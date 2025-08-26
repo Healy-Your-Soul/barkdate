@@ -83,13 +83,14 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       }
 
       // Upload user avatar if selected 📸
+      // TODO: Re-enable photo uploads after bucket setup
       String? avatarUrl;
-      if (_ownerPhoto != null) {
-        avatarUrl = await PhotoUploadService.uploadUserAvatar(
-          imageFile: _ownerPhoto!,
-          userId: user.id,
-        );
-      }
+      // if (_ownerPhoto != null) {
+      //   avatarUrl = await PhotoUploadService.uploadUserAvatar(
+      //     imageFile: _ownerPhoto!,
+      //     userId: user.id,
+      //   );
+      // }
 
       // Update user profile in database 🎉
       await BarkDateUserService.updateUserProfile(user.id, {
@@ -111,20 +112,21 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       });
 
       // Upload dog photo if selected 🐕📸
-      if (_dogPhoto != null && dogData.isNotEmpty) {
-        final dogId = dogData['id'] as String;
-        final dogPhotoUrl = await PhotoUploadService.uploadDogPhoto(
-          imageFile: _dogPhoto!,
-          dogId: dogId,
-        );
-        
-        if (dogPhotoUrl != null) {
-          // Update dog with photo URL
-          await SupabaseService.update('dogs', {
-            'photo_urls': [dogPhotoUrl],
-          }, filters: {'id': dogId});
-        }
-      }
+      // TODO: Re-enable photo uploads after bucket setup
+      // if (_dogPhoto != null && dogData.isNotEmpty) {
+      //   final dogId = dogData['id'] as String;
+      //   final dogPhotoUrl = await PhotoUploadService.uploadDogPhoto(
+      //     imageFile: _dogPhoto!,
+      //     dogId: dogId,
+      //   );
+      //   
+      //   if (dogPhotoUrl != null) {
+      //     // Update dog with photo URL
+      //     await SupabaseService.update('dogs', {
+      //       'photo_urls': [dogPhotoUrl],
+      //     }, filters: {'id': dogId});
+      //   }
+      // }
       
       if (mounted) {
         // Success! Take them to the main app
@@ -231,9 +233,12 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Text(
-                    'Step ${_currentStep + 1} of 2',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  Flexible(
+                    child: Text(
+                      'Step ${_currentStep + 1} of 2',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
@@ -315,12 +320,14 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           // Profile photo
           Center(
             child: GestureDetector(
-              onTap: () async {
-                // Real photo picker! 📸
-                final photo = await context.showImagePicker();
-                if (photo != null) {
-                  setState(() => _ownerPhoto = photo);
-                }
+              onTap: () {
+                // TODO: Re-enable photo selection after bucket setup
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Photo upload coming soon! Skip for now.'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
               },
               child: Stack(
                 children: [
@@ -442,12 +449,14 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           // Dog photo
           Center(
             child: GestureDetector(
-              onTap: () async {
-                // Real photo picker! 📸
-                final photo = await context.showImagePicker();
-                if (photo != null) {
-                  setState(() => _dogPhoto = photo);
-                }
+              onTap: () {
+                // TODO: Re-enable photo selection after bucket setup
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Dog photo upload coming soon! Skip for now.'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
               },
               child: Stack(
                 children: [
