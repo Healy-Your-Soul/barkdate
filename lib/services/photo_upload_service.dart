@@ -204,27 +204,53 @@ class PhotoUploadService {
 
       // Create buckets if they don't exist
       if (!dogPhotosBucketExists) {
-        await SupabaseConfig.client.storage.createBucket(
-          dogPhotosBucket,
-          BucketOptions(public: true),
-        );
-        if (kDebugMode) {
-          print('Created $dogPhotosBucket bucket');
+        try {
+          await SupabaseConfig.client.storage.createBucket(
+            dogPhotosBucket,
+            bucketOptions: const BucketOptions(
+              public: true,
+              allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+            ),
+          );
+          if (kDebugMode) {
+            print('Created $dogPhotosBucket bucket');
+          }
+        } catch (e) {
+          if (e.toString().contains('already exists') || e.toString().contains('409')) {
+            if (kDebugMode) {
+              print('Bucket $dogPhotosBucket already exists');
+            }
+          } else {
+            print('Error creating $dogPhotosBucket bucket: $e');
+          }
         }
       }
 
       if (!userAvatarsBucketExists) {
-        await SupabaseConfig.client.storage.createBucket(
-          userAvatarsBucket,
-          BucketOptions(public: true),
-        );
-        if (kDebugMode) {
-          print('Created $userAvatarsBucket bucket');
+        try {
+          await SupabaseConfig.client.storage.createBucket(
+            userAvatarsBucket,
+            bucketOptions: const BucketOptions(
+              public: true,
+              allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+            ),
+          );
+          if (kDebugMode) {
+            print('Created $userAvatarsBucket bucket');
+          }
+        } catch (e) {
+          if (e.toString().contains('already exists') || e.toString().contains('409')) {
+            if (kDebugMode) {
+              print('Bucket $userAvatarsBucket already exists');
+            }
+          } else {
+            print('Error creating $userAvatarsBucket bucket: $e');
+          }
         }
       }
     } catch (e) {
       print('Error ensuring buckets exist: $e');
-      // Don't throw here - buckets might already exist
+      // Don't throw here - buckets might already exist or we'll handle uploads differently
     }
   }
 }
