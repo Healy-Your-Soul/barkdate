@@ -207,10 +207,6 @@ class PhotoUploadService {
         try {
           await SupabaseConfig.client.storage.createBucket(
             dogPhotosBucket,
-            bucketOptions: const BucketOptions(
-              public: true,
-              allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
-            ),
           );
           if (kDebugMode) {
             print('Created $dogPhotosBucket bucket');
@@ -230,10 +226,6 @@ class PhotoUploadService {
         try {
           await SupabaseConfig.client.storage.createBucket(
             userAvatarsBucket,
-            bucketOptions: const BucketOptions(
-              public: true,
-              allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
-            ),
           );
           if (kDebugMode) {
             print('Created $userAvatarsBucket bucket');
