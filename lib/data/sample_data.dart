@@ -1,0 +1,203 @@
+import 'package:barkdate/models/dog.dart';
+import 'package:barkdate/models/post.dart';
+import 'package:barkdate/models/message.dart';
+import 'package:barkdate/models/playdate.dart';
+
+class SampleData {
+  static const currentUserId = 'user_001';
+  
+  static final List<Dog> nearbyDogs = [
+    Dog(
+      id: 'dog_001',
+      name: 'Buddy',
+      breed: 'Golden Retriever',
+      age: 2,
+      size: 'Large',
+      gender: 'Male',
+      bio: 'Loves playing fetch and making new friends! Always excited for park adventures.',
+      photos: ['https://pixabay.com/get/g4447f66f52d1681426c246cc047b412d9c4892febb1e1230bba29cd2f2a1b50192d68112b76bc950173339458454855baba830ddf9be46723ea1bef5d673dc3e_1280.jpg'],
+      ownerId: 'user_002',
+      ownerName: 'Sarah Johnson',
+      distanceKm: 1.2,
+    ),
+    Dog(
+      id: 'dog_002',
+      name: 'Cooper',
+      breed: 'Labrador',
+      age: 3,
+      size: 'Large',
+      gender: 'Male',
+      bio: 'Gentle giant who loves swimming and meeting new pups.',
+      photos: ['https://pixabay.com/get/g88dee05b0e9359a56b856643a45d9844a5f5aa3f8cf8d51bee5c05ecd4bc48f01cab13c9d99fa4309b6c6e12f155bcd0329fd339100dba318c7061bd1a1f8dd1_1280.jpg'],
+      ownerId: 'user_003',
+      ownerName: 'Mike Chen',
+      distanceKm: 2.5,
+    ),
+    Dog(
+      id: 'dog_003',
+      name: 'Bella',
+      breed: 'French Bulldog',
+      age: 1,
+      size: 'Small',
+      gender: 'Female',
+      bio: 'Playful little princess who loves belly rubs and treats!',
+      photos: ['https://pixabay.com/get/ga102f371ef5c3deaad95b196e64f6a3c497c4eebfa23ede4ad8548680d1ec90dc6728f761d02c8d2154ae0bbc0f5e2cf3e50558e64f6c25eea5e8bc5e45b4426_1280.jpg'],
+      ownerId: 'user_004',
+      ownerName: 'Emily Davis',
+      distanceKm: 0.8,
+    ),
+    Dog(
+      id: 'dog_004',
+      name: 'Charlie',
+      breed: 'Beagle',
+      age: 4,
+      size: 'Medium',
+      gender: 'Male',
+      bio: 'Curious explorer with an amazing nose for adventure!',
+      photos: ['https://pixabay.com/get/g17cf7a3d05f5aab5943d2f7741de77eb3d3299ab317e778f7d1e1166425de413dd1902a5898b772353d18ef895c33ba855c6ea596b0083a7280f10e5a22209ab_1280.jpg'],
+      ownerId: 'user_005',
+      ownerName: 'David Wilson',
+      distanceKm: 3.1,
+    ),
+    Dog(
+      id: 'dog_005',
+      name: 'Luna',
+      breed: 'Poodle',
+      age: 2,
+      size: 'Medium',
+      gender: 'Female',
+      bio: 'Elegant and smart, loves learning new tricks and showing off!',
+      photos: ['https://pixabay.com/get/gc57de090ecc8fe2089fc7b8c9874a54b0431f573dc83ac58b239dffc4d5623af62ffa9153e3de6d1c293de09769c93ef398c9fffd5acd396bcd47df1ff0a215e_1280.jpg'],
+      ownerId: 'user_006',
+      ownerName: 'Jessica Park',
+      distanceKm: 1.8,
+    ),
+    Dog(
+      id: 'dog_006',
+      name: 'Max',
+      breed: 'German Shepherd',
+      age: 5,
+      size: 'Large',
+      gender: 'Male',
+      bio: 'Loyal companion who loves long walks and protecting his pack.',
+      photos: ['https://pixabay.com/get/g0bdd30d1baa8ffb8843597674189ed7ac2059654d579a0630e9da226b67974be8b2f788b8374adc321b11e72535487f8ebcec795d77fbdfb694c6b98bd84304c_1280.jpg'],
+      ownerId: 'user_007',
+      ownerName: 'Tom Rodriguez',
+      distanceKm: 2.8,
+    ),
+  ];
+
+  static final List<Post> socialPosts = [
+    Post(
+      id: 'post_001',
+      userId: 'user_002',
+      userName: 'Sarah Johnson',
+      userPhoto: 'https://pixabay.com/get/g4447f66f52d1681426c246cc047b412d9c4892febb1e1230bba29cd2f2a1b50192d68112b76bc950173339458454855baba830ddf9be46723ea1bef5d673dc3e_1280.jpg',
+      dogName: 'Buddy',
+      content: 'Enjoying a sunny afternoon at the park with my furry friend!',
+      imageUrl: 'https://pixabay.com/get/g208d1816b6cb4944f4a367ccaf380d3b441bb87b2385977de3f3cd40dc600e3c6b44612734d7fa721d4755f0c555a0ad008d42641e24efdfbb11c32e4c17e9eb_1280.jpg',
+      hashtags: ['#dogpark', '#goldenretriever', '#playtime'],
+      timestamp: DateTime.now().subtract(const Duration(hours: 2)),
+      likes: 23,
+      comments: 12,
+      shares: 3,
+    ),
+    Post(
+      id: 'post_002',
+      userId: 'user_004',
+      userName: 'Emily Davis',
+      userPhoto: 'https://pixabay.com/get/ga102f371ef5c3deaad95b196e64f6a3c497c4eebfa23ede4ad8548680d1ec90dc6728f761d02c8d2154ae0bbc0f5e2cf3e50558e64f6c25eea5e8bc5e45b4426_1280.jpg',
+      dogName: 'Bella',
+      content: 'Beach day with Bella! She found so many new friends to play with 🏖️',
+      imageUrl: 'https://pixabay.com/get/g2015a824e6d889ca561f4bce4cdba0a9c339fa06b7d81999f12a9f9ccead1edc36cae8745b6575da796b3e853ae364d5feaf001a315562b325770472ae3cf403_1280.jpg',
+      hashtags: ['#beachday', '#frenchbulldog', '#socializing'],
+      timestamp: DateTime.now().subtract(const Duration(hours: 5)),
+      likes: 31,
+      comments: 8,
+      shares: 5,
+    ),
+  ];
+
+  static final List<ChatPreview> chatPreviews = [
+    ChatPreview(
+      chatId: 'chat_001',
+      otherUserId: 'user_002',
+      otherUserName: 'Sarah',
+      otherDogName: 'Buddy',
+      otherDogPhoto: 'https://pixabay.com/get/g4447f66f52d1681426c246cc047b412d9c4892febb1e1230bba29cd2f2a1b50192d68112b76bc950173339458454855baba830ddf9be46723ea1bef5d673dc3e_1280.jpg',
+      lastMessage: 'Perfect! See you then! 🐾',
+      lastMessageTime: DateTime.now().subtract(const Duration(minutes: 30)),
+      unreadCount: 2,
+    ),
+    ChatPreview(
+      chatId: 'chat_002',
+      otherUserId: 'user_003',
+      otherUserName: 'Mike',
+      otherDogName: 'Cooper',
+      otherDogPhoto: 'https://pixabay.com/get/g88dee05b0e9359a56b856643a45d9844a5f5aa3f8cf8d51bee5c05ecd4bc48f01cab13c9d99fa4309b6c6e12f155bcd0329fd339100dba318c7061bd1a1f8dd1_1280.jpg',
+      lastMessage: 'How about 10 AM at the park? It\'s supposed to be sunny!',
+      lastMessageTime: DateTime.now().subtract(const Duration(hours: 2)),
+      unreadCount: 0,
+    ),
+  ];
+
+  static final List<Playdate> upcomingPlaydates = [
+    Playdate(
+      id: 'playdate_001',
+      initiatorUserId: currentUserId,
+      invitedUserId: 'user_002',
+      initiatorDogName: 'My Dog',
+      invitedDogName: 'Buddy',
+      title: 'Park Playdate',
+      location: 'Central Park',
+      dateTime: DateTime.now().add(const Duration(days: 1)),
+      status: PlaydateStatus.accepted,
+      imageUrl: 'https://pixabay.com/get/g208d1816b6cb4944f4a367ccaf380d3b441bb87b2385977de3f3cd40dc600e3c6b44612734d7fa721d4755f0c555a0ad008d42641e24efdfbb11c32e4c17e9eb_1280.jpg',
+    ),
+    Playdate(
+      id: 'playdate_002',
+      initiatorUserId: 'user_004',
+      invitedUserId: currentUserId,
+      initiatorDogName: 'Bella',
+      invitedDogName: 'My Dog',
+      title: 'Beach Buddies',
+      location: 'Sunset Beach',
+      dateTime: DateTime.now().add(const Duration(days: 3)),
+      status: PlaydateStatus.pending,
+      imageUrl: 'https://pixabay.com/get/g2015a824e6d889ca561f4bce4cdba0a9c339fa06b7d81999f12a9f9ccead1edc36cae8745b6575da796b3e853ae364d5feaf001a315562b325770472ae3cf403_1280.jpg',
+    ),
+  ];
+
+  static final List<Achievement> achievements = [
+    Achievement(
+      id: 'achievement_001',
+      title: 'First Playdate',
+      description: 'Complete your first successful playdate',
+      iconName: 'pets',
+      isEarned: true,
+      earnedDate: DateTime.now().subtract(const Duration(days: 7)),
+    ),
+    Achievement(
+      id: 'achievement_002',
+      title: 'Dog Park Regular',
+      description: 'Visit the dog park 10 times',
+      iconName: 'park',
+      isEarned: true,
+      earnedDate: DateTime.now().subtract(const Duration(days: 3)),
+    ),
+    Achievement(
+      id: 'achievement_003',
+      title: 'Social Butterfly',
+      description: 'Make friends with 5 different dogs',
+      iconName: 'group',
+      isEarned: false,
+    ),
+    Achievement(
+      id: 'achievement_004',
+      title: 'Community Star',
+      description: 'Get 100 likes on your posts',
+      iconName: 'star',
+      isEarned: false,
+    ),
+  ];
+}

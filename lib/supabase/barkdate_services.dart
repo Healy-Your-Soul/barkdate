@@ -1,0 +1,347 @@
+import 'package:barkdate/supabase/supabase_config.dart';
+
+/// BarkDate-specific Supabase service classes
+class BarkDateUserService {
+  /// Get user profile
+  static Future<Map<String, dynamic>?> getUserProfile(String userId) async {
+    return await SupabaseService.selectSingle(
+      'users',
+      filters: {'id': userId},
+    );
+  }
+
+  /// Update user profile
+  static Future<void> updateUserProfile(String userId, Map<String, dynamic> data) async {
+    data['updated_at'] = DateTime.now().toIso8601String();
+    await SupabaseService.update(
+      'users',
+      data,
+      filters: {'id': userId},
+    );
+  }
+
+  /// Get user's dogs
+  static Future<List<Map<String, dynamic>>> getUserDogs(String userId) async {
+    return await SupabaseService.select(
+      'dogs',
+      filters: {'user_id': userId, 'is_active': true},
+      orderBy: 'created_at',
+    );
+  }
+
+  /// Add new dog
+  static Future<Map<String, dynamic>> addDog(String userId, Map<String, dynamic> dogData) async {
+    dogData['user_id'] = userId;
+    dogData['created_at'] = DateTime.now().toIso8601String();
+    dogData['updated_at'] = DateTime.now().toIso8601String();
+    
+    final result = await SupabaseService.insert('dogs', dogData);
+    return result.first;
+  }
+}
+
+class BarkDateMatchService {
+  /// Get nearby dogs for matching
+  static Future<List<Map<String, dynamic>>> getNearbyDogs(String userId) async {
+    return await SupabaseConfig.client
+        .from('dogs')
+        .select('''
+          *,
+          users!dogs_user_id_fkey(name, avatar_url, location)
+        ''')
+        .neq('user_id', userId)
+        .eq('is_active', true)
+        .limit(50);
+  }
+
+  /// Record a bark/pass action
+  static Future<bool> recordMatch({
+    required String userId,
+    required String targetUserId,
+    required String dogId,
+    required String targetDogId,
+    required String action, // 'bark' or 'pass'
+  }) async {
+    // Check if target user already barked at current user
+    final existingMatch = await SupabaseService.selectSingle(
+      'matches',
+      filters: {
+        'user_id': targetUserId,
+        'target_user_id': userId,
+        'dog_id': targetDogId,
+        'target_dog_id': dogId,
+        'action': 'bark',
+      },
+    );
+
+    final isMutual = existingMatch != null && action == 'bark';
+
+    // Insert current user's action
+    await SupabaseService.insert('matches', {
+      'user_id': userId,
+      'target_user_id': targetUserId,
+      'dog_id': dogId,
+      'target_dog_id': targetDogId,
+      'action': action,
+      'is_mutual': isMutual,
+    });
+
+    // If mutual match, update the existing match record
+    if (isMutual) {
+      await SupabaseService.update(
+        'matches',
+        {'is_mutual': true},
+        filters: {'id': existingMatch['id']},
+      );
+    }
+
+    return isMutual;
+  }
+
+  /// Get mutual matches
+  static Future<List<Map<String, dynamic>>> getMutualMatches(String userId) async {
+    final data = await SupabaseConfig.client
+        .from('matches')
+        .select('''
+          *,
+          target_user:users!matches_target_user_id_fkey(id, name, avatar_url),
+          target_dog:dogs!matches_target_dog_id_fkey(*)
+        ''')
+        .eq('user_id', userId)
+        .eq('is_mutual', true)
+        .order('created_at', ascending: false);
+    
+    return data;
+  }
+}
+
+class BarkDateMessageService {
+  /// Send message
+  static Future<Map<String, dynamic>> sendMessage({
+    required String matchId,
+    required String senderId,
+    required String receiverId,
+    required String content,
+    String messageType = 'text',
+  }) async {
+    final data = {
+      'match_id': matchId,
+      'sender_id': senderId,
+      'receiver_id': receiverId,
+      'content': content,
+      'message_type': messageType,
+    };
+
+    final result = await SupabaseService.insert('messages', data);
+    return result.first;
+  }
+
+  /// Get messages for a match
+  static Future<List<Map<String, dynamic>>> getMessages(String matchId) async {
+    return await SupabaseConfig.client
+        .from('messages')
+        .select('''
+          *,
+          sender:users!messages_sender_id_fkey(name, avatar_url)
+        ''')
+        .eq('match_id', matchId)
+        .order('created_at', ascending: true);
+  }
+
+  /// Mark messages as read
+  static Future<void> markMessagesAsRead(String matchId, String userId) async {
+    await SupabaseConfig.client
+        .from('messages')
+        .update({'is_read': true})
+        .eq('match_id', matchId)
+        .eq('receiver_id', userId);
+  }
+
+  /// Get recent conversations
+  static Future<List<Map<String, dynamic>>> getConversations(String userId) async {
+    final data = await SupabaseConfig.client
+        .from('messages')
+        .select('''
+          *,
+          sender:users!messages_sender_id_fkey(name, avatar_url),
+          receiver:users!messages_receiver_id_fkey(name, avatar_url)
+        ''')
+        .or('sender_id.eq.$userId,receiver_id.eq.$userId')
+        .order('created_at', ascending: false);
+    
+    // Group by match_id and return latest message for each conversation
+    final conversations = <String, Map<String, dynamic>>{};
+    for (final message in data) {
+      final matchId = message['match_id'];
+      if (!conversations.containsKey(matchId)) {
+        conversations[matchId] = message;
+      }
+    }
+    
+    return conversations.values.toList();
+  }
+}
+
+class BarkDatePlaydateService {
+  /// Create playdate
+  static Future<Map<String, dynamic>> createPlaydate(Map<String, dynamic> playdateData) async {
+    playdateData['created_at'] = DateTime.now().toIso8601String();
+    playdateData['updated_at'] = DateTime.now().toIso8601String();
+    
+    final result = await SupabaseService.insert('playdates', playdateData);
+    return result.first;
+  }
+
+  /// Get user's playdates
+  static Future<List<Map<String, dynamic>>> getUserPlaydates(String userId) async {
+    return await SupabaseConfig.client
+        .from('playdates')
+        .select('''
+          *,
+          organizer:users!playdates_organizer_id_fkey(name, avatar_url),
+          participant:users!playdates_participant_id_fkey(name, avatar_url)
+        ''')
+        .or('organizer_id.eq.$userId,participant_id.eq.$userId')
+        .order('scheduled_at', ascending: false);
+  }
+
+  /// Join playdate
+  static Future<void> joinPlaydate(String playdateId, String userId, String dogId) async {
+    await SupabaseService.insert('playdate_participants', {
+      'playdate_id': playdateId,
+      'user_id': userId,
+      'dog_id': dogId,
+    });
+  }
+
+  /// Update playdate status
+  static Future<void> updatePlaydateStatus(String playdateId, String status) async {
+    await SupabaseService.update(
+      'playdates',
+      {
+        'status': status,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      filters: {'id': playdateId},
+    );
+  }
+}
+
+class BarkDateSocialService {
+  /// Create post
+  static Future<Map<String, dynamic>> createPost({
+    required String userId,
+    required String content,
+    String? dogId,
+    List<String>? imageUrls,
+    String? location,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final data = {
+      'user_id': userId,
+      'content': content,
+      'dog_id': dogId,
+      'image_urls': imageUrls ?? [],
+      'location': location,
+      'latitude': latitude,
+      'longitude': longitude,
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+
+    final result = await SupabaseService.insert('posts', data);
+    return result.first;
+  }
+
+  /// Get social feed posts
+  static Future<List<Map<String, dynamic>>> getFeedPosts({int limit = 20, int offset = 0}) async {
+    return await SupabaseConfig.client
+        .from('posts')
+        .select('''
+          *,
+          user:users!posts_user_id_fkey(name, avatar_url),
+          dog:dogs!posts_dog_id_fkey(name, breed)
+        ''')
+        .eq('is_public', true)
+        .order('created_at', ascending: false)
+        .range(offset, offset + limit - 1);
+  }
+
+  /// Like/unlike post
+  static Future<void> togglePostLike(String postId, String userId) async {
+    final existingLike = await SupabaseService.selectSingle(
+      'post_likes',
+      filters: {'post_id': postId, 'user_id': userId},
+    );
+
+    if (existingLike != null) {
+      // Unlike
+      await SupabaseService.delete(
+        'post_likes',
+        filters: {'id': existingLike['id']},
+      );
+      
+      // Decrement likes count - simple update for now
+      final currentPost = await SupabaseService.selectSingle('posts', filters: {'id': postId});
+      if (currentPost != null) {
+        await SupabaseService.update('posts', {
+          'likes_count': (currentPost['likes_count'] ?? 1) - 1,
+        }, filters: {'id': postId});
+      }
+    } else {
+      // Like
+      await SupabaseService.insert('post_likes', {
+        'post_id': postId,
+        'user_id': userId,
+      });
+      
+      // Increment likes count - simple update for now
+      final currentPost = await SupabaseService.selectSingle('posts', filters: {'id': postId});
+      if (currentPost != null) {
+        await SupabaseService.update('posts', {
+          'likes_count': (currentPost['likes_count'] ?? 0) + 1,
+        }, filters: {'id': postId});
+      }
+    }
+  }
+}
+
+class BarkDateNotificationService {
+  /// Create notification
+  static Future<void> createNotification({
+    required String userId,
+    required String title,
+    required String body,
+    required String type,
+    Map<String, dynamic>? data,
+  }) async {
+    await SupabaseService.insert('notifications', {
+      'user_id': userId,
+      'title': title,
+      'body': body,
+      'type': type,
+      'data': data,
+    });
+  }
+
+  /// Get user notifications
+  static Future<List<Map<String, dynamic>>> getUserNotifications(String userId) async {
+    return await SupabaseService.select(
+      'notifications',
+      filters: {'user_id': userId},
+      orderBy: 'created_at',
+      ascending: false,
+      limit: 50,
+    );
+  }
+
+  /// Mark notification as read
+  static Future<void> markNotificationAsRead(String notificationId) async {
+    await SupabaseService.update(
+      'notifications',
+      {'is_read': true},
+      filters: {'id': notificationId},
+    );
+  }
+}

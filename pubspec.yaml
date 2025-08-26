@@ -1,0 +1,24 @@
+name: barkdate
+description: "BarkDate is a delightful social app that helps dog owners easily connect, schedule playdates, and share their furry friends' joyful adventures in a vibrant, community-focused space."
+publish_to: "none"
+version: 1.0.0
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.1.0
+  supabase_flutter: '>=1.10.0'
+  firebase_core: ^4.0.0
+  image_picker: ^1.0.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
