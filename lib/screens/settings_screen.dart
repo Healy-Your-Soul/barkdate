@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/screens/help_screen.dart';
 import 'package:barkdate/screens/auth/sign_in_screen.dart';
+import 'package:barkdate/supabase/supabase_config.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});

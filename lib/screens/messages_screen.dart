@@ -130,7 +130,12 @@ class MessagesScreen extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => ChatDetailScreen(chat: chat),
+          builder: (context) => ChatDetailScreen(
+            recipientName: chat.otherUserName,
+            dogName: chat.otherDogName,
+            matchId: null, // demo mode for now
+            recipientId: chat.otherUserId,
+          ),
         ),
       ),
     );

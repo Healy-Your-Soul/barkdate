@@ -278,7 +278,7 @@ class _ReportScreenState extends State<ReportScreen> {
               const SizedBox(height: 16),
               
               // Report reason options
-              ..._ reportReasons.map((reason) => _buildReasonOption(reason)),
+              ..._reportReasons.map((reason) => _buildReasonOption(reason)),
               
               const SizedBox(height: 24),
               

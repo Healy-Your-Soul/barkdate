@@ -74,7 +74,7 @@ class _FeedScreenState extends State<FeedScreen> {
       final dogData = await BarkDateMatchService.getNearbyDogs(user.id);
       
       // Convert database data to Dog objects
-      final dogs = dogData.map((data) {
+      final List<Dog> dogs = dogData.map<Dog>((data) {
         final userData = data['users'] as Map<String, dynamic>?;
         return Dog(
           id: data['id'] as String,
@@ -85,6 +85,7 @@ class _FeedScreenState extends State<FeedScreen> {
           gender: data['gender'] as String,
           bio: data['bio'] as String? ?? '',
           photos: List<String>.from(data['photo_urls'] ?? []),
+          ownerId: (data['user_id'] ?? userData?['id'] ?? '') as String,
           ownerName: userData?['name'] as String? ?? 'Unknown Owner',
           distanceKm: 2.5, // TODO: Calculate real distance based on location
         );

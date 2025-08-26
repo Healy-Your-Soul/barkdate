@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Service for handling photo uploads to Supabase Storage
 /// Think of this as your app's camera and photo album manager! 📸

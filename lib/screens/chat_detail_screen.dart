@@ -171,13 +171,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundImage: NetworkImage(widget.chat.otherDogPhoto),
+              backgroundImage: const NetworkImage('https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=200'),
               onBackgroundImageError: (exception, stackTrace) {},
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                widget.chat.otherUserName,
+                widget.recipientName,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onPrimaryContainer,
@@ -254,7 +254,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   child: TextField(
                     controller: _messageController,
                     decoration: InputDecoration(
-                      hintText: 'Message ${widget.chat.otherUserName}...',
+                      hintText: 'Message ${widget.recipientName}...',
                       hintStyle: TextStyle(
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
@@ -303,7 +303,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           if (!isMe) ...[
             CircleAvatar(
               radius: 16,
-              backgroundImage: NetworkImage(widget.chat.otherDogPhoto),
+              backgroundImage: const NetworkImage('https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=200'),
               onBackgroundImageError: (exception, stackTrace) {},
             ),
             const SizedBox(width: 8),
