@@ -68,9 +68,18 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     
     try {
       // Get current user from Supabase auth
-      final user = SupabaseAuth.currentUser;
+      var user = SupabaseAuth.currentUser;
       if (user == null) {
-        throw Exception('No authenticated user found');
+        // Try to get user from auth state changes
+        try {
+          final authState = await SupabaseConfig.auth.onAuthStateChange.first;
+          user = authState.session?.user;
+          if (user == null) {
+            throw Exception('No authenticated user found. Please sign in again.');
+          }
+        } catch (e) {
+          throw Exception('Authentication error: Please sign in again.');
+        }
       }
 
       // Upload user avatar if selected 📸

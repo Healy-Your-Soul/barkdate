@@ -88,6 +88,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (mounted) {
         if (response.user != null) {
           // Success! User account created
+          // Add a small delay to ensure auth state is updated
+          await Future.delayed(const Duration(milliseconds: 500));
+          
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
