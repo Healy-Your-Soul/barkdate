@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 
 /// BarkDate Supabase configuration
 class SupabaseConfig {
-  static const String supabaseUrl = 'https://caottaawpnocywayjmyl.supabase.co';
-  static const String anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhb3R0YWF3cG5vY3l3YXlqbXlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxODcxNDgsImV4cCI6MjA3MTc2MzE0OH0.s6iLqUXkN-B4Xv7WQ8TbD42mgB1ijsLxuN6w71rJzQQ';
+  static const String supabaseUrl = 'https://utmyixtkcieysokygomg.supabase.co';
+  static const String anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0bXlpeHRrY2lleXNva3lnb21nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxODgwNzYsImV4cCI6MjA3MTc2NDA3Nn0.SVf450-mP4wNDMC34UBN2uxiji1ByvtB0w32Z-ItF_Q';
 
   static Future<void> initialize() async {
     await Supabase.initialize(
