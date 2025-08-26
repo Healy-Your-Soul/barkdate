@@ -13,7 +13,8 @@ void main() async {
   await SupabaseConfig.initialize();
   
   // Initialize Storage buckets for photos 📸
-  await PhotoUploadService.ensureBucketsExist();
+  // Temporarily disabled - will create buckets after successful signup
+  // await PhotoUploadService.ensureBucketsExist();
   
   runApp(const MyApp());
 }
