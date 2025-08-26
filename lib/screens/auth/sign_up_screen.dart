@@ -88,16 +88,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (mounted) {
         if (response.user != null) {
           // Success! User account created
-          // Add a small delay to ensure auth state is updated
-          await Future.delayed(const Duration(milliseconds: 500));
-          
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CreateProfileScreen(
-                userName: _nameController.text,
-                userEmail: _emailController.text,
-              ),
+          // AuthChecker will automatically handle navigation to profile setup
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Account created successfully! 🎉'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
             ),
           );
         } else {

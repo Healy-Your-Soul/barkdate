@@ -3,6 +3,7 @@ import 'package:barkdate/theme.dart';
 import 'package:barkdate/screens/main_navigation.dart';
 import 'package:barkdate/screens/onboarding/welcome_screen.dart';
 import 'package:barkdate/screens/auth/sign_in_screen.dart';
+import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
 
@@ -48,15 +49,49 @@ class AuthChecker extends StatelessWidget {
         final user = SupabaseConfig.auth.currentUser;
         
         if (user != null) {
-          // User is logged in, go to main app! 🎉
-          return const MainNavigation();
+          // User is logged in, check if they have completed profile setup
+          return FutureBuilder(
+            future: _checkUserProfile(user.id),
+            builder: (context, profileSnapshot) {
+              if (profileSnapshot.connectionState == ConnectionState.waiting) {
+                // Show loading while checking profile
+                return const Scaffold(
+                  body: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+              
+              final hasProfile = profileSnapshot.data ?? false;
+              if (hasProfile) {
+                // User has completed profile, go to main app! 🎉
+                return const MainNavigation();
+              } else {
+                // User needs to complete profile setup
+                return CreateProfileScreen(
+                  userName: user.userMetadata?['name'] ?? '',
+                  userEmail: user.email ?? '',
+                );
+              }
+            },
+          );
         } else {
           // No user, show welcome/sign in
           return const WelcomeScreen();
-          // For development, you can change this to:
-          // return const SignInScreen(); // Skip welcome and go to sign in
         }
       },
     );
+  }
+
+  Future<bool> _checkUserProfile(String userId) async {
+    try {
+      final profile = await SupabaseService.selectSingle(
+        'users',
+        filters: {'id': userId},
+      );
+      return profile != null;
+    } catch (e) {
+      return false;
+    }
   }
 }

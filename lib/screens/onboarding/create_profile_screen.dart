@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'package:barkdate/screens/main_navigation.dart';
+
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
@@ -129,11 +129,15 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       // }
       
       if (mounted) {
-        // Success! Take them to the main app
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainNavigation()),
+        // Success! Show confirmation and let AuthChecker handle navigation
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile created successfully! Welcome to BarkDate! 🎉'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
         );
+        // AuthChecker will automatically detect the completed profile and navigate to MainNavigation
       }
     } catch (e) {
       if (mounted) {
