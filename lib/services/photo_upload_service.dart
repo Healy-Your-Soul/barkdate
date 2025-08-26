@@ -152,7 +152,7 @@ class PhotoUploadService {
     }
   }
 
-  /// Show photo picker dialog (Gallery vs Camera)
+  /// Show a dialog to choose between camera and gallery
   static Future<File?> showPhotoPickerDialog(BuildContext context) async {
     return await showDialog<File?>(
       context: context,
@@ -166,7 +166,6 @@ class PhotoUploadService {
                 leading: const Icon(Icons.photo_library),
                 title: const Text('Choose from Gallery'),
                 onTap: () async {
-                  Navigator.pop(context);
                   final file = await pickImage(source: ImageSource.gallery);
                   Navigator.pop(context, file);
                 },
@@ -175,7 +174,6 @@ class PhotoUploadService {
                 leading: const Icon(Icons.camera_alt),
                 title: const Text('Take Photo'),
                 onTap: () async {
-                  Navigator.pop(context);
                   final file = await pickImage(source: ImageSource.camera);
                   Navigator.pop(context, file);
                 },
