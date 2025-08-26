@@ -71,6 +71,7 @@ class AuthChecker extends StatelessWidget {
                 return CreateProfileScreen(
                   userName: user.userMetadata?['name'] ?? '',
                   userEmail: user.email ?? '',
+                  userId: user.id, // Pass the user ID
                 );
               }
             },

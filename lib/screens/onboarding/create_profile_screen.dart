@@ -9,12 +9,14 @@ class CreateProfileScreen extends StatefulWidget {
   final String? userName;
   final String? userEmail;
   final bool locationEnabled;
+  final String? userId; // Add userId parameter
 
   const CreateProfileScreen({
     super.key,
     this.userName,
     this.userEmail,
     this.locationEnabled = true,
+    this.userId, // Optional - will get from auth if not provided
   });
 
   @override
@@ -67,19 +69,14 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     setState(() => _isLoading = true);
     
     try {
-      // Get current user from Supabase auth
-      var user = SupabaseAuth.currentUser;
-      if (user == null) {
-        // Try to get user from auth state changes
-        try {
-          final authState = await SupabaseConfig.auth.onAuthStateChange.first;
-          user = authState.session?.user;
-          if (user == null) {
-            throw Exception('No authenticated user found. Please sign in again.');
-          }
-        } catch (e) {
-          throw Exception('Authentication error: Please sign in again.');
+      // Get user ID - either from parameter or current auth
+      String? userId = widget.userId;
+      if (userId == null) {
+        final user = SupabaseAuth.currentUser;
+        if (user == null) {
+          throw Exception('No authenticated user found. Please sign in again.');
         }
+        userId = user.id;
       }
 
       // Upload user avatar if selected 📸
@@ -93,7 +90,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       // }
 
       // Update user profile in database 🎉
-      await BarkDateUserService.updateUserProfile(user.id, {
+      await BarkDateUserService.updateUserProfile(userId, {
         'name': _ownerNameController.text.trim(),
         'bio': _ownerBioController.text.trim(),
         'location': _ownerLocationController.text.trim(),
@@ -101,7 +98,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       });
 
       // Add dog profile 🐕
-      final dogData = await BarkDateUserService.addDog(user.id, {
+      final dogData = await BarkDateUserService.addDog(userId, {
         'name': _dogNameController.text.trim(),
         'breed': _dogBreedController.text.trim(),
         'age': int.tryParse(_dogAgeController.text) ?? 1,
