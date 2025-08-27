@@ -1,28 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
+import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/screens/auth/sign_in_screen.dart';
 
 class LocationPermissionScreen extends StatelessWidget {
   const LocationPermissionScreen({super.key});
 
-  Future<void> _requestLocationPermission(BuildContext context) async {
-    // TODO: Implement actual location permission request
-    // For now, just navigate to the next screen
+  Future<void> _navigateNext(BuildContext context, {required bool locationEnabled}) async {
+    final user = SupabaseConfig.auth.currentUser;
+    if (user == null) {
+      // Not signed in → go to Sign In
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const SignInScreen()),
+      );
+      return;
+    }
+
+    // Signed in → proceed to profile setup with userId
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const CreateProfileScreen()),
+      MaterialPageRoute(
+        builder: (context) => CreateProfileScreen(
+          userId: user.id,
+          userName: user.userMetadata?['name'],
+          userEmail: user.email,
+          locationEnabled: locationEnabled,
+        ),
+      ),
     );
+  }
+
+  Future<void> _requestLocationPermission(BuildContext context) async {
+    // TODO: Implement actual location permission request
+    // For now, just navigate to the next screen with location enabled
+    await _navigateNext(context, locationEnabled: true);
   }
 
   void _skipLocationPermission(BuildContext context) {
     // Navigate with limited features flag
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const CreateProfileScreen(
-          locationEnabled: false,
-        ),
-      ),
-    );
+    _navigateNext(context, locationEnabled: false);
   }
 
   @override

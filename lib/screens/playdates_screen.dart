@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/data/sample_data.dart';
 import 'package:barkdate/models/playdate.dart';
+import 'package:barkdate/screens/playdate_recap_screen.dart';
 
 class PlaydatesScreen extends StatefulWidget {
   const PlaydatesScreen({super.key});
@@ -260,6 +261,21 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                       onPressed: () {},
                       icon: const Icon(Icons.directions),
                       label: const Text('Get Directions'),
+                    ),
+                  ),
+                ] else ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => PlaydateRecapScreen(playdate: playdate)),
+                        );
+                      },
+                      icon: const Icon(Icons.rate_review),
+                      label: const Text('Write a Recap'),
                     ),
                   ),
                 ],

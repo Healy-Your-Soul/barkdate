@@ -6,6 +6,8 @@ import 'package:barkdate/screens/auth/sign_in_screen.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
+import 'package:barkdate/screens/onboarding/location_permission_screen.dart';
+import 'package:barkdate/screens/auth/verify_email_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,30 +51,25 @@ class AuthChecker extends StatelessWidget {
         final user = SupabaseConfig.auth.currentUser;
         
         if (user != null) {
-          // User is logged in, check if they have completed profile setup
+          final isVerified = user.emailConfirmedAt != null;
+          if (!isVerified) {
+            return VerifyEmailScreen(email: user.email ?? '');
+          }
+
+          // User is logged in and verified; check if profile exists
           return FutureBuilder(
             future: _checkUserProfile(user.id),
             builder: (context, profileSnapshot) {
               if (profileSnapshot.connectionState == ConnectionState.waiting) {
-                // Show loading while checking profile
-                return const Scaffold(
-                  body: Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                );
+                return const Scaffold(body: Center(child: CircularProgressIndicator()));
               }
-              
+
               final hasProfile = profileSnapshot.data ?? false;
               if (hasProfile) {
-                // User has completed profile, go to main app! 🎉
                 return const MainNavigation();
               } else {
-                // User needs to complete profile setup
-                return CreateProfileScreen(
-                  userName: user.userMetadata?['name'] ?? '',
-                  userEmail: user.email ?? '',
-                  userId: user.id, // Pass the user ID
-                );
+                // Start onboarding at location permission; that forwards userId into CreateProfile
+                return const LocationPermissionScreen();
               }
             },
           );
