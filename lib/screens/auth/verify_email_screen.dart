@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/screens/main_navigation.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   final String email;
@@ -23,7 +24,13 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       final user = SupabaseConfig.auth.currentUser;
       final confirmed = user?.emailConfirmedAt != null;
       if (confirmed) {
-        if (mounted) Navigator.of(context).pop();
+        if (mounted) {
+          // Email verified! Navigate to main app
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainNavigation()),
+          );
+        }
       } else {
         setState(() {
           _message = 'Not verified yet. Please click the email link, then tap Check again.';

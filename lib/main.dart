@@ -68,8 +68,12 @@ class AuthChecker extends StatelessWidget {
               if (hasProfile) {
                 return const MainNavigation();
               } else {
-                // Start onboarding at location permission; that forwards userId into CreateProfile
-                return const LocationPermissionScreen();
+                // User needs to complete profile setup - go directly to profile creation
+                return CreateProfileScreen(
+                  userName: user.userMetadata?['name'] ?? '',
+                  userEmail: user.email ?? '',
+                  userId: user.id,
+                );
               }
             },
           );

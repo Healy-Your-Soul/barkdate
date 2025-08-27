@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/screens/auth/verify_email_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -87,13 +88,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (mounted) {
         if (response.user != null) {
-          // Success! User account created
-          // AuthChecker will automatically handle navigation to profile setup
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Account created successfully! 🎉'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
+          // Success! Navigate to email verification
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => VerifyEmailScreen(email: response.user!.email ?? ''),
             ),
           );
         } else {
