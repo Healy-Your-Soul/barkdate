@@ -49,45 +49,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   void initState() {
     super.initState();
     _ownerNameController.text = widget.userName ?? '';
-    _ownerBioController.text = widget.userEmail ?? '';
-    
-    // Request location permission when profile creation starts
-    if (!widget.locationEnabled) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _requestLocationPermission();
-      });
-    }
-  }
-
-  Future<void> _requestLocationPermission() async {
-    // TODO: Implement actual location permission request
-    // For now, just show a dialog asking user to enable location
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: const Text('Enable Location'),
-          content: const Text('BarkDate works better with location access to find nearby dogs and parks. Would you like to enable location?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                // User declined location
-              },
-              child: const Text('Not Now'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                // User accepted location (would implement actual permission request here)
-              },
-              child: const Text('Enable'),
-            ),
-          ],
-        ),
-      );
-    }
+    // Note: We don't pre-fill email in any field since users should enter their own info
   }
 
   @override

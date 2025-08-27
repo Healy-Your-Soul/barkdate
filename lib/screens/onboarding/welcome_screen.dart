@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:barkdate/screens/onboarding/location_permission_screen.dart';
+import 'package:barkdate/screens/auth/sign_in_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -42,7 +42,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   void _navigateToNext() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const LocationPermissionScreen()),
+      MaterialPageRoute(builder: (context) => const SignInScreen()),
     );
   }
 
