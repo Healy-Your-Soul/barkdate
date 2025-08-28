@@ -121,7 +121,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         try {
           // Upload all photos first
           dogPhotoUrls = await PhotoUploadService.uploadMultipleImages(
-            images: _dogPhotos,
+            imageFiles: _dogPhotos,
             bucketName: PhotoUploadService.dogPhotosBucket,
             baseFilePath: '$userId/temp/photo', // Use temp folder, will update after getting dogId
           );
@@ -151,10 +151,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       String? avatarUrl;
       if (_ownerPhoto != null) {
         try {
-          avatarUrl = await PhotoUploadService.uploadSingleImage(
+          avatarUrl = await PhotoUploadService.uploadUserAvatar(
             image: _ownerPhoto!,
-            bucketName: PhotoUploadService.userAvatarsBucket,
-            filePath: '$userId/avatar.jpg',
+            userId: userId,
           );
         } catch (e) {
           debugPrint('Error uploading avatar: $e');
