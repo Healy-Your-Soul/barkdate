@@ -21,7 +21,7 @@ void main() async {
   await SettingsService().initialize();
   
   // Initialize Storage buckets for photos 📸
-  // Temporarily disable until storage buckets + policies are created via SQL
+  // Buckets are managed in Supabase; avoid creating from client
   // await PhotoUploadService.ensureBucketsExist();
   
   runApp(const MyApp());

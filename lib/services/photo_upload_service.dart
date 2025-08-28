@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:io' show File, Platform;
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +7,11 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:barkdate/services/selected_image.dart';
+
+/// Upload progress callback types
+typedef ProgressCallback = void Function(double progress);
+typedef MultiProgressCallback = void Function(int current, int total);
 
 /// Enhanced Photo Upload Service with compression, multi-image support, and progress tracking
 /// Think of this as your app's professional photography studio! 📸✨
@@ -17,10 +22,6 @@ class PhotoUploadService {
   static const String postImagesBucket = 'post-images';
   static const String chatMediaBucket = 'chat-media';
   static const String playdateAlbumsBucket = 'playdate-albums';
-
-  /// Upload progress callback type
-  typedef ProgressCallback = void Function(double progress);
-  typedef MultiProgressCallback = void Function(int current, int total);
 
   /// Compress and optimize image before upload
   static Future<File> compressImage(
@@ -61,7 +62,8 @@ class PhotoUploadService {
   }
 
   /// Enhanced image picking with multi-selection support
-  static Future<File?> pickImage({
+  /// Returns SelectedImage (bytes-based) for web-safety
+  static Future<SelectedImage?> pickImage({
     ImageSource source = ImageSource.gallery,
     int imageQuality = 85,
     int maxWidth = 1080,
@@ -77,9 +79,14 @@ class PhotoUploadService {
       );
 
       if (image != null) {
-        final file = File(image.path);
-        // Auto-compress picked image
-        return await compressImage(file);
+        final bytes = await image.readAsBytes();
+        final compressed = await _compressBytes(bytes,
+            maxWidth: maxWidth, maxHeight: maxHeight, quality: imageQuality);
+        return SelectedImage(
+          bytes: compressed,
+          fileName: image.name,
+          mimeType: 'image/jpeg',
+        );
       }
       return null;
     } catch (e) {
@@ -89,7 +96,7 @@ class PhotoUploadService {
   }
 
   /// Pick multiple images for galleries
-  static Future<List<File>> pickMultipleImages({
+  static Future<List<SelectedImage>> pickMultipleImages({
     int maxImages = 10,
     int imageQuality = 85,
   }) async {
@@ -105,11 +112,15 @@ class PhotoUploadService {
       final limitedImages = images.take(maxImages).toList();
       
       // Convert to Files and compress
-      final List<File> compressedFiles = [];
+      final List<SelectedImage> compressedFiles = [];
       for (final xFile in limitedImages) {
-        final file = File(xFile.path);
-        final compressedFile = await compressImage(file);
-        compressedFiles.add(compressedFile);
+        final bytes = await xFile.readAsBytes();
+        final compressed = await _compressBytes(bytes, quality: imageQuality);
+        compressedFiles.add(SelectedImage(
+          bytes: compressed,
+          fileName: xFile.name,
+          mimeType: 'image/jpeg',
+        ));
       }
 
       return compressedFiles;
@@ -121,7 +132,7 @@ class PhotoUploadService {
 
   /// Core upload method with progress tracking
   static Future<String?> uploadImage({
-    required File imageFile,
+    required Uint8List bytes,
     required String bucketName,
     required String filePath,
     ProgressCallback? onProgress,
@@ -133,9 +144,10 @@ class PhotoUploadService {
       }
 
       // Upload to Supabase Storage with progress tracking
+      // On web we must upload bytes; on mobile we can upload file as well.
       await SupabaseConfig.client.storage
           .from(bucketName)
-          .upload(filePath, imageFile);
+          .uploadBinary(filePath, bytes, fileOptions: const FileOptions(contentType: 'image/jpeg'));
 
       // Get the public URL
       final publicUrl = SupabaseConfig.client.storage
@@ -154,7 +166,7 @@ class PhotoUploadService {
 
   /// Upload multiple images with progress tracking
   static Future<List<String>> uploadMultipleImages({
-    required List<File> imageFiles,
+    required List<SelectedImage> imageFiles,
     required String bucketName,
     required String baseFilePath,
     MultiProgressCallback? onProgress,
@@ -168,7 +180,7 @@ class PhotoUploadService {
         final filePath = '${baseFilePath}_${timestamp}_$i.jpg';
         
         final url = await uploadImage(
-          imageFile: imageFiles[i],
+          bytes: imageFiles[i].bytes,
           bucketName: bucketName,
           filePath: filePath,
         );
@@ -190,13 +202,13 @@ class PhotoUploadService {
 
   /// Upload user avatar
   static Future<String?> uploadUserAvatar({
-    required File imageFile,
+    required SelectedImage image,
     required String userId,
     ProgressCallback? onProgress,
   }) async {
     final filePath = '$userId/avatar.jpg';
     return await uploadImage(
-      imageFile: imageFile,
+      bytes: image.bytes,
       bucketName: userAvatarsBucket,
       filePath: filePath,
       onProgress: onProgress,
@@ -205,7 +217,7 @@ class PhotoUploadService {
 
   /// Upload multiple dog photos for gallery
   static Future<List<String>> uploadDogPhotos({
-    required List<File> imageFiles,
+    required List<SelectedImage> imageFiles,
     required String dogId,
     required String userId,
     MultiProgressCallback? onProgress,
@@ -221,7 +233,7 @@ class PhotoUploadService {
 
   /// Upload single dog photo
   static Future<String?> uploadDogPhoto({
-    required File imageFile,
+    required SelectedImage image,
     required String dogId,
     required String userId,
     ProgressCallback? onProgress,
@@ -229,7 +241,7 @@ class PhotoUploadService {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final filePath = '$userId/$dogId/photo_$timestamp.jpg';
     return await uploadImage(
-      imageFile: imageFile,
+      bytes: image.bytes,
       bucketName: dogPhotosBucket,
       filePath: filePath,
       onProgress: onProgress,
@@ -238,7 +250,7 @@ class PhotoUploadService {
 
   /// Upload post image
   static Future<String?> uploadPostImage({
-    required File imageFile,
+    required SelectedImage image,
     required String postId,
     required String userId,
     int imageIndex = 0,
@@ -246,7 +258,7 @@ class PhotoUploadService {
   }) async {
     final filePath = '$userId/posts/${postId}_$imageIndex.jpg';
     return await uploadImage(
-      imageFile: imageFile,
+      bytes: image.bytes,
       bucketName: postImagesBucket,
       filePath: filePath,
       onProgress: onProgress,
@@ -255,7 +267,7 @@ class PhotoUploadService {
 
   /// Upload chat media
   static Future<String?> uploadChatMedia({
-    required File mediaFile,
+    required SelectedImage media,
     required String matchId,
     required String messageId,
     required String userId,
@@ -263,7 +275,7 @@ class PhotoUploadService {
   }) async {
     final filePath = '$matchId/$userId/$messageId.jpg';
     return await uploadImage(
-      imageFile: mediaFile,
+      bytes: media.bytes,
       bucketName: chatMediaBucket,
       filePath: filePath,
       onProgress: onProgress,
@@ -272,7 +284,7 @@ class PhotoUploadService {
 
   /// Upload playdate photo
   static Future<String?> uploadPlaydatePhoto({
-    required File imageFile,
+    required SelectedImage image,
     required String playdateId,
     required String userId,
     ProgressCallback? onProgress,
@@ -280,7 +292,7 @@ class PhotoUploadService {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final filePath = '$playdateId/$userId/memory_$timestamp.jpg';
     return await uploadImage(
-      imageFile: imageFile,
+      bytes: image.bytes,
       bucketName: playdateAlbumsBucket,
       filePath: filePath,
       onProgress: onProgress,
@@ -309,8 +321,8 @@ class PhotoUploadService {
   }
 
   /// Show enhanced photo picker dialog
-  static Future<File?> showPhotoPickerDialog(BuildContext context) async {
-    return await showModalBottomSheet<File?>(
+  static Future<SelectedImage?> showPhotoPickerDialog(BuildContext context) async {
+    return await showModalBottomSheet<SelectedImage?>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -349,8 +361,8 @@ class PhotoUploadService {
                         icon: Icons.camera_alt,
                         label: 'Camera',
                         onTap: () async {
-                          final file = await pickImage(source: ImageSource.camera);
-                          if (context.mounted) Navigator.pop(context, file);
+                          final img = await pickImage(source: ImageSource.camera);
+                          if (context.mounted) Navigator.pop(context, img);
                         },
                       ),
                     ),
@@ -361,8 +373,8 @@ class PhotoUploadService {
                         icon: Icons.photo_library,
                         label: 'Gallery',
                         onTap: () async {
-                          final file = await pickImage(source: ImageSource.gallery);
-                          if (context.mounted) Navigator.pop(context, file);
+                          final img = await pickImage(source: ImageSource.gallery);
+                          if (context.mounted) Navigator.pop(context, img);
                         },
                       ),
                     ),
@@ -378,11 +390,11 @@ class PhotoUploadService {
   }
 
   /// Show multi-image picker dialog
-  static Future<List<File>?> showMultiImagePickerDialog(
+  static Future<List<SelectedImage>?> showMultiImagePickerDialog(
     BuildContext context, {
     int maxImages = 10,
   }) async {
-    return await showModalBottomSheet<List<File>?>(
+    return await showModalBottomSheet<List<SelectedImage>?>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -427,9 +439,9 @@ class PhotoUploadService {
                         icon: Icons.camera_alt,
                         label: 'Camera',
                         onTap: () async {
-                          final file = await pickImage(source: ImageSource.camera);
-                          if (context.mounted && file != null) {
-                            Navigator.pop(context, [file]);
+                          final img = await pickImage(source: ImageSource.camera);
+                          if (context.mounted && img != null) {
+                            Navigator.pop(context, [img]);
                           }
                         },
                       ),
@@ -441,9 +453,9 @@ class PhotoUploadService {
                         icon: Icons.photo_library,
                         label: 'Gallery',
                         onTap: () async {
-                          final files = await pickMultipleImages(maxImages: maxImages);
-                          if (context.mounted && files.isNotEmpty) {
-                            Navigator.pop(context, files);
+                          final imgs = await pickMultipleImages(maxImages: maxImages);
+                          if (context.mounted && imgs.isNotEmpty) {
+                            Navigator.pop(context, imgs);
                           }
                         },
                       ),
@@ -561,11 +573,27 @@ class UploadProgress {
 
 /// Helper extension for easier photo picking
 extension PhotoPickerExtension on BuildContext {
-  Future<File?> showImagePicker() async {
+  Future<SelectedImage?> showImagePicker() async {
     return await PhotoUploadService.showPhotoPickerDialog(this);
   }
 
-  Future<List<File>?> showMultiImagePicker({int maxImages = 10}) async {
+  Future<List<SelectedImage>?> showMultiImagePicker({int maxImages = 10}) async {
     return await PhotoUploadService.showMultiImagePickerDialog(this, maxImages: maxImages);
+  }
+}
+
+/// Compress raw bytes (web-safe)
+Future<Uint8List> _compressBytes(Uint8List input, {int maxWidth = 1080, int maxHeight = 1920, int quality = 85}) async {
+  try {
+    final result = await FlutterImageCompress.compressWithList(
+      input,
+      minWidth: maxWidth,
+      minHeight: maxHeight,
+      quality: quality,
+      format: CompressFormat.jpeg,
+    );
+    return Uint8List.fromList(result);
+  } catch (_) {
+    return input;
   }
 }

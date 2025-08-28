@@ -1,13 +1,13 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
+import 'package:barkdate/services/selected_image.dart';
 
 /// Enhanced Image Picker with multi-selection, preview, and reordering
 class EnhancedImagePicker extends StatefulWidget {
   final bool allowMultiple;
   final int maxImages;
-  final List<File> initialImages;
-  final Function(List<File>) onImagesChanged;
+  final List<SelectedImage> initialImages;
+  final Function(List<SelectedImage>) onImagesChanged;
   final Widget? placeholder;
   final String? title;
   final bool showPreview;
@@ -28,7 +28,7 @@ class EnhancedImagePicker extends StatefulWidget {
 }
 
 class _EnhancedImagePickerState extends State<EnhancedImagePicker> {
-  late List<File> _selectedImages;
+  late List<SelectedImage> _selectedImages;
   bool _isLoading = false;
 
   @override
@@ -165,7 +165,7 @@ class _EnhancedImagePickerState extends State<EnhancedImagePicker> {
     );
   }
 
-  Widget _buildSingleImagePreview(File imageFile) {
+  Widget _buildSingleImagePreview(SelectedImage imageFile) {
     return Container(
       width: double.infinity,
       height: 200,
@@ -177,8 +177,8 @@ class _EnhancedImagePickerState extends State<EnhancedImagePicker> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(11),
-            child: Image.file(
-              imageFile,
+            child: Image.memory(
+              imageFile.bytes,
               width: double.infinity,
               height: double.infinity,
               fit: BoxFit.cover,
@@ -212,7 +212,7 @@ class _EnhancedImagePickerState extends State<EnhancedImagePicker> {
 
   Widget _buildImageThumbnail({
     required Key key,
-    required File imageFile,
+    required SelectedImage imageFile,
     required int index,
   }) {
     return Container(
@@ -228,8 +228,8 @@ class _EnhancedImagePickerState extends State<EnhancedImagePicker> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(7),
-            child: Image.file(
-              imageFile,
+            child: Image.memory(
+              imageFile.bytes,
               width: 100,
               height: 100,
               fit: BoxFit.cover,

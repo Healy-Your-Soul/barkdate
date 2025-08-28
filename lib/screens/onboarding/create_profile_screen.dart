@@ -6,6 +6,7 @@ import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
 import 'package:barkdate/screens/main_navigation.dart';
 import 'package:barkdate/widgets/enhanced_image_picker.dart';
+import 'package:barkdate/services/selected_image.dart';
 
 class CreateProfileScreen extends StatefulWidget {
   final String? userName;
@@ -42,7 +43,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   final _dogBioController = TextEditingController();
   String _dogSize = 'Medium';
   String _dogGender = 'Male';
-  List<File> _dogPhotos = [];
+  List<SelectedImage> _dogPhotos = [];
+  SelectedImage? _ownerPhoto;
   
   bool _isLoading = false;
 
@@ -85,7 +87,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       if (_ownerPhoto != null) {
         try {
           avatarUrl = await PhotoUploadService.uploadUserAvatar(
-            imageFile: _ownerPhoto!,
+            image: _ownerPhoto!,
             userId: userId,
           );
         } catch (e) {
@@ -102,22 +104,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         'avatar_url': avatarUrl,
       });
 
-      // Upload dog photos if selected 🐕📸
-      List<String> dogPhotoUrls = [];
-      if (_dogPhotos.isNotEmpty) {
-        try {
-          dogPhotoUrls = await PhotoUploadService.uploadMultipleImages(
-            imageFiles: _dogPhotos,
-            bucketName: PhotoUploadService.dogPhotosBucket,
-            baseFilePath: '$userId/temp_dog/photo',
-          );
-        } catch (e) {
-          debugPrint('Error uploading dog photos: $e');
-          // Continue without photos
-        }
-      }
-
-      // Add dog profile 🐕
+      // 1) Add dog profile first (without photos) to get real dog_id 🐕
       final dogData = await BarkDateUserService.addDog(userId, {
         'name': _dogNameController.text.trim(),
         'breed': _dogBreedController.text.trim(),
@@ -125,8 +112,33 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         'size': _dogSize,
         'gender': _dogGender,
         'bio': _dogBioController.text.trim(),
-        'photo_urls': dogPhotoUrls,
+        'photo_urls': [],
       });
+
+      // 2) If user selected photos, upload them under {user_id}/{dog_id}/photo_*.jpg and then update dog
+      if (_dogPhotos.isNotEmpty && dogData.isNotEmpty) {
+        try {
+          final dogId = dogData['id'] as String;
+          final uploadedUrls = await PhotoUploadService.uploadDogPhotos(
+            imageFiles: _dogPhotos,
+            dogId: dogId,
+            userId: userId,
+          );
+
+          if (uploadedUrls.isNotEmpty) {
+            await SupabaseService.update(
+              'dogs',
+              {
+                'photo_urls': uploadedUrls,
+                'updated_at': DateTime.now().toIso8601String(),
+              },
+              filters: {'id': dogId},
+            );
+          }
+        } catch (e) {
+          debugPrint('Error uploading/updating dog photos: $e');
+        }
+      }
       
       if (mounted) {
         // Success! Show confirmation 
@@ -325,14 +337,11 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           // Profile photo
           Center(
             child: GestureDetector(
-              onTap: () {
-                // TODO: Re-enable photo selection after bucket setup
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Photo upload coming soon! Skip for now.'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+              onTap: () async {
+                final img = await context.showImagePicker();
+                if (img != null && mounted) {
+                  setState(() => _ownerPhoto = img);
+                }
               },
               child: Stack(
                 children: [
