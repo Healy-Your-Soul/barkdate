@@ -5,7 +5,7 @@ import 'package:barkdate/services/photo_upload_service.dart';
 import 'package:barkdate/services/selected_image.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/screens/bucket_test_screen.dart';
+
 
 class SocialFeedScreen extends StatefulWidget {
   const SocialFeedScreen({super.key});
@@ -15,10 +15,17 @@ class SocialFeedScreen extends StatefulWidget {
 }
 
 class _SocialFeedScreenState extends State<SocialFeedScreen> {
-  final List<Post> _posts = List.from(SampleData.socialPosts);
+  List<Post> _posts = [];
   final TextEditingController _postController = TextEditingController();
   SelectedImage? _selectedImage;
   bool _isPosting = false;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFeed();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,19 +50,6 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         actions: [
           IconButton(
             icon: Icon(
-              Icons.storage,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const BucketTestScreen()),
-              );
-            },
-            tooltip: 'Test Storage Buckets',
-          ),
-          IconButton(
-            icon: Icon(
               Icons.add_box_outlined,
               color: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
@@ -63,14 +57,21 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
           ),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: _posts.length,
-        itemBuilder: (context, index) {
-          final post = _posts[index];
-          return _buildPostCard(context, post);
-        },
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadFeed,
+              child: _posts.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: _posts.length,
+                      itemBuilder: (context, index) {
+                        final post = _posts[index];
+                        return _buildPostCard(context, post);
+                      },
+                    ),
+            ),
     );
   }
 
@@ -593,6 +594,9 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         setState(() {
           _selectedImage = null;
         });
+        
+        // Reload feed to show new post
+        _loadFeed();
       }
 
     } catch (e) {
@@ -607,6 +611,104 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         setState(() => _isPosting = false);
       }
     }
+  }
+
+  /// Load feed posts from Supabase
+  Future<void> _loadFeed() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      // Load posts from Supabase
+      final postsData = await BarkDateSocialService.getFeedPosts();
+      
+      // Convert to Post objects
+      final posts = postsData.map((postData) {
+        return Post(
+          id: postData['id'] ?? '',
+          userName: postData['user']?['name'] ?? 'Unknown User',
+          userPhoto: postData['user']?['avatar_url'] ?? 'https://via.placeholder.com/150',
+          dogName: postData['dog']?['name'] ?? 'Unnamed Dog',
+          content: postData['content'] ?? '',
+          imageUrl: postData['image_urls']?.isNotEmpty == true 
+              ? postData['image_urls'][0] 
+              : null,
+          timestamp: DateTime.tryParse(postData['created_at'] ?? '') ?? DateTime.now(),
+          likes: postData['likes_count'] ?? 0,
+          comments: postData['comments_count'] ?? 0,
+          hashtags: _extractHashtags(postData['content'] ?? ''),
+        );
+      }).toList();
+      
+      if (mounted) {
+        setState(() {
+          _posts = posts;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading feed: $e');
+      if (mounted) {
+        setState(() {
+          _posts = List.from(SampleData.socialPosts); // Fallback to sample data
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading feed: $e')),
+        );
+      }
+    }
+  }
+
+  /// Extract hashtags from post content
+  List<String> _extractHashtags(String content) {
+    final hashtagRegex = RegExp(r'#\w+');
+    return hashtagRegex.allMatches(content)
+        .map((match) => match.group(0)!)
+        .toList();
+  }
+
+  /// Build empty state when no posts
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.pets,
+              size: 80,
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No Posts Yet!',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Be the first to share your dog\'s adventure!\nTap the + button to create a post.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _showCreatePostDialog,
+              icon: const Icon(Icons.add_photo_alternate),
+              label: const Text('Create First Post'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
