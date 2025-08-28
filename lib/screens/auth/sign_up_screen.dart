@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/screens/auth/verify_email_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -88,6 +89,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (mounted) {
         if (response.user != null) {
+          // Create user profile in our custom users table
+          try {
+            await SupabaseService.insert('users', {
+              'id': response.user!.id,
+              'email': response.user!.email!,
+              'name': _nameController.text.trim(),
+              'created_at': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toIso8601String(),
+            });
+          } catch (e) {
+            debugPrint('Error creating user profile: $e');
+            // Continue anyway - the user is created in auth.users
+          }
+
           // Success! Navigate to email verification
           Navigator.pushReplacement(
             context,

@@ -40,7 +40,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Load user's dog (first dog for now)
       final dogs = await SupabaseService.select(
         'dogs', 
-        filters: {'owner_id': user.id},
+        filters: {'user_id': user.id},
         limit: 1,
       );
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:reorderables/reorderables.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
 import 'package:barkdate/services/selected_image.dart';
 
@@ -156,7 +157,7 @@ class _EnhancedImagePickerState extends State<EnhancedImagePicker> {
         onReorder: _reorderImages,
         itemBuilder: (context, index) {
           return _buildImageThumbnail(
-            key: ValueKey(_selectedImages[index].path),
+            key: ValueKey('image_$index'),
             imageFile: _selectedImages[index],
             index: index,
           );
