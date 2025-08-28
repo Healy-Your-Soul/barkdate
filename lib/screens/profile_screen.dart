@@ -49,6 +49,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _dogProfile = dogs.isNotEmpty ? dogs.first : null;
         _isLoading = false;
       });
+      
+      // Debug logging
+      debugPrint('User profile data: ${userProfile?.toString()}');
+      debugPrint('User avatar URL: ${userProfile?['avatar_url']}');
     } catch (e) {
       debugPrint('Error loading profile data: $e');
       setState(() => _isLoading = false);
@@ -332,10 +336,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 CircleAvatar(
                   radius: 30,
                   backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  backgroundImage: _userProfile?['avatar_url'] != null
+                  backgroundImage: _userProfile?['avatar_url'] != null && 
+                                  _userProfile!['avatar_url'].toString().isNotEmpty &&
+                                  !_userProfile!['avatar_url'].toString().contains('placeholder')
                       ? NetworkImage(_userProfile!['avatar_url'])
                       : null,
-                  child: _userProfile?['avatar_url'] == null
+                  onBackgroundImageError: (exception, stackTrace) {
+                    debugPrint('Error loading owner avatar: $exception');
+                  },
+                  child: _userProfile?['avatar_url'] == null || 
+                         _userProfile!['avatar_url'].toString().isEmpty ||
+                         _userProfile!['avatar_url'].toString().contains('placeholder')
                       ? Icon(
                           Icons.person,
                           size: 30,
