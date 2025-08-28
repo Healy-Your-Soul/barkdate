@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/data/sample_data.dart';
 import 'package:barkdate/models/post.dart';
+import 'package:barkdate/services/photo_upload_service.dart';
+import 'package:barkdate/services/selected_image.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
+import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/screens/bucket_test_screen.dart';
 
 class SocialFeedScreen extends StatefulWidget {
   const SocialFeedScreen({super.key});
@@ -11,6 +16,9 @@ class SocialFeedScreen extends StatefulWidget {
 
 class _SocialFeedScreenState extends State<SocialFeedScreen> {
   final List<Post> _posts = List.from(SampleData.socialPosts);
+  final TextEditingController _postController = TextEditingController();
+  SelectedImage? _selectedImage;
+  bool _isPosting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +41,19 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              Icons.storage,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const BucketTestScreen()),
+              );
+            },
+            tooltip: 'Test Storage Buckets',
+          ),
           IconButton(
             icon: Icon(
               Icons.add_box_outlined,
@@ -422,6 +443,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
               ),
               const SizedBox(height: 16),
               TextField(
+                controller: _postController,
                 maxLines: 4,
                 decoration: InputDecoration(
                   hintText: 'Share something about your dog adventures...',
@@ -433,21 +455,76 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
                   fillColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
                 ),
               ),
+              
+              // Show selected image preview
+              if (_selectedImage != null)
+                Container(
+                  margin: const EdgeInsets.only(top: 16),
+                  height: 200,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.memory(
+                          _selectedImage!.bytes,
+                          width: double.infinity,
+                          height: 200,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedImage = null;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.7),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () {},
+                      onPressed: _pickImage,
                       icon: const Icon(Icons.photo),
-                      label: const Text('Add Photo'),
+                      label: Text(_selectedImage != null ? 'Change Photo' : 'Add Photo'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Post'),
+                      onPressed: _isPosting ? null : _createPost,
+                      child: _isPosting 
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Post'),
                     ),
                   ),
                 ],
@@ -457,5 +534,84 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         ),
       ),
     );
+  }
+
+  /// Pick image for post
+  Future<void> _pickImage() async {
+    final image = await PhotoUploadService.pickImage();
+    if (image != null && mounted) {
+      setState(() {
+        _selectedImage = image;
+      });
+    }
+  }
+
+  /// Create and upload post
+  Future<void> _createPost() async {
+    if (_postController.text.trim().isEmpty && _selectedImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add some content or a photo')),
+      );
+      return;
+    }
+
+    setState(() => _isPosting = true);
+
+    try {
+      final userId = SupabaseConfig.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      String? imageUrl;
+      
+      // Upload image if selected
+      if (_selectedImage != null) {
+        final postId = DateTime.now().millisecondsSinceEpoch.toString();
+        imageUrl = await PhotoUploadService.uploadPostImage(
+          image: _selectedImage!,
+          postId: postId,
+          userId: userId,
+        );
+      }
+
+      // Create post in database
+      await BarkDateSocialService.createPost(
+        userId: userId,
+        content: _postController.text.trim(),
+        imageUrls: imageUrl != null ? [imageUrl] : null,
+      );
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Post created successfully!')),
+        );
+        
+        // Clear form
+        _postController.clear();
+        setState(() {
+          _selectedImage = null;
+        });
+      }
+
+    } catch (e) {
+      debugPrint('Error creating post: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating post: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPosting = false);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _postController.dispose();
+    super.dispose();
   }
 }
