@@ -3,6 +3,7 @@ import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/screens/auth/verify_email_screen.dart';
+import 'package:barkdate/screens/main_navigation.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -89,27 +90,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (mounted) {
         if (response.user != null) {
-          // Create user profile in our custom users table
-          try {
-            await SupabaseService.insert('users', {
-              'id': response.user!.id,
-              'email': response.user!.email!,
-              'name': _nameController.text.trim(),
-              'created_at': DateTime.now().toIso8601String(),
-              'updated_at': DateTime.now().toIso8601String(),
-            });
-          } catch (e) {
-            debugPrint('Error creating user profile: $e');
-            // Continue anyway - the user is created in auth.users
+          // Check if email confirmation is required
+          final emailConfirmed = response.user!.emailConfirmedAt != null;
+          
+          if (emailConfirmed) {
+            // Email already confirmed, go directly to profile creation
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MainNavigation(),
+              ),
+            );
+          } else {
+            // Email confirmation required
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => VerifyEmailScreen(email: response.user!.email ?? ''),
+              ),
+            );
           }
-
-          // Success! Navigate to email verification
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => VerifyEmailScreen(email: response.user!.email ?? ''),
-            ),
-          );
         } else {
           // Show error
           ScaffoldMessenger.of(context).showSnackBar(

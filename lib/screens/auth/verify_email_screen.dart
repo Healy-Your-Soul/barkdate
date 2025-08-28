@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/screens/main_navigation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   final String email;
@@ -12,7 +13,31 @@ class VerifyEmailScreen extends StatefulWidget {
 
 class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   bool _checking = false;
+  bool _resending = false;
   String? _message;
+
+  Future<void> _resendEmail() async {
+    setState(() {
+      _resending = true;
+      _message = null;
+    });
+    
+    try {
+      await SupabaseConfig.auth.resend(
+        type: OtpType.signup,
+        email: widget.email,
+      );
+      setState(() {
+        _message = 'Verification email sent! Check your inbox.';
+      });
+    } catch (e) {
+      setState(() {
+        _message = 'Failed to resend email. Try again later.';
+      });
+    } finally {
+      if (mounted) setState(() => _resending = false);
+    }
+  }
 
   Future<void> _checkVerified() async {
     setState(() {
@@ -81,6 +106,16 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                 child: _checking
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : const Text("I've verified"),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: _resending ? null : _resendEmail,
+                child: _resending
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text("Resend Email"),
               ),
             ),
           ],
