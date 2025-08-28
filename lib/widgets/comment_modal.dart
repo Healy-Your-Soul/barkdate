@@ -41,6 +41,19 @@ class _CommentModalState extends State<CommentModal> {
     _currentUserId = user?.id;
   }
 
+  /// Get the current user's dog for display
+  Future<List<Map<String, dynamic>>> _getCurrentUserDog() async {
+    try {
+      final userId = SupabaseConfig.auth.currentUser?.id;
+      if (userId == null) return [];
+      
+      return await BarkDateUserService.getUserDogs(userId);
+    } catch (e) {
+      debugPrint('Error getting user dog: $e');
+      return [];
+    }
+  }
+
   Future<void> _loadComments() async {
     setState(() => _isLoading = true);
     
@@ -387,14 +400,40 @@ class _CommentModalState extends State<CommentModal> {
       child: SafeArea(
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              child: Icon(
-                Icons.person,
-                size: 18,
-                color: Theme.of(context).colorScheme.onPrimary,
-              ),
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _getCurrentUserDog(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                  final dog = snapshot.data!.first;
+                  final dogPhotoUrl = dog['main_photo_url'];
+                  return CircleAvatar(
+                    radius: 18,
+                    backgroundImage: dogPhotoUrl != null && dogPhotoUrl.toString().isNotEmpty
+                        ? NetworkImage(dogPhotoUrl)
+                        : null,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    onBackgroundImageError: (exception, stackTrace) {
+                      debugPrint('Error loading dog image: $exception');
+                    },
+                    child: dogPhotoUrl == null || dogPhotoUrl.toString().isEmpty
+                        ? Icon(
+                            Icons.pets,
+                            size: 18,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          )
+                        : null,
+                  );
+                }
+                return CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  child: Icon(
+                    Icons.pets,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.onPrimary,
+                  ),
+                );
+              },
             ),
             const SizedBox(width: 12),
             Expanded(
