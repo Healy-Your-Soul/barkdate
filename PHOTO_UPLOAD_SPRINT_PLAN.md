@@ -1,10 +1,17 @@
-# Photo Upload System - Complete Implementation Sprint 📸
+# Photo Upload System - Complete Implementation Sprint 📸 (UPDATED)
 
-*Comprehensive plan for photo uploads across the entire BarkDate app*
+*Comprehensive plan for photo uploads across the entire BarkDate app with DOG-FIRST approach*
 
 ## 🎯 **Sprint Overview**
 
-**Goal**: Implement a complete photo upload system that allows users to upload, store, and manage photos across all app features - profiles, posts, chats, playdates, and multi-image galleries.
+**Goal**: Implement a complete photo upload system with **DOG-FIRST** profile creation and smart photo organization (1 main + 3 extras per dog).
+
+## 🐕 **Key Updates**:
+- **REVERSED FLOW**: Dog Profile FIRST → Owner Profile SECOND  
+- **Main Photo System**: 1st uploaded photo = main profile photo (center display)
+- **Photo Limits**: 4 total photos per dog (1 main + 3 extras)
+- **Database Schema**: Added `main_photo_url` and `extra_photo_urls` columns
+- **Fixed FK Constraints**: Ensure user profile exists before dog creation
 
 **Duration**: 2-3 weeks (depending on complexity)
 

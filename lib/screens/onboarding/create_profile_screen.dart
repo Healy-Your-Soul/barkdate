@@ -68,6 +68,33 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     super.dispose();
   }
 
+  Future<void> _ensureUserProfileExists(String userId) async {
+    try {
+      // Check if user profile exists
+      final existingUser = await SupabaseService.selectSingle(
+        'users',
+        filters: {'id': userId},
+      );
+
+      if (existingUser == null) {
+        // Create user profile if it doesn't exist (fallback if trigger didn't work)
+        final user = SupabaseAuth.currentUser;
+        await SupabaseService.insert('users', {
+          'id': userId,
+          'email': user?.email ?? '',
+          'name': _ownerNameController.text.trim().isNotEmpty 
+              ? _ownerNameController.text.trim() 
+              : 'User',
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      }
+    } catch (e) {
+      debugPrint('Error ensuring user profile exists: $e');
+      // Continue anyway - user might exist but we had a query error
+    }
+  }
+
   Future<void> _createProfile() async {
     setState(() => _isLoading = true);
     
@@ -82,29 +109,32 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         userId = user.id;
       }
 
-      // Upload user avatar if selected 📸
-      String? avatarUrl;
-      if (_ownerPhoto != null) {
+      // Ensure user profile exists (created by database trigger)
+      await _ensureUserProfileExists(userId);
+
+      // 1) Upload dog photos first and organize: main + extras 🐕📸
+      List<String> dogPhotoUrls = [];
+      String? mainPhotoUrl;
+      List<String> extraPhotoUrls = [];
+      
+      if (_dogPhotos.isNotEmpty) {
         try {
-          avatarUrl = await PhotoUploadService.uploadUserAvatar(
-            image: _ownerPhoto!,
-            userId: userId,
+          // Upload all photos first
+          dogPhotoUrls = await PhotoUploadService.uploadMultipleImages(
+            images: _dogPhotos,
+            bucketName: PhotoUploadService.dogPhotosBucket,
+            baseFilePath: '$userId/temp/photo', // Use temp folder, will update after getting dogId
           );
+          
+          // Organize: first photo = main, rest = extras (max 3)
+          mainPhotoUrl = dogPhotoUrls.isNotEmpty ? dogPhotoUrls[0] : null;
+          extraPhotoUrls = dogPhotoUrls.length > 1 ? dogPhotoUrls.sublist(1, dogPhotoUrls.length.clamp(1, 4)) : [];
         } catch (e) {
-          debugPrint('Error uploading avatar: $e');
-          // Continue without avatar
+          debugPrint('Error uploading dog photos: $e');
         }
       }
 
-      // Update user profile in database 🎉
-      await BarkDateUserService.updateUserProfile(userId, {
-        'name': _ownerNameController.text.trim(),
-        'bio': _ownerBioController.text.trim(),
-        'location': _ownerLocationController.text.trim(),
-        'avatar_url': avatarUrl,
-      });
-
-      // 1) Add dog profile first (without photos) to get real dog_id 🐕
+      // 2) Add dog profile (DOG FIRST! 🐕)
       final dogData = await BarkDateUserService.addDog(userId, {
         'name': _dogNameController.text.trim(),
         'breed': _dogBreedController.text.trim(),
@@ -112,33 +142,33 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         'size': _dogSize,
         'gender': _dogGender,
         'bio': _dogBioController.text.trim(),
-        'photo_urls': [],
+        'main_photo_url': mainPhotoUrl,
+        'extra_photo_urls': extraPhotoUrls,
+        'photo_urls': dogPhotoUrls, // Keep all photos for backward compatibility
       });
 
-      // 2) If user selected photos, upload them under {user_id}/{dog_id}/photo_*.jpg and then update dog
-      if (_dogPhotos.isNotEmpty && dogData.isNotEmpty) {
+      // 3) Upload owner avatar and update owner profile (OWNER SECOND! 👤)
+      String? avatarUrl;
+      if (_ownerPhoto != null) {
         try {
-          final dogId = dogData['id'] as String;
-          final uploadedUrls = await PhotoUploadService.uploadDogPhotos(
-            imageFiles: _dogPhotos,
-            dogId: dogId,
-            userId: userId,
+          avatarUrl = await PhotoUploadService.uploadSingleImage(
+            image: _ownerPhoto!,
+            bucketName: PhotoUploadService.userAvatarsBucket,
+            filePath: '$userId/avatar.jpg',
           );
-
-          if (uploadedUrls.isNotEmpty) {
-            await SupabaseService.update(
-              'dogs',
-              {
-                'photo_urls': uploadedUrls,
-                'updated_at': DateTime.now().toIso8601String(),
-              },
-              filters: {'id': dogId},
-            );
-          }
         } catch (e) {
-          debugPrint('Error uploading/updating dog photos: $e');
+          debugPrint('Error uploading avatar: $e');
         }
       }
+
+      await BarkDateUserService.updateUserProfile(userId, {
+        'name': _ownerNameController.text.trim(),
+        'bio': _ownerBioController.text.trim(),
+        'location': _ownerLocationController.text.trim(),
+        'avatar_url': avatarUrl,
+      });
+
+      // Success! Profile created with dog-first approach ✅
       
       if (mounted) {
         // Success! Show confirmation 
@@ -171,10 +201,10 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
   void _nextStep() {
     if (_currentStep == 0) {
-      // Validate owner info
-      if (_ownerNameController.text.isEmpty) {
+      // Validate dog info (DOG FIRST!)
+      if (_dogNameController.text.isEmpty || _dogBreedController.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter your name')),
+          const SnackBar(content: Text('Please enter your dog\'s name and breed')),
         );
         return;
       }
@@ -185,10 +215,10 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       );
       setState(() => _currentStep = 1);
     } else {
-      // Validate dog info
-      if (_dogNameController.text.isEmpty || _dogBreedController.text.isEmpty) {
+      // Validate owner info (OWNER SECOND!)
+      if (_ownerNameController.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please fill in all required fields')),
+          const SnackBar(content: Text('Please enter your name')),
         );
         return;
       }
@@ -267,8 +297,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  _buildOwnerInfoStep(),
-                  _buildDogInfoStep(),
+                  _buildDogInfoStep(), // DOG FIRST! 🐕
+                  _buildOwnerInfoStep(), // OWNER SECOND! 👤
                 ],
               ),
             ),
@@ -298,7 +328,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                           ),
                         )
                       : Text(
-                          _currentStep == 0 ? 'Next' : 'Create Profile',
+                          _currentStep == 0 ? 'Next: Owner Info' : 'Create Profile',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -320,14 +350,14 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Your Information',
+            '👤 Your Information',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Tell us a bit about yourself',
+            'Now tell us about yourself, the proud dog parent!',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -446,33 +476,44 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Your Dog',
+            '🐕 Your Dog Profile',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            "Let's create a profile for your furry friend",
+            "Dogs come first! Let's create your furry friend's profile",
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 32),
           
-          // Dog photos (multi-image gallery)
+          // Dog photos (1 main + 3 extras = 4 total)
           EnhancedImagePicker(
             allowMultiple: true,
-            maxImages: 5,
+            maxImages: 4, // 1 main + 3 extras
             initialImages: _dogPhotos,
             onImagesChanged: (images) {
               setState(() {
                 _dogPhotos = images;
               });
             },
-            title: 'Dog Photos',
+            title: 'Dog Photos (1st = Main Profile Photo)',
             showPreview: true,
           ),
+          if (_dogPhotos.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                '📸 First photo will be your dog\'s main profile picture',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
           const SizedBox(height: 32),
           
           // Dog name field

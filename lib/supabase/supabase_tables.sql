@@ -24,7 +24,9 @@ CREATE TABLE dogs (
   age integer NOT NULL,
   size text NOT NULL CHECK (size IN ('Small', 'Medium', 'Large', 'Extra Large')),
   gender text NOT NULL CHECK (gender IN ('Male', 'Female')),
-  photo_urls text[] DEFAULT '{}',
+  main_photo_url text, -- Primary/featured photo (center display)
+  extra_photo_urls text[] DEFAULT '{}', -- Up to 3 additional photos
+  photo_urls text[] DEFAULT '{}', -- All photos (backward compatibility)
   bio text,
   temperament text[] DEFAULT '{}',
   vaccinated boolean DEFAULT false,
