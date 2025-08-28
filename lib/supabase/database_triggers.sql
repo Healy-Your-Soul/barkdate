@@ -14,6 +14,10 @@ BEGIN
     NOW()
   );
   RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  -- Log error but don't fail the auth process
+  RAISE LOG 'Error creating user profile for %: %', NEW.id, SQLERRM;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

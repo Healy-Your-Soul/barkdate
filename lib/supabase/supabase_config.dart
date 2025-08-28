@@ -33,10 +33,7 @@ class SupabaseAuth {
         data: userData,
       );
 
-      // Optional: Create user profile after successful signup
-      if (response.user != null) {
-        await _createUserProfile(response.user!, userData);
-      }
+      // User profile will be created automatically by database trigger
 
       return response;
     } catch (e) {
@@ -87,35 +84,7 @@ class SupabaseAuth {
   static Stream<AuthState> get authStateChanges =>
       SupabaseConfig.auth.onAuthStateChange;
 
-  /// Create user profile in database (modify based on your schema)
-  static Future<void> _createUserProfile(
-    User user,
-    Map<String, dynamic>? userData,
-  ) async {
-    try {
-      // Check if profile already exists
-      final existingUser = await SupabaseService.selectSingle(
-        'users',
-        filters: {'id': user.id},
-      );
-
-      if (existingUser == null) {
-        await SupabaseService.insert('users', {
-          'id': user.id,
-          'email': user.email,
-          'name': userData?['name'] ?? 'New User',
-          'avatar_url': userData?['avatar_url'],
-          'bio': userData?['bio'],
-          'location': userData?['location'],
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        });
-      }
-    } catch (e) {
-      debugPrint('Error creating user profile: ${e}');
-      // Don't throw here to avoid breaking the signup flow
-    }
-  }
+  // User profiles are created automatically by database trigger
 
   /// Handle authentication errors
   static String _handleAuthError(dynamic error) {
