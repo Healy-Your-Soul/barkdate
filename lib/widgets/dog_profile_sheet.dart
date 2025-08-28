@@ -84,7 +84,12 @@ class DogProfileSheet extends StatelessWidget {
                   );
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => ChatDetailScreen(chat: preview)),
+                    MaterialPageRoute(
+                      builder: (context) => ChatDetailScreen(
+                        recipientName: dog.ownerName,
+                        dogName: dog.name,
+                      ),
+                    ),
                   );
                 },
                 onInvite: () {

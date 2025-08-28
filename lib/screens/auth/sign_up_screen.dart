@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
+
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/supabase/barkdate_services.dart';
+
 import 'package:barkdate/screens/auth/verify_email_screen.dart';
-import 'package:barkdate/screens/main_navigation.dart';
+
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});

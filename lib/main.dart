@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:barkdate/theme.dart';
 import 'package:barkdate/screens/main_navigation.dart';
 import 'package:barkdate/screens/onboarding/welcome_screen.dart';
-import 'package:barkdate/screens/auth/sign_in_screen.dart';
+
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/services/photo_upload_service.dart';
-import 'package:barkdate/screens/onboarding/location_permission_screen.dart';
+
+
 import 'package:barkdate/screens/auth/verify_email_screen.dart';
-import 'package:barkdate/supabase/barkdate_services.dart';
+
 import 'package:barkdate/services/settings_service.dart';
 
 void main() async {

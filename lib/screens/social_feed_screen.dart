@@ -5,6 +5,7 @@ import 'package:barkdate/services/photo_upload_service.dart';
 import 'package:barkdate/services/selected_image.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/widgets/comment_modal.dart';
 
 
 class SocialFeedScreen extends StatefulWidget {
@@ -275,138 +276,17 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
   }
 
   void _showComments(Post post) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        minChildSize: 0.3,
-        builder: (context, scrollController) => Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Comments',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView.builder(
-                  controller: scrollController,
-                  itemCount: 3, // Sample comments
-                  itemBuilder: (context, index) => _buildCommentTile(context, index),
-                ),
-              ),
-              _buildCommentInput(context),
-            ],
-          ),
-        ),
-      ),
-    );
+      barrierColor: Colors.transparent, // Transparent barrier
+      builder: (context) => CommentModal(post: post),
+    ).then((_) {
+      // Reload feed when comment modal closes to update comment counts
+      _loadFeed();
+    });
   }
 
-  Widget _buildCommentTile(BuildContext context, int index) {
-    final sampleComments = [
-      'What a beautiful dog! Looks like they\'re having a blast.',
-      'I love seeing dogs so happy. Where is this park?',
-      'Luna would love to play with your pup sometime!',
-    ];
 
-    final sampleNames = ['Sophie Bennett', 'Ethan Carter', 'Maya Lopez'];
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-            child: Icon(
-              Icons.person,
-              size: 16,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  sampleNames[index],
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  sampleComments[index],
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${index + 1}d ago',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCommentInput(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            child: Icon(
-              Icons.person,
-              size: 16,
-              color: Theme.of(context).colorScheme.onPrimary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Add a comment...',
-                border: InputBorder.none,
-                hintStyle: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: Icon(
-              Icons.send,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _sharePost(Post post) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -625,6 +505,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
       final posts = postsData.map((postData) {
         return Post(
           id: postData['id'] ?? '',
+          userId: postData['user_id'] ?? '',
           userName: postData['user']?['name'] ?? 'Unknown User',
           userPhoto: postData['user']?['avatar_url'] ?? 'https://via.placeholder.com/150',
           dogName: postData['dog']?['name'] ?? 'Unnamed Dog',

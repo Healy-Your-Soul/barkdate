@@ -315,6 +315,61 @@ class BarkDateSocialService {
       }
     }
   }
+
+  /// Get comments for a post
+  static Future<List<Map<String, dynamic>>> getPostComments(String postId) async {
+    return await SupabaseConfig.client
+        .from('post_comments')
+        .select('''
+          *,
+          user:users!post_comments_user_id_fkey(name, avatar_url)
+        ''')
+        .eq('post_id', postId)
+        .order('created_at', ascending: true);
+  }
+
+  /// Add comment to post
+  static Future<Map<String, dynamic>> addComment({
+    required String postId,
+    required String userId,
+    required String content,
+  }) async {
+    final data = {
+      'post_id': postId,
+      'user_id': userId,
+      'content': content,
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+
+    final result = await SupabaseService.insert('post_comments', data);
+    
+    // Update comments count on post
+    final currentPost = await SupabaseService.selectSingle('posts', filters: {'id': postId});
+    if (currentPost != null) {
+      await SupabaseService.update('posts', {
+        'comments_count': (currentPost['comments_count'] ?? 0) + 1,
+      }, filters: {'id': postId});
+    }
+    
+    return result.first;
+  }
+
+  /// Delete comment
+  static Future<void> deleteComment(String commentId, String postId) async {
+    await SupabaseService.delete(
+      'post_comments',
+      filters: {'id': commentId},
+    );
+
+    // Update comments count on post
+    final currentPost = await SupabaseService.selectSingle('posts', filters: {'id': postId});
+    if (currentPost != null) {
+      await SupabaseService.update('posts', {
+        'comments_count': (currentPost['comments_count'] ?? 1) - 1,
+      }, filters: {'id': postId});
+    }
+  }
 }
 
 class BarkDateNotificationService {
