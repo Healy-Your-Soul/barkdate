@@ -108,7 +108,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
                   },
                   child: post.userPhoto.isEmpty || post.userPhoto.contains('placeholder')
                       ? Icon(
-                          Icons.pets,
+                          Icons.person,
                           size: 20,
                           color: Theme.of(context).colorScheme.primary,
                         )
@@ -538,7 +538,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         
         final dogPhoto = postData['dog']?['main_photo_url'];
         final userAvatar = postData['user']?['avatar_url'];
-        final finalPhoto = dogPhoto ?? userAvatar ?? 'https://via.placeholder.com/150';
+        final finalPhoto = userAvatar ?? 'https://via.placeholder.com/150';
         
         debugPrint('Dog photo: $dogPhoto');
         debugPrint('User avatar: $userAvatar');

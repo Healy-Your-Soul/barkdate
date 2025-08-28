@@ -207,7 +207,7 @@ class _CommentModalState extends State<CommentModal> {
                       onBackgroundImageError: (exception, stackTrace) {},
                       child: widget.post.userPhoto.isEmpty
                           ? Icon(
-                              Icons.pets,
+                              Icons.person,
                               size: 16,
                               color: Theme.of(context).colorScheme.primary,
                             )
