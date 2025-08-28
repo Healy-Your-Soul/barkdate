@@ -108,13 +108,15 @@ class _CommentModalState extends State<CommentModal> {
             initialChildSize: 0.75,
             maxChildSize: 0.95,
             minChildSize: 0.5,
-            builder: (context, scrollController) => Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
+            builder: (context, scrollController) => Material(
+              color: Colors.transparent,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
                 ),
-              ),
               child: Column(
                 children: [
                   // Handle bar for drag indication
@@ -152,6 +154,7 @@ class _CommentModalState extends State<CommentModal> {
                   // Comment input
                   _buildCommentInput(),
                 ],
+              ),
               ),
             ),
           ),
@@ -363,9 +366,11 @@ class _CommentModalState extends State<CommentModal> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: TextField(
-                controller: _commentController,
-                decoration: InputDecoration(
+              child: Material(
+                color: Colors.transparent,
+                child: TextField(
+                  controller: _commentController,
+                  decoration: InputDecoration(
                   hintText: 'Add a comment...',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
@@ -393,8 +398,9 @@ class _CommentModalState extends State<CommentModal> {
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
-                maxLines: null,
-                textCapitalization: TextCapitalization.sentences,
+                                  maxLines: null,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
               ),
             ),
             const SizedBox(width: 8),
