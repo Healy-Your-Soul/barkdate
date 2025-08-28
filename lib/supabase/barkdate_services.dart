@@ -38,6 +38,16 @@ class BarkDateUserService {
     final result = await SupabaseService.insert('dogs', dogData);
     return result.first;
   }
+
+  /// Update dog profile
+  static Future<void> updateDogProfile(String userId, Map<String, dynamic> data) async {
+    data['updated_at'] = DateTime.now().toIso8601String();
+    await SupabaseService.update(
+      'dogs',
+      data,
+      filters: {'user_id': userId},
+    );
+  }
 }
 
 class BarkDateMatchService {

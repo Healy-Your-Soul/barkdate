@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:http/http.dart' as http;
 
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
@@ -8,12 +9,14 @@ import 'package:barkdate/screens/main_navigation.dart';
 import 'package:barkdate/widgets/enhanced_image_picker.dart';
 import 'package:barkdate/services/selected_image.dart';
 
+enum EditMode { createProfile, editDog, editOwner, editBoth }
+
 class CreateProfileScreen extends StatefulWidget {
   final String? userName;
   final String? userEmail;
   final bool locationEnabled;
   final String? userId; // Add userId parameter
-  final bool isEditing; // Add editing mode flag
+  final EditMode editMode; // Replace isEditing with editMode
 
   const CreateProfileScreen({
     super.key,
@@ -21,7 +24,7 @@ class CreateProfileScreen extends StatefulWidget {
     this.userEmail,
     this.locationEnabled = true,
     this.userId, // Optional - will get from auth if not provided
-    this.isEditing = false, // Default to creating new profile
+    this.editMode = EditMode.createProfile, // Default to creation
   });
 
   @override
@@ -56,8 +59,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     _ownerNameController.text = widget.userName ?? '';
     // Note: We don't pre-fill email in any field since users should enter their own info
     
-    // Load existing data if in edit mode
-    if (widget.isEditing) {
+    // Load existing data if in any edit mode
+    if (widget.editMode != EditMode.createProfile) {
       _loadExistingData();
     }
   }
@@ -109,6 +112,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         _dogBioController.text = dogProfile['bio'] ?? '';
         _dogSize = dogProfile['size'] ?? 'Medium';
         _dogGender = dogProfile['gender'] ?? 'Male';
+        
+        // Load existing dog photos
+        await _loadDogPhotos(dogProfile);
       }
     } catch (e) {
       debugPrint('Error loading existing data: $e');
@@ -122,6 +128,53 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  /// Load dog photos from URLs for edit mode
+  Future<void> _loadDogPhotos(Map<String, dynamic> dogProfile) async {
+    try {
+      List<SelectedImage> loadedPhotos = [];
+      
+      // Load main photo
+      if (dogProfile['main_photo_url'] != null) {
+        final mainPhoto = await _loadImageFromUrl(dogProfile['main_photo_url']);
+        if (mainPhoto != null) loadedPhotos.add(mainPhoto);
+      }
+      
+      // Load extra photos
+      if (dogProfile['extra_photo_urls'] != null) {
+        final extraUrls = List<String>.from(dogProfile['extra_photo_urls']);
+        for (String url in extraUrls.take(3)) { // Max 3 extra photos
+          final photo = await _loadImageFromUrl(url);
+          if (photo != null) loadedPhotos.add(photo);
+        }
+      }
+      
+      if (mounted) {
+        setState(() {
+          _dogPhotos = loadedPhotos;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading dog photos: $e');
+    }
+  }
+
+  /// Helper to convert network image URL to SelectedImage
+  Future<SelectedImage?> _loadImageFromUrl(String url) async {
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        return SelectedImage(
+          bytes: response.bodyBytes,
+          fileName: url.split('/').last,
+          mimeType: 'image/jpeg',
+        );
+      }
+    } catch (e) {
+      debugPrint('Error loading image from $url: $e');
+    }
+    return null;
   }
 
   Future<void> _ensureUserProfileExists(String userId) async {
@@ -302,6 +355,19 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // For single-screen edits, skip the stepper UI
+    if (widget.editMode == EditMode.editDog) {
+      return _buildSingleEditScreen(isDogEdit: true);
+    }
+    if (widget.editMode == EditMode.editOwner) {
+      return _buildSingleEditScreen(isDogEdit: false);
+    }
+    
+    // Keep existing 2-step UI for creation and editBoth
+    return _buildTwoStepScreen();
+  }
+
+  Widget _buildTwoStepScreen() {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -317,7 +383,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               )
             : null,
         title: Text(
-          widget.isEditing ? 'Edit Profile' : 'Create Profile',
+          widget.editMode != EditMode.createProfile ? 'Edit Profile' : 'Create Profile',
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
@@ -393,7 +459,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                       : Text(
                           _currentStep == 0 
                               ? 'Next: Owner Info' 
-                              : widget.isEditing ? 'Update Profile' : 'Create Profile',
+                              : widget.editMode != EditMode.createProfile ? 'Update Profile' : 'Create Profile',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -951,5 +1017,174 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         _dogPhotos.removeAt(index);
       }
     });
+  }
+
+  /// Build single-screen edit UI (dog or owner only)
+  Widget _buildSingleEditScreen({required bool isDogEdit}) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          isDogEdit ? 'Edit Dog Profile' : 'Edit Owner Profile',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: isDogEdit ? _buildDogInfoStep() : _buildOwnerInfoStep(),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(24),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _saveSingleEdit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    minimumSize: const Size(double.infinity, 56),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Update ${isDogEdit ? 'Dog' : 'Owner'} Profile',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Save single edit (dog or owner only)
+  Future<void> _saveSingleEdit() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      String? userId = widget.userId ?? SupabaseConfig.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      await _ensureUserProfileExists(userId);
+
+      if (widget.editMode == EditMode.editDog) {
+        // Validate dog info
+        if (_dogNameController.text.isEmpty || _dogBreedController.text.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please enter your dog\'s name and breed')),
+          );
+          return;
+        }
+
+        // Upload dog photos
+        List<String> dogPhotoUrls = [];
+        String? mainPhotoUrl;
+        List<String> extraPhotoUrls = [];
+
+        if (_dogPhotos.isNotEmpty) {
+          try {
+            dogPhotoUrls = await PhotoUploadService.uploadMultipleImages(
+              imageFiles: _dogPhotos,
+              bucketName: PhotoUploadService.dogPhotosBucket,
+              baseFilePath: '$userId/dog/photo',
+            );
+            mainPhotoUrl = dogPhotoUrls.isNotEmpty ? dogPhotoUrls[0] : null;
+            extraPhotoUrls = dogPhotoUrls.length > 1 ? dogPhotoUrls.sublist(1, dogPhotoUrls.length.clamp(1, 4)) : [];
+          } catch (e) {
+            debugPrint('Error uploading dog photos: $e');
+          }
+        }
+
+        // Update dog profile
+        await BarkDateUserService.updateDogProfile(userId, {
+          'name': _dogNameController.text.trim(),
+          'breed': _dogBreedController.text.trim(),
+          'age': int.tryParse(_dogAgeController.text) ?? 1,
+          'size': _dogSize,
+          'gender': _dogGender,
+          'bio': _dogBioController.text.trim(),
+          'main_photo_url': mainPhotoUrl,
+          'extra_photo_urls': extraPhotoUrls,
+          'photo_urls': dogPhotoUrls,
+        });
+
+      } else if (widget.editMode == EditMode.editOwner) {
+        // Validate owner info
+        if (_ownerNameController.text.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please enter your name')),
+          );
+          return;
+        }
+
+        // Upload owner avatar
+        String? avatarUrl;
+        if (_ownerPhoto != null) {
+          try {
+            avatarUrl = await PhotoUploadService.uploadUserAvatar(
+              image: _ownerPhoto!,
+              userId: userId,
+            );
+          } catch (e) {
+            debugPrint('Error uploading avatar: $e');
+          }
+        }
+
+        // Update owner profile
+        await BarkDateUserService.updateUserProfile(userId, {
+          'name': _ownerNameController.text.trim(),
+          'bio': _ownerBioController.text.trim(),
+          'location': _ownerLocationController.text.trim(),
+          'avatar_url': avatarUrl,
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully!')),
+        );
+        Navigator.pop(context, true); // Return true to indicate success
+      }
+
+    } catch (e) {
+      debugPrint('Error updating profile: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating profile: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 }

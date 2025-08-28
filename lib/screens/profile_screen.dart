@@ -127,11 +127,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               context,
                               MaterialPageRoute(
                                                               builder: (context) => CreateProfileScreen(
-                                userName: _userProfile?['name'],
-                                userEmail: _userProfile?['email'],
                                 userId: SupabaseConfig.auth.currentUser?.id,
-                                locationEnabled: true,
-                                isEditing: true, // Enable edit mode
+                                editMode: EditMode.editDog, // Only edit dog
                               ),
                               ),
                             );
@@ -308,11 +305,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => CreateProfileScreen(
-                          userName: _userProfile?['name'],
-                          userEmail: _userProfile?['email'],
                           userId: SupabaseConfig.auth.currentUser?.id,
-                          locationEnabled: true,
-                          isEditing: true, // Enable edit mode
+                          editMode: EditMode.editOwner, // Only edit owner
                         ),
                       ),
                     );
