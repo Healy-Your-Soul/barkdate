@@ -34,7 +34,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   final _ownerNameController = TextEditingController();
   final _ownerBioController = TextEditingController();
   final _ownerLocationController = TextEditingController();
-  File? _ownerPhoto;
+  // Removed old File-based ownerPhoto; using SelectedImage below
   
   // Dog info controllers
   final _dogNameController = TextEditingController();
@@ -353,7 +353,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                       shape: BoxShape.circle,
                       image: _ownerPhoto != null
                           ? DecorationImage(
-                              image: FileImage(_ownerPhoto!),
+                              image: MemoryImage(_ownerPhoto!.bytes),
                               fit: BoxFit.cover,
                             )
                           : null,

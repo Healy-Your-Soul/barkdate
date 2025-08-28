@@ -330,7 +330,7 @@ class _EnhancedImagePickerState extends State<EnhancedImagePicker> {
 
 /// Simple image thumbnail widget for displaying selected images
 class ImageThumbnail extends StatelessWidget {
-  final File imageFile;
+  final SelectedImage imageFile;
   final VoidCallback? onDelete;
   final double size;
   final bool showDeleteButton;
@@ -356,8 +356,8 @@ class ImageThumbnail extends StatelessWidget {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(7),
-            child: Image.file(
-              imageFile,
+            child: Image.memory(
+              imageFile.bytes,
               fit: BoxFit.cover,
             ),
           ),
