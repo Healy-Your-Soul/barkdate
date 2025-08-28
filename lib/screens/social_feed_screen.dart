@@ -103,9 +103,11 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
                       ? NetworkImage(post.userPhoto)
                       : null,
                   backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  onBackgroundImageError: (exception, stackTrace) {
-                    debugPrint('Error loading profile image: $exception');
-                  },
+                  onBackgroundImageError: post.userPhoto.isNotEmpty && !post.userPhoto.contains('placeholder')
+                      ? (exception, stackTrace) {
+                          debugPrint('Error loading profile image: $exception');
+                        }
+                      : null,
                   child: post.userPhoto.isEmpty || post.userPhoto.contains('placeholder')
                       ? Icon(
                           Icons.person,

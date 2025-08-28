@@ -204,7 +204,11 @@ class _CommentModalState extends State<CommentModal> {
                           ? NetworkImage(widget.post.userPhoto) 
                           : null,
                       backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                      onBackgroundImageError: (exception, stackTrace) {},
+                      onBackgroundImageError: widget.post.userPhoto.isNotEmpty
+                          ? (exception, stackTrace) {
+                              debugPrint('Error loading modal header image: $exception');
+                            }
+                          : null,
                       child: widget.post.userPhoto.isEmpty
                           ? Icon(
                               Icons.person,
@@ -315,9 +319,11 @@ class _CommentModalState extends State<CommentModal> {
                 ? NetworkImage(profileImage) 
                 : null,
             backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-            onBackgroundImageError: (exception, stackTrace) {
-              debugPrint('Error loading comment profile image: $exception');
-            },
+            onBackgroundImageError: profileImage.isNotEmpty && !profileImage.contains('placeholder')
+                ? (exception, stackTrace) {
+                    debugPrint('Error loading comment profile image: $exception');
+                  }
+                : null,
             child: profileImage.isEmpty || profileImage.contains('placeholder')
                 ? Icon(
                     Icons.pets, // Use pet icon for dog-focused comments
