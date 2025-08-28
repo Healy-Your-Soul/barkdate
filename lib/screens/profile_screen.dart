@@ -183,11 +183,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 16),
                   // Stats row
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildStatItem(context, '23', 'Playdates'),
-                      _buildStatItem(context, '89', 'Friends'),
-                      _buildStatItem(context, '156', 'Posts'),
+                      Expanded(child: _buildStatItem(context, '23', 'Playdates')),
+                      Expanded(child: _buildStatItem(context, '89', 'Friends')),
+                      Expanded(child: _buildStatItem(context, '156', 'Posts')),
                     ],
                   ),
                 ],
@@ -267,6 +266,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildStatItem(BuildContext context, String value, String label) {
     return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           value,
@@ -274,6 +275,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.primary,
           ),
+          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 4),
         Text(
@@ -281,6 +283,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
+          textAlign: TextAlign.center,
         ),
       ],
     );

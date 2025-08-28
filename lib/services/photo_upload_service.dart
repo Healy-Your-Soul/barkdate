@@ -144,10 +144,18 @@ class PhotoUploadService {
       }
 
       // Upload to Supabase Storage with progress tracking
+      // For avatar updates, use upsert to replace existing files
       // On web we must upload bytes; on mobile we can upload file as well.
       await SupabaseConfig.client.storage
           .from(bucketName)
-          .uploadBinary(filePath, bytes, fileOptions: const FileOptions(contentType: 'image/jpeg'));
+          .uploadBinary(
+            filePath, 
+            bytes, 
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true, // Allow replacing existing files
+            ),
+          );
 
       // Get the public URL
       final publicUrl = SupabaseConfig.client.storage

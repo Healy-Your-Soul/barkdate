@@ -96,6 +96,16 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         _ownerNameController.text = userProfile['name'] ?? '';
         _ownerBioController.text = userProfile['bio'] ?? '';
         _ownerLocationController.text = userProfile['location'] ?? '';
+        
+        // Load existing owner avatar
+        if (userProfile['avatar_url'] != null && userProfile['avatar_url'].toString().isNotEmpty) {
+          final avatarImage = await _loadImageFromUrl(userProfile['avatar_url']);
+          if (avatarImage != null && mounted) {
+            setState(() {
+              _ownerPhoto = avatarImage;
+            });
+          }
+        }
       }
 
       // Load dog profile
