@@ -99,8 +99,20 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundImage: NetworkImage(post.userPhoto),
-                  onBackgroundImageError: (exception, stackTrace) {},
+                  backgroundImage: post.userPhoto.isNotEmpty && !post.userPhoto.contains('placeholder')
+                      ? NetworkImage(post.userPhoto)
+                      : null,
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  onBackgroundImageError: (exception, stackTrace) {
+                    debugPrint('Error loading profile image: $exception');
+                  },
+                  child: post.userPhoto.isEmpty || post.userPhoto.contains('placeholder')
+                      ? Icon(
+                          Icons.pets,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.primary,
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -467,10 +479,15 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         );
       }
 
+      // Get user's dog for the post
+      final userDogs = await BarkDateUserService.getUserDogs(userId);
+      final dogId = userDogs.isNotEmpty ? userDogs.first['id'] : null;
+
       // Create post in database
       await BarkDateSocialService.createPost(
         userId: userId,
         content: _postController.text.trim(),
+        dogId: dogId,
         imageUrls: imageUrl != null ? [imageUrl] : null,
       );
 
@@ -514,11 +531,24 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
       
       // Convert to Post objects
       final posts = postsData.map((postData) {
+        // Debug logging
+        debugPrint('Post data: ${postData.toString()}');
+        debugPrint('Dog data: ${postData['dog']?.toString() ?? 'null'}');
+        debugPrint('User data: ${postData['user']?.toString() ?? 'null'}');
+        
+        final dogPhoto = postData['dog']?['main_photo_url'];
+        final userAvatar = postData['user']?['avatar_url'];
+        final finalPhoto = dogPhoto ?? userAvatar ?? 'https://via.placeholder.com/150';
+        
+        debugPrint('Dog photo: $dogPhoto');
+        debugPrint('User avatar: $userAvatar');
+        debugPrint('Final photo: $finalPhoto');
+        
         return Post(
           id: postData['id'] ?? '',
           userId: postData['user_id'] ?? '',
           userName: postData['user']?['name'] ?? 'Unknown User',
-          userPhoto: postData['dog']?['main_photo_url'] ?? postData['user']?['avatar_url'] ?? 'https://via.placeholder.com/150',
+          userPhoto: finalPhoto,
           dogName: postData['dog']?['name'] ?? 'Unnamed Dog',
           content: postData['content'] ?? '',
           imageUrl: postData['image_urls']?.isNotEmpty == true 
