@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/screens/help_screen.dart';
 import 'package:barkdate/screens/auth/sign_in_screen.dart';
+import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/settings_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -88,11 +90,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.person_outline,
               title: 'Profile',
               subtitle: 'Manage your profile information',
-              onTap: () {
-                // TODO: Navigate to edit profile screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Edit Profile - Coming soon!')),
-                );
+              onTap: () async {
+                // Navigate to profile editing
+                final user = SupabaseConfig.auth.currentUser;
+                if (user != null) {
+                  // Load current profile data
+                  final userProfile = await SupabaseService.selectSingle(
+                    'users',
+                    filters: {'id': user.id},
+                  );
+                  
+                  if (mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CreateProfileScreen(
+                          userName: userProfile?['name'],
+                          userEmail: userProfile?['email'] ?? user.email,
+                          userId: user.id,
+                          locationEnabled: true,
+                        ),
+                      ),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please sign in to edit profile')),
+                  );
+                }
               },
             ),
             _buildSettingsItem(
@@ -100,11 +125,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.pets,
               title: 'My Dogs',
               subtitle: 'Manage your dog profiles',
-              onTap: () {
-                // TODO: Navigate to manage dogs screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Manage Dogs - Coming soon!')),
-                );
+              onTap: () async {
+                // Navigate to dog management (same as profile editing for now)
+                final user = SupabaseConfig.auth.currentUser;
+                if (user != null) {
+                  // Load current profile data
+                  final userProfile = await SupabaseService.selectSingle(
+                    'users',
+                    filters: {'id': user.id},
+                  );
+                  
+                  if (mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CreateProfileScreen(
+                          userName: userProfile?['name'],
+                          userEmail: userProfile?['email'] ?? user.email,
+                          userId: user.id,
+                          locationEnabled: true,
+                        ),
+                      ),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please sign in to manage dogs')),
+                  );
+                }
               },
             ),
             _buildSettingsItem(
@@ -481,10 +529,10 @@ class _AppPreferencesSheetState extends State<AppPreferencesSheet> {
                   onChanged: (value) => _settingsService.setLocationEnabled(value),
                 ),
                 SwitchListTile(
-                  title: const Text('Show Online Status'),
-                  subtitle: const Text('Let others know when you\'re online'),
-                  value: _showOnlineStatus,
-                  onChanged: (value) => setState(() => _showOnlineStatus = value),
+                  title: const Text('Privacy Mode'),
+                  subtitle: const Text('Limit who can see your profile'),
+                  value: _settingsService.privacyMode,
+                  onChanged: (value) => _settingsService.setPrivacyMode(value),
                 ),
                 
                 const SizedBox(height: 24),
@@ -498,50 +546,21 @@ class _AppPreferencesSheetState extends State<AppPreferencesSheet> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                ListTile(
-                  title: const Text('Search Radius'),
-                  subtitle: Text('${_searchRadius.round()} miles'),
+                const ListTile(
+                  title: Text('Search Radius'),
+                  subtitle: Text('25 miles'),
                   trailing: SizedBox(
                     width: 150,
                     child: Slider(
-                      value: _searchRadius,
+                      value: 25.0,
                       min: 1,
                       max: 50,
                       divisions: 49,
-                      onChanged: (value) => setState(() => _searchRadius = value),
+                      onChanged: null, // TODO: Implement search radius setting
                     ),
                   ),
                 ),
-                
-                const SizedBox(height: 24),
-                
-                // Theme
-                Text(
-                  'Appearance',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  title: const Text('Theme'),
-                  subtitle: Text(_theme),
-                  trailing: DropdownButton<String>(
-                    value: _theme,
-                    items: ['Light', 'Dark', 'System'].map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _theme = value);
-                      }
-                    },
-                  ),
-                ),
+
               ],
             ),
           ),
