@@ -90,26 +90,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (mounted) {
         if (response.user != null) {
-          // Check if email confirmation is required
-          final emailConfirmed = response.user!.emailConfirmedAt != null;
-          
-          if (emailConfirmed) {
-            // Email already confirmed, go directly to profile creation
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const MainNavigation(),
-              ),
-            );
-          } else {
-            // Email confirmation required
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => VerifyEmailScreen(email: response.user!.email ?? ''),
-              ),
-            );
-          }
+          // Success! Navigate to email verification
+          // (Database trigger will automatically create user profile)
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => VerifyEmailScreen(email: response.user!.email ?? ''),
+            ),
+          );
         } else {
           // Show error
           ScaffoldMessenger.of(context).showSnackBar(

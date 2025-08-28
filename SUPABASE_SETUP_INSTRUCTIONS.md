@@ -5,13 +5,11 @@ Your app has a **database foreign key constraint** that's preventing user signup
 
 ## 📝 **Quick Fix Steps:**
 
-### 1. **Disable Email Confirmation (Temporary)**
+### 1. **Ensure Email Confirmation is Enabled**
 1. Go to your Supabase Dashboard: `https://caottaawpnocywayjmyl.supabase.co`
 2. Go to **Authentication** → **Settings** 
-3. **TURN OFF** "Enable email confirmations" (temporarily)
+3. **MAKE SURE** "Enable email confirmations" is **ON**
 4. Click **Save**
-
-This will allow users to sign up immediately without email verification.
 
 ### 2. **Fix Database Trigger** 
 Run this SQL in your **Supabase SQL Editor**:
@@ -46,14 +44,10 @@ CREATE TRIGGER on_auth_user_created
 
 ### 3. **Test the App**
 1. Try signing up with a new email
-2. You should go directly to the main app (no email verification needed)
-3. Create your profile and test photo uploads
-
-### 4. **Re-enable Email Confirmation (Later)**
-Once everything works:
-1. Go back to **Authentication** → **Settings**
-2. **TURN ON** "Enable email confirmations" 
-3. Configure email templates if needed
+2. You should receive a verification email
+3. Click the verification link
+4. Return to app and tap "I've verified"
+5. Create your profile and test photo uploads
 
 ## 🔍 **What Was Wrong:**
 
