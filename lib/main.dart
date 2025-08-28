@@ -21,7 +21,8 @@ void main() async {
   await SettingsService().initialize();
   
   // Initialize Storage buckets for photos 📸
-  await PhotoUploadService.ensureBucketsExist();
+  // Temporarily disable until storage buckets + policies are created via SQL
+  // await PhotoUploadService.ensureBucketsExist();
   
   runApp(const MyApp());
 }
