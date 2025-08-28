@@ -208,6 +208,14 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         return;
       }
       
+      // Validate at least 1 photo is required
+      if (_dogPhotos.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please add at least one photo of your dog')),
+        );
+        return;
+      }
+      
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -489,30 +497,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           ),
           const SizedBox(height: 32),
           
-          // Dog photos (1 main + 3 extras = 4 total)
-          EnhancedImagePicker(
-            allowMultiple: true,
-            maxImages: 4, // 1 main + 3 extras
-            initialImages: _dogPhotos,
-            onImagesChanged: (images) {
-              setState(() {
-                _dogPhotos = images;
-              });
-            },
-            title: 'Dog Photos (1st = Main Profile Photo)',
-            showPreview: true,
-          ),
-          if (_dogPhotos.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Text(
-                '📸 First photo will be your dog\'s main profile picture',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
+          // Dog Photos Layout (Main + Extra)
+          _buildDogPhotosSection(),
           const SizedBox(height: 32),
           
           // Dog name field
@@ -632,5 +618,280 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         ],
       ),
     );
+  }
+
+  /// Custom dog photos layout: Large main photo + 3 smaller extra photos
+  Widget _buildDogPhotosSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Add Photos',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              ' *',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        
+        // Main Photo (Large, Center)
+        _buildMainPhotoArea(),
+        const SizedBox(height: 16),
+        
+        // Extra Photos (3 smaller slots)
+        _buildExtraPhotosRow(),
+        const SizedBox(height: 8),
+        
+        // Helper text
+        Text(
+          'First photo will be your dog\'s main profile picture',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Large main photo area (center, prominent)
+  Widget _buildMainPhotoArea() {
+    final hasMainPhoto = _dogPhotos.isNotEmpty;
+    final mainPhoto = hasMainPhoto ? _dogPhotos[0] : null;
+
+    return Center(
+      child: GestureDetector(
+        onTap: _pickMainPhoto,
+        child: Container(
+          width: 200,
+          height: 200,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: hasMainPhoto 
+                  ? Theme.of(context).colorScheme.primary 
+                  : Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+              width: 2,
+            ),
+          ),
+          child: hasMainPhoto && mainPhoto != null
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Stack(
+                    children: [
+                      Image(
+                        image: mainPhoto.imageProvider!,
+                        width: 200,
+                        height: 200,
+                        fit: BoxFit.cover,
+                      ),
+                      // Edit/Delete overlay
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildPhotoActionButton(
+                              icon: Icons.edit,
+                              onPressed: _pickMainPhoto,
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            _buildPhotoActionButton(
+                              icon: Icons.delete,
+                              onPressed: () => _removePhoto(0),
+                              backgroundColor: Theme.of(context).colorScheme.error,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.add_photo_alternate, // Material Design icon
+                      size: 48,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Main Photo',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Tap to add',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  /// Row of 3 smaller extra photo slots
+  Widget _buildExtraPhotosRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: List.generate(3, (index) {
+        final photoIndex = index + 1; // +1 because main photo is index 0
+        final hasPhoto = _dogPhotos.length > photoIndex;
+        final photo = hasPhoto ? _dogPhotos[photoIndex] : null;
+
+        return GestureDetector(
+          onTap: () => _pickExtraPhoto(photoIndex),
+          child: Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: hasPhoto 
+                    ? Theme.of(context).colorScheme.primary 
+                    : Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
+            child: hasPhoto && photo != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Stack(
+                      children: [
+                        Image(
+                          image: photo.imageProvider!,
+                          width: 90,
+                          height: 90,
+                          fit: BoxFit.cover,
+                        ),
+                        // Delete button
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: _buildPhotoActionButton(
+                            icon: Icons.close,
+                            onPressed: () => _removePhoto(photoIndex),
+                            backgroundColor: Theme.of(context).colorScheme.error,
+                            size: 24,
+                            iconSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add_photo_alternate,
+                        size: 24,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Extra',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        );
+      }),
+    );
+  }
+
+  /// Small circular action button for photo actions
+  Widget _buildPhotoActionButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    required Color backgroundColor,
+    double size = 32,
+    double iconSize = 18,
+  }) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(
+          icon,
+          size: iconSize,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  /// Pick main photo (index 0)
+  Future<void> _pickMainPhoto() async {
+    final image = await context.showImagePicker();
+    if (image != null) {
+      setState(() {
+        if (_dogPhotos.isEmpty) {
+          _dogPhotos = [image];
+        } else {
+          _dogPhotos[0] = image;
+        }
+      });
+    }
+  }
+
+  /// Pick extra photo at specific index
+  Future<void> _pickExtraPhoto(int index) async {
+    final image = await context.showImagePicker();
+    if (image != null) {
+      setState(() {
+        // Ensure list is long enough
+        while (_dogPhotos.length <= index) {
+          _dogPhotos.add(_dogPhotos.first); // Duplicate main photo as placeholder
+        }
+        _dogPhotos[index] = image;
+      });
+    }
+  }
+
+  /// Remove photo at index and reorganize
+  void _removePhoto(int index) {
+    setState(() {
+      if (index < _dogPhotos.length) {
+        _dogPhotos.removeAt(index);
+      }
+    });
   }
 }
