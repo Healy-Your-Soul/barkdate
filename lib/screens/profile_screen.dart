@@ -106,25 +106,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       CircleAvatar(
                         radius: 50,
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        child: Icon(
-                          Icons.person,
-                          size: 50,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
+                        backgroundImage: _dogProfile?['main_photo_url'] != null
+                            ? NetworkImage(_dogProfile!['main_photo_url'])
+                            : null,
+                        child: _dogProfile?['main_photo_url'] == null
+                            ? Icon(
+                                Icons.pets,
+                                size: 50,
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              )
+                            : null,
                       ),
                       Positioned(
                         bottom: 0,
                         right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.tertiary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.edit,
-                            size: 16,
-                            color: Theme.of(context).colorScheme.onTertiary,
+                        child: GestureDetector(
+                          onTap: () async {
+                            // Navigate to profile editing for dog
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                                              builder: (context) => CreateProfileScreen(
+                                userName: _userProfile?['name'],
+                                userEmail: _userProfile?['email'],
+                                userId: SupabaseConfig.auth.currentUser?.id,
+                                locationEnabled: true,
+                                isEditing: true, // Enable edit mode
+                              ),
+                              ),
+                            );
+                            // Reload data if profile was updated
+                            if (result == true) {
+                              _loadProfileData();
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.tertiary,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.edit,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.onTertiary,
+                            ),
                           ),
                         ),
                       ),
@@ -132,7 +158,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    _userProfile?['name'] ?? 'User',
+                    _dogProfile?['name'] ?? 'Add Your Dog',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -140,7 +166,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _userProfile?['bio'] ?? 'Dog lover & adventure seeker',
+                    _dogProfile?['bio'] ?? 'Your furry best friend',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
@@ -161,8 +187,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             
             const SizedBox(height: 24),
             
-            // My Dog section
-            _buildMyDogSection(context),
+            // My Owner section
+            _buildMyOwnerSection(context),
             
             const SizedBox(height: 24),
             
@@ -251,7 +277,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildMyDogSection(BuildContext context) {
+  Widget _buildMyOwnerSection(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -270,7 +296,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'My Dog',
+                  'My Owner',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -286,6 +312,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           userEmail: _userProfile?['email'],
                           userId: SupabaseConfig.auth.currentUser?.id,
                           locationEnabled: true,
+                          isEditing: true, // Enable edit mode
                         ),
                       ),
                     );
@@ -311,11 +338,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 CircleAvatar(
                   radius: 30,
                   backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  child: Icon(
-                    Icons.pets,
-                    size: 30,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                  backgroundImage: _userProfile?['avatar_url'] != null
+                      ? NetworkImage(_userProfile!['avatar_url'])
+                      : null,
+                  child: _userProfile?['avatar_url'] == null
+                      ? Icon(
+                          Icons.person,
+                          size: 30,
+                          color: Theme.of(context).colorScheme.primary,
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -323,23 +355,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _dogProfile?['name'] ?? 'No dog added yet',
+                        _userProfile?['name'] ?? 'No owner info yet',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _dogProfile != null 
-                          ? '${_dogProfile!['breed'] ?? 'Unknown breed'}, ${_dogProfile!['age'] ?? 0} years old'
-                          : 'Add your dog\'s information',
+                        _userProfile?['location'] ?? 'Location not set',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _dogProfile?['bio'] ?? 'Add a description of your dog!',
+                        _userProfile?['bio'] ?? 'Dog lover & adventure seeker',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),

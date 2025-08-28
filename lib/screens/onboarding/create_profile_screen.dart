@@ -13,6 +13,7 @@ class CreateProfileScreen extends StatefulWidget {
   final String? userEmail;
   final bool locationEnabled;
   final String? userId; // Add userId parameter
+  final bool isEditing; // Add editing mode flag
 
   const CreateProfileScreen({
     super.key,
@@ -20,6 +21,7 @@ class CreateProfileScreen extends StatefulWidget {
     this.userEmail,
     this.locationEnabled = true,
     this.userId, // Optional - will get from auth if not provided
+    this.isEditing = false, // Default to creating new profile
   });
 
   @override
@@ -53,6 +55,11 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     super.initState();
     _ownerNameController.text = widget.userName ?? '';
     // Note: We don't pre-fill email in any field since users should enter their own info
+    
+    // Load existing data if in edit mode
+    if (widget.isEditing) {
+      _loadExistingData();
+    }
   }
 
   @override
@@ -66,6 +73,55 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     _dogAgeController.dispose();
     _dogBioController.dispose();
     super.dispose();
+  }
+
+  /// Load existing user and dog data for edit mode
+  Future<void> _loadExistingData() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      String? userId = widget.userId ?? SupabaseConfig.auth.currentUser?.id;
+      if (userId == null) return;
+
+      // Load user profile
+      final userProfile = await SupabaseService.selectSingle(
+        'users',
+        filters: {'id': userId},
+      );
+      
+      if (userProfile != null) {
+        _ownerNameController.text = userProfile['name'] ?? '';
+        _ownerBioController.text = userProfile['bio'] ?? '';
+        _ownerLocationController.text = userProfile['location'] ?? '';
+      }
+
+      // Load dog profile
+      final dogProfiles = await SupabaseService.select(
+        'dogs',
+        filters: {'user_id': userId},
+      );
+      
+      if (dogProfiles.isNotEmpty) {
+        final dogProfile = dogProfiles.first;
+        _dogNameController.text = dogProfile['name'] ?? '';
+        _dogBreedController.text = dogProfile['breed'] ?? '';
+        _dogAgeController.text = dogProfile['age']?.toString() ?? '';
+        _dogBioController.text = dogProfile['bio'] ?? '';
+        _dogSize = dogProfile['size'] ?? 'Medium';
+        _dogGender = dogProfile['gender'] ?? 'Male';
+      }
+    } catch (e) {
+      debugPrint('Error loading existing data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading profile data: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _ensureUserProfileExists(String userId) async {
@@ -261,7 +317,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               )
             : null,
         title: Text(
-          'Create Profile',
+          widget.isEditing ? 'Edit Profile' : 'Create Profile',
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
@@ -335,7 +391,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                           ),
                         )
                       : Text(
-                          _currentStep == 0 ? 'Next: Owner Info' : 'Create Profile',
+                          _currentStep == 0 
+                              ? 'Next: Owner Info' 
+                              : widget.isEditing ? 'Update Profile' : 'Create Profile',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
