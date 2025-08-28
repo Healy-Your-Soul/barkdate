@@ -295,6 +295,15 @@ class _CommentModalState extends State<CommentModal> {
     final content = comment['content'] ?? '';
     final createdAt = DateTime.tryParse(comment['created_at'] ?? '') ?? DateTime.now();
     
+    // Get dog data for the commenting user
+    final dog = comment['dog'] ?? {};
+    final dogName = dog['name'] ?? 'Unknown Dog';
+    final dogPhoto = dog['main_photo_url'] ?? '';
+    final ownerFirstName = userName.split(' ').first; // Get first name only
+    
+    final displayName = '$dogName & $ownerFirstName';
+    final profileImage = dogPhoto.isNotEmpty ? dogPhoto : userAvatar;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -302,11 +311,16 @@ class _CommentModalState extends State<CommentModal> {
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundImage: userAvatar.isNotEmpty ? NetworkImage(userAvatar) : null,
+            backgroundImage: profileImage.isNotEmpty && !profileImage.contains('placeholder')
+                ? NetworkImage(profileImage) 
+                : null,
             backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-            child: userAvatar.isEmpty
+            onBackgroundImageError: (exception, stackTrace) {
+              debugPrint('Error loading comment profile image: $exception');
+            },
+            child: profileImage.isEmpty || profileImage.contains('placeholder')
                 ? Icon(
-                    Icons.person,
+                    Icons.pets, // Use pet icon for dog-focused comments
                     size: 18,
                     color: Theme.of(context).colorScheme.primary,
                   )
@@ -321,7 +335,7 @@ class _CommentModalState extends State<CommentModal> {
                   text: TextSpan(
                     children: [
                       TextSpan(
-                        text: userName,
+                        text: displayName,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurface,

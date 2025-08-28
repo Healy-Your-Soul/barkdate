@@ -316,9 +316,10 @@ class BarkDateSocialService {
     }
   }
 
-  /// Get comments for a post
+  /// Get comments for a post with user and dog data
   static Future<List<Map<String, dynamic>>> getPostComments(String postId) async {
-    return await SupabaseConfig.client
+    // First get comments with user data
+    final comments = await SupabaseConfig.client
         .from('post_comments')
         .select('''
           *,
@@ -326,6 +327,24 @@ class BarkDateSocialService {
         ''')
         .eq('post_id', postId)
         .order('created_at', ascending: true);
+    
+    // Then get dog data for each user
+    for (var comment in comments) {
+      final userId = comment['user_id'];
+      if (userId != null) {
+        final dogs = await SupabaseConfig.client
+            .from('dogs')
+            .select('name, main_photo_url')
+            .eq('user_id', userId)
+            .limit(1);
+        
+        if (dogs.isNotEmpty) {
+          comment['dog'] = dogs.first;
+        }
+      }
+    }
+    
+    return comments;
   }
 
   /// Add comment to post
