@@ -110,10 +110,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       CircleAvatar(
                         radius: 50,
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        backgroundImage: _dogProfile?['main_photo_url'] != null
+                        backgroundImage: _dogProfile?['main_photo_url'] != null &&
+                                        _dogProfile!['main_photo_url'].toString().isNotEmpty
                             ? NetworkImage(_dogProfile!['main_photo_url'])
                             : null,
-                        child: _dogProfile?['main_photo_url'] == null
+                        onBackgroundImageError: _dogProfile?['main_photo_url'] != null &&
+                                               _dogProfile!['main_photo_url'].toString().isNotEmpty
+                            ? (exception, stackTrace) {
+                                debugPrint('Error loading dog avatar: $exception');
+                              }
+                            : null,
+                        child: _dogProfile?['main_photo_url'] == null ||
+                               _dogProfile!['main_photo_url'].toString().isEmpty
                             ? Icon(
                                 Icons.pets,
                                 size: 50,
@@ -341,9 +349,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   !_userProfile!['avatar_url'].toString().contains('placeholder')
                       ? NetworkImage(_userProfile!['avatar_url'])
                       : null,
-                  onBackgroundImageError: (exception, stackTrace) {
-                    debugPrint('Error loading owner avatar: $exception');
-                  },
+                  onBackgroundImageError: _userProfile?['avatar_url'] != null && 
+                                         _userProfile!['avatar_url'].toString().isNotEmpty &&
+                                         !_userProfile!['avatar_url'].toString().contains('placeholder')
+                      ? (exception, stackTrace) {
+                          debugPrint('Error loading owner avatar: $exception');
+                        }
+                      : null,
                   child: _userProfile?['avatar_url'] == null || 
                          _userProfile!['avatar_url'].toString().isEmpty ||
                          _userProfile!['avatar_url'].toString().contains('placeholder')
