@@ -29,6 +29,13 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
   }
 
   @override
+  void didUpdateWidget(SocialFeedScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Refresh feed when widget updates (e.g., user returns from profile edit)
+    _loadFeed();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -511,7 +518,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
           id: postData['id'] ?? '',
           userId: postData['user_id'] ?? '',
           userName: postData['user']?['name'] ?? 'Unknown User',
-          userPhoto: postData['user']?['avatar_url'] ?? 'https://via.placeholder.com/150',
+          userPhoto: postData['dog']?['main_photo_url'] ?? postData['user']?['avatar_url'] ?? 'https://via.placeholder.com/150',
           dogName: postData['dog']?['name'] ?? 'Unnamed Dog',
           content: postData['content'] ?? '',
           imageUrl: postData['image_urls']?.isNotEmpty == true 

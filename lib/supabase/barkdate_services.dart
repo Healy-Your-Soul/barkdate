@@ -271,7 +271,7 @@ class BarkDateSocialService {
         .select('''
           *,
           user:users!posts_user_id_fkey(name, avatar_url),
-          dog:dogs!posts_dog_id_fkey(name, breed)
+          dog:dogs!posts_dog_id_fkey(name, breed, main_photo_url)
         ''')
         .eq('is_public', true)
         .order('created_at', ascending: false)

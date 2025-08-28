@@ -200,11 +200,14 @@ class _CommentModalState extends State<CommentModal> {
                   children: [
                     CircleAvatar(
                       radius: 16,
-                      backgroundImage: NetworkImage(widget.post.userPhoto),
+                      backgroundImage: widget.post.userPhoto.isNotEmpty 
+                          ? NetworkImage(widget.post.userPhoto) 
+                          : null,
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                       onBackgroundImageError: (exception, stackTrace) {},
                       child: widget.post.userPhoto.isEmpty
                           ? Icon(
-                              Icons.person,
+                              Icons.pets,
                               size: 16,
                               color: Theme.of(context).colorScheme.primary,
                             )
