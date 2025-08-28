@@ -69,6 +69,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
                       itemCount: _posts.length,
                       itemBuilder: (context, index) {
                         final post = _posts[index];
+                        // Rebuild each post card to update timestamps
                         return _buildPostCard(context, post);
                       },
                     ),
@@ -100,14 +101,14 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        post.userName,
+                        post.dogName,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Text(
-                        'with ${post.dogName} • ${_formatPostTime(post.timestamp)}',
+                        'with ${post.userName} • ${_formatPostTime(post.timestamp)}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
@@ -252,7 +253,10 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
 
-    if (difference.inDays > 0) {
+    if (difference.inDays >= 365) {
+      final years = difference.inDays ~/ 365;
+      return '${years}y';
+    } else if (difference.inDays > 0) {
       return '${difference.inDays}d';
     } else if (difference.inHours > 0) {
       return '${difference.inHours}h';

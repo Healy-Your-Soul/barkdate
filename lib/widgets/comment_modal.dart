@@ -212,7 +212,7 @@ class _CommentModalState extends State<CommentModal> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      widget.post.userName,
+                      widget.post.dogName,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -220,13 +220,21 @@ class _CommentModalState extends State<CommentModal> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                if (widget.post.content.isNotEmpty)
+                Text(
+                  'with ${widget.post.userName}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                if (widget.post.content.isNotEmpty) ...[
+                  const SizedBox(height: 4),
                   Text(
                     widget.post.content,
                     style: Theme.of(context).textTheme.bodyMedium,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                ],
               ],
             ),
           ),
@@ -427,8 +435,9 @@ class _CommentModalState extends State<CommentModal> {
     final now = DateTime.now();
     final difference = now.difference(time);
 
-    if (difference.inDays > 7) {
-      return '${difference.inDays ~/ 7}w';
+    if (difference.inDays >= 365) {
+      final years = difference.inDays ~/ 365;
+      return '${years}y';
     } else if (difference.inDays > 0) {
       return '${difference.inDays}d';
     } else if (difference.inHours > 0) {
