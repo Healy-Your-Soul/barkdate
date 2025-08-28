@@ -4,12 +4,65 @@ import 'package:barkdate/screens/playdates_screen.dart';
 import 'package:barkdate/screens/premium_screen.dart';
 import 'package:barkdate/screens/social_feed_screen.dart';
 import 'package:barkdate/screens/settings_screen.dart';
+import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
+import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  Map<String, dynamic>? _userProfile;
+  Map<String, dynamic>? _dogProfile;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileData();
+  }
+
+  Future<void> _loadProfileData() async {
+    try {
+      final user = SupabaseConfig.auth.currentUser;
+      if (user == null) return;
+
+      // Load user profile
+      final userProfile = await SupabaseService.selectSingle(
+        'users',
+        filters: {'id': user.id},
+      );
+
+      // Load user's dog (first dog for now)
+      final dogs = await SupabaseService.select(
+        'dogs', 
+        filters: {'owner_id': user.id},
+        limit: 1,
+      );
+
+      setState(() {
+        _userProfile = userProfile;
+        _dogProfile = dogs.isNotEmpty ? dogs.first : null;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading profile data: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Profile')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -79,7 +132,7 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Alex Johnson',
+                    _userProfile?['name'] ?? 'User',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -87,7 +140,7 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Dog lover & adventure seeker',
+                    _userProfile?['bio'] ?? 'Dog lover & adventure seeker',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
@@ -223,7 +276,24 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
                 TextButton(
-                  onPressed: () {},
+                  onPressed: () async {
+                    // Navigate to profile editing
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CreateProfileScreen(
+                          userName: _userProfile?['name'],
+                          userEmail: _userProfile?['email'],
+                          userId: SupabaseConfig.auth.currentUser?.id,
+                          locationEnabled: true,
+                        ),
+                      ),
+                    );
+                    // Reload data if profile was updated
+                    if (result == true) {
+                      _loadProfileData();
+                    }
+                  },
                   child: Text(
                     'Edit',
                     style: TextStyle(
@@ -253,21 +323,23 @@ class ProfileScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Luna',
+                        _dogProfile?['name'] ?? 'No dog added yet',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Golden Retriever, 3 years old',
+                        _dogProfile != null 
+                          ? '${_dogProfile!['breed'] ?? 'Unknown breed'}, ${_dogProfile!['age'] ?? 0} years old'
+                          : 'Add your dog\'s information',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Friendly and loves to play fetch!',
+                        _dogProfile?['bio'] ?? 'Add a description of your dog!',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),

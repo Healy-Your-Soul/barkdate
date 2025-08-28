@@ -8,12 +8,17 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
 import 'package:barkdate/screens/onboarding/location_permission_screen.dart';
 import 'package:barkdate/screens/auth/verify_email_screen.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
+import 'package:barkdate/services/settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize Supabase
   await SupabaseConfig.initialize();
+  
+  // Initialize settings service
+  await SettingsService().initialize();
   
   // Initialize Storage buckets for photos 📸
   // Temporarily disabled - will create buckets after successful signup
@@ -27,13 +32,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'BarkDate',
-      debugShowCheckedModeBanner: false,
-      theme: lightTheme,
-      darkTheme: darkTheme,
-      themeMode: ThemeMode.system,
-      home: const AuthChecker(), // Check if user is already logged in
+    return ListenableBuilder(
+      listenable: SettingsService(),
+      builder: (context, child) {
+        return MaterialApp(
+          title: 'BarkDate',
+          debugShowCheckedModeBanner: false,
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: SettingsService().themeMode, // Use settings service theme
+          home: const AuthChecker(), // Check if user is already logged in
+        );
+      },
     );
   }
 }

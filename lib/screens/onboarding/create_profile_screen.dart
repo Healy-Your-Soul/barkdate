@@ -126,15 +126,16 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       // }
       
       if (mounted) {
-        // Success! Show confirmation and let AuthChecker handle navigation
+        // Success! Show confirmation 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Profile created successfully! Welcome to BarkDate! 🎉'),
+            content: Text('Profile updated successfully! 🎉'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
         );
-        // AuthChecker will automatically detect the completed profile and navigate to MainNavigation
+        // Return success to caller (if called from ProfileScreen)
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {

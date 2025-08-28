@@ -2,9 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:barkdate/screens/help_screen.dart';
 import 'package:barkdate/screens/auth/sign_in_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/services/settings_service.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showSignOutDialog(BuildContext context) {
     showDialog(
@@ -360,16 +367,31 @@ class AppPreferencesSheet extends StatefulWidget {
 }
 
 class _AppPreferencesSheetState extends State<AppPreferencesSheet> {
-  bool _pushNotifications = true;
-  bool _emailNotifications = false;
-  bool _locationSharing = true;
-  bool _showOnlineStatus = true;
-  String _theme = 'System';
-  double _searchRadius = 25.0;
+  final _settingsService = SettingsService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Settings will be read from SettingsService directly
+  }
+
+  String _getThemeDisplayName(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return 'System';
+      case ThemeMode.light:
+        return 'Light';
+      case ThemeMode.dark:
+        return 'Dark';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return ListenableBuilder(
+      listenable: _settingsService,
+      builder: (context, child) {
+        return Container(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
@@ -396,6 +418,35 @@ class _AppPreferencesSheetState extends State<AppPreferencesSheet> {
             child: ListView(
               controller: widget.scrollController,
               children: [
+                // Theme Settings
+                Text(
+                  'Appearance',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  title: const Text('Theme'),
+                  subtitle: Text(_getThemeDisplayName(_settingsService.themeMode)),
+                  trailing: DropdownButton<ThemeMode>(
+                    value: _settingsService.themeMode,
+                    items: [
+                      DropdownMenuItem(value: ThemeMode.system, child: const Text('System')),
+                      DropdownMenuItem(value: ThemeMode.light, child: const Text('Light')),
+                      DropdownMenuItem(value: ThemeMode.dark, child: const Text('Dark')),
+                    ],
+                    onChanged: (ThemeMode? mode) {
+                      if (mode != null) {
+                        _settingsService.setThemeMode(mode);
+                      }
+                    },
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+
                 // Notifications
                 Text(
                   'Notifications',
@@ -408,14 +459,8 @@ class _AppPreferencesSheetState extends State<AppPreferencesSheet> {
                 SwitchListTile(
                   title: const Text('Push Notifications'),
                   subtitle: const Text('Receive notifications on your device'),
-                  value: _pushNotifications,
-                  onChanged: (value) => setState(() => _pushNotifications = value),
-                ),
-                SwitchListTile(
-                  title: const Text('Email Notifications'),
-                  subtitle: const Text('Receive notifications via email'),
-                  value: _emailNotifications,
-                  onChanged: (value) => setState(() => _emailNotifications = value),
+                  value: _settingsService.notificationsEnabled,
+                  onChanged: (value) => _settingsService.setNotificationsEnabled(value),
                 ),
                 
                 const SizedBox(height: 24),
@@ -432,8 +477,8 @@ class _AppPreferencesSheetState extends State<AppPreferencesSheet> {
                 SwitchListTile(
                   title: const Text('Location Sharing'),
                   subtitle: const Text('Allow others to see your general location'),
-                  value: _locationSharing,
-                  onChanged: (value) => setState(() => _locationSharing = value),
+                  value: _settingsService.locationEnabled,
+                  onChanged: (value) => _settingsService.setLocationEnabled(value),
                 ),
                 SwitchListTile(
                   title: const Text('Show Online Status'),
@@ -502,6 +547,8 @@ class _AppPreferencesSheetState extends State<AppPreferencesSheet> {
           ),
         ],
       ),
+    );
+      }
     );
   }
 }
