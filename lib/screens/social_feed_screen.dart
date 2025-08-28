@@ -325,119 +325,27 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
   }
 
   void _showCreatePostDialog() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Create Post',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _postController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: 'Share something about your dog adventures...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                ),
-              ),
-              
-              // Show selected image preview
-              if (_selectedImage != null)
-                Container(
-                  margin: const EdgeInsets.only(top: 16),
-                  height: 200,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.memory(
-                          _selectedImage!.bytes,
-                          width: double.infinity,
-                          height: 200,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedImage = null;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.7),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _pickImage,
-                      icon: const Icon(Icons.photo),
-                      label: Text(_selectedImage != null ? 'Change Photo' : 'Add Photo'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isPosting ? null : _createPost,
-                      child: _isPosting 
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Post'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => 
+            _CreatePostScreen(
+              onPost: _handleCreatePost,
+              isPosting: _isLoading,
+            ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.0, 1.0);
+          const end = Offset.zero;
+          const curve = Curves.easeOut;
+
+          var tween = Tween(begin: begin, end: end).chain(
+            CurveTween(curve: curve),
+          );
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
       ),
     );
   }
@@ -449,6 +357,63 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
       setState(() {
         _selectedImage = image;
       });
+    }
+  }
+
+  /// Handle post creation from new screen
+  Future<void> _handleCreatePost(String content, SelectedImage? image) async {
+    setState(() => _isLoading = true);
+
+    try {
+      final userId = SupabaseConfig.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      String? imageUrl;
+      
+      // Upload image if selected
+      if (image != null) {
+        final postId = DateTime.now().millisecondsSinceEpoch.toString();
+        imageUrl = await PhotoUploadService.uploadPostImage(
+          image: image,
+          postId: postId,
+          userId: userId,
+        );
+      }
+
+      // Get user's dog for the post
+      final userDogs = await BarkDateUserService.getUserDogs(userId);
+      final dogId = userDogs.isNotEmpty ? userDogs.first['id'] : null;
+
+      // Create post in database
+      await BarkDateSocialService.createPost(
+        userId: userId,
+        content: content,
+        dogId: dogId,
+        imageUrls: imageUrl != null ? [imageUrl] : null,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Post created successfully!')),
+        );
+        
+        // Reload feed to show new post
+        _loadFeed();
+      }
+
+    } catch (e) {
+      debugPrint('Error creating post: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating post: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -540,7 +505,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         
         final dogPhoto = postData['dog']?['main_photo_url'];
         final userAvatar = postData['user']?['avatar_url'];
-        final finalPhoto = userAvatar ?? 'https://via.placeholder.com/150';
+        final finalPhoto = dogPhoto ?? userAvatar ?? 'https://via.placeholder.com/150';
         
         debugPrint('Dog photo: $dogPhoto');
         debugPrint('User avatar: $userAvatar');
@@ -556,7 +521,8 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
           imageUrl: postData['image_urls']?.isNotEmpty == true 
               ? postData['image_urls'][0] 
               : null,
-          timestamp: DateTime.tryParse(postData['created_at'] ?? '') ?? DateTime.now(),
+          timestamp: DateTime.tryParse(postData['created_at'] ?? '') ?? 
+              DateTime.now().subtract(const Duration(minutes: 5)), // Fallback to 5 minutes ago instead of "now"
           likes: postData['likes_count'] ?? 0,
           comments: postData['comments_count'] ?? 0,
           hashtags: _extractHashtags(postData['content'] ?? ''),
@@ -639,5 +605,419 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
   void dispose() {
     _postController.dispose();
     super.dispose();
+  }
+}
+
+/// New full-screen create post screen with tabs
+class _CreatePostScreen extends StatefulWidget {
+  final Function(String content, SelectedImage? image) onPost;
+  final bool isPosting;
+
+  const _CreatePostScreen({
+    required this.onPost,
+    required this.isPosting,
+  });
+
+  @override
+  State<_CreatePostScreen> createState() => _CreatePostScreenState();
+}
+
+class _CreatePostScreenState extends State<_CreatePostScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final TextEditingController _textController = TextEditingController();
+  SelectedImage? _selectedImage;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    // Start with Image tab (index 0)
+    _tabController.index = 0;
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _textController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final image = await PhotoUploadService.pickImage();
+    if (image != null && mounted) {
+      setState(() {
+        _selectedImage = image;
+      });
+    }
+  }
+
+  void _removeImage() {
+    setState(() {
+      _selectedImage = null;
+    });
+  }
+
+  Future<void> _handlePost() async {
+    if (_textController.text.trim().isEmpty && _selectedImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add some content or a photo')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    
+    try {
+      await widget.onPost(_textController.text.trim(), _selectedImage);
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      // Error handling is done in the parent widget
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final modalHeight = screenHeight * 0.8; // 80% of screen height
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: GestureDetector(
+        onTap: () => Navigator.pop(context),
+        child: Container(
+          color: Colors.black.withValues(alpha: 0.5),
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: GestureDetector(
+              onTap: () {}, // Prevent closing when tapping modal content
+              child: Container(
+                height: modalHeight,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    // Header with title and cancel
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Create Post',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: Text(
+                              'Cancel',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Tab bar
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 24),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: TabBar(
+                        controller: _tabController,
+                        indicator: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        labelColor: Theme.of(context).colorScheme.onPrimary,
+                        unselectedLabelColor: Theme.of(context).colorScheme.onSurface,
+                        dividerColor: Colors.transparent,
+                        tabs: const [
+                          Tab(text: 'Image'),
+                          Tab(text: 'Text'),
+                        ],
+                      ),
+                    ),
+
+                    // Tab content
+                    Expanded(
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildImageTab(),
+                          _buildTextTab(),
+                        ],
+                      ),
+                    ),
+
+                    // Post button at bottom
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: (_isLoading || widget.isPosting) ? null : _handlePost,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: (_isLoading || widget.isPosting)
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : const Text(
+                                  'Post',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageTab() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          // Image picker area
+          Expanded(
+            child: _selectedImage != null
+                ? _buildImagePreview()
+                : _buildImagePicker(),
+          ),
+          
+          // Caption field
+          const SizedBox(height: 16),
+          TextField(
+            controller: _textController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Share something about your dog adventures...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextTab() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          // User avatar and prompt
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                child: Icon(
+                  Icons.person,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                "What's on your mind?",
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Text input area
+          Expanded(
+            child: TextField(
+              controller: _textController,
+              maxLines: null,
+              expands: true,
+              textAlignVertical: TextAlignVertical.top,
+              decoration: InputDecoration(
+                hintText: 'Share something about your dog adventures...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                contentPadding: const EdgeInsets.all(16),
+              ),
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImagePicker() {
+    return GestureDetector(
+      onTap: _pickImage,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+            width: 2,
+            style: BorderStyle.solid,
+          ),
+          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.add_photo_alternate,
+              size: 64,
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Tap to add an image',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Show off your dog\'s adventures!',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImagePreview() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.memory(
+              _selectedImage!.bytes,
+              width: double.infinity,
+              height: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          ),
+          
+          // Remove button
+          Positioned(
+            top: 12,
+            right: 12,
+            child: GestureDetector(
+              onTap: _removeImage,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+          
+          // Change photo button
+          Positioned(
+            bottom: 12,
+            right: 12,
+            child: GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.photo_camera,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Change',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

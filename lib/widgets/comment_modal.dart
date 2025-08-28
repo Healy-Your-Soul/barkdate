@@ -297,7 +297,8 @@ class _CommentModalState extends State<CommentModal> {
     final userName = user['name'] ?? 'Unknown User';
     final userAvatar = user['avatar_url'] ?? '';
     final content = comment['content'] ?? '';
-    final createdAt = DateTime.tryParse(comment['created_at'] ?? '') ?? DateTime.now();
+    final createdAt = DateTime.tryParse(comment['created_at'] ?? '') ?? 
+        DateTime.now().subtract(const Duration(minutes: 2)); // Fallback to 2 minutes ago
     
     // Get dog data for the commenting user
     final dog = comment['dog'] ?? {};
