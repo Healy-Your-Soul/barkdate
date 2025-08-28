@@ -5,6 +5,7 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
 import 'package:barkdate/screens/main_navigation.dart';
+import 'package:barkdate/widgets/enhanced_image_picker.dart';
 
 class CreateProfileScreen extends StatefulWidget {
   final String? userName;
@@ -41,7 +42,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   final _dogBioController = TextEditingController();
   String _dogSize = 'Medium';
   String _dogGender = 'Male';
-  File? _dogPhoto;
+  List<File> _dogPhotos = [];
   
   bool _isLoading = false;
 
@@ -80,14 +81,18 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       }
 
       // Upload user avatar if selected 📸
-      // TODO: Re-enable photo uploads after bucket setup
       String? avatarUrl;
-      // if (_ownerPhoto != null) {
-      //   avatarUrl = await PhotoUploadService.uploadUserAvatar(
-      //     imageFile: _ownerPhoto!,
-      //     userId: user.id,
-      //   );
-      // }
+      if (_ownerPhoto != null) {
+        try {
+          avatarUrl = await PhotoUploadService.uploadUserAvatar(
+            imageFile: _ownerPhoto!,
+            userId: userId,
+          );
+        } catch (e) {
+          debugPrint('Error uploading avatar: $e');
+          // Continue without avatar
+        }
+      }
 
       // Update user profile in database 🎉
       await BarkDateUserService.updateUserProfile(userId, {
@@ -97,6 +102,21 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         'avatar_url': avatarUrl,
       });
 
+      // Upload dog photos if selected 🐕📸
+      List<String> dogPhotoUrls = [];
+      if (_dogPhotos.isNotEmpty) {
+        try {
+          dogPhotoUrls = await PhotoUploadService.uploadMultipleImages(
+            imageFiles: _dogPhotos,
+            bucketName: PhotoUploadService.dogPhotosBucket,
+            baseFilePath: '$userId/temp_dog/photo',
+          );
+        } catch (e) {
+          debugPrint('Error uploading dog photos: $e');
+          // Continue without photos
+        }
+      }
+
       // Add dog profile 🐕
       final dogData = await BarkDateUserService.addDog(userId, {
         'name': _dogNameController.text.trim(),
@@ -105,25 +125,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         'size': _dogSize,
         'gender': _dogGender,
         'bio': _dogBioController.text.trim(),
-        'photo_urls': [],
+        'photo_urls': dogPhotoUrls,
       });
-
-      // Upload dog photo if selected 🐕📸
-      // TODO: Re-enable photo uploads after bucket setup
-      // if (_dogPhoto != null && dogData.isNotEmpty) {
-      //   final dogId = dogData['id'] as String;
-      //   final dogPhotoUrl = await PhotoUploadService.uploadDogPhoto(
-      //     imageFile: _dogPhoto!,
-      //     dogId: dogId,
-      //   );
-      //   
-      //   if (dogPhotoUrl != null) {
-      //     // Update dog with photo URL
-      //     await SupabaseService.update('dogs', {
-      //       'photo_urls': [dogPhotoUrl],
-      //     }, filters: {'id': dogId});
-      //   }
-      // }
       
       if (mounted) {
         // Success! Show confirmation 
@@ -448,60 +451,18 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           ),
           const SizedBox(height: 32),
           
-          // Dog photo
-          Center(
-            child: GestureDetector(
-              onTap: () {
-                // TODO: Re-enable photo selection after bucket setup
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Dog photo upload coming soon! Skip for now.'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
-              child: Stack(
-                children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      shape: BoxShape.circle,
-                      image: _dogPhoto != null
-                          ? DecorationImage(
-                              image: FileImage(_dogPhoto!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child: _dogPhoto == null
-                        ? Icon(
-                            Icons.pets,
-                            size: 50,
-                            color: Theme.of(context).colorScheme.primary,
-                          )
-                        : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        size: 20,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          // Dog photos (multi-image gallery)
+          EnhancedImagePicker(
+            allowMultiple: true,
+            maxImages: 5,
+            initialImages: _dogPhotos,
+            onImagesChanged: (images) {
+              setState(() {
+                _dogPhotos = images;
+              });
+            },
+            title: 'Dog Photos',
+            showPreview: true,
           ),
           const SizedBox(height: 32),
           
