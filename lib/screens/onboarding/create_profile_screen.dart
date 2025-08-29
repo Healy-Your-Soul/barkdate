@@ -353,6 +353,84 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     }
   }
 
+  /// Skip dog step and go directly to owner info
+  void _skipDogStep() {
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+    setState(() => _currentStep = 1);
+  }
+
+  /// Enter app with minimal setup (just user profile, no dog)
+  Future<void> _enterAppWithMinimalSetup() async {
+    // Validate at least owner name
+    if (_ownerNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your name first')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    
+    try {
+      String? userId = widget.userId ?? SupabaseConfig.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('No authenticated user found');
+      }
+
+      // Ensure user profile exists
+      await _ensureUserProfileExists(userId);
+
+      // Update only owner profile (no dog)
+      String? avatarUrl;
+      if (_ownerPhoto != null) {
+        try {
+          avatarUrl = await PhotoUploadService.uploadUserAvatar(
+            image: _ownerPhoto!,
+            userId: userId,
+          );
+        } catch (e) {
+          debugPrint('Error uploading avatar: $e');
+        }
+      }
+
+      await BarkDateUserService.updateUserProfile(userId, {
+        'name': _ownerNameController.text.trim(),
+        'bio': _ownerBioController.text.trim(),
+        'location': _ownerLocationController.text.trim(),
+        'avatar_url': avatarUrl,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Welcome to BarkDate! You can add your dog anytime from Settings.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Navigate to main app
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigation()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Setup failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   void _previousStep() {
     if (_currentStep > 0) {
       _pageController.previousPage(
@@ -442,40 +520,93 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               ),
             ),
             
-            // Next button
+            // Action buttons (Next + Skip)
             Padding(
               padding: const EdgeInsets.all(24),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _nextStep,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              child: Column(
+                children: [
+                  // Primary action button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _nextStep,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              _currentStep == 0 
+                                  ? 'Next: Owner Info' 
+                                  : widget.editMode != EditMode.createProfile ? 'Update Profile' : 'Create Profile',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                     ),
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          _currentStep == 0 
-                              ? 'Next: Owner Info' 
-                              : widget.editMode != EditMode.createProfile ? 'Update Profile' : 'Create Profile',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                  const SizedBox(height: 12),
+                  
+                  // Skip buttons (only for creation mode)
+                  if (widget.editMode == EditMode.createProfile) ...[
+                    if (_currentStep == 0) ...[
+                      // Skip dog step
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton(
+                          onPressed: _isLoading ? null : _skipDogStep,
+                          child: Text(
+                            'Skip for now - Just set up my profile',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                            ),
                           ),
                         ),
-                ),
+                      ),
+                    ] else ...[
+                      // Option to go back and add dog
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton(
+                          onPressed: _isLoading ? null : () {
+                            setState(() => _currentStep = 0);
+                            _pageController.animateToPage(
+                              0,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          },
+                          child: const Text('← Back to add dog info'),
+                        ),
+                      ),
+                    ],
+                    
+                    // Enter app without full setup
+                    TextButton(
+                      onPressed: _isLoading ? null : _enterAppWithMinimalSetup,
+                      child: Text(
+                        'Enter app with basic setup',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],

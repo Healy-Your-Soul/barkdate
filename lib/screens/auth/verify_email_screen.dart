@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/screens/main_navigation.dart';
+import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
@@ -50,11 +51,27 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       final confirmed = user?.emailConfirmedAt != null;
       if (confirmed) {
         if (mounted) {
-          // Email verified! Navigate to main app
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const MainNavigation()),
-          );
+          // Email verified! Check if user has completed profile setup
+          final hasProfile = await _checkUserProfile(user!.id);
+          if (hasProfile) {
+            // Profile exists, go to main app
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const MainNavigation()),
+            );
+          } else {
+            // Profile doesn't exist, go to profile creation
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CreateProfileScreen(
+                  userName: user.userMetadata?['name'] ?? '',
+                  userEmail: user.email ?? '',
+                  userId: user.id,
+                ),
+              ),
+            );
+          }
         }
       } else {
         setState(() {
@@ -67,6 +84,18 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       });
     } finally {
       if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  Future<bool> _checkUserProfile(String userId) async {
+    try {
+      final profile = await SupabaseService.selectSingle(
+        'users',
+        filters: {'id': userId},
+      );
+      return profile != null;
+    } catch (e) {
+      return false;
     }
   }
 
