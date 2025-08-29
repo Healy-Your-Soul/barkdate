@@ -21,6 +21,80 @@ class BarkDateUserService {
     );
   }
 
+  /// Delete user account and all related data
+  /// This method handles the complete cleanup process
+  static Future<void> deleteUserAccount(String userId) async {
+    debugPrint('=== DELETE USER ACCOUNT DEBUG ===');
+    debugPrint('Starting deletion process for user: $userId');
+    
+    try {
+      // Step 1: Clean up Supabase storage files
+      await _cleanupUserStorage(userId);
+      
+      // Step 2: Call the database cleanup function
+      await SupabaseConfig.client.rpc('cleanup_user_storage', params: {'user_id': userId});
+      
+      // Step 3: Delete the user from auth.users
+      // This will automatically trigger CASCADE deletion of all related data
+      await SupabaseConfig.client.auth.admin.deleteUser(userId);
+      
+      debugPrint('User account and all related data deleted successfully');
+      debugPrint('=== END DELETE USER ACCOUNT DEBUG ===');
+      
+    } catch (e) {
+      debugPrint('Error deleting user account: $e');
+      rethrow;
+    }
+  }
+
+  /// Clean up user's storage files from all buckets
+  static Future<void> _cleanupUserStorage(String userId) async {
+    debugPrint('Cleaning up storage files for user: $userId');
+    
+    try {
+      // List of storage buckets to clean
+      final buckets = [
+        'user-avatars',
+        'dog-photos', 
+        'post-images',
+        'chat-media',
+        'playdate-albums'
+      ];
+      
+      for (final bucket in buckets) {
+        try {
+          // List all files in the user's folder
+          final files = await SupabaseConfig.client.storage
+              .from(bucket)
+              .list(path: userId);
+          
+          if (files.isNotEmpty) {
+            debugPrint('Found ${files.length} files in bucket $bucket for user $userId');
+            
+            // Delete all files in the user's folder
+            for (final file in files) {
+              if (file.name != null) {
+                await SupabaseConfig.client.storage
+                    .from(bucket)
+                    .remove(['$userId/${file.name}']);
+                debugPrint('Deleted file: $bucket/$userId/${file.name}');
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('Error cleaning bucket $bucket: $e');
+          // Continue with other buckets even if one fails
+        }
+      }
+      
+      debugPrint('Storage cleanup completed for user: $userId');
+      
+    } catch (e) {
+      debugPrint('Error during storage cleanup: $e');
+      // Don't rethrow - storage cleanup failure shouldn't prevent account deletion
+    }
+  }
+
   /// Get user's dogs
   static Future<List<Map<String, dynamic>>> getUserDogs(String userId) async {
     debugPrint('=== GET USER DOGS DEBUG ===');
