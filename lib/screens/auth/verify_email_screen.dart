@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/screens/main_navigation.dart';
@@ -46,13 +47,27 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       _message = null;
     });
     try {
-      await SupabaseConfig.auth.refreshSession();
-      final user = SupabaseConfig.auth.currentUser;
+      // First try to get current user without forcing refresh
+      var user = SupabaseConfig.auth.currentUser;
+      
+      // If no user or not confirmed, try refreshing session
+      if (user == null || user.emailConfirmedAt == null) {
+        try {
+          await SupabaseConfig.auth.refreshSession();
+          user = SupabaseConfig.auth.currentUser;
+        } catch (refreshError) {
+          // Refresh failed, but continue with current user check
+          debugPrint('Refresh session failed: $refreshError');
+        }
+      }
+      
       final confirmed = user?.emailConfirmedAt != null;
-      if (confirmed) {
+      debugPrint('Verification check - User: ${user?.id}, Confirmed: $confirmed');
+      
+      if (confirmed && user != null) {
         if (mounted) {
           // Email verified! Check if user has completed profile setup
-          final hasProfile = await _checkUserProfile(user!.id);
+          final hasProfile = await _checkUserProfile(user.id);
           if (hasProfile) {
             // Profile exists, go to main app
             Navigator.pushReplacement(
@@ -75,12 +90,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         }
       } else {
         setState(() {
-          _message = 'Not verified yet. Please click the email link, then tap Check again.';
+          _message = user == null 
+              ? 'No user session found. Please sign in again.'
+              : 'Not verified yet. Please click the email link, then tap "I\'ve verified".';
         });
       }
     } catch (e) {
+      debugPrint('Verification check error: $e');
       setState(() {
-        _message = 'Could not check yet. Try again in a moment.';
+        _message = 'Could not check verification status. Please try again.';
       });
     } finally {
       if (mounted) setState(() => _checking = false);
