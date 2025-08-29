@@ -1,4 +1,5 @@
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:flutter/foundation.dart';
 
 /// BarkDate-specific Supabase service classes
 class BarkDateUserService {
@@ -22,11 +23,22 @@ class BarkDateUserService {
 
   /// Get user's dogs
   static Future<List<Map<String, dynamic>>> getUserDogs(String userId) async {
-    return await SupabaseService.select(
+    debugPrint('=== GET USER DOGS DEBUG ===');
+    debugPrint('Getting dogs for user ID: $userId');
+    
+    final dogs = await SupabaseService.select(
       'dogs',
       filters: {'user_id': userId, 'is_active': true},
       orderBy: 'created_at',
     );
+    
+    debugPrint('Found ${dogs.length} dogs for user');
+    for (var dog in dogs) {
+      debugPrint('Dog: ${dog.toString()}');
+    }
+    debugPrint('=== END GET USER DOGS DEBUG ===');
+    
+    return dogs;
   }
 
   /// Add new dog
@@ -57,7 +69,7 @@ class BarkDateMatchService {
         .from('dogs')
         .select('''
           *,
-          users!dogs_user_id_fkey(name, avatar_url, location)
+          users(name, avatar_url, location)
         ''')
         .neq('user_id', userId)
         .eq('is_active', true)
@@ -114,8 +126,8 @@ class BarkDateMatchService {
         .from('matches')
         .select('''
           *,
-          target_user:users!matches_target_user_id_fkey(id, name, avatar_url),
-          target_dog:dogs!matches_target_dog_id_fkey(*)
+          target_user:users(id, name, avatar_url),
+          target_dog:dogs(*)
         ''')
         .eq('user_id', userId)
         .eq('is_mutual', true)
@@ -152,7 +164,7 @@ class BarkDateMessageService {
         .from('messages')
         .select('''
           *,
-          sender:users!messages_sender_id_fkey(name, avatar_url)
+          sender:users(name, avatar_url)
         ''')
         .eq('match_id', matchId)
         .order('created_at', ascending: true);
@@ -173,8 +185,8 @@ class BarkDateMessageService {
         .from('messages')
         .select('''
           *,
-          sender:users!messages_sender_id_fkey(name, avatar_url),
-          receiver:users!messages_receiver_id_fkey(name, avatar_url)
+          sender:users(name, avatar_url),
+          receiver:users(name, avatar_url)
         ''')
         .or('sender_id.eq.$userId,receiver_id.eq.$userId')
         .order('created_at', ascending: false);
@@ -208,8 +220,8 @@ class BarkDatePlaydateService {
         .from('playdates')
         .select('''
           *,
-          organizer:users!playdates_organizer_id_fkey(name, avatar_url),
-          participant:users!playdates_participant_id_fkey(name, avatar_url)
+          organizer:users(name, avatar_url),
+          participant:users(name, avatar_url)
         ''')
         .or('organizer_id.eq.$userId,participant_id.eq.$userId')
         .order('scheduled_at', ascending: false);
@@ -260,7 +272,18 @@ class BarkDateSocialService {
       'updated_at': DateTime.now().toIso8601String(),
     };
 
+    // Debug logging
+    debugPrint('=== CREATE POST DEBUG ===');
+    debugPrint('Creating post with data: $data');
+    debugPrint('User ID: $userId');
+    debugPrint('Dog ID: $dogId');
+    debugPrint('Content: $content');
+    debugPrint('Image URLs: $imageUrls');
+
     final result = await SupabaseService.insert('posts', data);
+    debugPrint('Post created successfully: ${result.first}');
+    debugPrint('=== END CREATE POST DEBUG ===');
+    
     return result.first;
   }
 
@@ -270,8 +293,8 @@ class BarkDateSocialService {
         .from('posts')
         .select('''
           *,
-          user:users!posts_user_id_fkey(name, avatar_url),
-          dog:dogs!posts_dog_id_fkey(name, breed, main_photo_url)
+          user:users(name, avatar_url),
+          dog:dogs(name, breed, main_photo_url)
         ''')
         .eq('is_public', true)
         .order('created_at', ascending: false)
@@ -323,7 +346,7 @@ class BarkDateSocialService {
         .from('post_comments')
         .select('''
           *,
-          user:users!post_comments_user_id_fkey(name, avatar_url)
+          user:users(name, avatar_url)
         ''')
         .eq('post_id', postId)
         .order('created_at', ascending: true);

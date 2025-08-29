@@ -500,7 +500,12 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
       // Convert to Post objects
       final posts = postsData.map((postData) {
         // Debug logging
-        debugPrint('Post data: ${postData.toString()}');
+        debugPrint('=== POST DEBUG ===');
+        debugPrint('Post ID: ${postData['id']}');
+        debugPrint('Post content: ${postData['content']}');
+        debugPrint('User ID: ${postData['user_id']}');
+        debugPrint('Dog ID: ${postData['dog_id']}');
+        debugPrint('Full post data: ${postData.toString()}');
         debugPrint('Dog data: ${postData['dog']?.toString() ?? 'null'}');
         debugPrint('User data: ${postData['user']?.toString() ?? 'null'}');
         
@@ -511,6 +516,8 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         debugPrint('Dog photo: $dogPhoto');
         debugPrint('User avatar: $userAvatar');
         debugPrint('Final photo: $finalPhoto');
+        debugPrint('Dog name: ${postData['dog']?['name'] ?? 'null'}');
+        debugPrint('=== END POST DEBUG ===');
         
         return Post(
           id: postData['id'] ?? '',
