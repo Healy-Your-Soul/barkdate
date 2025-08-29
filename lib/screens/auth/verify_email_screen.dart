@@ -83,9 +83,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
               context,
               MaterialPageRoute(
                 builder: (context) => CreateProfileScreen(
-                  userName: user.userMetadata?['name'] ?? '',
-                  userEmail: user.email ?? '',
-                  userId: user.id,
+                  userName: user?.userMetadata?['name'] ?? '',
+                  userEmail: user?.email ?? '',
+                  userId: user?.id ?? '',
                 ),
               ),
             );
@@ -115,9 +115,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => CreateProfileScreen(
-                    userName: user.userMetadata?['name'] ?? '',
-                    userEmail: user.email ?? '',
-                    userId: user.id,
+                    userName: user?.userMetadata?['name'] ?? '',
+                    userEmail: user?.email ?? '',
+                    userId: user?.id ?? '',
                   ),
                 ),
               );
