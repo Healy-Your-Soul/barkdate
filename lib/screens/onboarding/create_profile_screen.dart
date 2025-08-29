@@ -50,6 +50,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   String _dogGender = 'Male';
   List<SelectedImage> _dogPhotos = [];
   SelectedImage? _ownerPhoto;
+  Map<String, dynamic>? _dogProfile; // Track existing dog data
   
   bool _isLoading = false;
 
@@ -116,6 +117,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       
       if (dogProfiles.isNotEmpty) {
         final dogProfile = dogProfiles.first;
+        setState(() {
+          _dogProfile = dogProfile; // Store dog data for reference
+        });
         _dogNameController.text = dogProfile['name'] ?? '';
         _dogBreedController.text = dogProfile['breed'] ?? '';
         _dogAgeController.text = dogProfile['age']?.toString() ?? '';
@@ -125,6 +129,10 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         
         // Load existing dog photos
         await _loadDogPhotos(dogProfile);
+      } else {
+        setState(() {
+          _dogProfile = null; // No dog exists
+        });
       }
     } catch (e) {
       debugPrint('Error loading existing data: $e');
@@ -1168,7 +1176,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          isDogEdit ? 'Edit Dog Profile' : 'Edit Owner Profile',
+          isDogEdit ? (_dogProfile != null ? 'Edit Dog Profile' : 'Add Dog Profile') : 'Edit Owner Profile',
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
@@ -1209,7 +1217,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                           ),
                         )
                       : Text(
-                          'Update ${isDogEdit ? 'Dog' : 'Owner'} Profile',
+                          isDogEdit 
+                              ? (_dogProfile != null ? 'Update Dog Profile' : 'Create Dog Profile')
+                              : 'Update Owner Profile',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -1264,18 +1274,36 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           }
         }
 
-        // Update dog profile
-        await BarkDateUserService.updateDogProfile(userId, {
-          'name': _dogNameController.text.trim(),
-          'breed': _dogBreedController.text.trim(),
-          'age': int.tryParse(_dogAgeController.text) ?? 1,
-          'size': _dogSize,
-          'gender': _dogGender,
-          'bio': _dogBioController.text.trim(),
-          'main_photo_url': mainPhotoUrl,
-          'extra_photo_urls': extraPhotoUrls,
-          'photo_urls': dogPhotoUrls,
-        });
+        // Check if dog already exists, then add or update accordingly
+        final existingDogs = await BarkDateUserService.getUserDogs(userId);
+        
+        if (existingDogs.isEmpty) {
+          // No dog exists - create a new one (first-time creation)
+          await BarkDateUserService.addDog(userId, {
+            'name': _dogNameController.text.trim(),
+            'breed': _dogBreedController.text.trim(),
+            'age': int.tryParse(_dogAgeController.text) ?? 1,
+            'size': _dogSize,
+            'gender': _dogGender,
+            'bio': _dogBioController.text.trim(),
+            'main_photo_url': mainPhotoUrl,
+            'extra_photo_urls': extraPhotoUrls,
+            'photo_urls': dogPhotoUrls,
+          });
+        } else {
+          // Dog exists - update existing profile
+          await BarkDateUserService.updateDogProfile(userId, {
+            'name': _dogNameController.text.trim(),
+            'breed': _dogBreedController.text.trim(),
+            'age': int.tryParse(_dogAgeController.text) ?? 1,
+            'size': _dogSize,
+            'gender': _dogGender,
+            'bio': _dogBioController.text.trim(),
+            'main_photo_url': mainPhotoUrl,
+            'extra_photo_urls': extraPhotoUrls,
+            'photo_urls': dogPhotoUrls,
+          });
+        }
 
       } else if (widget.editMode == EditMode.editOwner) {
         // Validate owner info

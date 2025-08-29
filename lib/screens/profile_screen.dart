@@ -144,10 +144,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
-                                                              builder: (context) => CreateProfileScreen(
-                                userId: SupabaseConfig.auth.currentUser?.id,
-                                editMode: EditMode.editDog, // Only edit dog
-                              ),
+                                builder: (context) => CreateProfileScreen(
+                                  userId: SupabaseConfig.auth.currentUser?.id,
+                                  editMode: EditMode.editDog, // Only edit dog
+                                ),
                               ),
                             );
                             // Reload data if profile was updated
@@ -162,7 +162,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              Icons.edit,
+                              _dogProfile == null ? Icons.add : Icons.edit,
                               size: 16,
                               color: Theme.of(context).colorScheme.onTertiary,
                             ),
