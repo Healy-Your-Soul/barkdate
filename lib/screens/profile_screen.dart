@@ -37,12 +37,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         filters: {'id': user.id},
       );
 
-      // Load user's dog (first dog for now)
-      final dogs = await SupabaseService.select(
-        'dogs', 
-        filters: {'user_id': user.id},
-        limit: 1,
-      );
+      // Load user's dog (first dog for now) - using proper service method
+      final dogs = await BarkDateUserService.getUserDogs(user.id);
 
       setState(() {
         _userProfile = userProfile;
@@ -51,8 +47,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
       
       // Debug logging
+      debugPrint('=== PROFILE SCREEN DEBUG ===');
       debugPrint('User profile data: ${userProfile?.toString()}');
       debugPrint('User avatar URL: ${userProfile?['avatar_url']}');
+      debugPrint('Found ${dogs.length} dogs for user');
+      if (dogs.isNotEmpty) {
+        debugPrint('Dog profile data: ${dogs.first.toString()}');
+        debugPrint('Dog main photo URL: ${dogs.first['main_photo_url']}');
+        debugPrint('Dog name: ${dogs.first['name']}');
+      } else {
+        debugPrint('No dogs found for user!');
+      }
+      debugPrint('=== END PROFILE SCREEN DEBUG ===');
     } catch (e) {
       debugPrint('Error loading profile data: $e');
       setState(() => _isLoading = false);
