@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/screens/main_navigation.dart';
@@ -67,7 +66,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       if (confirmed && user != null) {
         if (mounted) {
           // Email verified! Check if user has completed profile setup
-          final hasProfile = await _checkUserProfile(user.id);
+          final currentUser = user; // Already checked non-null above
+          final hasProfile = await _checkUserProfile(currentUser.id);
           if (hasProfile) {
             // Profile exists, go to main app
             Navigator.pushReplacement(
@@ -80,9 +80,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
               context,
               MaterialPageRoute(
                 builder: (context) => CreateProfileScreen(
-                  userName: user.userMetadata?['name'] ?? '',
-                  userEmail: user.email ?? '',
-                  userId: user.id,
+                  userName: currentUser.userMetadata?['name'] ?? '',
+                  userEmail: currentUser.email ?? '',
+                  userId: currentUser.id,
                 ),
               ),
             );
