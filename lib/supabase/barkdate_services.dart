@@ -99,6 +99,7 @@ class BarkDateUserService {
   static Future<List<Map<String, dynamic>>> getUserDogs(String userId) async {
     debugPrint('=== GET USER DOGS DEBUG ===');
     debugPrint('Getting dogs for user ID: $userId');
+    debugPrint('Search filters: {user_id: $userId, is_active: true}');
     
     final dogs = await SupabaseService.select(
       'dogs',
@@ -110,6 +111,16 @@ class BarkDateUserService {
     for (var dog in dogs) {
       debugPrint('Dog: ${dog.toString()}');
     }
+    
+    // Also try getting ALL dogs to see what's in the database
+    debugPrint('--- Checking ALL dogs in database ---');
+    final allDogs = await SupabaseService.select('dogs', filters: {}, limit: 10);
+    debugPrint('Total dogs in database: ${allDogs.length}');
+    for (var dog in allDogs) {
+      debugPrint('All Dogs - User ID: ${dog['user_id']}, Dog Name: ${dog['name']}, Active: ${dog['is_active']}');
+    }
+    debugPrint('--- End ALL dogs check ---');
+    
     debugPrint('=== END GET USER DOGS DEBUG ===');
     
     return dogs;
@@ -117,11 +128,29 @@ class BarkDateUserService {
 
   /// Add new dog
   static Future<Map<String, dynamic>> addDog(String userId, Map<String, dynamic> dogData) async {
+    debugPrint('=== ADD DOG DEBUG ===');
+    debugPrint('Adding dog for user ID: $userId');
+    debugPrint('Dog data being saved: $dogData');
+    
     dogData['user_id'] = userId;
     dogData['created_at'] = DateTime.now().toIso8601String();
     dogData['updated_at'] = DateTime.now().toIso8601String();
     
+    // Ensure is_active is set to true
+    if (!dogData.containsKey('is_active')) {
+      dogData['is_active'] = true;
+      debugPrint('Set is_active to true (was missing)');
+    } else {
+      debugPrint('is_active value: ${dogData['is_active']}');
+    }
+    
+    debugPrint('Final dog data with user_id and is_active: $dogData');
+    
     final result = await SupabaseService.insert('dogs', dogData);
+    
+    debugPrint('Dog saved successfully: ${result.first}');
+    debugPrint('=== END ADD DOG DEBUG ===');
+    
     return result.first;
   }
 
