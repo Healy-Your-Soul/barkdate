@@ -48,26 +48,29 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     try {
       // First try to get current user without forcing refresh
       var user = SupabaseConfig.auth.currentUser;
+      debugPrint('Initial user check - User: ${user?.id}, Email confirmed: ${user?.emailConfirmedAt != null}');
       
-      // If no user or not confirmed, try refreshing session
-      if (user == null || user.emailConfirmedAt == null) {
-        try {
-          await SupabaseConfig.auth.refreshSession();
-          user = SupabaseConfig.auth.currentUser;
-        } catch (refreshError) {
-          // Refresh failed, but continue with current user check
-          debugPrint('Refresh session failed: $refreshError');
-        }
+      // If no user session exists, user needs to sign in again
+      if (user == null) {
+        setState(() {
+          _message = 'Session expired. Please sign in again to verify your email.';
+        });
+        
+        // Optional: Navigate back to sign in after a delay
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            Navigator.of(context).pop(); // Go back to previous screen (likely sign in)
+          }
+        });
+        return;
       }
       
-      final confirmed = user?.emailConfirmedAt != null;
-      debugPrint('Verification check - User: ${user?.id}, Confirmed: $confirmed');
-      
-      if (confirmed && user != null) {
+      // Check if already verified
+      if (user.emailConfirmedAt != null) {
+        debugPrint('User already verified, proceeding to app');
         if (mounted) {
           // Email verified! Check if user has completed profile setup
-          final currentUser = user; // Already checked non-null above
-          final hasProfile = await _checkUserProfile(currentUser.id);
+          final hasProfile = await _checkUserProfile(user.id);
           if (hasProfile) {
             // Profile exists, go to main app
             Navigator.pushReplacement(
@@ -80,21 +83,59 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
               context,
               MaterialPageRoute(
                 builder: (context) => CreateProfileScreen(
-                  userName: currentUser.userMetadata?['name'] ?? '',
-                  userEmail: currentUser.email ?? '',
-                  userId: currentUser.id,
+                  userName: user.userMetadata?['name'] ?? '',
+                  userEmail: user.email ?? '',
+                  userId: user.id,
                 ),
               ),
             );
           }
         }
-      } else {
+        return;
+      }
+      
+      // User exists but not verified - try refreshing session to check for verification
+      try {
+        debugPrint('User not verified, trying to refresh session...');
+        await SupabaseConfig.auth.refreshSession();
+        user = SupabaseConfig.auth.currentUser;
+        debugPrint('After refresh - User: ${user?.id}, Email confirmed: ${user?.emailConfirmedAt != null}');
+        
+        if (user?.emailConfirmedAt != null) {
+          // Now verified! Proceed to app
+          if (mounted) {
+            final hasProfile = await _checkUserProfile(user!.id);
+            if (hasProfile) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const MainNavigation()),
+              );
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CreateProfileScreen(
+                    userName: user.userMetadata?['name'] ?? '',
+                    userEmail: user.email ?? '',
+                    userId: user.id,
+                  ),
+                ),
+              );
+            }
+          }
+        } else {
+          // Still not verified
+          setState(() {
+            _message = 'Not verified yet. Please click the email link, then tap "I\'ve verified".';
+          });
+        }
+      } catch (refreshError) {
+        debugPrint('Refresh session failed: $refreshError');
         setState(() {
-          _message = user == null 
-              ? 'No user session found. Please sign in again.'
-              : 'Not verified yet. Please click the email link, then tap "I\'ve verified".';
+          _message = 'Could not verify email status. Please click the email link first, then try again.';
         });
       }
+      
     } catch (e) {
       debugPrint('Verification check error: $e');
       setState(() {
