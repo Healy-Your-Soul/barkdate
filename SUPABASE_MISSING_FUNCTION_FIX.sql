@@ -1,4 +1,4 @@
--- Missing function fix for BarkDate account deletion
+-- Missing functions fix for BarkDate account deletion
 -- Run this in your Supabase SQL Editor
 
 -- Function to clean up user's storage files
@@ -15,5 +15,27 @@ BEGIN
   
   -- You can add additional cleanup logic here if needed
   
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to delete user account completely
+-- This handles both database and auth deletion
+CREATE OR REPLACE FUNCTION public.delete_user_account(user_id uuid)
+RETURNS void AS $$
+BEGIN
+  -- Log the deletion attempt
+  RAISE LOG 'Deleting user account %', user_id;
+  
+  -- Delete from auth.users (this will trigger CASCADE deletes)
+  -- Note: This requires service_role access or RLS policy
+  DELETE FROM auth.users WHERE id = user_id;
+  
+  -- Log completion
+  RAISE LOG 'User account % successfully deleted', user_id;
+  
+EXCEPTION WHEN OTHERS THEN
+  -- Log error and re-raise
+  RAISE LOG 'Error deleting user account %: %', user_id, SQLERRM;
+  RAISE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

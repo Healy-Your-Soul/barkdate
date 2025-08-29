@@ -103,6 +103,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return;
       }
 
+      // Save navigator and messenger references before async operations
+      final navigator = Navigator.of(context);
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+
       // Show loading dialog
       showDialog(
         context: context,
@@ -124,11 +128,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await BarkDateUserService.deleteUserAccount(user.id);
 
       // Close loading dialog
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) navigator.pop();
 
       if (mounted) {
         // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Text('Account deleted successfully'),
             backgroundColor: Colors.green,
@@ -136,24 +140,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
 
         // Navigate to sign in screen
-        Navigator.of(context).pushAndRemoveUntil(
+        navigator.pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const SignInScreen()),
           (route) => false,
         );
       }
 
     } catch (e) {
-      // Close loading dialog
-      if (mounted) Navigator.of(context).pop();
+      // Close loading dialog if still mounted
+      if (mounted) {
+        try {
+          Navigator.of(context).pop();
+        } catch (navError) {
+          // Navigator context might be invalid, ignore
+        }
+      }
 
       if (mounted) {
         // Show error message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete account: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        try {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete account: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        } catch (msgError) {
+          // ScaffoldMessenger context might be invalid, ignore
+        }
       }
     }
   }

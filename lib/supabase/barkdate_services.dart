@@ -34,9 +34,9 @@ class BarkDateUserService {
       // Step 2: Call the database cleanup function
       await SupabaseConfig.client.rpc('cleanup_user_storage', params: {'user_id': userId});
       
-      // Step 3: Delete the user from auth.users
-      // This will automatically trigger CASCADE deletion of all related data
-      await SupabaseConfig.client.auth.admin.deleteUser(userId);
+      // Step 3: Delete the user using server-side RPC function
+      // This will handle both auth deletion and CASCADE cleanup
+      await SupabaseConfig.client.rpc('delete_user_account', params: {'user_id': userId});
       
       debugPrint('User account and all related data deleted successfully');
       debugPrint('=== END DELETE USER ACCOUNT DEBUG ===');
