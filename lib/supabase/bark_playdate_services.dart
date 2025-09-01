@@ -121,7 +121,7 @@ class BarkNotificationService {
         await SupabaseConfig.client
             .from('matches')
             .update({'is_mutual': true})
-            .in_('id', [mutualMatch['id']]);
+            .inFilter('id', [mutualMatch['id']]);
             
         // Create mutual match notification
         await NotificationService.createNotification(
@@ -321,7 +321,7 @@ class PlaydateRequestService {
       };
 
       if (message != null) updateData['message'] = message;
-      if (counterProposal != null) updateData['counter_proposal'] = counterProposal;
+      if (counterProposal != null) updateData['counter_proposal'] = counterProposal.toString();
 
       await SupabaseConfig.client
           .from('playdate_requests')
