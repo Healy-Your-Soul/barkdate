@@ -11,6 +11,8 @@ import 'package:barkdate/screens/dog_profile_detail.dart';
 import 'package:barkdate/screens/settings_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
+import 'package:barkdate/supabase/bark_playdate_services.dart';
+import 'package:barkdate/widgets/playdate_request_modal.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -226,6 +228,7 @@ class _FeedScreenState extends State<FeedScreen> {
                             child: DogCard(
                               dog: dog,
                               onBarkPressed: () => _onBarkPressed(context, dog),
+                              onPlaydatePressed: () => _onPlaydatePressed(context, dog),
                             ),
                           ),
                         );
@@ -239,15 +242,98 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  void _onBarkPressed(BuildContext context, Dog dog) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('You barked at ${dog.name}! 🐕'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-    );
+  Future<void> _onBarkPressed(BuildContext context, Dog dog) async {
+    try {
+      final currentUser = SupabaseConfig.auth.currentUser;
+      if (currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please sign in to bark at dogs')),
+        );
+        return;
+      }
+
+      // Get current user's dog
+      final userDogs = await BarkDateUserService.getUserDogs(currentUser.id);
+      if (userDogs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please create a dog profile first')),
+        );
+        return;
+      }
+
+      final myDogId = userDogs.first['id'];
+
+      // Send bark notification
+      final success = await BarkNotificationService.sendBark(
+        fromUserId: currentUser.id,
+        toUserId: dog.ownerId,
+        fromDogId: myDogId,
+        toDogId: dog.id,
+      );
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('You barked at ${dog.name}! 🐕'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('You already barked at ${dog.name} recently'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error sending bark: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to send bark. Please try again.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _onPlaydatePressed(BuildContext context, Dog dog) async {
+    try {
+      final currentUser = SupabaseConfig.auth.currentUser;
+      if (currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please sign in to request playdates')),
+        );
+        return;
+      }
+
+      // Show playdate request modal
+      final result = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => PlaydateRequestModal(
+          targetDog: dog,
+          targetUserId: dog.ownerId,
+        ),
+      );
+
+      // If playdate was successfully created, refresh the feed
+      if (result == true) {
+        _loadNearbyDogs();
+      }
+    } catch (e) {
+      debugPrint('Error showing playdate modal: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to open playdate request. Please try again.')),
+        );
+      }
+    }
   }
 
   void _showDogProfile(Dog dog) {

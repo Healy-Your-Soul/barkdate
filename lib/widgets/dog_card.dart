@@ -5,12 +5,14 @@ import 'package:barkdate/theme.dart';
 class DogCard extends StatelessWidget {
   final Dog dog;
   final VoidCallback onBarkPressed;
+  final VoidCallback? onPlaydatePressed;
   final VoidCallback? onOpenProfile;
 
   const DogCard({
     super.key,
     required this.dog,
     required this.onBarkPressed,
+    this.onPlaydatePressed,
     this.onOpenProfile,
   });
 
@@ -88,31 +90,73 @@ class DogCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Bark button
-            ElevatedButton(
-              onPressed: onBarkPressed,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isDark 
-                  ? DarkModeColors.darkBarkButton 
-                  : LightModeColors.lightBarkButton,
-                foregroundColor: isDark 
-                  ? DarkModeColors.darkOnBarkButton 
-                  : LightModeColors.lightOnBarkButton,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+            // Action buttons (Bark and Playdate)
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Bark button
+                SizedBox(
+                  width: 85,
+                  child: ElevatedButton(
+                    onPressed: onBarkPressed,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark 
+                        ? DarkModeColors.darkBarkButton 
+                        : LightModeColors.lightBarkButton,
+                      foregroundColor: isDark 
+                        ? DarkModeColors.darkOnBarkButton 
+                        : LightModeColors.lightOnBarkButton,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: Text(
+                      'Bark',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isDark 
+                          ? DarkModeColors.darkOnBarkButton 
+                          : LightModeColors.lightOnBarkButton,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              child: Text(
-                'Bark',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: isDark 
-                    ? DarkModeColors.darkOnBarkButton 
-                    : LightModeColors.lightOnBarkButton,
+                
+                const SizedBox(height: 6),
+                
+                // Playdate button
+                SizedBox(
+                  width: 85,
+                  child: OutlinedButton.icon(
+                    onPressed: onPlaydatePressed,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: theme.colorScheme.primary,
+                      side: BorderSide(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                        width: 1,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    icon: Icon(
+                      Icons.calendar_today,
+                      size: 14,
+                      color: theme.colorScheme.primary,
+                    ),
+                    label: Text(
+                      'Play',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
