@@ -328,6 +328,8 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
   void _showCreatePostDialog() {
     Navigator.of(context).push(
       PageRouteBuilder(
+        opaque: false, // Make the route transparent
+        barrierColor: Colors.transparent, // Transparent barrier
         pageBuilder: (context, animation, secondaryAnimation) => 
             _CreatePostScreen(
               onPost: _handleCreatePost,
@@ -716,7 +718,9 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
-            color: Colors.black.withValues(alpha: 0.2), // Subtle dark overlay for visibility
+            width: double.infinity,
+            height: double.infinity,
+            color: Colors.transparent, // Transparent overlay to remove grey tint
             child: Align(
               alignment: Alignment.bottomCenter,
               child: GestureDetector(
@@ -724,7 +728,7 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
               child: Container(
                 height: modalHeight,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(20),
                   ),
