@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:barkdate/data/sample_data.dart';
 import 'package:barkdate/models/playdate.dart';
 import 'package:barkdate/screens/playdate_recap_screen.dart';
+import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/supabase/bark_playdate_services.dart';
+import 'package:barkdate/widgets/playdate_response_modal.dart';
 
 class PlaydatesScreen extends StatefulWidget {
   const PlaydatesScreen({super.key});
@@ -13,11 +16,70 @@ class PlaydatesScreen extends StatefulWidget {
 class _PlaydatesScreenState extends State<PlaydatesScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  List<Map<String, dynamic>> _upcomingPlaydates = [];
+  List<Map<String, dynamic>> _pastPlaydates = [];
+  List<Map<String, dynamic>> _pendingRequests = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
+    _loadPlaydates();
+  }
+
+  Future<void> _loadPlaydates() async {
+    try {
+      setState(() => _isLoading = true);
+      
+      final user = SupabaseAuth.currentUser;
+      if (user == null) {
+        _loadSampleData();
+        return;
+      }
+
+      // Load real data from database
+      final now = DateTime.now();
+      
+      // Get upcoming playdates
+      final upcoming = await SupabaseConfig.client
+          .from('playdates')
+          .select('*, organizer:users!playdates_organizer_id_fkey(name, avatar_url), participant:users!playdates_participant_id_fkey(name, avatar_url)')
+          .or('organizer_id.eq.${user.id},participant_id.eq.${user.id}')
+          .gte('scheduled_at', now.toIso8601String())
+          .eq('status', 'confirmed')
+          .order('scheduled_at', ascending: true);
+
+      // Get past playdates
+      final past = await SupabaseConfig.client
+          .from('playdates')
+          .select('*, organizer:users!playdates_organizer_id_fkey(name, avatar_url), participant:users!playdates_participant_id_fkey(name, avatar_url)')
+          .or('organizer_id.eq.${user.id},participant_id.eq.${user.id}')
+          .lt('scheduled_at', now.toIso8601String())
+          .order('scheduled_at', ascending: false);
+
+      // Get pending requests
+      final requests = await PlaydateRequestService.getPendingRequests(user.id);
+
+      setState(() {
+        _upcomingPlaydates = upcoming;
+        _pastPlaydates = past;
+        _pendingRequests = requests;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading playdates: $e');
+      _loadSampleData();
+    }
+  }
+
+  void _loadSampleData() {
+    setState(() {
+      _upcomingPlaydates = [];
+      _pastPlaydates = [];
+      _pendingRequests = [];
+      _isLoading = false;
+    });
   }
 
   @override
@@ -60,15 +122,17 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
           labelColor: Theme.of(context).colorScheme.primary,
           unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           indicatorColor: Theme.of(context).colorScheme.primary,
-          tabs: const [
-            Tab(text: 'Upcoming'),
-            Tab(text: 'Past'),
+          tabs: [
+            Tab(text: 'Requests${_pendingRequests.isNotEmpty ? ' (${_pendingRequests.length})' : ''}'),
+            const Tab(text: 'Upcoming'),
+            const Tab(text: 'Past'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
+          _buildPendingRequests(),
           _buildUpcomingPlaydates(),
           _buildPastPlaydates(),
         ],
@@ -76,22 +140,522 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     );
   }
 
-  Widget _buildUpcomingPlaydates() {
-    final upcomingPlaydates = SampleData.upcomingPlaydates
-        .where((playdate) => playdate.dateTime.isAfter(DateTime.now()))
-        .toList();
+  Widget _buildPendingRequests() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: upcomingPlaydates.length,
-      itemBuilder: (context, index) {
-        final playdate = upcomingPlaydates[index];
-        return _buildPlaydateCard(context, playdate, isUpcoming: true);
-      },
+    if (_pendingRequests.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.inbox_outlined,
+              size: 64,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No pending requests',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Playdate invitations will appear here',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadPlaydates,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _pendingRequests.length,
+        itemBuilder: (context, index) {
+          final request = _pendingRequests[index];
+          return _buildRequestCard(request);
+        },
+      ),
+    );
+  }
+
+  Widget _buildUpcomingPlaydates() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_upcomingPlaydates.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.calendar_today,
+              size: 64,
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No upcoming playdates',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Schedule your first playdate!',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadPlaydates,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _upcomingPlaydates.length,
+        itemBuilder: (context, index) {
+          final playdate = _upcomingPlaydates[index];
+          return _buildRealPlaydateCard(playdate, isUpcoming: true);
+        },
+      ),
     );
   }
 
   Widget _buildPastPlaydates() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_pastPlaydates.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.history,
+              size: 64,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No past playdates',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Your completed playdates will appear here',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadPlaydates,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _pastPlaydates.length,
+        itemBuilder: (context, index) {
+          final playdate = _pastPlaydates[index];
+          return _buildRealPlaydateCard(playdate, isUpcoming: false);
+        },
+      ),
+    );
+  }
+
+  Widget _buildRequestCard(Map<String, dynamic> request) {
+    final playdate = request['playdate'] as Map<String, dynamic>?;
+    final requester = request['requester'] as Map<String, dynamic>?;
+    final requesterDog = request['requester_dog'] as Map<String, dynamic>?;
+    
+    if (playdate == null) return const SizedBox.shrink();
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Request header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Pending Request',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.orange,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                if (request['created_at'] != null)
+                  Text(
+                    _formatTimeAgo(DateTime.parse(request['created_at'])),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            
+            // Playdate info
+            Text(
+              playdate['title'] ?? 'Playdate Request',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            
+            // From info
+            if (requester != null && requesterDog != null)
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundImage: requesterDog['main_photo_url'] != null
+                        ? NetworkImage(requesterDog['main_photo_url'])
+                        : null,
+                    child: requesterDog['main_photo_url'] == null
+                        ? const Icon(Icons.pets)
+                        : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'From ${requester['name']}',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '${requesterDog['name']} (${requesterDog['breed']})',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            
+            const SizedBox(height: 12),
+            
+            // Location and time
+            Row(
+              children: [
+                Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  playdate['location'] ?? 'TBD',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(width: 16),
+                Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  _formatDateTime(DateTime.parse(playdate['scheduled_at'])),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+            
+            // Message if provided
+            if (request['message'] != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  request['message'],
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ],
+            
+            const SizedBox(height: 16),
+            
+            // Action buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _handleRequestResponse(request, 'declined'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                    ),
+                    child: const Text('Decline'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => _handleRequestResponse(request, 'accepted'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Accept'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRealPlaydateCard(Map<String, dynamic> playdate, {required bool isUpcoming}) {
+    final organizer = playdate['organizer'] as Map<String, dynamic>?;
+    final participant = playdate['participant'] as Map<String, dynamic>?;
+    final scheduledAt = DateTime.parse(playdate['scheduled_at']);
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
+        onTap: isUpcoming ? null : () => _navigateToRecap(playdate),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Status badge
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(playdate['status']).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      playdate['status']?.toUpperCase() ?? 'PENDING',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _getStatusColor(playdate['status']),
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (!isUpcoming)
+                    TextButton.icon(
+                      onPressed: () => _navigateToRecap(playdate),
+                      icon: const Icon(Icons.rate_review, size: 16),
+                      label: const Text('Add Recap'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              
+              // Title
+              Text(
+                playdate['title'] ?? 'Playdate',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              // Location and time
+              Row(
+                children: [
+                  Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      playdate['location'] ?? 'TBD',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    _formatDateTime(scheduledAt),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Participants
+              Text(
+                'Participants',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (organizer != null)
+                    _buildParticipantChip(organizer['name'] ?? 'Organizer', true),
+                  const SizedBox(width: 8),
+                  if (participant != null)
+                    _buildParticipantChip(participant['name'] ?? 'Participant', false),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildParticipantChip(String name, bool isOrganizer) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: isOrganizer
+            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+            : Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isOrganizer
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
+              : Theme.of(context).colorScheme.secondary.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.person,
+            size: 16,
+            color: isOrganizer
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.secondary,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            name,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: isOrganizer
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.secondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'confirmed':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'cancelled':
+        return Colors.red;
+      case 'completed':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = dateTime.difference(now);
+    
+    if (difference.inDays == 0) {
+      return 'Today at ${TimeOfDay.fromDateTime(dateTime).format(context)}';
+    } else if (difference.inDays == 1) {
+      return 'Tomorrow at ${TimeOfDay.fromDateTime(dateTime).format(context)}';
+    } else if (difference.inDays == -1) {
+      return 'Yesterday at ${TimeOfDay.fromDateTime(dateTime).format(context)}';
+    } else {
+      return '${dateTime.day}/${dateTime.month} at ${TimeOfDay.fromDateTime(dateTime).format(context)}';
+    }
+  }
+
+  String _formatTimeAgo(DateTime dateTime) {
+    final difference = DateTime.now().difference(dateTime);
+    
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${difference.inDays}d ago';
+    }
+  }
+
+  Future<void> _handleRequestResponse(Map<String, dynamic> request, String response) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PlaydateResponseModal(
+        playdateRequest: request,
+        onResponse: (selectedResponse) {
+          // Refresh the list after response
+          _loadPlaydates();
+        },
+      ),
+    );
+
+    if (result == true) {
+      _loadPlaydates();
+    }
+  }
+
+  void _navigateToRecap(Map<String, dynamic> playdate) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PlaydateRecapScreen(
+          playdateId: playdate['id'],
+          playdateData: playdate,
+        ),
+      ),
+    ).then((_) => _loadPlaydates());
+  }
+
+  Widget _buildPastPlaydatesOld() {
     // Create some past playdates for demo
     final pastPlaydates = [
       Playdate(

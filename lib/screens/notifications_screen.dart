@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/models/notification.dart';
 import 'package:barkdate/widgets/notification_tile.dart';
-import 'package:barkdate/supabase/notification_service.dart';
+import 'package:barkdate/supabase/notification_service.dart' as notif_service;
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/screens/playdates_screen.dart';
 import 'package:barkdate/screens/chat_detail_screen.dart';
 import 'package:barkdate/screens/social_feed_screen.dart';
+import 'package:barkdate/widgets/playdate_response_modal.dart';
+import 'package:barkdate/supabase/bark_playdate_services.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -123,15 +125,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
 
       // Load real notifications from database
-      final notificationsData = await NotificationService.getUnreadNotifications(currentUser.id);
+      final allNotificationsData = await notif_service.NotificationService.getAllNotifications(currentUser.id);
       
       // Convert to BarkDateNotification objects
-      final notifications = notificationsData.map((data) => 
+      final notifications = allNotificationsData.map((data) => 
         BarkDateNotification.fromMap(data)
       ).toList();
 
-      // Add some sample notifications for demo purposes
-      notifications.addAll(_getSampleNotifications());
+      // Only add sample notifications if there are no real ones
+      if (notifications.isEmpty) {
+        notifications.addAll(_getSampleNotifications());
+      }
 
       if (mounted) {
         setState(() {
@@ -533,7 +537,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       final currentUser = SupabaseConfig.auth.currentUser;
       if (currentUser != null) {
-        await NotificationService.markAllAsRead(currentUser.id);
+        await notif_service.NotificationService.markAllAsRead(currentUser.id);
       }
       
       // Update local state
@@ -648,33 +652,75 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  void _showPlaydateResponseDialog(BarkDateNotification notification, String response) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Playdate ${response == 'accepted' ? 'Accepted' : response == 'declined' ? 'Declined' : 'Counter-Proposed'}'),
-        content: Text(
-          response == 'accepted' 
-            ? 'Great! The playdate is now confirmed.'
-            : response == 'declined'
-              ? 'The playdate invitation has been declined.'
-              : 'You can now suggest alternative times or locations.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+  Future<void> _showPlaydateResponseDialog(BarkDateNotification notification, String response) async {
+    // Get the full playdate request data
+    final currentUser = SupabaseAuth.currentUser;
+    if (currentUser == null) return;
+
+    try {
+      // Get the playdate request details
+      final playdateId = notification.metadata?['playdate_id'];
+      if (playdateId == null) return;
+
+      final requests = await PlaydateRequestService.getPendingRequests(currentUser.id);
+      final request = requests.firstWhere(
+        (r) => r['playdate']?['id'] == playdateId,
+        orElse: () => {},
+      );
+
+      if (request.isEmpty) {
+        // Fallback to simple dialog if request not found
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Playdate Request'),
+            content: const Text('This playdate request is no longer available.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        );
+        return;
+      }
+
+      // Show the response modal
+      final result = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => PlaydateResponseModal(
+          playdateRequest: request,
+          onResponse: (selectedResponse) {
+            // Update the notification after response
+            _markNotificationAsRead(notification);
+          },
+        ),
+      );
+
+      if (result == true) {
+        // Refresh notifications
+        _loadNotifications();
+      }
+    } catch (e) {
+      debugPrint('Error showing playdate response dialog: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to load playdate details'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _markNotificationAsRead(BarkDateNotification notification) async {
     try {
       final currentUser = SupabaseConfig.auth.currentUser;
       if (currentUser != null) {
-        await NotificationService.markAsRead(notification.id);
+        await notif_service.NotificationService.markAsRead(notification.id);
       }
       
       // Update local state

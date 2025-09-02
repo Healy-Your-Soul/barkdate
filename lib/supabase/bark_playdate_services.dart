@@ -221,7 +221,6 @@ class PlaydateRequestService {
           .insert({
             'organizer_id': organizerId,
             'participant_id': inviteeId,
-            'creator_dog_id': organizerDogId,
             'title': title,
             'description': description,
             'location': location,

@@ -13,6 +13,8 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
 import 'package:barkdate/widgets/playdate_request_modal.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:barkdate/supabase/notification_service.dart' as notif_service;
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -27,11 +29,22 @@ class _FeedScreenState extends State<FeedScreen> {
   bool _isLoading = true;
   List<Dog> _nearbyDogs = [];
   String? _error;
+  int _upcomingPlaydates = 0;
+  int _unreadNotifications = 0;
+  int _mutualBarks = 0;
 
   @override
   void initState() {
     super.initState();
     _loadNearbyDogs();
+    _loadDashboardData();
+    _setupRealtimeSubscriptions();
+  }
+
+  @override
+  void dispose() {
+    _cancelSubscriptions();
+    super.dispose();
   }
 
   List<Dog> get _filteredDogs {
@@ -112,9 +125,173 @@ class _FeedScreenState extends State<FeedScreen> {
     setState(() => _isRefreshing = true);
     
     // Reload fresh data from database! 🔄
-    await _loadNearbyDogs();
+    await Future.wait([
+      _loadNearbyDogs(),
+      _loadDashboardData(),
+    ]);
     
     setState(() => _isRefreshing = false);
+  }
+
+  Future<void> _loadDashboardData() async {
+    try {
+      final user = SupabaseAuth.currentUser;
+      if (user == null) {
+        setState(() {
+          _upcomingPlaydates = 3;
+          _unreadNotifications = 5;
+          _mutualBarks = 2;
+        });
+        return;
+      }
+
+      // Load real counts from database
+      final results = await Future.wait([
+        _getUpcomingPlaydatesCount(user.id),
+        notif_service.NotificationService.getUnreadCount(user.id),
+        _getMutualBarksCount(user.id),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _upcomingPlaydates = results[0] as int;
+          _unreadNotifications = results[1] as int;
+          _mutualBarks = results[2] as int;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading dashboard data: $e');
+    }
+  }
+
+  Future<int> _getUpcomingPlaydatesCount(String userId) async {
+    try {
+      final now = DateTime.now();
+      final data = await SupabaseConfig.client
+          .from('playdates')
+          .select('id')
+          .or('organizer_id.eq.$userId,participant_id.eq.$userId')
+          .eq('status', 'confirmed')
+          .gte('scheduled_at', now.toIso8601String());
+      return data.length;
+    } catch (e) {
+      debugPrint('Error getting playdate count: $e');
+      return 0;
+    }
+  }
+
+  Future<int> _getMutualBarksCount(String userId) async {
+    try {
+      final data = await SupabaseConfig.client
+          .from('matches')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('is_mutual', true)
+          .eq('action', 'bark');
+      return data.length;
+    } catch (e) {
+      debugPrint('Error getting mutual barks count: $e');
+      return 0;
+    }
+  }
+
+  void _setupRealtimeSubscriptions() {
+    final user = SupabaseAuth.currentUser;
+    if (user == null) return;
+
+    // Subscribe to notifications
+    SupabaseConfig.client
+        .channel('notifications_${user.id}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'notifications',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: user.id,
+          ),
+          callback: (payload) {
+            if (mounted) {
+              setState(() {
+                _unreadNotifications++;
+              });
+              // Show snackbar for new notification
+              final data = payload.newRecord;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(data['title'] as String? ?? 'New notification'),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  action: SnackBarAction(
+                    label: 'View',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                      );
+                    },
+                  ),
+                ),
+              );
+            }
+          },
+        )
+        .subscribe();
+
+    // Subscribe to playdates
+    SupabaseConfig.client
+        .channel('playdates_${user.id}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'playdates',
+          callback: (payload) {
+            if (mounted) {
+              _loadDashboardData();
+            }
+          },
+        )
+        .subscribe();
+
+    // Subscribe to matches (barks)
+    SupabaseConfig.client
+        .channel('matches_${user.id}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'matches',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'target_user_id',
+            value: user.id,
+          ),
+          callback: (payload) {
+            if (mounted) {
+              _loadDashboardData();
+              if (payload.eventType == PostgresChangeEvent.insert) {
+                final data = payload.newRecord;
+                if (data['is_mutual'] == true) {
+                  setState(() {
+                    _mutualBarks++;
+                  });
+                }
+              }
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  void _cancelSubscriptions() {
+    final user = SupabaseAuth.currentUser;
+    if (user != null) {
+      SupabaseConfig.client.channel('notifications_${user.id}').unsubscribe();
+      SupabaseConfig.client.channel('playdates_${user.id}').unsubscribe();
+      SupabaseConfig.client.channel('matches_${user.id}').unsubscribe();
+    }
   }
 
   void _showFilterSheet() {
@@ -367,33 +544,41 @@ class _FeedScreenState extends State<FeedScreen> {
             _buildDashboardCard(
               icon: Icons.calendar_today,
               title: 'Playdates',
-              subtitle: '3 upcoming',
+              subtitle: _upcomingPlaydates > 0 
+                  ? '$_upcomingPlaydates upcoming' 
+                  : 'Schedule one',
               color: Colors.blue,
+              badge: _upcomingPlaydates > 0 ? _upcomingPlaydates : null,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const PlaydatesScreen()),
-              ),
+              ).then((_) => _loadDashboardData()),
             ),
             _buildDashboardCard(
               icon: Icons.notifications,
               title: 'Notifications',
-              subtitle: '5 new',
+              subtitle: _unreadNotifications > 0 
+                  ? '$_unreadNotifications new' 
+                  : 'All caught up',
               color: Colors.orange,
-              badge: 5,
+              badge: _unreadNotifications > 0 ? _unreadNotifications : null,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const NotificationsScreen()),
-              ),
+              ).then((_) => _loadDashboardData()),
             ),
             _buildDashboardCard(
               icon: Icons.favorite,
-              title: 'Catch',
-              subtitle: 'Find new friends',
+              title: 'Matches',
+              subtitle: _mutualBarks > 0 
+                  ? '$_mutualBarks mutual barks' 
+                  : 'Find new friends',
               color: Colors.red,
+              badge: _mutualBarks > 0 ? _mutualBarks : null,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const CatchScreen()),
-              ),
+              ).then((_) => _loadDashboardData()),
             ),
             _buildDashboardCard(
               icon: Icons.photo_library,
