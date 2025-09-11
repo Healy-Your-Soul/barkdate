@@ -58,17 +58,6 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const double earthRadius = 6371000; // Earth radius in meters
-    final double dLat = (lat2 - lat1) * (pi / 180);
-    final double dLon = (lon2 - lon1) * (pi / 180);
-    final double a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1 * (pi / 180)) * cos(lat2 * (pi / 180)) *
-        sin(dLon / 2) * sin(dLon / 2);
-    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return earthRadius * c;
-  }
-
   Future<void> _initializeMap() async {
     try {
       // Get location permission and current location
@@ -183,47 +172,14 @@ class _MapScreenState extends State<MapScreen> {
     setState(() => _isSearching = true);
     
     try {
-      // Get Google Places results
-      final googleResults = await PlacesService.searchDogFriendlyPlaces(
+      final results = await PlacesService.searchDogFriendlyPlaces(
         latitude: _currentLocation!.latitude,
         longitude: _currentLocation!.longitude,
         keyword: query,
       );
       
-      // Get featured parks from database that match the search
-      final featuredResults = <PlaceResult>[];
-      for (final park in _featuredParks) {
-        final name = park['name']?.toString().toLowerCase() ?? '';
-        final description = park['description']?.toString().toLowerCase() ?? '';
-        final searchTerm = query.toLowerCase();
-        
-        if (name.contains(searchTerm) || description.contains(searchTerm)) {
-          featuredResults.add(PlaceResult(
-            placeId: 'featured_${park['id']}',
-            name: '⭐ ${park['name']}',
-            address: park['address'] ?? park['description'] ?? 'Featured dog park',
-            latitude: park['latitude'],
-            longitude: park['longitude'],
-            rating: park['rating']?.toDouble() ?? 4.5,
-            userRatingsTotal: 0,
-            isOpen: true,
-            category: PlaceCategory.park,
-            distance: _calculateDistance(
-              _currentLocation!.latitude,
-              _currentLocation!.longitude,
-              park['latitude'],
-              park['longitude'],
-            ),
-            photoReference: null,
-          ));
-        }
-      }
-      
-      // Combine results with featured parks first
-      final allResults = [...featuredResults, ...googleResults];
-      
       setState(() {
-        _searchResults = allResults;
+        _searchResults = results;
         _showingSearchResults = true;
       });
       _updateMarkers();
@@ -444,6 +400,428 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  void _showPlaceDetails(PlaceResult place) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          maxChildSize: 0.9,
+          minChildSize: 0.3,
+          expand: false,
+          builder: (context, scrollController) {
+            return FutureBuilder<PlaceDetails?>(
+              future: PlacesService.getPlaceDetails(place.placeId),
+              builder: (context, snapshot) {
+                return SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            child: Text(
+                              place.category.icon,
+                              style: const TextStyle(fontSize: 24),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  place.name,
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  place.category.displayName,
+                                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.directions),
+                            onPressed: () {
+                              final uri = Uri.parse(
+                                  'https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}');
+                              launchUrl(uri, mode: LaunchMode.externalApplication);
+                            },
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Rating and distance
+                      Row(
+                        children: [
+                          if (place.rating > 0) ...[
+                            Row(
+                              children: [
+                                const Icon(Icons.star, color: Colors.amber, size: 20),
+                                const SizedBox(width: 4),
+                                Text(
+                                  place.rating.toStringAsFixed(1),
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                if (place.userRatingsTotal > 0) ...[
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '(${place.userRatingsTotal})',
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(width: 16),
+                          ],
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on, size: 20),
+                              const SizedBox(width: 4),
+                              Text(place.distanceText),
+                            ],
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: place.isOpen ? Colors.green : Colors.red,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              place.isOpen ? 'Open' : 'Closed',
+                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Address
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.place, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              place.address,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      // Photo
+                      if (place.photoReference != null) ...[
+                        const SizedBox(height: 16),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: CachedNetworkImage(
+                            imageUrl: place.photoUrl,
+                            height: 200,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                              height: 200,
+                              color: Colors.grey[300],
+                              child: const Center(child: CircularProgressIndicator()),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              height: 200,
+                              color: Colors.grey[300],
+                              child: const Center(child: Icon(Icons.error)),
+                            ),
+                          ),
+                        ),
+                      ],
+                      
+                      if (snapshot.connectionState == ConnectionState.waiting) ...[
+                        const SizedBox(height: 32),
+                        const Center(child: CircularProgressIndicator()),
+                        const SizedBox(height: 16),
+                        const Center(child: Text('Loading details...')),
+                      ] else if (snapshot.hasData && snapshot.data != null) ...[
+                        const SizedBox(height: 16),
+                        _buildPlaceDetailsContent(snapshot.data!),
+                      ],
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Action buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                final uri = Uri.parse('tel:${snapshot.data?.phoneNumber ?? ''}');
+                                if (snapshot.data?.phoneNumber != null) {
+                                  launchUrl(uri);
+                                }
+                              },
+                              icon: const Icon(Icons.phone),
+                              label: const Text('Call'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                final uri = Uri.parse(
+                                    'https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}');
+                                launchUrl(uri, mode: LaunchMode.externalApplication);
+                              },
+                              icon: const Icon(Icons.directions),
+                              label: const Text('Directions'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPlaceDetailsContent(PlaceDetails details) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Opening hours
+        if (details.weekdayText.isNotEmpty) ...[
+          Text(
+            'Hours',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          ...details.weekdayText.map((hour) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Text(hour, style: Theme.of(context).textTheme.bodyMedium),
+          )),
+          const SizedBox(height: 16),
+        ],
+        
+        // Contact info
+        if (details.phoneNumber != null || details.website != null) ...[
+          Text(
+            'Contact',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          if (details.phoneNumber != null) ...[
+            Row(
+              children: [
+                const Icon(Icons.phone, size: 16),
+                const SizedBox(width: 8),
+                Text(details.phoneNumber!),
+              ],
+            ),
+            const SizedBox(height: 4),
+          ],
+          if (details.website != null) ...[
+            Row(
+              children: [
+                const Icon(Icons.web, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => launchUrl(Uri.parse(details.website!)),
+                    child: Text(
+                      details.website!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 16),
+        ],
+        
+        // Reviews
+        if (details.reviews.isNotEmpty) ...[
+          Text(
+            'Reviews',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          ...details.reviews.take(3).map((review) => Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceVariant,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      review.authorName,
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                    const Spacer(),
+                    Row(
+                      children: [
+                        const Icon(Icons.star, size: 14, color: Colors.amber),
+                        Text(' ${review.rating.toStringAsFixed(1)}'),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  review.text,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  review.relativeTimeDescription,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ],
+            ),
+          )),
+        ],
+      ],
+    );
+  }
+  void _showParkDetails(ParkLocation park) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const CircleAvatar(
+                    backgroundColor: Colors.green,
+                    child: Icon(Icons.park, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(park.name, style: Theme.of(context).textTheme.titleLarge),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Dog Park',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.directions),
+                    onPressed: () {
+                      final uri = Uri.parse(
+                          'https://www.google.com/maps/search/?api=1&query=${park.latitude},${park.longitude}');
+                      launchUrl(uri, mode: LaunchMode.externalApplication);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.place, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      park.address,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              StreamBuilder<List<Map<String, dynamic>>>(
+                stream: CheckinService.streamActiveCheckinsForPark(park.id),
+                builder: (context, snapshot) {
+                  final count = snapshot.data?.length ?? 0;
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceVariant,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.pets),
+                        const SizedBox(width: 8),
+                        Text('$count dogs currently active at this park'),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        final uri = Uri.parse(
+                            'https://www.google.com/maps/search/?api=1&query=${park.latitude},${park.longitude}');
+                        launchUrl(uri, mode: LaunchMode.externalApplication);
+                      },
+                      icon: const Icon(Icons.directions),
+                      label: const Text('Directions'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
   void _showParkDetails(Map<String, dynamic> park) {
     showModalBottomSheet(
       context: context,

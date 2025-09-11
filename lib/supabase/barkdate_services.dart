@@ -163,6 +163,79 @@ class BarkDateUserService {
       filters: {'user_id': userId},
     );
   }
+
+  /// Get current dog counts for all parks
+  static Future<Map<String, int>> getCurrentDogCounts() async {
+    try {
+      final response = await SupabaseConfig.client
+          .from('park_checkins')
+          .select('park_id')
+          .eq('is_active', true);
+
+      Map<String, int> counts = {};
+      for (var checkin in response) {
+        String parkId = checkin['park_id'];
+        counts[parkId] = (counts[parkId] ?? 0) + 1;
+      }
+      
+      return counts;
+    } catch (e) {
+      debugPrint('Error getting dog counts: $e');
+      return {};
+    }
+  }
+
+  /// Listen to real-time dog count updates
+  static Stream<Map<String, int>> getDogCountUpdates() {
+    return SupabaseConfig.client
+        .from('park_checkins')
+        .stream(primaryKey: ['id'])
+        .map((data) {
+          Map<String, int> counts = {};
+          for (var checkin in data) {
+            if (checkin['is_active'] == true) {
+              String parkId = checkin['park_id'];
+              counts[parkId] = (counts[parkId] ?? 0) + 1;
+            }
+          }
+          return counts;
+        });
+  }
+
+  /// Check in to a park
+  static Future<void> checkInToPark(String parkId) async {
+    try {
+      final user = SupabaseConfig.client.auth.currentUser;
+      if (user == null) throw Exception('User not authenticated');
+
+      // Get user's active dog
+      final dogs = await getUserDogs(user.id);
+      if (dogs.isEmpty) throw Exception('No active dogs found');
+      
+      final dogId = dogs.first['id'];
+
+      // Check out from any current park first
+      await SupabaseConfig.client
+          .from('park_checkins')
+          .update({'is_active': false, 'checked_out_at': DateTime.now().toIso8601String()})
+          .eq('user_id', user.id)
+          .eq('is_active', true);
+
+      // Check in to new park
+      await SupabaseConfig.client
+          .from('park_checkins')
+          .insert({
+            'user_id': user.id,
+            'dog_id': dogId,
+            'park_id': parkId,
+            'checked_in_at': DateTime.now().toIso8601String(),
+            'is_active': true,
+          });
+    } catch (e) {
+      debugPrint('Error checking in to park: $e');
+      rethrow;
+    }
+  }
 }
 
 class BarkDateMatchService {

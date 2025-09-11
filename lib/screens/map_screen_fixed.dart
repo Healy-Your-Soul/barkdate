@@ -58,17 +58,6 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const double earthRadius = 6371000; // Earth radius in meters
-    final double dLat = (lat2 - lat1) * (pi / 180);
-    final double dLon = (lon2 - lon1) * (pi / 180);
-    final double a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1 * (pi / 180)) * cos(lat2 * (pi / 180)) *
-        sin(dLon / 2) * sin(dLon / 2);
-    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return earthRadius * c;
-  }
-
   Future<void> _initializeMap() async {
     try {
       // Get location permission and current location
@@ -183,47 +172,14 @@ class _MapScreenState extends State<MapScreen> {
     setState(() => _isSearching = true);
     
     try {
-      // Get Google Places results
-      final googleResults = await PlacesService.searchDogFriendlyPlaces(
+      final results = await PlacesService.searchDogFriendlyPlaces(
         latitude: _currentLocation!.latitude,
         longitude: _currentLocation!.longitude,
         keyword: query,
       );
       
-      // Get featured parks from database that match the search
-      final featuredResults = <PlaceResult>[];
-      for (final park in _featuredParks) {
-        final name = park['name']?.toString().toLowerCase() ?? '';
-        final description = park['description']?.toString().toLowerCase() ?? '';
-        final searchTerm = query.toLowerCase();
-        
-        if (name.contains(searchTerm) || description.contains(searchTerm)) {
-          featuredResults.add(PlaceResult(
-            placeId: 'featured_${park['id']}',
-            name: '⭐ ${park['name']}',
-            address: park['address'] ?? park['description'] ?? 'Featured dog park',
-            latitude: park['latitude'],
-            longitude: park['longitude'],
-            rating: park['rating']?.toDouble() ?? 4.5,
-            userRatingsTotal: 0,
-            isOpen: true,
-            category: PlaceCategory.park,
-            distance: _calculateDistance(
-              _currentLocation!.latitude,
-              _currentLocation!.longitude,
-              park['latitude'],
-              park['longitude'],
-            ),
-            photoReference: null,
-          ));
-        }
-      }
-      
-      // Combine results with featured parks first
-      final allResults = [...featuredResults, ...googleResults];
-      
       setState(() {
-        _searchResults = allResults;
+        _searchResults = results;
         _showingSearchResults = true;
       });
       _updateMarkers();
