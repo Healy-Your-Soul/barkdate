@@ -12,7 +12,12 @@ dependencies:
   cupertino_icons: ^1.0.8
   google_fonts: ^6.1.0
   supabase_flutter: '>=1.10.0'
-  firebase_core: ^4.0.0
+  firebase_core: ^3.15.2
+  firebase_messaging: ^15.2.10
+  flutter_local_notifications: ^18.0.1
+  google_maps_flutter: ^2.9.0
+  geolocator: ^13.0.1
+  url_launcher: ^6.3.0
   image_picker: ^1.0.7
   shared_preferences: ^2.2.2
   flutter_image_compress: ^2.1.0
@@ -21,6 +26,7 @@ dependencies:
   cached_network_image: ^3.3.1
   path_provider: ^2.1.1
   http: ^1.1.0
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:
@@ -29,3 +35,18 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
+  assets:
+    - assets/sounds/
+    - assets/images/
+    
+  # Sound files for notifications
+  # To be added:
+  # - assets/sounds/bark_notification.mp3
+  # - assets/sounds/playdate_invite.mp3
+  # - assets/sounds/playdate_response.mp3
+  # - assets/sounds/playdate_reminder.mp3
+  # - assets/sounds/match_found.mp3
+  # - assets/sounds/message_received.mp3
+  # - assets/sounds/social_notification.mp3
+  # - assets/sounds/general_notification.mp3

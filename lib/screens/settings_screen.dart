@@ -219,7 +219,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => CreateProfileScreen(
+                        builder: (context) => CreateProfileScreen(editMode: EditMode.editOwner, 
                           userName: userProfile?['name'],
                           userEmail: userProfile?['email'] ?? user.email,
                           userId: user.id,
@@ -254,7 +254,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => CreateProfileScreen(
+                        builder: (context) => CreateProfileScreen(editMode: EditMode.editOwner, 
                           userName: userProfile?['name'],
                           userEmail: userProfile?['email'] ?? user.email,
                           userId: user.id,

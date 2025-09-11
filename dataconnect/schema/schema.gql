@@ -1,0 +1,59 @@
+type User @table {
+  username: String!
+  email: String!
+  createdAt: Timestamp!
+  displayName: String
+  photoUrl: String
+  bio: String
+}
+
+type Conversation @table {
+  type: String!
+  createdAt: Timestamp!
+  name: String
+  description: String
+}
+
+type UserConversation @table(key: ["user", "conversation"]) {
+  user: User!
+  conversation: Conversation!
+  joinedAt: Timestamp!
+  lastReadMessage: Message
+  isAdmin: Boolean
+}
+
+type Message @table {
+  content: String!
+  createdAt: Timestamp!
+  sender: User!
+  conversation: Conversation!
+  isRead: Boolean
+  attachmentUrl: String
+}
+
+type Meeting @table {
+  title: String!
+  startTime: Timestamp!
+  endTime: Timestamp!
+  organizer: User!
+  createdAt: Timestamp!
+  location: String
+  description: String
+}
+
+type MeetingAttendee @table(key: ["user", "meeting"]) {
+  user: User!
+  meeting: Meeting!
+  status: String!
+  invitedAt: Timestamp!
+  respondedAt: Timestamp
+}
+
+type Notification @table {
+  message: String!
+  type: String!
+  recipient: User!
+  createdAt: Timestamp!
+  isRead: Boolean
+  link: String
+}

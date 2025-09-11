@@ -1,4 +1,12 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    - build/**
+    - ios/Pods/**
+    - android/**/build/**
+    - references/**
+    - web/.dart_tool/**
+
 linter:
   rules:

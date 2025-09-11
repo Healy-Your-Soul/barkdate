@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
+import 'package:barkdate/supabase/notification_service.dart';
 
 /// Simplified playdate service that works with basic schema
 class SimplifiedPlaydateService {
@@ -26,7 +27,7 @@ class SimplifiedPlaydateService {
       debugPrint('Location: $location, Time: $scheduledAt');
 
       // Create playdate with only basic fields that definitely exist
-      final playdateData = {
+  final Map<String, dynamic> playdateData = {
         'organizer_id': organizerId,
         'participant_id': inviteeId,
         'title': title,

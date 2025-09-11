@@ -1,0 +1,29 @@
+mutation CreateUser @auth(level: USER) {
+  user_insert(data: {
+    email: "test@example.com",
+    username: "testuser"
+  })
+}
+
+query GetUser @auth(level: USER) {
+  user(key: {id_expr: "auth.uid"}) {
+    id
+    email
+    username
+  }
+}
+
+mutation UpdateUserBio @auth(level: USER) {
+  user_update(key: {id_expr: "auth.uid"}, data: {
+    bio: "Updated bio content"
+  })
+}
+
+query ListNotifications @auth(level: USER) {
+  notifications(where: {recipientId_expr: "auth.uid"}) {
+    id
+    type
+    message
+    isRead
+  }
+}

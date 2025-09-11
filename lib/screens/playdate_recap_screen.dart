@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;

@@ -130,6 +130,7 @@ ALTER TABLE playdate_recaps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dog_friendships ENABLE ROW LEVEL SECURITY;
 
 -- Playdate requests policies
+DROP POLICY IF EXISTS "Users can view requests involving them" ON playdate_requests;
 CREATE POLICY "Users can view requests involving them" ON playdate_requests
   FOR SELECT USING (
     requester_id = auth.uid() OR 
@@ -140,6 +141,7 @@ CREATE POLICY "Users can view requests involving them" ON playdate_requests
     )
   );
 
+DROP POLICY IF EXISTS "Users can create requests for their playdates" ON playdate_requests;
 CREATE POLICY "Users can create requests for their playdates" ON playdate_requests
   FOR INSERT WITH CHECK (
     requester_id = auth.uid() AND
@@ -149,10 +151,21 @@ CREATE POLICY "Users can create requests for their playdates" ON playdate_reques
     )
   );
 
+DROP POLICY IF EXISTS "Users can update requests they received" ON playdate_requests;
 CREATE POLICY "Users can update requests they received" ON playdate_requests
   FOR UPDATE USING (invitee_id = auth.uid() OR requester_id = auth.uid());
 
+-- Notifications policies (view/insert own)
+DROP POLICY IF EXISTS "Users can view own notifications" ON notifications;
+CREATE POLICY "Users can view own notifications" ON notifications
+  FOR SELECT USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can insert own notifications" ON notifications;
+CREATE POLICY "Users can insert own notifications" ON notifications
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+
 -- Playdate recaps policies
+DROP POLICY IF EXISTS "Users can view recaps for playdates they participated in" ON playdate_recaps;
 CREATE POLICY "Users can view recaps for playdates they participated in" ON playdate_recaps
   FOR SELECT USING (
     user_id = auth.uid() OR
@@ -162,6 +175,7 @@ CREATE POLICY "Users can view recaps for playdates they participated in" ON play
     )
   );
 
+DROP POLICY IF EXISTS "Users can create recaps for their own playdates" ON playdate_recaps;
 CREATE POLICY "Users can create recaps for their own playdates" ON playdate_recaps
   FOR INSERT WITH CHECK (
     user_id = auth.uid() AND
@@ -171,16 +185,19 @@ CREATE POLICY "Users can create recaps for their own playdates" ON playdate_reca
     )
   );
 
+DROP POLICY IF EXISTS "Users can update their own recaps" ON playdate_recaps;
 CREATE POLICY "Users can update their own recaps" ON playdate_recaps
   FOR UPDATE USING (user_id = auth.uid());
 
 -- Dog friendships policies
+DROP POLICY IF EXISTS "Users can view friendships for their dogs" ON dog_friendships;
 CREATE POLICY "Users can view friendships for their dogs" ON dog_friendships
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM dogs d WHERE d.id = dog1_id AND d.user_id = auth.uid()) OR
     EXISTS (SELECT 1 FROM dogs d WHERE d.id = dog2_id AND d.user_id = auth.uid())
   );
 
+DROP POLICY IF EXISTS "Users can create friendships for their dogs" ON dog_friendships;
 CREATE POLICY "Users can create friendships for their dogs" ON dog_friendships
   FOR INSERT WITH CHECK (
     EXISTS (SELECT 1 FROM dogs d WHERE d.id = dog1_id AND d.user_id = auth.uid()) OR

@@ -4,10 +4,11 @@ import 'package:barkdate/widgets/notification_tile.dart';
 import 'package:barkdate/supabase/notification_service.dart' as notif_service;
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/screens/playdates_screen.dart';
+import 'package:barkdate/models/dog.dart';
+import 'package:barkdate/screens/dog_profile_detail.dart';
 import 'package:barkdate/screens/chat_detail_screen.dart';
 import 'package:barkdate/screens/social_feed_screen.dart';
-import 'package:barkdate/widgets/playdate_response_modal.dart';
-import 'package:barkdate/supabase/bark_playdate_services.dart';
+import 'package:barkdate/widgets/playdate_response_bottom_sheet.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -22,11 +23,35 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _isLoading = true;
   String? _error;
   String _selectedView = 'all'; // 'all', 'unread', 'grouped'
+  Stream<List<Map<String, dynamic>>>? _notifStream;
 
   @override
   void initState() {
     super.initState();
     _loadNotifications();
+    _subscribeToRealtime();
+  }
+
+  void _subscribeToRealtime() {
+    final currentUser = SupabaseConfig.auth.currentUser;
+    if (currentUser == null) return;
+
+    _notifStream = notif_service.NotificationService.streamUserNotifications(currentUser.id);
+    _notifStream!.listen((rows) {
+      if (!mounted) return;
+      final fresh = rows.map((m) => BarkDateNotification.fromMap(m)).toList();
+      setState(() {
+        _notifications = fresh;
+        _notificationGroups = _groupNotifications(_notifications);
+      });
+    }, onError: (e) {
+      debugPrint('Realtime notification error: $e');
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -175,6 +200,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         metadata: {
           'from_dog_name': 'Charlie',
           'from_user_id': 'user_123',
+          'from_dog_id': 'dog_charlie',
         },
         isRead: false,
         createdAt: DateTime.now().subtract(const Duration(minutes: 15)),
@@ -183,13 +209,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         id: '2',
         userId: 'current_user',
         title: 'New Playdate Invitation! 🐕',
-        body: 'Sarah invited Max for a playdate at Central Park',
+        body: 'Lizzy invited Gigi for a playdate at Central Park',
         type: NotificationType.playdateRequest,
+        actionType: 'playdate_invitation',
+        relatedId: 'playdate_request_123',
         metadata: {
-          'organizer_name': 'Sarah',
-          'organizer_dog_name': 'Max',
-          'location': 'Central Park',
-          'scheduled_at': '2024-01-15T14:00:00Z',
+          'playdate_id': 'playdate_123',
+          'title': 'Central Park Adventure',
+          'organizer_id': 'user_sarah',
+          'organizer_name': 'Lizzy',
+          'organizer_dog_id': 'dog_max',
+          'organizer_dog_name': 'Gigi',
+          'location': 'Central Park Dog Run',
+          'scheduled_at': DateTime.now().add(const Duration(days: 1)).toIso8601String(),
+          'description': 'Let\'s have a fun playdate in the park! Our dogs can run around and play together.',
         },
         isRead: false,
         createdAt: DateTime.now().subtract(const Duration(hours: 2)),
@@ -203,6 +236,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         metadata: {
           'other_dog_name': 'Buddy',
           'other_user_id': 'user_456',
+          'other_user_name': 'Mike',
         },
         isRead: false,
         createdAt: DateTime.now().subtract(const Duration(hours: 4)),
@@ -572,11 +606,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void _handleNotificationTap(BarkDateNotification notification) {
     // Navigate based on notification type
     switch (notification.type) {
+      case NotificationType.bark:
+        _openDogFromNotification(notification);
+        break;
       case NotificationType.playdateRequest:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const PlaydatesScreen()),
-        );
+        _showPlaydateResponseBottomSheet(notification);
         break;
       case NotificationType.message:
         Navigator.push(
@@ -584,6 +618,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           MaterialPageRoute(builder: (_) => ChatDetailScreen(
             recipientName: notification.metadata?['sender_name'] ?? 'Unknown',
             dogName: 'Unknown',
+          )),
+        );
+        break;
+      case NotificationType.playdate:
+        // Open Upcoming tab and attempt to highlight the playdate
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => PlaydatesScreen(
+            initialTabIndex: 1,
+            highlightPlaydateId: notification.relatedId,
           )),
         );
         break;
@@ -599,17 +643,52 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  Future<void> _openDogFromNotification(BarkDateNotification notification) async {
+    try {
+      final dogId = notification.metadata?['from_dog_id'] ?? notification.relatedId;
+      if (dogId == null) return;
+
+      final row = await SupabaseConfig.client
+          .from('dogs')
+          .select('id, name, breed, age, size, gender, bio, photo_urls, user_id, users(name)')
+          .eq('id', dogId)
+          .maybeSingle();
+
+      if (row == null) return;
+
+      final dog = Dog(
+        id: row['id'],
+        name: row['name'] ?? 'Dog',
+        breed: row['breed'] ?? '',
+        age: (row['age'] is int) ? row['age'] as int : int.tryParse('${row['age'] ?? 0}') ?? 0,
+        size: row['size'] ?? '',
+        gender: row['gender'] ?? '',
+        bio: row['bio'] ?? '',
+        photos: List<String>.from(row['photo_urls'] ?? []),
+        ownerId: row['user_id'] ?? '',
+        ownerName: (row['users']?['name']) ?? 'Owner',
+        distanceKm: 0,
+      );
+
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => DogProfileDetail(dog: dog)),
+      );
+
+      _markNotificationAsRead(notification);
+    } catch (e) {
+      debugPrint('Error opening dog from notification: $e');
+    }
+  }
+
   Future<void> _handleNotificationAction(BarkDateNotification notification, String action) async {
     try {
       switch (action) {
         case 'accept_playdate':
-          _showPlaydateResponseDialog(notification, 'accepted');
-          break;
         case 'decline_playdate':
-          _showPlaydateResponseDialog(notification, 'declined');
-          break;
         case 'counter_propose':
-          _showPlaydateResponseDialog(notification, 'counter_proposed');
+          _showPlaydateResponseBottomSheet(notification);
           break;
         case 'reply_message':
           Navigator.push(
@@ -652,63 +731,52 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  Future<void> _showPlaydateResponseDialog(BarkDateNotification notification, String response) async {
-    // Get the full playdate request data
-    final currentUser = SupabaseAuth.currentUser;
+  Future<void> _showPlaydateResponseBottomSheet(BarkDateNotification notification) async {
+    final currentUser = SupabaseConfig.auth.currentUser;
     if (currentUser == null) return;
 
     try {
-      // Get the playdate request details
-      final playdateId = notification.metadata?['playdate_id'];
-      if (playdateId == null) return;
+      // Get the full playdate request data from the notification metadata
+      final playdateRequest = {
+        'id': notification.relatedId ?? notification.metadata?['playdate_id'],
+        'playdate': {
+          'id': notification.metadata?['playdate_id'],
+          'location': notification.metadata?['location'],
+          'scheduled_at': notification.metadata?['scheduled_at'],
+          'title': notification.metadata?['title'],
+          'description': notification.body,
+        },
+        'requester': {
+          'name': notification.metadata?['organizer_name'] ?? 'Someone',
+          'id': notification.metadata?['organizer_id'],
+        },
+        'invitee_dog': {
+          'name': notification.metadata?['invitee_dog_name'] ?? 'Your Dog',
+          'id': notification.metadata?['invitee_dog_id'],
+        },
+        'status': 'pending',
+      };
 
-      final requests = await PlaydateRequestService.getPendingRequests(currentUser.id);
-      final request = requests.firstWhere(
-        (r) => r['playdate']?['id'] == playdateId,
-        orElse: () => {},
-      );
-
-      if (request.isEmpty) {
-        // Fallback to simple dialog if request not found
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Playdate Request'),
-            content: const Text('This playdate request is no longer available.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-        return;
-      }
-
-      // Show the response modal
-      final result = await showDialog<bool>(
+      // Show the enhanced bottom sheet
+      await showModalBottomSheet<void>(
         context: context,
-        barrierDismissible: false,
-        builder: (context) => PlaydateResponseModal(
-          playdateRequest: request,
-          onResponse: (selectedResponse) {
-            // Update the notification after response
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => PlaydateResponseBottomSheet(
+          playdateRequest: playdateRequest,
+          onResponseSent: () {
+            // Mark notification as read after response
             _markNotificationAsRead(notification);
           },
         ),
       );
-
-      if (result == true) {
-        // Refresh notifications
-        _loadNotifications();
-      }
+      
     } catch (e) {
-      debugPrint('Error showing playdate response dialog: $e');
+      debugPrint('Error showing playdate response: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to load playdate details'),
+          SnackBar(
+            content: Text('Error: $e'),
             backgroundColor: Colors.red,
           ),
         );

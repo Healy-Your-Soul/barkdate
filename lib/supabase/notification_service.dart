@@ -1,4 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/services/firebase_messaging_service.dart';
+import 'package:barkdate/services/in_app_notification_service.dart';
+import 'package:barkdate/models/notification.dart';
 
 /// Service for managing notifications in BarkDate
 class NotificationService {
@@ -12,7 +16,7 @@ class NotificationService {
           .eq('is_read', false)
           .order('created_at', ascending: false);
       
-      return List<Map<String, dynamic>>.from(data ?? []);
+      return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       print('Error getting unread notifications: $e');
       return [];
@@ -28,11 +32,20 @@ class NotificationService {
           .eq('user_id', userId)
           .order('created_at', ascending: false);
       
-      return List<Map<String, dynamic>>.from(data ?? []);
+      return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       print('Error getting all notifications: $e');
       return [];
     }
+  }
+
+  /// Real-time stream of notifications for a user (ordered newest first)
+  static Stream<List<Map<String, dynamic>>> streamUserNotifications(String userId) {
+    return SupabaseConfig.client
+        .from('notifications')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
   }
 
   /// Mark a notification as read
@@ -84,10 +97,50 @@ class NotificationService {
         'created_at': DateTime.now().toIso8601String(),
       };
 
-      final result = await SupabaseService.insert('notifications', notificationData);
-      return result.first;
+      // Try client insert first, fallback to RPC if RLS blocks
+      Map<String, dynamic> result;
+      try {
+        final insertResult = await SupabaseService.insert('notifications', notificationData);
+        result = insertResult.first;
+      } catch (e) {
+        final errMsg = e.toString();
+        
+        if (errMsg.contains('row-level security') || errMsg.contains('violates row-level security')) {
+          // Use server-side RPC for cross-user notifications
+          try {
+            final rpc = await SupabaseConfig.client.rpc('create_notification', params: notificationData);
+            if (rpc is Map<String, dynamic>) result = rpc;
+            if (rpc is List && rpc.isNotEmpty) result = Map<String, dynamic>.from(rpc.first);
+            
+            // Fallback return
+            result = {
+              'id': null,
+              'user_id': userId,
+              'title': title,
+              'body': body,
+            };
+          } catch (rpcErr) {
+            debugPrint('Notification RPC failed: $rpcErr');
+            rethrow;
+          }
+        } else {
+          debugPrint('Notification creation failed: $errMsg');
+          rethrow;
+        }
+      }
+
+      // Send push notification if Firebase is initialized
+      try {
+        // Store FCM token for the user (simplified for now)
+        debugPrint('Would send push notification to user $userId: $title');
+      } catch (e) {
+        debugPrint('Failed to send push notification: $e');
+        // Don't fail the whole operation if push fails
+      }
+
+      return result;
     } catch (e) {
-      print('Error creating notification: $e');
+      debugPrint('Error creating notification: $e');
       rethrow;
     }
   }
@@ -121,15 +174,47 @@ class NotificationService {
     }
   }
 
-  /// Subscribe to real-time notification updates (placeholder for future implementation)
-  static void subscribeToNotifications(String userId, Function(Map<String, dynamic>) onNotification) {
-    // TODO: Implement real-time notifications
-    print('Real-time notifications not yet implemented');
+  /// Show in-app notification banner (for foreground notifications)
+  static Future<void> showInAppNotification(BarkDateNotification notification) async {
+    try {
+      await InAppNotificationService.showNotification(notification);
+    } catch (e) {
+      debugPrint('Error showing in-app notification: $e');
+    }
   }
 
-  /// Unsubscribe from notification updates (placeholder for future implementation)
-  static void unsubscribeFromNotifications() {
-    // TODO: Implement real-time notifications
-    print('Real-time notifications not yet implemented');
+  /// Create and show notification (both database and in-app if foreground)
+  static Future<Map<String, dynamic>> createAndShowNotification({
+    required String userId,
+    required String title,
+    required String body,
+    required String type,
+    String? actionType,
+    String? relatedId,
+    Map<String, dynamic>? metadata,
+    bool showInApp = true,
+  }) async {
+    // Create in database
+    final result = await createNotification(
+      userId: userId,
+      title: title,
+      body: body,
+      type: type,
+      actionType: actionType,
+      relatedId: relatedId,
+      metadata: metadata,
+    );
+
+    // Show in-app notification if requested
+    if (showInApp) {
+      try {
+        final notification = BarkDateNotification.fromMap(result);
+        await showInAppNotification(notification);
+      } catch (e) {
+        debugPrint('Error creating BarkDateNotification from result: $e');
+      }
+    }
+
+    return result;
   }
 }

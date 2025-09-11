@@ -1,0 +1,22 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Flutter Pub Get",
+			"type": "shell",
+			"command": "flutter pub get",
+			"isBackground": false,
+			"problemMatcher": [
+				"$flutter-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Supabase DB Push",
+			"type": "shell",
+			"command": "supabase db push",
+			"isBackground": false,
+			"group": "build"
+		}
+	]
+}

@@ -1,0 +1,39 @@
+connectorId: example
+generate:
+  javascriptSdk:
+    - outputDir: ../../references/fluttergram-master/functions/src/dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ../../references/fluttergram-master/functions
+      react: false
+      angular: false
+  dartSdk:
+    - outputDir: ../../lib/dataconnect_generated
+      package: dataconnect_generated
+    - outputDir: ../../references/smart-admin-dashboard-master/lib/dataconnect_generated
+      package: dataconnect_generated
+    - outputDir: ../../references/fluttergram-master/lib/dataconnect_generated
+      package: dataconnect_generated
+    - outputDir: ../../references/flutter_google_maps-master/lib/dataconnect_generated
+      package: dataconnect_generated
+    - outputDir: ../../references/fluffychat-main/lib/dataconnect_generated
+      package: dataconnect_generated
+    - outputDir: ../../references/beacon-main/lib/dataconnect_generated
+      package: dataconnect_generated
+    - outputDir: ../../references/animated_selection_slide-master/lib/dataconnect_generated
+      package: dataconnect_generated
+    - outputDir: ../../references/aria-main/lib/dataconnect_generated
+      package: dataconnect_generated
+    - outputDir: ../../references/Flutter_beautiful_popup-master/lib/dataconnect_generated
+      package: dataconnect_generated
+    - outputDir: ../../references/Flutter-Responsive-Admin-Panel-or-Dashboard-master/lib/dataconnect_generated
+      package: dataconnect_generated
+    - outputDir: ../../references/flutter_google_maps-master/example/lib/dataconnect_generated
+      package: dataconnect_generated
+    - outputDir: ../../references/aria-main/rust_builder/lib/dataconnect_generated
+      package: dataconnect_generated
+    - outputDir: ../../references/SlimSocial-for-Facebook-master/SlimSocial_for_Facebook/lib/dataconnect_generated
+      package: dataconnect_generated
+    - outputDir: ../../references/Flutter_beautiful_popup-master/example/lib/dataconnect_generated
+      package: dataconnect_generated
+    - outputDir: ../../references/aria-main/rust_builder/cargokit/build_tool/lib/dataconnect_generated
+      package: dataconnect_generated

@@ -1,1 +1,28 @@
-{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"co1l0uvij8nhdcps5tiyii9b2wp9hp","configurations":{"web":"1:350088513961:web:7104e09731a24d24c3dcb8"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "co1l0uvij8nhdcps5tiyii9b2wp9hp",
+          "configurations": {
+            "web": "1:350088513961:web:7104e09731a24d24c3dcb8"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "/Users/Chen/Desktop/projects/barkdate (1)",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

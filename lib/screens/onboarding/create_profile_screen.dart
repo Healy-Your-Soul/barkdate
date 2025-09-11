@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import 'package:barkdate/supabase/supabase_config.dart';
@@ -12,19 +11,19 @@ import 'package:barkdate/services/selected_image.dart';
 enum EditMode { createProfile, editDog, editOwner, editBoth }
 
 class CreateProfileScreen extends StatefulWidget {
+  final String? userId;
+  final EditMode editMode;
   final String? userName;
   final String? userEmail;
   final bool locationEnabled;
-  final String? userId; // Add userId parameter
-  final EditMode editMode; // Replace isEditing with editMode
 
   const CreateProfileScreen({
     super.key,
+    this.userId,
+    this.editMode = EditMode.editDog, // Default to simple dog editing
     this.userName,
     this.userEmail,
-    this.locationEnabled = true,
-    this.userId, // Optional - will get from auth if not provided
-    this.editMode = EditMode.createProfile, // Default to creation
+    this.locationEnabled = false,
   });
 
   @override

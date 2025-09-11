@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/supabase/notification_service.dart';
 
 /// Enhanced services for bark notifications and playdate management
 /// Part of the BarkDate sprint to implement social interaction features
@@ -294,6 +295,7 @@ class PlaydateRequestService {
 
     } catch (e) {
       debugPrint('Error creating playdate request: $e');
+      debugPrint('Error type: ${e.runtimeType} - details: ${e.toString()}');
       return null;
     }
   }
@@ -341,7 +343,16 @@ class PlaydateRequestService {
           .single();
 
       if (response == 'accepted') {
-        // Add invitee as participant
+        // Update playdate to include participant and set status to confirmed
+        await SupabaseConfig.client
+            .from('playdates')
+            .update({
+              'participant_id': request['invitee_id'], // Set the main participant
+              'status': 'confirmed'
+            })
+            .eq('id', request['playdate_id']);
+
+        // Add invitee as participant (for many-to-many relationships if needed later)
         await SupabaseConfig.client
             .from('playdate_participants')
             .insert({
@@ -349,12 +360,6 @@ class PlaydateRequestService {
               'user_id': request['invitee_id'],
               'dog_id': request['invitee_dog_id'],
             });
-
-        // Update playdate status to confirmed
-        await SupabaseConfig.client
-            .from('playdates')
-            .update({'status': 'confirmed'})
-            .eq('id', request['playdate_id']);
 
         // Notify organizer
         await NotificationService.createNotification(
@@ -416,6 +421,7 @@ class PlaydateRequestService {
 
     } catch (e) {
       debugPrint('Error responding to playdate request: $e');
+      debugPrint('Error type: ${e.runtimeType} - details: ${e.toString()}');
       return false;
     }
   }
@@ -423,25 +429,184 @@ class PlaydateRequestService {
   /// Get pending playdate requests for a user
   static Future<List<Map<String, dynamic>>> getPendingRequests(String userId) async {
     try {
+      // Try the RPC function first (if available after SQL update)
+      try {
+        final rpcResult = await SupabaseConfig.client
+            .rpc('get_pending_playdate_requests', params: {'user_id_param': userId});
+        
+        if (rpcResult != null && rpcResult is List && rpcResult.isNotEmpty) {
+          return List<Map<String, dynamic>>.from(rpcResult);
+        }
+      } catch (rpcError) {
+        debugPrint('RPC function not available, falling back to basic query: $rpcError');
+      }
+
+      // Fallback to simple query without complex joins
       final requests = await SupabaseConfig.client
           .from('playdate_requests')
-          .select('''
-            *,
-            playdate:playdates(*),
-            requester:users!playdate_requests_requester_id_fkey(name, avatar_url),
-            requester_dog:dogs!playdate_requests_requester_id_fkey(
-              id, name, main_photo_url, breed
-            ),
-            invitee_dog:dogs!playdate_requests_invitee_dog_id_fkey(name, main_photo_url)
-          ''')
+          .select('*')
           .eq('invitee_id', userId)
           .eq('status', 'pending')
           .order('created_at', ascending: false);
 
-      return requests;
+      // Manually fetch related data for each request
+      final enrichedRequests = <Map<String, dynamic>>[];
+      
+      for (final request in requests) {
+        final enrichedRequest = Map<String, dynamic>.from(request);
+        
+        // Get playdate details
+        try {
+          final playdate = await SupabaseConfig.client
+              .from('playdates')
+              .select('*')
+              .eq('id', request['playdate_id'])
+              .maybeSingle();
+          enrichedRequest['playdate'] = playdate;
+        } catch (e) {
+          debugPrint('Error fetching playdate: $e');
+        }
+
+        // Get requester details
+        try {
+          final requester = await SupabaseConfig.client
+              .from('users')
+              .select('name, avatar_url')
+              .eq('id', request['requester_id'])
+              .maybeSingle();
+          enrichedRequest['requester'] = requester;
+        } catch (e) {
+          debugPrint('Error fetching requester: $e');
+        }
+
+        // Get invitee dog details
+        try {
+          final inviteeDog = await SupabaseConfig.client
+              .from('dogs')
+              .select('name, main_photo_url, breed')
+              .eq('id', request['invitee_dog_id'])
+              .maybeSingle();
+          enrichedRequest['invitee_dog'] = inviteeDog;
+        } catch (e) {
+          debugPrint('Error fetching invitee dog: $e');
+        }
+
+        enrichedRequests.add(enrichedRequest);
+      }
+
+      return enrichedRequests;
     } catch (e) {
       debugPrint('Error getting pending requests: $e');
       return [];
+    }
+  }
+
+  /// Get sent playdate requests for a user (where user is the requester)
+  static Future<List<Map<String, dynamic>>> getSentRequests(String userId) async {
+    try {
+      debugPrint('=== GETTING SENT REQUESTS FOR USER: $userId ===');
+      
+      // Get requests where user is the requester
+      final requests = await SupabaseConfig.client
+          .from('playdate_requests')
+          .select('*')
+          .eq('requester_id', userId)
+          .eq('status', 'pending')
+          .order('created_at', ascending: false);
+
+      debugPrint('Found ${requests.length} sent requests');
+
+      // Manually fetch related data for each request
+      final enrichedRequests = <Map<String, dynamic>>[];
+      
+      for (final request in requests) {
+        final enrichedRequest = Map<String, dynamic>.from(request);
+        
+        // Get playdate details
+        try {
+          final playdate = await SupabaseConfig.client
+              .from('playdates')
+              .select('*')
+              .eq('id', request['playdate_id'])
+              .single();
+          enrichedRequest['playdate'] = playdate;
+        } catch (e) {
+          debugPrint('Error fetching playdate: $e');
+          enrichedRequest['playdate'] = null;
+        }
+
+        // Get invitee (recipient) details
+        try {
+          final invitee = await SupabaseConfig.client
+              .from('users')
+              .select('id, name, avatar_url')
+              .eq('id', request['invitee_id'])
+              .single();
+          enrichedRequest['invitee'] = invitee;
+        } catch (e) {
+          debugPrint('Error fetching invitee: $e');
+          enrichedRequest['invitee'] = null;
+        }
+
+        // Get invitee dog details
+        try {
+          final inviteeDog = await SupabaseConfig.client
+              .from('dogs')
+              .select('id, name, breed, main_photo_url')
+              .eq('id', request['invitee_dog_id'])
+              .single();
+          enrichedRequest['invitee_dog'] = inviteeDog;
+        } catch (e) {
+          debugPrint('Error fetching invitee dog: $e');
+          enrichedRequest['invitee_dog'] = null;
+        }
+
+        enrichedRequests.add(enrichedRequest);
+      }
+
+      debugPrint('Returning ${enrichedRequests.length} enriched sent requests');
+      return enrichedRequests;
+
+    } catch (e) {
+      debugPrint('Error getting sent requests: $e');
+      return [];
+    }
+  }
+
+  /// Cancel a playdate request (for requester to withdraw)
+  static Future<bool> cancelRequest(String requestId) async {
+    try {
+      debugPrint('=== CANCELLING PLAYDATE REQUEST ===');
+      debugPrint('Request ID: $requestId');
+
+      // Update request status to cancelled
+      await SupabaseConfig.client
+          .from('playdate_requests')
+          .update({
+            'status': 'cancelled',
+            'responded_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', requestId);
+
+      // Get request details to update playdate
+      final request = await SupabaseConfig.client
+          .from('playdate_requests')
+          .select('playdate_id, invitee_id')
+          .eq('id', requestId)
+          .single();
+
+      // Update associated playdate status to cancelled
+      await SupabaseConfig.client
+          .from('playdates')
+          .update({'status': 'cancelled'})
+          .eq('id', request['playdate_id']);
+
+      debugPrint('Playdate request cancelled successfully!');
+      return true;
+
+    } catch (e) {
+      debugPrint('Error cancelling playdate request: $e');
+      return false;
     }
   }
 
@@ -513,88 +678,193 @@ class PlaydateRequestService {
 }
 
 // =============================================================================
-// NOTIFICATION SERVICE
+// PLAYDATE MANAGEMENT SERVICE (participants, cancel, reschedule)
 // =============================================================================
 
-class NotificationService {
-  /// Create a new notification
-  static Future<bool> createNotification({
+class PlaydateManagementService {
+  /// Add a participant (user + dog) to a playdate and notify the added user
+  static Future<bool> addParticipant({
+    required String playdateId,
     required String userId,
-    required String type,
-    required String title,
-    required String body,
-    String? actionType,
-    String? relatedId,
-    Map<String, dynamic>? metadata,
+    required String dogId,
+    required String addedByUserId,
   }) async {
     try {
+      // Insert participant (ignore if duplicate by relying on DB unique constraints if present)
       await SupabaseConfig.client
-          .from('notifications')
+          .from('playdate_participants')
           .insert({
+            'playdate_id': playdateId,
             'user_id': userId,
-            'title': title,
-            'body': body,
-            'type': type,
-            'action_type': actionType,
-            'related_id': relatedId,
-            'metadata': metadata,
-            'is_read': false,
+            'dog_id': dogId,
           });
 
-      debugPrint('Notification created for user $userId: $title');
-      return true;
+      // Notify the added user
+      await NotificationService.createNotification(
+        userId: userId,
+        type: 'playdate',
+        actionType: 'participant_added',
+        title: 'You were added to a playdate',
+        body: 'You have been added to an upcoming playdate.',
+        relatedId: playdateId,
+        metadata: {
+          'playdate_id': playdateId,
+          'added_by': addedByUserId,
+          'user_id': userId,
+          'dog_id': dogId,
+        },
+      );
 
+      return true;
     } catch (e) {
-      debugPrint('Error creating notification: $e');
+      debugPrint('Error adding participant: $e');
       return false;
     }
   }
 
-  /// Get unread notifications for a user
-  static Future<List<Map<String, dynamic>>> getUnreadNotifications(String userId) async {
+  /// Remove a participant from a playdate and notify the organizer
+  static Future<bool> removeParticipant({
+    required String playdateId,
+    required String userId,
+    required String removedByUserId,
+  }) async {
     try {
-      final notifications = await SupabaseConfig.client
-          .from('notifications')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('is_read', false)
-          .order('created_at', ascending: false)
-          .limit(50);
-
-      return notifications;
-    } catch (e) {
-      debugPrint('Error getting unread notifications: $e');
-      return [];
-    }
-  }
-
-  /// Mark notification as read
-  static Future<bool> markAsRead(String notificationId) async {
-    try {
+      // Remove participant row
       await SupabaseConfig.client
-          .from('notifications')
-          .update({'is_read': true})
-          .eq('id', notificationId);
+          .from('playdate_participants')
+          .delete()
+          .eq('playdate_id', playdateId)
+          .eq('user_id', userId);
+
+      // Fetch organizer to notify
+      final playdate = await SupabaseConfig.client
+          .from('playdates')
+          .select('organizer_id')
+          .eq('id', playdateId)
+          .single();
+
+      final organizerId = playdate['organizer_id'] as String;
+
+      await NotificationService.createNotification(
+        userId: organizerId,
+        type: 'playdate',
+        actionType: 'participant_removed',
+        title: 'Participant removed',
+        body: 'A participant was removed from your playdate.',
+        relatedId: playdateId,
+        metadata: {
+          'playdate_id': playdateId,
+          'removed_user_id': userId,
+          'removed_by': removedByUserId,
+        },
+      );
 
       return true;
     } catch (e) {
-      debugPrint('Error marking notification as read: $e');
+      debugPrint('Error removing participant: $e');
       return false;
     }
   }
 
-  /// Mark all notifications as read for a user
-  static Future<bool> markAllAsRead(String userId) async {
+  /// Cancel a playdate and notify all participants
+  static Future<bool> cancelPlaydate({
+    required String playdateId,
+    required String cancelledByUserId,
+    String? reason,
+  }) async {
     try {
+      // Update playdate status
       await SupabaseConfig.client
-          .from('notifications')
-          .update({'is_read': true})
-          .eq('user_id', userId)
-          .eq('is_read', false);
+          .from('playdates')
+          .update({
+            'status': 'cancelled',
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', playdateId);
+
+      // Get all participants (including organizer) to notify
+      final participantRows = await SupabaseConfig.client
+          .from('playdate_participants')
+          .select('user_id')
+          .eq('playdate_id', playdateId);
+
+      for (final p in participantRows) {
+        await NotificationService.createNotification(
+          userId: p['user_id'] as String,
+          type: 'playdate',
+          actionType: 'playdate_cancelled',
+          title: 'Playdate cancelled',
+          body: reason == null ? 'A playdate you joined was cancelled.' : 'Cancelled: $reason',
+          relatedId: playdateId,
+          metadata: {
+            'playdate_id': playdateId,
+            'cancelled_by': cancelledByUserId,
+            if (reason != null) 'reason': reason,
+          },
+        );
+      }
 
       return true;
     } catch (e) {
-      debugPrint('Error marking all notifications as read: $e');
+      debugPrint('Error cancelling playdate: $e');
+      return false;
+    }
+  }
+
+  /// Reschedule a playdate (time and/or location). Notifies other participants as updated.
+  static Future<bool> reschedulePlaydate({
+    required String playdateId,
+    required String updatedByUserId,
+    DateTime? newScheduledAt,
+    String? newLocation,
+    String? newDescription,
+    int? newDurationMinutes,
+    double? newLatitude,
+    double? newLongitude,
+  }) async {
+    try {
+      final updateData = <String, dynamic>{
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      if (newScheduledAt != null) updateData['scheduled_at'] = newScheduledAt.toIso8601String();
+      if (newLocation != null) updateData['location'] = newLocation;
+      if (newDescription != null) updateData['description'] = newDescription;
+      if (newDurationMinutes != null) updateData['duration_minutes'] = newDurationMinutes;
+      if (newLatitude != null) updateData['latitude'] = newLatitude;
+      if (newLongitude != null) updateData['longitude'] = newLongitude;
+
+      await SupabaseConfig.client
+          .from('playdates')
+          .update(updateData)
+          .eq('id', playdateId);
+
+      // Notify all other participants
+      final participants = await SupabaseConfig.client
+          .from('playdate_participants')
+          .select('user_id')
+          .eq('playdate_id', playdateId)
+          .neq('user_id', updatedByUserId);
+
+      for (final participant in participants) {
+        await NotificationService.createNotification(
+          userId: participant['user_id'] as String,
+          type: 'playdate',
+          actionType: 'playdate_updated',
+          title: 'Playdate rescheduled',
+          body: 'Details for your playdate were updated.',
+          relatedId: playdateId,
+          metadata: {
+            'playdate_id': playdateId,
+            'updated_by': updatedByUserId,
+            'changes': updateData,
+          },
+        );
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Error rescheduling playdate: $e');
       return false;
     }
   }
@@ -748,6 +1018,100 @@ class DogFriendshipService {
     } catch (e) {
       debugPrint('Error creating dog friendship: $e');
       return false;
+    }
+  }
+
+  /// Get all requests for a user (all statuses)
+  static Future<List<Map<String, dynamic>>> getAllRequests(String userId, String role) async {
+    try {
+      String columnName = role == 'invitee' ? 'invitee_id' : 'requester_id';
+      
+      final requests = await SupabaseConfig.client
+          .from('playdate_requests')
+          .select('*')
+          .eq(columnName, userId)
+          .order('created_at', ascending: false);
+
+      // Manually fetch related data for each request
+      final enrichedRequests = <Map<String, dynamic>>[];
+      
+      for (final request in requests) {
+        final enrichedRequest = Map<String, dynamic>.from(request);
+        
+        // Get playdate details
+        try {
+          final playdate = await SupabaseConfig.client
+              .from('playdates')
+              .select('*')
+              .eq('id', request['playdate_id'])
+              .maybeSingle();
+          
+          enrichedRequest['playdate'] = playdate;
+        } catch (e) {
+          debugPrint('Error fetching playdate for request ${request['id']}: $e');
+        }
+
+        // Get requester details
+        try {
+          final requester = await SupabaseConfig.client
+              .from('profiles')
+              .select('id, name, avatar_url')
+              .eq('id', request['requester_id'])
+              .maybeSingle();
+          
+          enrichedRequest['requester'] = requester;
+        } catch (e) {
+          debugPrint('Error fetching requester for request ${request['id']}: $e');
+        }
+
+        // Get invitee details  
+        try {
+          final invitee = await SupabaseConfig.client
+              .from('profiles')
+              .select('id, name, avatar_url')
+              .eq('id', request['invitee_id'])
+              .maybeSingle();
+          
+          enrichedRequest['invitee'] = invitee;
+        } catch (e) {
+          debugPrint('Error fetching invitee for request ${request['id']}: $e');
+        }
+
+        // Get invitee dog details
+        try {
+          final inviteeDog = await SupabaseConfig.client
+              .from('dogs')
+              .select('*')
+              .eq('id', request['invitee_dog_id'])
+              .maybeSingle();
+          
+          enrichedRequest['invitee_dog'] = inviteeDog;
+        } catch (e) {
+          debugPrint('Error fetching invitee dog for request ${request['id']}: $e');
+        }
+
+        // Get requester dog details
+        try {
+          final requesterDog = await SupabaseConfig.client
+              .from('dogs')
+              .select('*')
+              .eq('id', request['requester_dog_id'])
+              .maybeSingle();
+          
+          enrichedRequest['requester_dog'] = requesterDog;
+        } catch (e) {
+          debugPrint('Error fetching requester dog for request ${request['id']}: $e');
+        }
+
+        enrichedRequests.add(enrichedRequest);
+      }
+
+      debugPrint('Returning ${enrichedRequests.length} enriched $role requests');
+      return enrichedRequests;
+
+    } catch (e) {
+      debugPrint('Error getting $role requests for user $userId: $e');
+      return [];
     }
   }
 }

@@ -1,0 +1,52 @@
+mutation SeedData @auth(level: USER) {
+  user_upsertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      username: "bobuser",
+      email: "bob@example.com",
+      createdAt: "2024-01-01T00:00:00Z",
+      displayName: "Bob User"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      username: "aliceuser",
+      email: "alice@example.com",
+      createdAt: "2024-01-02T00:00:00Z",
+      displayName: "Alice User"
+    }
+  ])
+  conversation_upsertMany(data: [
+    {
+      id: "660e8400-e29b-41d4-a716-446655440000",
+      name: "General Chat",
+      type: "public",
+      createdAt: "2024-01-03T00:00:00Z",
+      description: "A general chat for all users"
+    },
+    {
+      id: "660e8400-e29b-41d4-a716-446655440001",
+      name: "Meeting Planning",
+      type: "private",
+      createdAt: "2024-01-04T00:00:00Z",
+      description: "A private chat for planning meetings"
+    }
+  ])
+  message_upsertMany(data: [
+    {
+      id: "770e8400-e29b-41d4-a716-446655440000",
+      conversationId: "660e8400-e29b-41d4-a716-446655440000",
+      senderId: "550e8400-e29b-41d4-a716-446655440000",
+      content: "Hello everyone!",
+      createdAt: "2024-01-05T00:00:00Z",
+      isRead: true
+    },
+    {
+      id: "770e8400-e29b-41d4-a716-446655440001",
+      conversationId: "660e8400-e29b-41d4-a716-446655440001",
+      senderId: "550e8400-e29b-41d4-a716-446655440001",
+      content: "Let's schedule a meeting.",
+      createdAt: "2024-01-06T00:00:00Z",
+      isRead: false
+    }
+  ])
+}

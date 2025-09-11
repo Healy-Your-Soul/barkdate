@@ -5,6 +5,7 @@ import 'package:barkdate/screens/premium_screen.dart';
 import 'package:barkdate/screens/social_feed_screen.dart';
 import 'package:barkdate/screens/settings_screen.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
+import 'package:barkdate/screens/create_dog_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 
@@ -140,13 +141,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         right: 0,
                         child: GestureDetector(
                           onTap: () async {
-                            // Navigate to profile editing for dog
+                            // Navigate to dedicated dog profile screen
                             final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => CreateProfileScreen(
-                                  userId: SupabaseConfig.auth.currentUser?.id,
-                                  editMode: EditMode.editDog, // Only edit dog
+                                builder: (context) => CreateDogProfileScreen(
+                                  userId: SupabaseConfig.auth.currentUser?.id ?? '',
+                                  existingDogData: _dogProfile, // Pass existing dog data if editing
                                 ),
                               ),
                             );

@@ -194,7 +194,7 @@ class _PlaydateRequestModalState extends State<PlaydateRequestModal> {
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to send playdate request')),
+            const SnackBar(content: Text('Failed to send playdate request. Please check permissions and network.')),
           );
         }
       }

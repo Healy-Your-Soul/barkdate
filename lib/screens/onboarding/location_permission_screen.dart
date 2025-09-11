@@ -22,10 +22,11 @@ class LocationPermissionScreen extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (context) => CreateProfileScreen(
-          userId: user.id,
-          userName: user.userMetadata?['name'],
-          userEmail: user.email,
-          locationEnabled: locationEnabled,
+          userId: widget.userId,
+          userName: widget.userName,
+          userEmail: widget.userEmail,
+          locationEnabled: widget.locationEnabled,
+          editMode: EditMode.createProfile,
         ),
       ),
     );

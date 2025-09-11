@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/theme.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/widgets/playdate_action_popup.dart';
+import 'dart:async';
 
 class DogCard extends StatefulWidget {
   final Dog dog;
@@ -23,6 +25,7 @@ class DogCard extends StatefulWidget {
 
 class _DogCardState extends State<DogCard> {
   String _playdateStatus = 'none'; // 'none', 'pending', 'confirmed'
+  Map<String, dynamic>? _currentPlaydate; // Store current playdate data when confirmed
   
   @override
   void initState() {
@@ -49,21 +52,157 @@ class _DogCardState extends State<DogCard> {
         return;
       }
 
-      // Check for confirmed playdates with this dog
-      final confirmedPlaydates = await SupabaseConfig.client
+      // Check for confirmed playdates with this specific dog's owner
+      final confirmedAsOrganizer = await SupabaseConfig.client
           .from('playdates')
-          .select('id')
-          .or('organizer_id.eq.${user.id},participant_id.eq.${user.id}')
-          .or('organizer_id.eq.${widget.dog.ownerId},participant_id.eq.${widget.dog.ownerId}')
+          .select('id, organizer_id, participant_id, scheduled_at, title, description, location, status')
+          .eq('organizer_id', user.id)
+          .eq('participant_id', widget.dog.ownerId)
           .eq('status', 'confirmed')
           .gte('scheduled_at', DateTime.now().toIso8601String())
           .limit(1);
 
-      if (confirmedPlaydates.isNotEmpty) {
-        setState(() => _playdateStatus = 'confirmed');
+      final confirmedAsParticipant = await SupabaseConfig.client
+          .from('playdates')
+          .select('id, organizer_id, participant_id, scheduled_at, title, description, location, status')
+          .eq('organizer_id', widget.dog.ownerId)
+          .eq('participant_id', user.id)
+          .eq('status', 'confirmed')
+          .gte('scheduled_at', DateTime.now().toIso8601String())
+          .limit(1);
+
+      if (confirmedAsOrganizer.isNotEmpty || confirmedAsParticipant.isNotEmpty) {
+        final playdateData = confirmedAsOrganizer.isNotEmpty 
+            ? confirmedAsOrganizer.first 
+            : confirmedAsParticipant.first;
+        setState(() {
+          _playdateStatus = 'confirmed';
+          _currentPlaydate = playdateData;
+        });
       }
     } catch (e) {
       debugPrint('Error checking playdate status: $e');
+    }
+  }
+
+  void _showPlaydatePopup() {
+    if (_currentPlaydate == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => PlaydateActionPopup(
+        playdate: _currentPlaydate!,
+        onCancel: () => Navigator.of(context).pop(),
+        onReschedule: () {
+          Navigator.of(context).pop();
+          _showRescheduleDialog();
+        },
+      ),
+    );
+  }
+
+  Future<void> _showRescheduleDialog() async {
+    if (_currentPlaydate == null) return;
+
+    final currentDate = DateTime.parse(_currentPlaydate!['scheduled_at']);
+    DateTime selectedDate = currentDate;
+    TimeOfDay selectedTime = TimeOfDay.fromDateTime(currentDate);
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reschedule Playdate'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.calendar_today),
+              title: Text('Date: ${selectedDate.toString().split(' ')[0]}'),
+              subtitle: const Text('Tap to change'),
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: selectedDate,
+                  firstDate: DateTime.now(),
+                  lastDate: DateTime.now().add(const Duration(days: 365)),
+                );
+                if (picked != null) {
+                  selectedDate = picked;
+                  (context as Element).markNeedsBuild();
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.access_time),
+              title: Text('Time: ${selectedTime.format(context)}'),
+              subtitle: const Text('Tap to change'),
+              onTap: () async {
+                final picked = await showTimePicker(
+                  context: context,
+                  initialTime: selectedTime,
+                );
+                if (picked != null) {
+                  selectedTime = picked;
+                  (context as Element).markNeedsBuild();
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _updatePlaydateTime(selectedDate, selectedTime);
+            },
+            child: const Text('Reschedule'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _updatePlaydateTime(DateTime date, TimeOfDay time) async {
+    try {
+      final newDateTime = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
+
+      await SupabaseConfig.client
+          .from('playdates')
+          .update({
+        'scheduled_at': newDateTime.toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      })
+          .eq('id', _currentPlaydate!['id']);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Playdate rescheduled successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Refresh the playdate status
+        _checkPlaydateStatus();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to reschedule: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -82,7 +221,7 @@ class _DogCardState extends State<DogCard> {
           children: [
             // Dog photo
             GestureDetector(
-              onTap: onOpenProfile,
+              onTap: widget.onOpenProfile,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(30),
                 child: Image.network(
@@ -183,7 +322,7 @@ class _DogCardState extends State<DogCard> {
                   width: 85,
                   child: _playdateStatus == 'confirmed'
                       ? OutlinedButton.icon(
-                          onPressed: null,
+                          onPressed: _showPlaydatePopup,
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.green,
                             side: const BorderSide(
@@ -201,7 +340,7 @@ class _DogCardState extends State<DogCard> {
                             color: Colors.green,
                           ),
                           label: Text(
-                            'Set',
+                            'EDIT',
                             style: theme.textTheme.labelSmall?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: Colors.green,

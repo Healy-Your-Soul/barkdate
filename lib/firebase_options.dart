@@ -60,4 +60,5 @@ class DefaultFirebaseOptions {
     authDomain: 'co1l0uvij8nhdcps5tiyii9b2wp9hp.firebaseapp.com',
     storageBucket: 'co1l0uvij8nhdcps5tiyii9b2wp9hp.firebasestorage.app',
   );
+
 }
