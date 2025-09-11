@@ -53,7 +53,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCxCHnFHDhNaPPobgkwbCr4NK0jWDB2HTg',
+    apiKey: 'your_firebase_api_key_here', // Use environment variables in production
     appId: '1:350088513961:web:7104e09731a24d24c3dcb8',
     messagingSenderId: '350088513961',
     projectId: 'co1l0uvij8nhdcps5tiyii9b2wp9hp',
