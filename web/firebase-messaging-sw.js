@@ -4,7 +4,8 @@ importScripts('https://www.gstatic.com/firebasejs/10.3.1/firebase-messaging-comp
 
 // Initialize Firebase
 firebase.initializeApp({
-  apiKey: "AIzaSyCxCHnFHDhNaPPobgkwbCr4NK0jWDB2HTg",
+  // Firebase config - use environment variables in production
+  apiKey: "your_firebase_api_key_here",
   authDomain: "co1l0uvij8nhdcps5tiyii9b2wp9hp.firebaseapp.com",
   projectId: "co1l0uvij8nhdcps5tiyii9b2wp9hp",
   storageBucket: "co1l0uvij8nhdcps5tiyii9b2wp9hp.firebasestorage.app",
