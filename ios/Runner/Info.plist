@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE pl	<key>GMSApiKey</key>
-	<string>AIzaSyCMfjL_HJ22QOnNTDCX2idk25cjg9lv2IY</string>
+	<string>$(GOOGLE_PLACES_API_KEY)</string>
 	</dict> PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -51,11 +51,8 @@
 	<string>We use your location to show nearby dog parks and friends.</string>
 		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Location access helps us show relevant maps and check-ins.</string>
-	<key>GMSApiKey</key>
-	<string>AIzaSyBW2Y1alK_zDVSFFunFaYshyWVhA6itRrY</string>
-</dict>
 	<!-- Google Maps API Key (Optional if provided via runtime). Add your key or use GMSServices.provideAPIKey in AppDelegate if needed. -->
 	<key>GMSApiKey</key>
-	<string>YOUR_IOS_GOOGLE_MAPS_API_KEY_HERE</string>
+	<string>$(GOOGLE_MAPS_API_KEY)</string>
 </dict>
 </plist>

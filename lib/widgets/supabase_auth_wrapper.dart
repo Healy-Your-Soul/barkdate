@@ -4,11 +4,14 @@ import 'package:barkdate/screens/auth_screen.dart';
 import 'package:barkdate/screens/main_navigation.dart';
 import 'package:barkdate/screens/onboarding/welcome_screen.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
+import 'package:barkdate/screens/onboarding/location_permission_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/services/settings_service.dart';
 
 enum ProfileStatus {
   complete,
   needsDogProfile,
+  needsLocationPermission,
   needsFullSetup,
 }
 
@@ -60,7 +63,15 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
                     userName: session.user.userMetadata?['full_name'] ?? session.user.email?.split('@')[0],
                     userEmail: session.user.email,
                     editMode: EditMode.createProfile,
-                    locationEnabled: false,
+                    locationEnabled: SettingsService().locationEnabled,
+                  );
+                
+                case ProfileStatus.needsLocationPermission:
+                  // User has profile but needs to set location permission
+                  return LocationPermissionScreen(
+                    userId: session.user.id,
+                    userName: session.user.userMetadata?['full_name'] ?? session.user.email?.split('@')[0],
+                    userEmail: session.user.email,
                   );
                 
                 case ProfileStatus.needsFullSetup:

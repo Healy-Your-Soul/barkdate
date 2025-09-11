@@ -4,7 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter/foundation.dart';
 
 class PlacesService {
-  static const String _apiKey = String.fromEnvironment('GOOGLE_PLACES_API_KEY', defaultValue: 'AIzaSyCMfjL_HJ22QOnNTDCX2idk25cjg9lv2IY');
+  static const String _apiKey = String.fromEnvironment('GOOGLE_PLACES_API_KEY');
   static const String _baseUrl = 'https://maps.googleapis.com/maps/api/place';
 
   // Search for dog parks and dog-friendly places
@@ -345,7 +345,7 @@ class PlacesService {
 
   // Get detailed information about a specific place
   static Future<Map<String, dynamic>?> getPlaceDetails(String placeId) async {
-    if (_apiKey.isEmpty || _apiKey == 'AIzaSyCMfjL_HJ22QOnNTDCX2idk25cjg9lv2IY') {
+    if (_apiKey.isEmpty) {
       debugPrint('Google Places API key not configured properly');
       return null;
     }

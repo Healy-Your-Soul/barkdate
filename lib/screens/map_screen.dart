@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:barkdate/services/park_service.dart';
 import 'package:barkdate/services/places_service.dart';
+import 'package:barkdate/services/settings_service.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'dart:async';
@@ -22,6 +23,8 @@ class _MapScreenState extends State<MapScreen> {
   Location _location = Location();
   LatLng? _currentLocation;
   bool _loading = true;
+  bool _locationPermissionDenied = false;
+  bool _locationServiceDisabled = false;
   List<Map<String, dynamic>> _nearbyParks = [];
   List<Map<String, dynamic>> _featuredParks = [];
   final Set<Marker> _markers = {};
@@ -31,6 +34,7 @@ class _MapScreenState extends State<MapScreen> {
   bool _isSearching = false;
   List<PlaceResult> _searchResults = [];
   bool _showingSearchResults = false;
+  final SettingsService _settingsService = SettingsService();
 
   @override
   void initState() {
@@ -71,34 +75,73 @@ class _MapScreenState extends State<MapScreen> {
 
   Future<void> _initializeMap() async {
     try {
+      // Check if user has enabled location sharing in settings
+      if (!_settingsService.locationEnabled) {
+        setState(() {
+          _locationPermissionDenied = true;
+          _loading = false;
+        });
+        // Still load featured parks even without location
+        await _loadFeaturedParks();
+        _updateMarkers();
+        return;
+      }
+
       // Get location permission and current location
       bool serviceEnabled = await _location.serviceEnabled();
       if (!serviceEnabled) {
         serviceEnabled = await _location.requestService();
-        if (!serviceEnabled) return;
+        if (!serviceEnabled) {
+          setState(() {
+            _locationServiceDisabled = true;
+            _loading = false;
+          });
+          // Still load featured parks even without location
+          await _loadFeaturedParks();
+          _updateMarkers();
+          return;
+        }
       }
 
       PermissionStatus permissionGranted = await _location.hasPermission();
       if (permissionGranted == PermissionStatus.denied) {
         permissionGranted = await _location.requestPermission();
-        if (permissionGranted != PermissionStatus.granted) return;
+        if (permissionGranted != PermissionStatus.granted) {
+          setState(() {
+            _locationPermissionDenied = true;
+            _loading = false;
+          });
+          // Still load featured parks even without location
+          await _loadFeaturedParks();
+          _updateMarkers();
+          return;
+        }
       }
 
       final locationData = await _location.getLocation();
       if (locationData.latitude != null && locationData.longitude != null) {
-        _currentLocation = LatLng(locationData.latitude!, locationData.longitude!);
-      }
-
-      // Load parks and featured parks
-      if (_currentLocation != null) {
+        setState(() {
+          _currentLocation = LatLng(locationData.latitude!, locationData.longitude!);
+        });
+        
+        // Load parks with location context
         await _loadParksData();
+      } else {
+        // Still load featured parks even without location
+        await _loadFeaturedParks();
       }
 
       _updateMarkers();
     } catch (e) {
       debugPrint('Map initialization failed: $e');
+      setState(() {
+        _locationPermissionDenied = true;
+      });
+      // Still load featured parks even if location fails
+      await _loadFeaturedParks();
+      _updateMarkers();
     } finally {
-      if (mounted) setState(() => _loading = false);
+      setState(() => _loading = false);
     }
   }
 
@@ -124,6 +167,22 @@ class _MapScreenState extends State<MapScreen> {
       }
     } catch (e) {
       debugPrint('Failed to load parks data: $e');
+    }
+  }
+
+  Future<void> _loadFeaturedParks() async {
+    try {
+      final featured = await ParkService.getFeaturedParks();
+      final counts = await BarkDateUserService.getCurrentDogCounts();
+
+      if (mounted) {
+        setState(() {
+          _featuredParks = featured;
+          _dogCounts = counts;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load featured parks: $e');
     }
   }
 
@@ -320,6 +379,45 @@ class _MapScreenState extends State<MapScreen> {
                     ],
                   ),
                 ),
+                // Location status banner
+                if (_locationPermissionDenied || _locationServiceDisabled)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _locationPermissionDenied ? Icons.location_off : Icons.location_disabled,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _locationPermissionDenied
+                                ? 'Location access disabled. Enable in settings to see distance and get better recommendations.'
+                                : 'Location services disabled. Showing featured parks only.',
+                            style: const TextStyle(
+                              color: Colors.orange,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        if (_locationPermissionDenied)
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/settings');
+                            },
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.orange,
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                            ),
+                            child: const Text('Settings', style: TextStyle(fontSize: 12)),
+                          ),
+                      ],
+                    ),
+                  ),
                 // Map
                 SizedBox(
                   height: 300,

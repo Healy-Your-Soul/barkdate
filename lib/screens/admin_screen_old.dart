@@ -257,7 +257,7 @@ class _AdminScreenState extends State<AdminScreen> {
                       const SizedBox(height: 8),
                       GooglePlaceAutoCompleteTextField(
                         textEditingController: _searchController,
-                        googleAPIKey: const String.fromEnvironment('GOOGLE_PLACES_API_KEY', defaultValue: 'AIzaSyCMfjL_HJ22QOnNTDCX2idk25cjg9lv2IY'),
+                        googleAPIKey: const String.fromEnvironment('GOOGLE_PLACES_API_KEY'),
                         inputDecoration: InputDecoration(
                           hintText: 'Search for dog parks on Google...',
                           prefixIcon: const Icon(Icons.search),
