@@ -53,6 +53,38 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   
   bool _isLoading = false;
 
+  // --- Normalization helpers to keep UI and DB in sync for dropdown/segmented fields ---
+  String _normalizeSize(dynamic raw) {
+    if (raw == null) return 'Medium';
+    final v = raw.toString().trim().toLowerCase();
+    switch (v) {
+      case 'small':
+        return 'Small';
+      case 'large':
+        return 'Large';
+      case 'medium':
+        return 'Medium';
+      default:
+        // Fallback if unexpected value stored
+        debugPrint('Unknown size "$raw" – defaulting to Medium');
+        return 'Medium';
+    }
+  }
+
+  String _normalizeGender(dynamic raw) {
+    if (raw == null) return 'Male';
+    final v = raw.toString().trim().toLowerCase();
+    switch (v) {
+      case 'male':
+        return 'Male';
+      case 'female':
+        return 'Female';
+      default:
+        debugPrint('Unknown gender "$raw" – defaulting to Male');
+        return 'Male';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -108,23 +140,40 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         }
       }
 
-      // Load dog profile
-      final dogProfiles = await SupabaseService.select(
-        'dogs',
-        filters: {'user_id': userId},
-      );
+      // Load dog profile using enhanced method for consistency
+      final dogProfiles = await BarkDateUserService.getUserDogs(userId);
       
       if (dogProfiles.isNotEmpty) {
         final dogProfile = dogProfiles.first;
         setState(() {
           _dogProfile = dogProfile; // Store dog data for reference
         });
+        debugPrint('🐕 Loading dog profile from enhanced service:');
+        debugPrint('  - Dog data: $dogProfile');
+        debugPrint('  - Dog ID: ${dogProfile['id']}');
+        
         _dogNameController.text = dogProfile['name'] ?? '';
         _dogBreedController.text = dogProfile['breed'] ?? '';
         _dogAgeController.text = dogProfile['age']?.toString() ?? '';
         _dogBioController.text = dogProfile['bio'] ?? '';
-        _dogSize = dogProfile['size'] ?? 'Medium';
-        _dogGender = dogProfile['gender'] ?? 'Male';
+  final rawSize = dogProfile['size'];
+  final rawGender = dogProfile['gender'];
+  _dogSize = _normalizeSize(rawSize);
+  _dogGender = _normalizeGender(rawGender);
+        
+        // Debug: Log the loaded values
+        debugPrint('🐕 Dog profile loaded:');
+        debugPrint('  - Size from DB raw: "$rawSize" -> normalized: "$_dogSize"');
+        debugPrint('  - Gender from DB raw: "$rawGender" -> normalized: "$_dogGender"');
+        if (!['Small','Medium','Large'].contains(_dogSize)) {
+          debugPrint('  ! Size value "$_dogSize" not in allowed set – forcing Medium');
+          _dogSize = 'Medium';
+        }
+        if (!['Male','Female'].contains(_dogGender)) {
+          debugPrint('  ! Gender value "$_dogGender" not in allowed set – forcing Male');
+          _dogGender = 'Male';
+        }
+        debugPrint('  - Age from DB: "${dogProfile['age']}" -> UI shows: "${_dogAgeController.text}"');
         
         // Load existing dog photos
         await _loadDogPhotos(dogProfile);
@@ -1235,6 +1284,13 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
   /// Save single edit (dog or owner only)
   Future<void> _saveSingleEdit() async {
+    debugPrint('=== SAVE SINGLE EDIT DEBUG ===');
+    debugPrint('Save button pressed');
+    debugPrint('Edit mode: ${widget.editMode}');
+    debugPrint('Current dog size: $_dogSize');
+    debugPrint('Current dog gender: $_dogGender');
+    debugPrint('Dog profile: $_dogProfile');
+    
     setState(() => _isLoading = true);
     
     try {
@@ -1242,7 +1298,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       if (userId == null) {
         throw Exception('User not authenticated');
       }
-
+      
+      debugPrint('User ID: $userId');
       await _ensureUserProfileExists(userId);
 
       if (widget.editMode == EditMode.editDog) {
@@ -1274,34 +1331,73 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         }
 
         // Check if dog already exists, then add or update accordingly
-        final existingDogs = await BarkDateUserService.getUserDogs(userId);
+        final existingDogs = await BarkDateUserService.getUserDogsEnhanced(userId);
+        
+        debugPrint('🔍 Checking existing dogs:');
+        debugPrint('  - existingDogs.isEmpty: ${existingDogs.isEmpty}');
+        debugPrint('  - existingDogs.length: ${existingDogs.length}');
+        debugPrint('  - _dogProfile: $_dogProfile');
+        debugPrint('  - _dogProfile ID: ${_dogProfile?['id']}');
+        if (existingDogs.isNotEmpty) {
+          debugPrint('  - existingDogs.first: ${existingDogs.first}');
+          debugPrint('  - existingDogs.first ID: ${existingDogs.first['id']}');
+          debugPrint('  - existingDogs.first keys: ${existingDogs.first.keys.toList()}');
+        }
+        
+        // Debug: Log what we're about to save
+        debugPrint('🔄 Saving dog profile:');
+        debugPrint('  - Size: "$_dogSize"');
+        debugPrint('  - Gender: "$_dogGender"');
+        debugPrint('  - Age: "${_dogAgeController.text}"');
+        
+        // Ensure values are normalized before persisting
+        _dogSize = _normalizeSize(_dogSize);
+        _dogGender = _normalizeGender(_dogGender);
+        final dogData = {
+          'name': _dogNameController.text.trim(),
+          'breed': _dogBreedController.text.trim(),
+          'age': int.tryParse(_dogAgeController.text) ?? 1,
+          'size': _dogSize,
+          'gender': _dogGender,
+          'bio': _dogBioController.text.trim(),
+          'main_photo_url': mainPhotoUrl,
+          'extra_photo_urls': extraPhotoUrls,
+          'photo_urls': dogPhotoUrls,
+        };
         
         if (existingDogs.isEmpty) {
           // No dog exists - create a new one (first-time creation)
-          await BarkDateUserService.addDog(userId, {
-            'name': _dogNameController.text.trim(),
-            'breed': _dogBreedController.text.trim(),
-            'age': int.tryParse(_dogAgeController.text) ?? 1,
-            'size': _dogSize,
-            'gender': _dogGender,
-            'bio': _dogBioController.text.trim(),
-            'main_photo_url': mainPhotoUrl,
-            'extra_photo_urls': extraPhotoUrls,
-            'photo_urls': dogPhotoUrls,
-          });
+          debugPrint('📝 Creating new dog...');
+          await BarkDateUserService.addDog(userId, dogData);
         } else {
           // Dog exists - update existing profile
-          await BarkDateUserService.updateDogProfile(userId, {
-            'name': _dogNameController.text.trim(),
-            'breed': _dogBreedController.text.trim(),
-            'age': int.tryParse(_dogAgeController.text) ?? 1,
-            'size': _dogSize,
-            'gender': _dogGender,
-            'bio': _dogBioController.text.trim(),
-            'main_photo_url': mainPhotoUrl,
-            'extra_photo_urls': extraPhotoUrls,
-            'photo_urls': dogPhotoUrls,
-          });
+          // Include the dog ID for the update
+          String? dogId;
+          
+          // First try to get ID from existingDogs (most reliable source)
+          if (existingDogs.isNotEmpty && existingDogs.first['id'] != null) {
+            dogId = existingDogs.first['id'];
+            debugPrint('🔧 Dog ID from existingDogs: $dogId');
+          } else if (_dogProfile != null && _dogProfile!['id'] != null) {
+            dogId = _dogProfile!['id'];
+            debugPrint('🔧 Dog ID from _dogProfile: $dogId');
+          }
+          
+          debugPrint('🔍 Dog ID resolution:');
+          debugPrint('  - existingDogs: ${existingDogs.isNotEmpty ? existingDogs.first : 'empty'}');
+          debugPrint('  - _dogProfile: $_dogProfile');
+          debugPrint('  - Final dogId: $dogId');
+          
+          if (dogId == null) {
+            debugPrint('❌ Could not determine dog ID for update!');
+            throw Exception('Could not determine dog ID for update');
+          }
+          
+          dogData['id'] = dogId;
+          debugPrint('  - Complete dogData with ID: $dogData');
+          debugPrint('  - About to call updateDogProfile with data: $dogData');
+          await BarkDateUserService.updateDogProfile(userId, dogData);
+          debugPrint('  - updateDogProfile completed successfully');
         }
 
       } else if (widget.editMode == EditMode.editOwner) {
@@ -1339,14 +1435,20 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully!')),
         );
+        debugPrint('✅ Profile update completed - navigating back');
         Navigator.pop(context, true); // Return true to indicate success
       }
 
     } catch (e) {
-      debugPrint('Error updating profile: $e');
+      debugPrint('❌ Error updating profile: $e');
+      debugPrint('Error type: ${e.runtimeType}');
+      debugPrint('Error stack trace: ${StackTrace.current}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating profile: $e')),
+          SnackBar(
+            content: Text('Error updating profile: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -1354,5 +1456,6 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         setState(() => _isLoading = false);
       }
     }
+    debugPrint('=== END SAVE SINGLE EDIT DEBUG ===');
   }
 }

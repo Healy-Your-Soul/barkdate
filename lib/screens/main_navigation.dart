@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/screens/feed_screen.dart';
 import 'package:barkdate/screens/map_screen.dart';
+import 'package:barkdate/screens/playdates_screen.dart';
 import 'package:barkdate/screens/messages_screen.dart';
 import 'package:barkdate/screens/profile_screen.dart';
 
@@ -17,6 +18,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _screens = [
     const FeedScreen(),
     const MapScreen(),
+    const PlaydatesScreen(),
     const MessagesScreen(),
     const ProfileScreen(),
   ];
@@ -48,6 +50,11 @@ class _MainNavigationState extends State<MainNavigation> {
             icon: Icon(Icons.map_outlined),
             activeIcon: Icon(Icons.map),
             label: 'Map',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today_outlined),
+            activeIcon: Icon(Icons.calendar_today),
+            label: 'Playdates',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline),

@@ -5,6 +5,7 @@ import 'package:barkdate/widgets/dog_card.dart';
 import 'package:barkdate/widgets/filter_sheet.dart';
 import 'package:barkdate/screens/catch_screen.dart';
 import 'package:barkdate/screens/notifications_screen.dart';
+import 'package:barkdate/widgets/photo_gallery.dart';
 import 'package:barkdate/screens/playdates_screen.dart';
 import 'package:barkdate/screens/social_feed_screen.dart';
 import 'package:barkdate/screens/dog_profile_detail.dart';

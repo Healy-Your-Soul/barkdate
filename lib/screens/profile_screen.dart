@@ -5,9 +5,9 @@ import 'package:barkdate/screens/premium_screen.dart';
 import 'package:barkdate/screens/social_feed_screen.dart';
 import 'package:barkdate/screens/settings_screen.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
-import 'package:barkdate/screens/create_dog_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
+import 'package:barkdate/widgets/dog_share_dialog.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -66,6 +66,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  // Single edit navigation function - unified for all editing
+  Future<void> _editProfile({
+    required EditMode mode,
+    String? title,
+  }) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateProfileScreen(
+          userId: SupabaseConfig.auth.currentUser?.id,
+          editMode: mode,
+        ),
+      ),
+    );
+    
+    if (result == true) {
+      _loadProfileData(); // Refresh data
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -86,17 +106,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         elevation: 0,
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: Icon(
-              Icons.settings,
+              Icons.more_vert,
               color: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
+            onSelected: (value) async {
+              switch (value) {
+                case 'edit_dog':
+                  await _editProfile(mode: EditMode.editDog);
+                  break;
+                case 'edit_owner':
+                  await _editProfile(mode: EditMode.editOwner);
+                  break;
+                case 'edit_both':
+                  await _editProfile(mode: EditMode.editBoth);
+                  break;
+                case 'add_dog':
+                  await _editProfile(mode: EditMode.createProfile);
+                  break;
+                case 'settings':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                  );
+                  break;
+              }
             },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'edit_dog',
+                child: Row(
+                  children: [
+                    Icon(Icons.pets),
+                    SizedBox(width: 12),
+                    Text('Edit Dog Profile'),
+                  ],
+                ),
+              ),
+              if (_dogProfile == null)
+                const PopupMenuItem(
+                  value: 'add_dog',
+                  child: Row(
+                    children: [
+                      Icon(Icons.add),
+                      SizedBox(width: 12),
+                      Text('Add Dog Profile'),
+                    ],
+                  ),
+                ),
+              const PopupMenuItem(
+                value: 'edit_owner',
+                child: Row(
+                  children: [
+                    Icon(Icons.person),
+                    SizedBox(width: 12),
+                    Text('Edit Owner Profile'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'edit_both',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit),
+                    SizedBox(width: 12),
+                    Text('Edit All'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings),
+                    SizedBox(width: 12),
+                    Text('Settings'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -140,27 +230,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         bottom: 0,
                         right: 0,
                         child: GestureDetector(
-                          onTap: () async {
-                            // Navigate to dedicated dog profile screen
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CreateDogProfileScreen(
-                                  userId: SupabaseConfig.auth.currentUser?.id ?? '',
-                                  existingDogData: _dogProfile, // Pass existing dog data if editing
-                                ),
-                              ),
-                            );
-                            // Reload data if profile was updated
-                            if (result == true) {
-                              _loadProfileData();
-                            }
-                          },
+                          onTap: () => _editProfile(mode: _dogProfile != null ? EditMode.editDog : EditMode.createProfile),
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
                               color: Theme.of(context).colorScheme.tertiary,
                               shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: Icon(
                               _dogProfile == null ? Icons.add : Icons.edit,
@@ -215,7 +297,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               subtitle: 'Manage your upcoming and past playdates',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const PlaydatesScreen()),
+                                MaterialPageRoute(builder: (context) => const PlaydatesScreen()),
               ),
             ),
             _buildMenuItem(
@@ -320,29 +402,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                TextButton(
-                  onPressed: () async {
-                    // Navigate to profile editing
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CreateProfileScreen(
-                          userId: SupabaseConfig.auth.currentUser?.id,
-                          editMode: EditMode.editOwner, // Only edit owner
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () async {
+                        // Share the current dog profile
+                        if (_dogProfile != null) {
+                          final dogId = _dogProfile!['id'];
+                          final dogName = _dogProfile!['name'] ?? 'My Dog';
+                          await DogShareDialog.open(
+                            context,
+                            dogId: dogId,
+                            dogName: dogName,
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please create a dog profile first to share'),
+                            ),
+                          );
+                        }
+                      },
+                      icon: Icon(
+                        Icons.share,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      label: Text(
+                        'Share',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
-                    );
-                    // Reload data if profile was updated
-                    if (result == true) {
-                      _loadProfileData();
-                    }
-                  },
-                  child: Text(
-                    'Edit',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
                     ),
-                  ),
+                    TextButton(
+                      onPressed: () => _editProfile(mode: EditMode.editOwner),
+                      child: Text(
+                        'Edit',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

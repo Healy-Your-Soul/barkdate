@@ -95,38 +95,149 @@ class BarkDateUserService {
     }
   }
 
-  /// Get user's dogs
+  /// Get user's dogs (including shared access) with enhanced ownership info
+  static Future<List<Map<String, dynamic>>> getUserDogsEnhanced(String userId) async {
+    debugPrint('=== GET USER DOGS (RPC) ===');
+    debugPrint('Getting dogs for user ID: $userId');
+    try {
+      final result = await SupabaseConfig.client.rpc('get_user_accessible_dogs', params: {
+        'p_user_id': userId,
+      });
+      
+      debugPrint('Raw RPC result: $result');
+      debugPrint('RPC result type: ${result.runtimeType}');
+      debugPrint('RPC result length: ${result?.length}');
+      
+      if (result == null || result.isEmpty) {
+        debugPrint('RPC returned empty, falling back to legacy method');
+        return await getUserDogs(userId);
+      }
+      
+      // Try to handle both tuple format and map format
+      final rawData = List<dynamic>.from(result);
+      final dogsData = <Map<String, dynamic>>[];
+      
+      for (final item in rawData) {
+        Map<String, dynamic> dogMap;
+        
+        if (item is List) {
+          // Tuple format - map positional values to named fields
+          debugPrint('Processing tuple format: $item');
+          if (item.length >= 8) {
+            dogMap = {
+              'id': item[0], // Critical: the dog ID
+              'name': item[1],
+              'breed': item[2],
+              'age': item[3],
+              'size': item[4],
+              'gender': item[5],
+              'bio': item[6],
+              'main_photo_url': item[7],
+              'extra_photo_urls': item.length > 8 ? (item[8] ?? []) : [],
+              'updated_at': item.length > 9 ? item[9] : null,
+              'user_id': item.length > 10 ? item[10] : userId,
+              'ownership_type': item.length > 11 ? item[11] : 'owner',
+              'permissions': item.length > 12 ? item[12] : ['view', 'edit'],
+              'is_primary': item.length > 13 ? item[13] : true,
+              'owner_name': item.length > 14 ? item[14] : null,
+              'created_at': item.length > 15 ? item[15] : null,
+              'is_active': true,
+            };
+          } else {
+            debugPrint('Tuple too short: ${item.length}, skipping');
+            continue;
+          }
+        } else if (item is Map<String, dynamic>) {
+          // Already a map, use as-is
+          debugPrint('Processing map format: $item');
+          dogMap = Map<String, dynamic>.from(item);
+        } else {
+          debugPrint('Unknown item format: ${item.runtimeType}, skipping');
+          continue;
+        }
+        
+        debugPrint('Mapped dog: ${dogMap['name']} (ID: ${dogMap['id']}) size=${dogMap['size']} gender=${dogMap['gender']}');
+        dogsData.add(dogMap);
+      }
+      
+      debugPrint('Accessible dogs count: ${dogsData.length}');
+      debugPrint('=== END GET USER DOGS (RPC) ===');
+      return dogsData;
+    } catch (e) {
+      debugPrint('Error getting dogs via RPC: $e (fallback to legacy)');
+      return await getUserDogs(userId);
+    }
+  }
+
+  /// Get user's dogs (including shared access)
   static Future<List<Map<String, dynamic>>> getUserDogs(String userId) async {
     debugPrint('=== GET USER DOGS DEBUG ===');
     debugPrint('Getting dogs for user ID: $userId');
     debugPrint('Search filters: {user_id: $userId, is_active: true}');
     
-    final dogs = await SupabaseService.select(
+    // Get directly owned dogs
+    final ownedDogs = await SupabaseService.select(
       'dogs',
       filters: {'user_id': userId, 'is_active': true},
       orderBy: 'created_at',
     );
     
-    debugPrint('Found ${dogs.length} dogs for user');
-    for (var dog in dogs) {
-      debugPrint('Dog: ${dog.toString()}');
+    // TODO: Add shared dogs when dog_shared_access table is created
+    // final sharedDogs = await SupabaseService.select(
+    //   'dogs',
+    //   joins: 'INNER JOIN dog_shared_access dsa ON dogs.id = dsa.dog_id',
+    //   filters: {'dsa.shared_with_user_id': userId, 'is_active': true},
+    // );
+    
+    final allDogs = [...ownedDogs]; // + sharedDogs when implemented
+    
+    debugPrint('Found ${allDogs.length} dogs for user (${ownedDogs.length} owned)');
+    for (var dog in allDogs) {
+      debugPrint('Dog raw data: ${dog.toString()}');
+      debugPrint('Dog ID specifically: ${dog['id']}');
+      debugPrint('Dog keys: ${dog.keys.toList()}');
     }
     
     // Also try getting ALL dogs to see what's in the database
     debugPrint('--- Checking ALL dogs in database ---');
-    final allDogs = await SupabaseService.select('dogs', filters: {}, limit: 10);
-    debugPrint('Total dogs in database: ${allDogs.length}');
-    for (var dog in allDogs) {
+    final allDogsInDb = await SupabaseService.select('dogs', filters: {}, limit: 10);
+    debugPrint('Total dogs in database: ${allDogsInDb.length}');
+    for (var dog in allDogsInDb) {
       debugPrint('All Dogs - User ID: ${dog['user_id']}, Dog Name: ${dog['name']}, Active: ${dog['is_active']}');
     }
     debugPrint('--- End ALL dogs check ---');
     
     debugPrint('=== END GET USER DOGS DEBUG ===');
     
-    return dogs;
+    return allDogs;
   }
 
-  /// Add new dog
+  /// Add new dog with enhanced ownership support
+  static Future<String> addDogWithOwnership(String userId, Map<String, dynamic> dogData) async {
+    debugPrint('=== ADD DOG WITH OWNERSHIP ===');
+    debugPrint('Adding dog for user ID: $userId');
+    debugPrint('Dog data: $dogData');
+    
+    try {
+      // Use the new database function for enhanced ownership
+      final result = await SupabaseConfig.client.rpc('add_dog_with_primary_owner', params: {
+        'p_user_id': userId,
+        'p_dog_data': dogData,
+      });
+      
+      final dogId = result as String;
+      debugPrint('✅ Dog created with enhanced ownership, ID: $dogId');
+      return dogId;
+    } catch (e) {
+      debugPrint('❌ Error creating dog with ownership: $e');
+      // Fallback to original method
+      debugPrint('🔄 Falling back to original dog creation method');
+      final legacyResult = await addDog(userId, dogData);
+      return legacyResult['id'] as String;
+    }
+  }
+
+  /// Add new dog (legacy method for backward compatibility)
   static Future<Map<String, dynamic>> addDog(String userId, Map<String, dynamic> dogData) async {
     debugPrint('=== ADD DOG DEBUG ===');
     debugPrint('Adding dog for user ID: $userId');
@@ -154,14 +265,103 @@ class BarkDateUserService {
     return result.first;
   }
 
+  /// Get dog owners/co-owners
+  static Future<List<Map<String, dynamic>>> getDogOwners(String dogId) async {
+    debugPrint('=== GET DOG OWNERS ===');
+    debugPrint('Getting owners for dog ID: $dogId');
+    
+    try {
+      final result = await SupabaseConfig.client
+          .from('dog_owners')
+          .select('''
+            user_id, ownership_type, permissions, is_primary, added_at,
+            users:user_id(name, avatar_url)
+          ''')
+          .eq('dog_id', dogId)
+          .order('is_primary', ascending: false);
+
+      debugPrint('Found ${result.length} owners for dog');
+      return List<Map<String, dynamic>>.from(result);
+    } catch (e) {
+      debugPrint('Error getting dog owners: $e');
+      return [];
+    }
+  }
+
   /// Update dog profile
   static Future<void> updateDogProfile(String userId, Map<String, dynamic> data) async {
+    debugPrint('=== UPDATE DOG PROFILE SERVICE DEBUG ===');
+    debugPrint('User ID: $userId');
+    debugPrint('Data received: $data');
+    
     data['updated_at'] = DateTime.now().toIso8601String();
-    await SupabaseService.update(
-      'dogs',
-      data,
-      filters: {'user_id': userId},
-    );
+    
+  // Extract dog ID from data and use it as the filter (may be inferred later)
+  var dogId = data['id'];
+    if (dogId == null) {
+      debugPrint('❌ Dog ID is missing from data - attempting fallback resolution');
+      try {
+        final accessibleDogs = await getUserDogsEnhanced(userId);
+        debugPrint('Fallback lookup found ${accessibleDogs.length} accessible dogs');
+        if (accessibleDogs.length == 1 && accessibleDogs.first['id'] != null) {
+          final inferredId = accessibleDogs.first['id'];
+          debugPrint('✅ Inferred dog ID from single accessible dog: $inferredId');
+          data['id'] = inferredId; // mutate original data map so subsequent logic works
+        } else if (accessibleDogs.isEmpty) {
+          debugPrint('❌ No dogs found for user during fallback inference');
+        } else {
+          debugPrint('⚠️ Multiple dogs found (${accessibleDogs.length}); cannot safely infer ID');
+        }
+      } catch (e) {
+        debugPrint('❌ Fallback dog ID inference failed: $e');
+      }
+  if (data['id'] == null) {
+        debugPrint('⚠️ Dog ID still unresolved after accessibleDogs fallback – trying direct dogs table query');
+        try {
+          final owned = await SupabaseService.select('dogs', filters: {'user_id': userId, 'is_active': true}, limit: 2);
+          debugPrint('Direct dogs table query returned ${owned.length} rows');
+          if (owned.length == 1 && owned.first['id'] != null) {
+            data['id'] = owned.first['id'];
+            debugPrint('✅ Inferred dog ID from direct table query: ${data['id']}');
+          } else if (owned.isEmpty) {
+            debugPrint('❌ No owned dogs found in direct table query');
+          } else {
+            debugPrint('⚠️ Multiple owned dogs found (${owned.length}); cannot safely infer ID');
+          }
+        } catch (e) {
+          debugPrint('❌ Direct table query inference failed: $e');
+        }
+        if (data['id'] == null) {
+          debugPrint('❌ Dog ID still unresolved after all fallbacks');
+          throw Exception('Dog ID is required for updating dog profile');
+        }
+      }
+  // Refresh dogId variable after inference
+  dogId = data['id'];
+    }
+    
+  debugPrint('Dog ID for update: ${data['id']} (local var: $dogId)');
+    
+    // Remove ID from data since it shouldn't be updated
+    final updateData = Map<String, dynamic>.from(data);
+    updateData.remove('id');
+    
+    debugPrint('Final update data (without ID): $updateData');
+    debugPrint('Updating dog with ID: $dogId');
+    
+    try {
+      await SupabaseService.update(
+        'dogs',
+        updateData,
+        filters: {'id': dogId}, // Update by dog ID, not user ID
+      );
+      debugPrint('✅ Database update completed successfully');
+    } catch (e) {
+      debugPrint('❌ Database update failed: $e');
+      rethrow;
+    }
+    
+    debugPrint('=== END UPDATE DOG PROFILE SERVICE DEBUG ===');
   }
 
   /// Get current dog counts for all parks

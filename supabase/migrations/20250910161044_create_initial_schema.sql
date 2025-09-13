@@ -91,6 +91,21 @@ CREATE TABLE playdate_participants (
   UNIQUE(playdate_id, user_id, dog_id)
 );
 
+-- Playdate requests table (for handling playdate invitations)
+CREATE TABLE playdate_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  requester_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  invitee_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  playdate_id uuid NOT NULL REFERENCES playdates(id) ON DELETE CASCADE,
+  invitee_dog_id uuid NOT NULL REFERENCES dogs(id) ON DELETE CASCADE,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
+  message text,
+  response_message text,
+  created_at timestamp with time zone DEFAULT now(),
+  responded_at timestamp with time zone,
+  UNIQUE(requester_id, invitee_id, playdate_id, invitee_dog_id)
+);
+
 -- Posts table (for social feed)
 CREATE TABLE posts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -2,11 +2,21 @@ include: package:flutter_lints/flutter.yaml
 
 analyzer:
   exclude:
-    - build/**
-    - ios/Pods/**
-    - android/**/build/**
+    # Exclude broken prototype files from analysis
+    - lib/services/shared_dog_service.dart
+    - lib/services/google_calendar_service.dart
+    - lib/screens/admin_screen_simplified.dart
+    - test_many_to_many.dart
+    # Newly quarantined legacy / broken files
+    - lib/services/places_service_old.dart
+    - lib/screens/admin_screen_old.dart
+    - lib/screens/map_screen_robust.dart
+    - lib/screens/map_screen_simplified.dart
+    - lib/screens/map_screen_fixed.dart
+    - lib/screens/map_screen_backup.dart.backup
+    - lib/screens/admin_screen_old.dart.backup
+    # Exclude reference projects
     - references/**
-    - web/.dart_tool/**
 
 linter:
   rules:

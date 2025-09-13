@@ -1,10 +1,8 @@
-import 'dart:io' show File, Platform;
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/services/selected_image.dart';
@@ -23,41 +21,26 @@ class PhotoUploadService {
   static const String chatMediaBucket = 'chat-media';
   static const String playdateAlbumsBucket = 'playdate-albums';
 
-  /// Compress and optimize image before upload
-  static Future<File> compressImage(
-    File imageFile, {
+  /// Compress image bytes (web-safe)
+  static Future<Uint8List> _compressBytes(
+    Uint8List bytes, {
     int maxWidth = 1080,
     int maxHeight = 1920,
     int quality = 85,
   }) async {
     try {
-      // Get temporary directory for compressed image
-      final tempDir = await getTemporaryDirectory();
-      final compressedFileName = 'compressed_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final compressedPath = '${tempDir.path}/$compressedFileName';
-
-      // Compress the image
-      final compressedBytes = await FlutterImageCompress.compressWithFile(
-        imageFile.absolute.path,
+      final compressedBytes = await FlutterImageCompress.compressWithList(
+        bytes,
         minWidth: maxWidth,
         minHeight: maxHeight,
         quality: quality,
         format: CompressFormat.jpeg,
       );
 
-      if (compressedBytes == null) {
-        throw Exception('Failed to compress image');
-      }
-
-      // Save compressed image to file
-      final compressedFile = File(compressedPath);
-      await compressedFile.writeAsBytes(compressedBytes);
-
-      return compressedFile;
+      return compressedBytes ?? bytes;
     } catch (e) {
       debugPrint('Error compressing image: $e');
-      // Return original file if compression fails
-      return imageFile;
+      return bytes;
     }
   }
 

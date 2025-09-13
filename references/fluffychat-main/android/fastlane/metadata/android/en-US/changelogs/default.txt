@@ -1,1 +1,0 @@
-Fixes broken error reporter for push notifications and wrong clipped avatars. Also updates dependencies and translations.

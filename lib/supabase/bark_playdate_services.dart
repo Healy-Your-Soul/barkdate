@@ -246,17 +246,37 @@ class PlaydateRequestService {
             'dog_id': organizerDogId,
           });
 
-      // Create the playdate request for the invitee
-      await SupabaseConfig.client
-          .from('playdate_requests')
-          .insert({
-            'playdate_id': playdateId,
-            'requester_id': organizerId,
-            'invitee_id': inviteeId,
-            'invitee_dog_id': inviteeDogId,
-            'status': 'pending',
-            'message': message,
-          });
+      // Create the playdate request for the invitee (attempt to include requester_dog_id if schema migrated)
+      try {
+        await SupabaseConfig.client
+            .from('playdate_requests')
+            .insert({
+              'playdate_id': playdateId,
+              'requester_id': organizerId,
+              'requester_dog_id': organizerDogId, // new column (safe try)
+              'invitee_id': inviteeId,
+              'invitee_dog_id': inviteeDogId,
+              'status': 'pending',
+              'message': message,
+            });
+      } catch (e) {
+        final msg = e.toString();
+        if (msg.contains('requester_dog_id') || msg.contains('column')) {
+          debugPrint('requester_dog_id column missing – retrying without it');
+          await SupabaseConfig.client
+              .from('playdate_requests')
+              .insert({
+                'playdate_id': playdateId,
+                'requester_id': organizerId,
+                'invitee_id': inviteeId,
+                'invitee_dog_id': inviteeDogId,
+                'status': 'pending',
+                'message': message,
+              });
+        } else {
+          rethrow;
+        }
+      }
 
       // Get dog names for notification
       final organizerDog = await SupabaseConfig.client
@@ -579,12 +599,13 @@ class PlaydateRequestService {
       debugPrint('=== CANCELLING PLAYDATE REQUEST ===');
       debugPrint('Request ID: $requestId');
 
-      // Update request status to cancelled
+      // Update request status to declined (cancelled is not allowed in constraint)
       await SupabaseConfig.client
           .from('playdate_requests')
           .update({
-            'status': 'cancelled',
+            'status': 'declined',
             'responded_at': DateTime.now().toIso8601String(),
+            'message': 'Request cancelled by organizer',
           })
           .eq('id', requestId);
 
@@ -1112,6 +1133,114 @@ class DogFriendshipService {
     } catch (e) {
       debugPrint('Error getting $role requests for user $userId: $e');
       return [];
+    }
+  }
+}
+
+// =============================================================================
+// MULTI-OWNER / CONSOLIDATED PLAYDATE QUERY SERVICE
+// =============================================================================
+/// Provides unified queries that no longer rely on the single participant_id column.
+/// Uses playdate_participants as source of truth so multi-dog & multi-owner works.
+class PlaydateQueryService {
+  /// Fetch upcoming & past playdates for a user (based on participation) with aggregated participants.
+  static Future<Map<String, List<Map<String, dynamic>>>> getUserPlaydatesAggregated(String userId) async {
+    try {
+      final nowIso = DateTime.now().toIso8601String();
+
+      // 1. Get playdate IDs where user participates OR organizes
+      final participantRows = await SupabaseConfig.client
+          .from('playdate_participants')
+          .select('playdate_id')
+          .eq('user_id', userId);
+
+      final organizerRows = await SupabaseConfig.client
+          .from('playdates')
+          .select('id')
+          .eq('organizer_id', userId);
+
+      // Combine both participant and organizer playdates
+      final participantIds = participantRows.map((r) => r['playdate_id']).toList();
+      final organizerIds = organizerRows.map((r) => r['id']).toList();
+      final playdateIds = [...participantIds, ...organizerIds].toSet().toList(); // Remove duplicates
+
+      if (playdateIds.isEmpty) {
+        return {
+          'upcoming': [],
+          'past': [],
+        };
+      }
+
+      // 2. Fetch playdates in two buckets
+    final upcoming = await SupabaseConfig.client
+      .from('playdates')
+      .select('*')
+      .filter('id', 'in', '(${playdateIds.join(',')})')
+      .gte('scheduled_at', nowIso)
+      .neq('status', 'cancelled')
+      .order('scheduled_at', ascending: true) as List<dynamic>;
+
+    final past = await SupabaseConfig.client
+      .from('playdates')
+      .select('*')
+      .filter('id', 'in', '(${playdateIds.join(',')})')
+      .lt('scheduled_at', nowIso)
+      .order('scheduled_at', ascending: false) as List<dynamic>;
+
+      // 3. Load participants for all fetched playdates in one query
+      final allFetchedIds = [
+        ...upcoming.map((p) => p['id']),
+        ...past.map((p) => p['id']),
+      ];
+
+      Map<String, List<Map<String, dynamic>>> participantsByPlaydate = {};
+      if (allFetchedIds.isNotEmpty) {
+    final participants = await SupabaseConfig.client
+      .from('playdate_participants')
+      .select('playdate_id, user_id, dog_id, joined_at')
+      .filter('playdate_id', 'in', '(${allFetchedIds.join(',')})') as List<dynamic>;
+
+        // Enrich each participant with user & dog details (could be optimized w/ RPC later)
+        for (final part in participants) {
+          try {
+            final user = await SupabaseConfig.client
+                .from('users')
+                .select('name, avatar_url')
+                .eq('id', part['user_id'])
+                .maybeSingle();
+            if (user != null) part['user'] = user;
+          } catch (_) {}
+          try {
+            final dog = await SupabaseConfig.client
+                .from('dogs')
+                .select('name, breed, main_photo_url')
+                .eq('id', part['dog_id'])
+                .maybeSingle();
+            if (dog != null) part['dog'] = dog;
+          } catch (_) {}
+          participantsByPlaydate.putIfAbsent(part['playdate_id'], () => []).add(part);
+        }
+      }
+
+      // 4. Attach participants lists
+      List<Map<String, dynamic>> attach(List<dynamic> list) => list.map<Map<String, dynamic>>((p) {
+        final map = Map<String, dynamic>.from(p);
+        map['participants'] = participantsByPlaydate[p['id']] ?? [];
+        // Derive a friendly title if missing
+        map['title'] = map['title'] ?? 'Playdate';
+        return map;
+      }).toList();
+
+      return {
+        'upcoming': attach(upcoming),
+        'past': attach(past),
+      };
+    } catch (e) {
+      debugPrint('Error aggregating playdates: $e');
+      return {
+        'upcoming': [],
+        'past': [],
+      };
     }
   }
 }

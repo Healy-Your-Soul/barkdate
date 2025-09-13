@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/screens/chat_detail_screen.dart';
 import 'package:barkdate/screens/report_screen.dart';
+import 'package:barkdate/services/dog_sharing_service.dart';
+import 'package:barkdate/widgets/dog_share_dialog.dart';
 
 class DogProfileDetail extends StatefulWidget {
   final Dog dog;
@@ -49,15 +52,23 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
   }
 
   void _onMessage() {
-    Navigator.pop(context);
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ChatDetailScreen(
-          recipientName: widget.dog.ownerName,
+          recipientName: widget.dog.ownerName ?? 'Dog Owner',
           dogName: widget.dog.name,
         ),
       ),
+    );
+  }
+
+  void _onShare() async {
+    // Open new share dialog (manages link + shared users)
+    await DogShareDialog.open(
+      context,
+      dogId: widget.dog.id,
+      dogName: widget.dog.name,
     );
   }
 
@@ -467,6 +478,26 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                               ),
                             ),
                           ],
+                        ),
+                        
+                        const SizedBox(height: 12),
+                        
+                        // Share button (full width)
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _onShare,
+                            icon: const Icon(Icons.share),
+                            label: const Text('Share Dog Profile'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                              foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 12),
                         

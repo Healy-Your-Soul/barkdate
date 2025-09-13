@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -66,7 +65,7 @@ class FirebaseMessagingService {
     debugPrint('📱 Notification permission status: ${settings.authorizationStatus}');
     
     // For iOS, also request local notification permissions
-    if (Platform.isIOS) {
+    if (!kIsWeb) {
       await _localNotifications
           .resolvePlatformSpecificImplementation<
               IOSFlutterLocalNotificationsPlugin>()
@@ -104,7 +103,7 @@ class FirebaseMessagingService {
     );
     
     // Create notification channels for Android
-    if (Platform.isAndroid) {
+    if (!kIsWeb) {
       await _createNotificationChannels();
     }
   }

@@ -21,6 +21,7 @@ class GoogleCalendarService {
       debugPrint('❌ Google Calendar integration temporarily disabled');
       return false;
 
+      /*
       final event = {
         'summary': title,
         'description': description,
@@ -46,7 +47,7 @@ class GoogleCalendarService {
       final response = await http.post(
         Uri.parse('$_baseUrl/calendars/primary/events'),
         headers: {
-          'Authorization': 'Bearer $accessToken',
+          'Authorization': 'Bearer \$accessToken',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(event),
@@ -56,10 +57,11 @@ class GoogleCalendarService {
         debugPrint('✅ Calendar event created successfully');
         return true;
       } else {
-        debugPrint('❌ Failed to create calendar event: ${response.statusCode}');
-        debugPrint('Response: ${response.body}');
+        debugPrint('❌ Failed to create calendar event: \${response.statusCode}');
+        debugPrint('Response: \${response.body}');
         return false;
       }
+      */
     } catch (e) {
       debugPrint('❌ Error creating calendar event: $e');
       return false;
@@ -75,6 +77,7 @@ class GoogleCalendarService {
       debugPrint('❌ Google Calendar integration temporarily disabled');
       return [];
 
+      /*
       final now = DateTime.now().toIso8601String();
       final response = await http.get(
         Uri.parse('$_baseUrl/calendars/primary/events'
@@ -99,6 +102,7 @@ class GoogleCalendarService {
         debugPrint('❌ Failed to get calendar events: ${response.statusCode}');
         return [];
       }
+      */
     } catch (e) {
       debugPrint('❌ Error getting calendar events: $e');
       return [];

@@ -54,4 +54,38 @@ class Dog {
     distanceKm: distanceKm ?? this.distanceKm,
     isMatched: isMatched ?? this.isMatched,
   );
+
+  factory Dog.fromJson(Map<String, dynamic> json) {
+    return Dog(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      breed: json['breed'] ?? '',
+      age: json['age']?.toInt() ?? 0,
+      size: json['size'] ?? '',
+      gender: json['gender'] ?? '',
+      bio: json['bio'] ?? '',
+      photos: List<String>.from(json['photos'] ?? []),
+      ownerId: json['owner_id'] ?? '',
+      ownerName: json['owner_name'] ?? '',
+      distanceKm: json['distance_km']?.toDouble() ?? 0.0,
+      isMatched: json['is_matched'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'breed': breed,
+      'age': age,
+      'size': size,
+      'gender': gender,
+      'bio': bio,
+      'photos': photos,
+      'owner_id': ownerId,
+      'owner_name': ownerName,
+      'distance_km': distanceKm,
+      'is_matched': isMatched,
+    };
+  }
 }

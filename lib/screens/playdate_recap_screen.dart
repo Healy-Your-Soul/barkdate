@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:barkdate/services/selected_image.dart';
 
 class PlaydateRecapScreen extends StatefulWidget {
   final String playdateId;
@@ -30,7 +30,7 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
   bool _shareToFeed = false;
   bool _isSubmitting = false;
   
-  List<XFile> _selectedImages = [];
+  List<SelectedImage> _selectedImages = [];
   List<String> _uploadedImageUrls = [];
   List<Map<String, dynamic>> _participatingDogs = [];
   Set<String> _taggedDogIds = {};
@@ -79,8 +79,17 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
       );
       
       if (images.isNotEmpty) {
+        final List<SelectedImage> selectedImages = [];
+        for (final xFile in images) {
+          final bytes = await xFile.readAsBytes();
+          selectedImages.add(SelectedImage(
+            bytes: bytes,
+            name: xFile.name,
+            path: xFile.path,
+          ));
+        }
         setState(() {
-          _selectedImages.addAll(images);
+          _selectedImages.addAll(selectedImages);
         });
       }
     } catch (e) {
@@ -101,8 +110,14 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
       );
       
       if (photo != null) {
+        final bytes = await photo.readAsBytes();
+        final selectedImage = SelectedImage(
+          bytes: bytes,
+          name: photo.name,
+          path: photo.path,
+        );
         setState(() {
-          _selectedImages.add(photo);
+          _selectedImages.add(selectedImage);
         });
       }
     } catch (e) {
@@ -124,13 +139,12 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
     
     for (final image in _selectedImages) {
       try {
-        final bytes = await image.readAsBytes();
         final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
         final path = 'playdate-recaps/$fileName';
         
         await SupabaseConfig.client.storage
             .from('photos')
-            .uploadBinary(path, bytes);
+            .uploadBinary(path, image.bytes);
         
         final url = SupabaseConfig.client.storage
             .from('photos')
@@ -441,15 +455,10 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: kIsWeb
-                            ? Image.network(
-                                _selectedImages[index].path,
-                                fit: BoxFit.cover,
-                              )
-                            : Image.file(
-                                File(_selectedImages[index].path),
-                                fit: BoxFit.cover,
-                              ),
+                        child: Image.memory(
+                          _selectedImages[index].bytes,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                       Positioned(
                         top: 4,

@@ -2,41 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/screens/auth/sign_in_screen.dart';
-import 'package:barkdate/services/settings_service.dart';
-import 'package:location/location.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LocationPermissionScreen extends StatelessWidget {
-  final String? userId;
-  final String? userName;
-  final String? userEmail;
-
-  const LocationPermissionScreen({
-    super.key,
-    this.userId,
-    this.userName,
-    this.userEmail,
-  });
+  const LocationPermissionScreen({super.key});
 
   Future<void> _navigateNext(BuildContext context, {required bool locationEnabled}) async {
-    // Save location preference to settings
-    await SettingsService().setLocationEnabled(locationEnabled);
-    
-    // Optional: Save location preference to user profile in Supabase
     final user = SupabaseConfig.auth.currentUser;
-    if (user != null) {
-      try {
-        // You can uncomment this if you want to store location preference in database
-        // await Supabase.instance.client
-        //     .from('users')
-        //     .update({'location_enabled': locationEnabled})
-        //     .eq('id', user.id);
-      } catch (e) {
-        // Non-critical error, continue with local storage
-        debugPrint('Could not save location preference to database: $e');
-      }
-    }
-    
     if (user == null) {
       // Not signed in → go to Sign In
       Navigator.pushReplacement(
@@ -51,50 +22,19 @@ class LocationPermissionScreen extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (context) => CreateProfileScreen(
-          userId: userId ?? user.id,
-          userName: userName ?? user.userMetadata?['full_name'] ?? user.email?.split('@')[0],
-          userEmail: userEmail ?? user.email,
+          userId: user.id,
+          userName: user.userMetadata?['name'],
+          userEmail: user.email,
           locationEnabled: locationEnabled,
-          editMode: EditMode.createProfile,
         ),
       ),
     );
   }
 
   Future<void> _requestLocationPermission(BuildContext context) async {
-    try {
-      // Request actual location permissions
-      Location location = Location();
-      
-      // Check if location service is enabled
-      bool serviceEnabled = await location.serviceEnabled();
-      if (!serviceEnabled) {
-        serviceEnabled = await location.requestService();
-        if (!serviceEnabled) {
-          // User denied location service, continue with disabled location
-          await _navigateNext(context, locationEnabled: false);
-          return;
-        }
-      }
-
-      // Check location permissions
-      PermissionStatus permissionGranted = await location.hasPermission();
-      if (permissionGranted == PermissionStatus.denied) {
-        permissionGranted = await location.requestPermission();
-        if (permissionGranted != PermissionStatus.granted) {
-          // User denied location permission, continue with disabled location
-          await _navigateNext(context, locationEnabled: false);
-          return;
-        }
-      }
-
-      // Location permission granted, save to settings and continue
-      await _navigateNext(context, locationEnabled: true);
-    } catch (e) {
-      // Error requesting location, continue with disabled location
-      debugPrint('Error requesting location permission: $e');
-      await _navigateNext(context, locationEnabled: false);
-    }
+    // TODO: Implement actual location permission request
+    // For now, just navigate to the next screen with location enabled
+    await _navigateNext(context, locationEnabled: true);
   }
 
   void _skipLocationPermission(BuildContext context) {

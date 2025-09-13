@@ -7,6 +7,7 @@ class FeaturedPark {
   final List<String> amenities;
   final String? address;
   final double? rating;
+  final int? reviewCount;
   final List<String>? photoUrls;
   final bool isActive;
   final DateTime? createdAt;
@@ -20,6 +21,7 @@ class FeaturedPark {
     required this.amenities,
     this.address,
     this.rating,
+    this.reviewCount,
     this.photoUrls,
     this.isActive = true,
     this.createdAt,
@@ -35,6 +37,7 @@ class FeaturedPark {
       amenities: List<String>.from(json['amenities'] ?? []),
       address: json['address'],
       rating: json['rating']?.toDouble(),
+      reviewCount: json['review_count']?.toInt(),
       photoUrls: json['photo_urls'] != null ? List<String>.from(json['photo_urls']) : null,
       isActive: json['is_active'] ?? true,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
@@ -51,6 +54,7 @@ class FeaturedPark {
       'amenities': amenities,
       'address': address,
       'rating': rating,
+      'review_count': reviewCount,
       'photo_urls': photoUrls,
       'is_active': isActive,
       'created_at': createdAt?.toIso8601String(),

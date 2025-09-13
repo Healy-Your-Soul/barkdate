@@ -7,14 +7,17 @@ import 'package:barkdate/supabase/barkdate_services.dart';
 /// Enhanced playdate response bottom sheet with progressive disclosure
 /// Inspired by FluffyChat invitations + Beacon multi-step flows
 class PlaydateResponseBottomSheet extends StatefulWidget {
-  final Map<String, dynamic> playdateRequest;
+  final Map<String, dynamic> request; // renamed from playdateRequest
   final VoidCallback? onResponseSent;
 
   const PlaydateResponseBottomSheet({
     super.key,
-    required this.playdateRequest,
+    required Map<String, dynamic> request,
     this.onResponseSent,
-  });
+  }) : request = request;
+
+  // Backward compatibility getter
+  Map<String, dynamic> get playdateRequest => request;
 
   @override
   State<PlaydateResponseBottomSheet> createState() => _PlaydateResponseBottomSheetState();

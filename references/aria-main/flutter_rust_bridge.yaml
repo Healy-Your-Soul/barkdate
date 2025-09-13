@@ -1,3 +1,0 @@
-rust_input: rust/src/api/**/*.rs
-dart_output: lib/rust
-enable_lifetime: true

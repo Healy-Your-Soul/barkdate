@@ -86,8 +86,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                   userName: user?.userMetadata?['name'] ?? '',
                   userEmail: user?.email ?? '',
                   userId: user?.id ?? '',
-                  editMode: EditMode.createProfile,
-                  locationEnabled: false,
                 ),
               ),
             );
@@ -120,8 +118,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                     userName: user?.userMetadata?['name'] ?? '',
                     userEmail: user?.email ?? '',
                     userId: user?.id ?? '',
-                    editMode: EditMode.createProfile,
-                    locationEnabled: false,
                   ),
                 ),
               );

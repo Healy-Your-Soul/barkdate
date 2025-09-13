@@ -2,6 +2,7 @@ import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/models/post.dart';
 import 'package:barkdate/models/message.dart';
 import 'package:barkdate/models/playdate.dart';
+import 'package:barkdate/models/park.dart';
 
 class SampleData {
   static const currentUserId = 'user_001';
@@ -144,27 +145,33 @@ class SampleData {
   static final List<Playdate> upcomingPlaydates = [
     Playdate(
       id: 'playdate_001',
-      initiatorUserId: currentUserId,
-      invitedUserId: 'user_002',
-      initiatorDogName: 'My Dog',
-      invitedDogName: 'Buddy',
       title: 'Park Playdate',
+      description: 'Fun playdate at Central Park',
       location: 'Central Park',
-      dateTime: DateTime.now().add(const Duration(days: 1)),
-      status: PlaydateStatus.accepted,
-      imageUrl: 'https://pixabay.com/get/g208d1816b6cb4944f4a367ccaf380d3b441bb87b2385977de3f3cd40dc600e3c6b44612734d7fa721d4755f0c555a0ad008d42641e24efdfbb11c32e4c17e9eb_1280.jpg',
+      latitude: 40.785091,
+      longitude: -73.968285,
+      scheduledAt: DateTime.now().add(const Duration(days: 1)),
+      status: PlaydateStatus.confirmed,
+      organizerId: 'user_001',
+      organizerName: 'John Doe',
+      participants: [],
+      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+      updatedAt: DateTime.now().subtract(const Duration(hours: 2)),
     ),
     Playdate(
       id: 'playdate_002',
-      initiatorUserId: 'user_004',
-      invitedUserId: currentUserId,
-      initiatorDogName: 'Bella',
-      invitedDogName: 'My Dog',
       title: 'Beach Buddies',
+      description: 'Beach playdate for water-loving dogs',
       location: 'Sunset Beach',
-      dateTime: DateTime.now().add(const Duration(days: 3)),
+      latitude: 40.574323,
+      longitude: -74.013687,
+      scheduledAt: DateTime.now().add(const Duration(days: 3)),
       status: PlaydateStatus.pending,
-      imageUrl: 'https://pixabay.com/get/g2015a824e6d889ca561f4bce4cdba0a9c339fa06b7d81999f12a9f9ccead1edc36cae8745b6575da796b3e853ae364d5feaf001a315562b325770472ae3cf403_1280.jpg',
+      organizerId: 'user_002',
+      organizerName: 'Jane Smith',
+      participants: [],
+      createdAt: DateTime.now().subtract(const Duration(hours: 5)),
+      updatedAt: DateTime.now().subtract(const Duration(hours: 5)),
     ),
   ];
 
@@ -198,6 +205,49 @@ class SampleData {
       description: 'Get 100 likes on your posts',
       iconName: 'star',
       isEarned: false,
+    ),
+  ];
+
+  static final List<Park> nearbyParks = [
+    Park(
+      id: 'park_001',
+      name: 'Central Park Dog Run',
+      address: '85th St &, East Dr, New York, NY 10028',
+      latitude: 40.785091,
+      longitude: -73.968285,
+      rating: 4.5,
+      distance: 0.8,
+      amenities: ['Off-leash area', 'Water fountain', 'Waste bags', 'Benches'],
+    ),
+    Park(
+      id: 'park_002',
+      name: 'Washington Square Park',
+      address: 'Washington Square N, New York, NY 10012',
+      latitude: 40.730823,
+      longitude: -73.997332,
+      rating: 4.2,
+      distance: 1.2,
+      amenities: ['Open space', 'Shade trees', 'Walking paths'],
+    ),
+    Park(
+      id: 'park_003',
+      name: 'Prospect Park Dog Beach',
+      address: '95 Prospect Park W, Brooklyn, NY 11215',
+      latitude: 40.660204,
+      longitude: -73.969086,
+      rating: 4.7,
+      distance: 2.1,
+      amenities: ['Off-leash hours', 'Large field', 'Water access', 'Parking'],
+    ),
+    Park(
+      id: 'park_004',
+      name: 'Bryant Park',
+      address: '1065 6th Ave, New York, NY 10018',
+      latitude: 40.753597,
+      longitude: -73.983233,
+      rating: 4.0,
+      distance: 1.8,
+      amenities: ['Lawn area', 'Seating', 'Seasonal events'],
     ),
   ];
 }

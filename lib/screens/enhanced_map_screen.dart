@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:barkdate/services/park_service.dart';
-import 'package:barkdate/supabase/barkdate_services.dart';
+import '../services/park_service.dart';
+import '../services/places_service.dart';
+import '../models/featured_park.dart';
+import 'admin_screen.dart';
 import 'dart:async';
-import 'dart:math';
 
 class EnhancedMapScreen extends StatefulWidget {
   const EnhancedMapScreen({super.key});
@@ -19,37 +19,33 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
   Location _location = Location();
   LatLng? _currentLocation;
   bool _loading = true;
+  bool _isCheckedIn = false;
+  final Set<Marker> _markers = {};
+  
+  // Enhanced features
   List<Map<String, dynamic>> _nearbyParks = [];
-  List<Map<String, dynamic>> _featuredParks = [];
-  Set<Marker> _markers = {};
-  Map<String, int> _parkDogCounts = {};
-  StreamSubscription? _dogCountSubscription;
+  List<FeaturedPark> _featuredParks = [];
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+  List<PlaceResult> _searchResults = [];
+  bool _showingSearchResults = false;
+  bool _showOnlyFeatured = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeLocation();
-    _setupRealTimeDogCounts();
+    _initializeMap();
   }
 
   @override
   void dispose() {
-    _dogCountSubscription?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
-  void _setupRealTimeDogCounts() {
-    _dogCountSubscription = BarkDateUserService.getDogCountUpdates()
-        .listen((counts) {
-      setState(() {
-        _parkDogCounts = counts;
-      });
-      _updateMarkersWithCounts();
-    });
-  }
-
-  Future<void> _initializeLocation() async {
+  Future<void> _initializeMap() async {
     try {
+      // Get location permission and current location
       bool serviceEnabled = await _location.serviceEnabled();
       if (!serviceEnabled) {
         serviceEnabled = await _location.requestService();
@@ -64,573 +60,499 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
 
       final locationData = await _location.getLocation();
       if (locationData.latitude != null && locationData.longitude != null) {
-        setState(() {
-          _currentLocation = LatLng(locationData.latitude!, locationData.longitude!);
-        });
-        
-        await _loadNearbyParks();
-        await _loadFeaturedParks();
-        await _loadInitialDogCounts();
+        _currentLocation = LatLng(locationData.latitude!, locationData.longitude!);
       }
+
+      // Load parks and featured parks
+      if (_currentLocation != null) {
+        await _loadParksData();
+      }
+
+      _updateMarkers();
     } catch (e) {
-      debugPrint('Error getting location: $e');
+      debugPrint('Map initialization failed: $e');
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _loadNearbyParks() async {
+  Future<void> _loadParksData() async {
     if (_currentLocation == null) return;
 
     try {
+      // Load nearby parks with distance sorting
       final parks = await ParkService.getNearbyParks(
         latitude: _currentLocation!.latitude,
         longitude: _currentLocation!.longitude,
-        radiusKm: 10,
       );
       
-      setState(() {
-        _nearbyParks = parks;
-      });
-      
-      _updateMarkersWithParks();
-    } catch (e) {
-      debugPrint('Error loading nearby parks: $e');
-    }
-  }
-
-  Future<void> _loadFeaturedParks() async {
-    try {
       final featured = await ParkService.getFeaturedParks();
-      setState(() {
-        _featuredParks = featured;
-      });
-      _updateMarkersWithParks();
+
+      if (mounted) {
+        setState(() {
+          _nearbyParks = parks;
+          _featuredParks = featured;
+        });
+      }
     } catch (e) {
-      debugPrint('Error loading featured parks: $e');
+      debugPrint('Failed to load parks data: $e');
     }
   }
 
-  Future<void> _loadInitialDogCounts() async {
-    try {
-      final counts = await BarkDateUserService.getCurrentDogCounts();
-      setState(() {
-        _parkDogCounts = counts;
-      });
-    } catch (e) {
-      debugPrint('Error loading dog counts: $e');
-    }
-  }
-
-  void _updateMarkersWithParks() {
-    Set<Marker> newMarkers = {};
-
-    // Add nearby parks markers (regular parks)
-    for (var park in _nearbyParks) {
-      final dogCount = _parkDogCounts[park['id']] ?? 0;
-      newMarkers.add(
-        Marker(
-          markerId: MarkerId('park_${park['id']}'),
-          position: LatLng(park['latitude'], park['longitude']),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+  void _updateMarkers() {
+    _markers.clear();
+    
+    if (_showingSearchResults) {
+      // Show search results
+      for (final place in _searchResults) {
+        _markers.add(Marker(
+          markerId: MarkerId('search_${place.placeId}'),
+          position: LatLng(place.latitude, place.longitude),
           infoWindow: InfoWindow(
-            title: park['name'],
-            snippet: dogCount > 0 ? '$dogCount ${dogCount == 1 ? 'dog' : 'dogs'} here now' : 'No dogs currently',
+            title: place.name,
+            snippet: '${place.distanceText} • ${place.rating}⭐',
           ),
-          onTap: () => _showParkDetails(park, dogCount, false),
-        ),
-      );
-    }
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          onTap: () => _showPlaceDetails(place),
+        ));
+      }
+    } else {
+      // Show regular parks (unless filtered to featured only)
+      if (!_showOnlyFeatured) {
+        for (final park in _nearbyParks) {
+          _markers.add(Marker(
+            markerId: MarkerId('park_${park['id']}'),
+            position: LatLng(park['latitude'], park['longitude']),
+            infoWindow: InfoWindow(
+              title: park['name'],
+              snippet: park['address'] ?? 'Dog park nearby',
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            onTap: () => _showParkDetails(park),
+          ));
+        }
+      }
 
-    // Add featured parks markers (admin-curated)
-    for (var park in _featuredParks) {
-      final dogCount = _parkDogCounts[park['id']] ?? 0;
-      newMarkers.add(
-        Marker(
-          markerId: MarkerId('featured_${park['id']}'),
-          position: LatLng(park['latitude'], park['longitude']),
+      // Show featured parks with special markers
+      for (final park in _featuredParks) {
+        _markers.add(Marker(
+          markerId: MarkerId('featured_${park.id}'),
+          position: LatLng(park.latitude, park.longitude),
+          infoWindow: InfoWindow(
+            title: '⭐ ${park.name}',
+            snippet: 'Featured park • ${park.rating}⭐',
+          ),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-          infoWindow: InfoWindow(
-            title: '⭐ ${park['name']}',
-            snippet: dogCount > 0 ? '$dogCount ${dogCount == 1 ? 'dog' : 'dogs'} here now' : 'Featured park',
-          ),
-          onTap: () => _showParkDetails(park, dogCount, true),
-        ),
-      );
+          onTap: () => _showFeaturedParkDetails(park),
+        ));
+      }
     }
-
+    
     // Add current location marker
     if (_currentLocation != null) {
-      newMarkers.add(
-        Marker(
-          markerId: const MarkerId('current_location'),
-          position: _currentLocation!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-          infoWindow: const InfoWindow(title: 'Your Location'),
-        ),
-      );
+      _markers.add(Marker(
+        markerId: const MarkerId('current_location'),
+        position: _currentLocation!,
+        infoWindow: const InfoWindow(title: 'Your Location'),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      ));
     }
+  }
 
+  Future<void> _searchPlaces(String query) async {
+    if (_currentLocation == null || query.trim().isEmpty) return;
+    
+    setState(() => _isSearching = true);
+    
+    try {
+      final results = await PlacesService.searchDogFriendlyPlaces(
+        latitude: _currentLocation!.latitude,
+        longitude: _currentLocation!.longitude,
+        keyword: query,
+      );
+      
+      setState(() {
+        _searchResults = results;
+        _showingSearchResults = true;
+      });
+      _updateMarkers();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Search failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isSearching = false);
+    }
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
     setState(() {
-      _markers = newMarkers;
+      _showingSearchResults = false;
+      _searchResults = [];
     });
+    _updateMarkers();
   }
 
-  void _updateMarkersWithCounts() {
-    _updateMarkersWithParks();
+  void _showPlaceDetails(PlaceResult place) {
+    showBottomSheet(
+      context: context,
+      builder: (context) => PlaceDetailsSheet(place: place),
+    );
   }
 
-  double _calculateDistance(LatLng point1, LatLng point2) {
-    const double earthRadius = 6371; // Earth's radius in kilometers
-    
-    double lat1Rad = point1.latitude * (pi / 180);
-    double lat2Rad = point2.latitude * (pi / 180);
-    double deltaLatRad = (point2.latitude - point1.latitude) * (pi / 180);
-    double deltaLngRad = (point2.longitude - point1.longitude) * (pi / 180);
-    
-    double a = sin(deltaLatRad / 2) * sin(deltaLatRad / 2) +
-        cos(lat1Rad) * cos(lat2Rad) *
-        sin(deltaLngRad / 2) * sin(deltaLngRad / 2);
-    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    
-    return earthRadius * c;
+  void _showParkDetails(Map<String, dynamic> park) {
+    showBottomSheet(
+      context: context,
+      builder: (context) => ParkDetailsSheet(park: park),
+    );
   }
 
-  List<Map<String, dynamic>> get _sortedNearbyParks {
-    if (_currentLocation == null) return _nearbyParks;
-    
-    List<Map<String, dynamic>> sortedParks = List.from(_nearbyParks);
-    sortedParks.sort((a, b) {
-      double distanceA = _calculateDistance(
-        _currentLocation!,
-        LatLng(a['latitude'], a['longitude']),
-      );
-      double distanceB = _calculateDistance(
-        _currentLocation!,
-        LatLng(b['latitude'], b['longitude']),
-      );
-      return distanceA.compareTo(distanceB);
+  void _showFeaturedParkDetails(FeaturedPark park) {
+    showBottomSheet(
+      context: context,
+      builder: (context) => FeaturedParkDetailsSheet(park: park),
+    );
+  }
+
+  void _toggleCheckIn() {
+    setState(() {
+      _isCheckedIn = !_isCheckedIn;
     });
-    return sortedParks;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isCheckedIn ? 'Checked in successfully!' : 'Checked out'),
+        backgroundColor: _isCheckedIn ? Colors.green : Colors.orange,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dog Parks & Places'),
-        backgroundColor: const Color(0xFF2E7D32),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.admin_panel_settings),
-            onPressed: () {
-              Navigator.pushNamed(context, '/admin');
-            },
-            tooltip: 'Admin Panel',
+      body: Stack(
+        children: [
+          // Google Map
+          _loading
+              ? const Center(child: CircularProgressIndicator())
+              : GoogleMap(
+                  mapType: MapType.normal,
+                  initialCameraPosition: CameraPosition(
+                    target: _currentLocation ?? const LatLng(37.7749, -122.4194),
+                    zoom: 14.0,
+                  ),
+                  markers: _markers,
+                  onMapCreated: (GoogleMapController controller) {
+                    _mapController = controller;
+                    if (_currentLocation != null) {
+                      controller.animateCamera(
+                        CameraUpdate.newLatLngZoom(_currentLocation!, 14.0),
+                      );
+                    }
+                  },
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                ),
+          
+          // Search Bar
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            left: 16,
+            right: 16,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search for dog parks...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _showingSearchResults
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: _clearSearch,
+                        )
+                      : _isSearching
+                          ? const Padding(
+                              padding: EdgeInsets.all(16),
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                onSubmitted: _searchPlaces,
+              ),
+            ),
+          ),
+          
+          // Filter Buttons
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 70,
+            left: 16,
+            child: Column(
+              children: [
+                FilterButton(
+                  icon: Icons.star,
+                  label: 'Featured',
+                  isSelected: _showOnlyFeatured,
+                  onTap: () {
+                    setState(() {
+                      _showOnlyFeatured = !_showOnlyFeatured;
+                    });
+                    _updateMarkers();
+                  },
+                ),
+                const SizedBox(height: 8),
+                FilterButton(
+                  icon: Icons.my_location,
+                  label: 'My Location',
+                  onTap: () {
+                    if (_currentLocation != null) {
+                      _mapController?.animateCamera(
+                        CameraUpdate.newLatLngZoom(_currentLocation!, 16),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          
+          // Admin Button (show only for admin users)
+          Positioned(
+            bottom: 100,
+            right: 16,
+            child: FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AdminScreen(),
+                  ),
+                );
+              },
+              backgroundColor: Colors.orange,
+              child: const Icon(Icons.admin_panel_settings),
+            ),
+          ),
+          
+          // Check-in/Check-out Button
+          Positioned(
+            bottom: 30,
+            right: 16,
+            child: FloatingActionButton.extended(
+              onPressed: _toggleCheckIn,
+              backgroundColor: _isCheckedIn ? Colors.red : Colors.green,
+              icon: Icon(_isCheckedIn ? Icons.exit_to_app : Icons.location_on),
+              label: Text(_isCheckedIn ? 'Check Out' : 'Check In'),
+            ),
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Map
-                Expanded(
-                  flex: 2,
-                  child: GoogleMap(
-                    onMapCreated: (GoogleMapController controller) {
-                      _mapController = controller;
-                    },
-                    initialCameraPosition: CameraPosition(
-                      target: _currentLocation ?? const LatLng(40.7831, -73.9712),
-                      zoom: 14,
-                    ),
-                    markers: _markers,
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: true,
-                  ),
-                ),
-                
-                // Parks list with live dog counts
-                Expanded(
-                  flex: 1,
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              'Nearby Parks',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF2E7D32),
-                              ),
-                            ),
-                            const Spacer(),
-                            if (_currentLocation != null)
-                              Text(
-                                'Sorted by distance',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: _sortedNearbyParks.length + _featuredParks.length,
-                            itemBuilder: (context, index) {
-                              if (index < _featuredParks.length) {
-                                final park = _featuredParks[index];
-                                final dogCount = _parkDogCounts[park['id']] ?? 0;
-                                return _buildFeaturedParkCard(park, dogCount);
-                              } else {
-                                final parkIndex = index - _featuredParks.length;
-                                final park = _sortedNearbyParks[parkIndex];
-                                final dogCount = _parkDogCounts[park['id']] ?? 0;
-                                return _buildParkCard(park, dogCount);
-                              }
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
     );
   }
+}
 
-  Widget _buildParkCard(Map<String, dynamic> park, int dogCount) {
-    double? distance;
-    if (_currentLocation != null) {
-      distance = _calculateDistance(
-        _currentLocation!,
-        LatLng(park['latitude'], park['longitude']),
-      );
-    }
+// Helper Widgets
+class FilterButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFF2E7D32),
-          child: Text(
-            dogCount.toString(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        title: Text(park['name']),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (distance != null)
-              Text('${distance.toStringAsFixed(1)} km away'),
-            Text(
-              dogCount == 0
-                  ? 'No dogs currently here'
-                  : '$dogCount ${dogCount == 1 ? 'dog is' : 'dogs are'} here now',
-              style: TextStyle(
-                color: dogCount > 0 
-                    ? const Color(0xFF2E7D32)
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                fontWeight: dogCount > 0 ? FontWeight.w600 : FontWeight.normal,
-              ),
+  const FilterButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    this.isSelected = false,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.info_outline),
-          onPressed: () => _showParkDetails(park, dogCount, false),
-        ),
-        onTap: () {
-          _mapController?.animateCamera(
-            CameraUpdate.newLatLngZoom(
-              LatLng(park['latitude'], park['longitude']),
-              16,
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildFeaturedParkCard(Map<String, dynamic> park, int dogCount) {
-    double? distance;
-    if (_currentLocation != null) {
-      distance = _calculateDistance(
-        _currentLocation!,
-        LatLng(park['latitude'], park['longitude']),
-      );
-    }
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      color: const Color(0xFF2E7D32).withOpacity(0.1),
-      child: ListTile(
-        leading: Stack(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            CircleAvatar(
-              backgroundColor: const Color(0xFF2E7D32),
-              child: Text(
-                dogCount.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? Colors.white : Colors.black87,
             ),
-            const Positioned(
-              top: -2,
-              right: -2,
-              child: Icon(
-                Icons.star,
-                color: Colors.orange,
-                size: 16,
-              ),
-            ),
-          ],
-        ),
-        title: Row(
-          children: [
-            const Icon(Icons.star, color: Colors.orange, size: 16),
             const SizedBox(width: 4),
-            Expanded(child: Text(park['name'])),
-            if (park['rating'] != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.orange,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  park['rating'].toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
             Text(
-              'Featured Park',
+              label,
               style: TextStyle(
-                color: const Color(0xFF2E7D32),
-                fontWeight: FontWeight.w600,
                 fontSize: 12,
-              ),
-            ),
-            if (distance != null)
-              Text('${distance.toStringAsFixed(1)} km away'),
-            Text(
-              dogCount == 0
-                  ? 'No dogs currently here'
-                  : '$dogCount ${dogCount == 1 ? 'dog is' : 'dogs are'} here now',
-              style: TextStyle(
-                color: dogCount > 0 
-                    ? const Color(0xFF2E7D32)
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                fontWeight: dogCount > 0 ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: FontWeight.w500,
+                color: isSelected ? Colors.white : Colors.black87,
               ),
             ),
           ],
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.info_outline),
-          onPressed: () => _showParkDetails(park, dogCount, true),
-        ),
-        onTap: () {
-          _mapController?.animateCamera(
-            CameraUpdate.newLatLngZoom(
-              LatLng(park['latitude'], park['longitude']),
-              16,
-            ),
-          );
-        },
       ),
     );
   }
+}
 
-  void _showParkDetails(Map<String, dynamic> park, int dogCount, bool isFeatured) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        minChildSize: 0.3,
-        expand: false,
-        builder: (context, scrollController) => Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+// Detail Sheets
+class PlaceDetailsSheet extends StatelessWidget {
+  final PlaceResult place;
+
+  const PlaceDetailsSheet({super.key, required this.place});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            place.name,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Text('${place.rating}⭐ • ${place.distanceText}'),
+          const SizedBox(height: 8),
+          Text(place.address),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: Add to featured parks
+            },
+            child: const Text('Add to Featured'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ParkDetailsSheet extends StatelessWidget {
+  final Map<String, dynamic> park;
+
+  const ParkDetailsSheet({super.key, required this.park});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            park['name'] ?? 'Unknown Park',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Text(park['address'] ?? ''),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('Check In Here'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class FeaturedParkDetailsSheet extends StatelessWidget {
+  final FeaturedPark park;
+
+  const FeaturedParkDetailsSheet({super.key, required this.park});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  if (isFeatured) ...[
-                    const Icon(Icons.star, color: Colors.orange),
-                    const SizedBox(width: 8),
-                  ],
-                  Expanded(
-                    child: Text(
-                      park['name'],
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  if (isFeatured && park['rating'] != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.orange,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        '${park['rating']} ⭐',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              
-              if (isFeatured)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2E7D32).withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    'Featured Park',
-                    style: TextStyle(
-                      color: Color(0xFF2E7D32),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              
-              const SizedBox(height: 16),
-              
-              // Live dog count
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: dogCount > 0 
-                      ? const Color(0xFF2E7D32).withOpacity(0.2)
-                      : Theme.of(context).colorScheme.surfaceVariant,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.pets, color: Color(0xFF2E7D32)),
-                    const SizedBox(width: 8),
-                    Text(
-                      dogCount == 0
-                          ? 'No dogs currently at this park'
-                          : '$dogCount ${dogCount == 1 ? 'dog is' : 'dogs are'} here right now!',
-                      style: const TextStyle(
-                        color: Color(0xFF2E7D32),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-              
-              if (park['description'] != null) ...[
-                Text(
-                  'About',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(park['description']),
-                const SizedBox(height: 16),
-              ],
-              
-              if (isFeatured && park['amenities'] != null) ...[
-                Text(
-                  'Amenities',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: (park['amenities'] as List).map<Widget>((amenity) {
-                    return Chip(
-                      label: Text(amenity.toString().replaceAll('_', ' ')),
-                      backgroundColor: const Color(0xFF2E7D32).withOpacity(0.2),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 16),
-              ],
-              
-              // Check-in button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _checkInToPark(park),
-                  icon: const Icon(Icons.location_on),
-                  label: Text('Check In at ${park['name']}'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E7D32),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
+              const Icon(Icons.star, color: Colors.orange),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  park.name,
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 8),
+          Text('${park.rating}⭐ • ${park.reviewCount} reviews'),
+          const SizedBox(height: 8),
+          Text(park.address ?? 'No address provided'),
+          const SizedBox(height: 8),
+          Text(park.description),
+          const SizedBox(height: 16),
+          if (park.amenities.isNotEmpty) ...[
+            const Text('Amenities:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 4,
+              children: park.amenities.map((amenity) => Chip(
+                label: Text(amenity, style: const TextStyle(fontSize: 12)),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              )).toList(),
+            ),
+            const SizedBox(height: 16),
+          ],
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('Check In Here'),
+          ),
+        ],
       ),
     );
-  }
-
-  Future<void> _checkInToPark(Map<String, dynamic> park) async {
-    try {
-      await BarkDateUserService.checkInToPark(park['id']);
-      
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Checked in to ${park['name']}!'),
-            backgroundColor: const Color(0xFF2E7D32),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error checking in: $e')),
-        );
-      }
-    }
   }
 }

@@ -9,7 +9,7 @@ class PlaydatesScreen extends StatefulWidget {
   final int? initialTabIndex; // 0=Requests, 1=Upcoming, 2=Past
   final String? highlightPlaydateId;
 
-  const PlaydatesScreen({super.key, this.initialTabIndex, this.highlightPlaydateId});
+  const PlaydatesScreen({Key? key, this.initialTabIndex, this.highlightPlaydateId}) : super(key: key);
 
   @override
   State<PlaydatesScreen> createState() => _PlaydatesScreenState();
@@ -56,32 +56,14 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
 
       debugPrint('=== LOADING PLAYDATES FOR USER: ${user.id} ===');
 
-      // FOR TESTING: Load sample data if no real data exists
-      bool useSampleData = false;
-
-      // Load real data from database
-      final now = DateTime.now();
+  // Aggregated loading (multi-owner) – legacy direct queries removed
       
-      // Get upcoming playdates
-      debugPrint('=== GETTING UPCOMING PLAYDATES ===');
-      final upcoming = await SupabaseConfig.client
-          .from('playdates')
-          .select('*, organizer:users!playdates_organizer_id_fkey(name, avatar_url), participant:users!playdates_participant_id_fkey(name, avatar_url)')
-          .or('organizer_id.eq.${user.id},participant_id.eq.${user.id}')
-          .gte('scheduled_at', now.toIso8601String())
-          .eq('status', 'confirmed')
-          .order('scheduled_at', ascending: true);
-      debugPrint('=== FOUND ${upcoming.length} UPCOMING PLAYDATES ===');
-
-      // Get past playdates
-      debugPrint('=== GETTING PAST PLAYDATES ===');
-      final past = await SupabaseConfig.client
-          .from('playdates')
-          .select('*, organizer:users!playdates_organizer_id_fkey(name, avatar_url), participant:users!playdates_participant_id_fkey(name, avatar_url)')
-          .or('organizer_id.eq.${user.id},participant_id.eq.${user.id}')
-          .lt('scheduled_at', now.toIso8601String())
-          .order('scheduled_at', ascending: false);
-      debugPrint('=== FOUND ${past.length} PAST PLAYDATES ===');
+  // Multi-owner aware aggregated query (participants pivot)
+  debugPrint('=== GETTING AGGREGATED PLAYDATES (multi-owner) ===');
+  final aggregated = await PlaydateQueryService.getUserPlaydatesAggregated(user.id);
+  final upcoming = aggregated['upcoming'] ?? [];
+  final past = aggregated['past'] ?? [];
+  debugPrint('=== FOUND ${upcoming.length} UPCOMING / ${past.length} PAST (AGGREGATED) ===');
 
       // Get both incoming and outgoing requests
       debugPrint('=== GETTING INCOMING REQUESTS (Chen is invitee) ===');
@@ -201,15 +183,27 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     if (user == null) return;
 
     // Listen for changes to both incoming and outgoing requests
-    _subRequests = SupabaseConfig.client
-        .from('playdate_requests')
-        .stream(primaryKey: ['id'])
-        .eq('requester_id', user.id)
-        .listen((data) {
-          if (mounted) {
-            _loadPlaydates();
-          }
-        });
+  // Listen to requests involving user both as requester & invitee
+  // Supabase Dart client stream doesn't support .or; subscribe twice
+  final requesterStream = SupabaseConfig.client
+    .from('playdate_requests')
+    .stream(primaryKey: ['id'])
+    .eq('requester_id', user.id)
+    .listen((_) { if (mounted) _loadPlaydates(); });
+  final inviteeStream = SupabaseConfig.client
+    .from('playdate_requests')
+    .stream(primaryKey: ['id'])
+    .eq('invitee_id', user.id)
+    .listen((_) { if (mounted) _loadPlaydates(); });
+  // Store one subscription handle; others tracked separately
+  _subRequests = requesterStream;
+  _subParticipants = inviteeStream;
+
+  // Listen to participant changes for live updates (join/leave)
+  _subParticipants = SupabaseConfig.client
+    .from('playdate_participants')
+    .stream(primaryKey: ['id'])
+    .listen((_) { if (mounted) _loadPlaydates(); });
   }
 
   void _tryScrollToHighlight() {
@@ -820,10 +814,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => PlaydateResponseBottomSheet(
-        playdateRequest: request,
-        onResponseSent: () {
-          _loadPlaydates(); // Refresh after response
-        },
+        request: request,
+        onResponseSent: () => _loadPlaydates(),
       ),
     );
   }
@@ -879,10 +871,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
         onReschedule: () {
           debugPrint('=== RESCHEDULE BUTTON PRESSED ===');
           Navigator.of(context).pop();
-          // TODO: Navigate to reschedule screen
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Reschedule feature coming soon!')),
-          );
+          _showRescheduleDialog(playdate);
         },
         onCancel: () {
           debugPrint('=== CANCEL BUTTON PRESSED ===');
@@ -931,6 +920,164 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
         ],
       ),
     );
+  }
+
+  Future<void> _showRescheduleDialog(Map<String, dynamic> playdate) async {
+    DateTime? selectedDate;
+    TimeOfDay? selectedTime;
+    final locationController = TextEditingController(text: playdate['location']);
+    final descriptionController = TextEditingController(text: playdate['description'] ?? '');
+
+    final currentScheduledAt = DateTime.parse(playdate['scheduled_at']);
+    selectedDate = DateTime(currentScheduledAt.year, currentScheduledAt.month, currentScheduledAt.day);
+    selectedTime = TimeOfDay.fromDateTime(currentScheduledAt);
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Reschedule Playdate'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Date selection
+                ListTile(
+                  leading: const Icon(Icons.calendar_today),
+                  title: Text(selectedDate != null 
+                    ? 'Date: ${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
+                    : 'Select Date'),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate ?? DateTime.now().add(const Duration(days: 1)),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 90)),
+                    );
+                    if (date != null) {
+                      setState(() => selectedDate = date);
+                    }
+                  },
+                ),
+                
+                // Time selection
+                ListTile(
+                  leading: const Icon(Icons.access_time),
+                  title: Text(selectedTime != null 
+                    ? 'Time: ${selectedTime!.format(context)}'
+                    : 'Select Time'),
+                  onTap: () async {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: selectedTime ?? TimeOfDay.now(),
+                    );
+                    if (time != null) {
+                      setState(() => selectedTime = time);
+                    }
+                  },
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Location
+                TextField(
+                  controller: locationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Location',
+                    prefixIcon: Icon(Icons.location_on),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Description
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description (optional)',
+                    prefixIcon: Icon(Icons.notes),
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (selectedDate != null && selectedTime != null && locationController.text.isNotEmpty) {
+                  final newDateTime = DateTime(
+                    selectedDate!.year,
+                    selectedDate!.month,
+                    selectedDate!.day,
+                    selectedTime!.hour,
+                    selectedTime!.minute,
+                  );
+                  
+                  final success = await _reschedulePlaydate(
+                    playdate['id'],
+                    newDateTime,
+                    locationController.text,
+                    descriptionController.text.isEmpty ? null : descriptionController.text,
+                  );
+                  
+                  if (mounted) {
+                    Navigator.of(context).pop();
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Playdate rescheduled successfully! 📅'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                      _loadPlaydates();
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Failed to reschedule playdate'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill in all required fields')),
+                  );
+                }
+              },
+              child: const Text('Reschedule'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _reschedulePlaydate(String playdateId, DateTime newDateTime, String newLocation, String? newDescription) async {
+    try {
+      final currentUser = SupabaseConfig.auth.currentUser;
+      if (currentUser == null) return false;
+
+      final success = await PlaydateManagementService.reschedulePlaydate(
+        playdateId: playdateId,
+        updatedByUserId: currentUser.id,
+        newScheduledAt: newDateTime,
+        newLocation: newLocation,
+        newDescription: newDescription,
+      );
+
+      return success;
+    } catch (e) {
+      debugPrint('Error rescheduling playdate: $e');
+      return false;
+    }
   }
 
   Future<void> _cancelPlaydate(Map<String, dynamic> playdate) async {

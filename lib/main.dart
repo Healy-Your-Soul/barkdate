@@ -5,7 +5,6 @@ import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 import 'package:barkdate/screens/main_navigation.dart';
 import 'package:barkdate/screens/onboarding/welcome_screen.dart';
 import 'package:barkdate/screens/auth_screen.dart';
-import 'package:barkdate/screens/admin_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/settings_service.dart';
 import 'package:barkdate/services/notification_manager.dart';
@@ -50,7 +49,6 @@ class MyApp extends StatelessWidget {
             '/auth': (context) => const AuthScreen(),
             '/home': (context) => const MainNavigation(),
             '/welcome': (context) => const WelcomeScreen(),
-            '/admin': (context) => const AdminScreen(),
           },
         );
       },

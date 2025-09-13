@@ -44,20 +44,14 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Environment variables and secrets
+# Environment variables - NEVER commit these!
 .env
 .env.local
 .env.production
-.env.development
+.env.staging
 *.env
-run_with_secrets.sh
 
-# Firebase config files (regenerate for each environment)
-lib/firebase_options.dart
-ios/Runner/GoogleService-Info.plist
-android/app/google-services.json
-
-# API keys and sensitive data
-**/secrets/
-**/*_secret*
-**/*_key*
+# API Keys and secrets
+**/api_keys.dart
+**/secrets.dart
+**/config/keys.dart

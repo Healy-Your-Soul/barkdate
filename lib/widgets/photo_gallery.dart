@@ -1,13 +1,13 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:barkdate/services/selected_image.dart';
 
 /// Tinder-style photo gallery with swipe navigation and full-screen viewing
 class PhotoGallery extends StatefulWidget {
   final List<String> photoUrls;
-  final List<File>? localImages;
+  final List<SelectedImage>? localImages;
   final int initialIndex;
   final bool isEditable;
   final Function(List<String>)? onReorder;
@@ -252,9 +252,9 @@ class _PhotoGalleryState extends State<PhotoGallery> {
           child: const Icon(Icons.error, color: Colors.white54),
         ),
       );
-    } else if (image is File) {
-      return Image.file(
-        image,
+    } else if (image is SelectedImage) {
+      return Image.memory(
+        image.bytes,
         fit: BoxFit.cover,
       );
     } else {
@@ -268,8 +268,8 @@ class _PhotoGalleryState extends State<PhotoGallery> {
   ImageProvider _getImageProvider(dynamic image) {
     if (image is String) {
       return CachedNetworkImageProvider(image);
-    } else if (image is File) {
-      return FileImage(image);
+    } else if (image is SelectedImage) {
+      return MemoryImage(image.bytes);
     } else {
       throw ArgumentError('Unsupported image type: ${image.runtimeType}');
     }
