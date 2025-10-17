@@ -1,4 +1,4 @@
-# UI Migration Plan - Airbnb-Style Design System
+Deprecated - replaced by PLAN_FIX_RESPONSIVE_AND_PERF.md
 
 ## 🎯 Goal
 Transform all screens to use the new design system for consistent, clean, modern Airbnb-inspired UI.

@@ -38,8 +38,12 @@ class FirebaseMessagingService {
       // Set up message handlers
       _setupMessageHandlers();
       
-      // Subscribe to user-specific topics
-      await _subscribeToUserTopics();
+      // Subscribe to user-specific topics (skip on web where topics are unsupported)
+      if (!kIsWeb) {
+        await _subscribeToUserTopics();
+      } else {
+        debugPrint('ℹ️ Skipping FCM topic subscription on web');
+      }
       
       _isInitialized = true;
       debugPrint('✅ Firebase Messaging initialized successfully');
@@ -206,7 +210,10 @@ class FirebaseMessagingService {
     FirebaseMessaging.onMessageOpenedApp.listen(_handleBackgroundMessage);
     
     // Handle messages when app is terminated and opened from notification
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    // Not supported on web; guard to avoid noise
+    if (!kIsWeb) {
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    }
     
     // Listen for token refresh
     _firebaseMessaging.onTokenRefresh.listen((newToken) async {
@@ -471,6 +478,10 @@ class FirebaseMessagingService {
     final user = SupabaseConfig.auth.currentUser;
     if (user != null) {
       try {
+        if (kIsWeb) {
+          // Web does not support topic subscription; exit early
+          return;
+        }
         // Subscribe to user-specific notifications
         await _firebaseMessaging.subscribeToTopic('user_${user.id}');
         

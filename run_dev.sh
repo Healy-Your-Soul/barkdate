@@ -57,7 +57,7 @@ echo ""
 sed "s/{{GOOGLE_MAPS_API_KEY}}/$GOOGLE_MAPS_API_KEY/g" web/index.html.template > web/index.html 2>/dev/null || true
 
 # Start Flutter web app
-flutter run -d chrome \
+flutter run -d chrome --web-renderer=html \
     --dart-define=GOOGLE_MAPS_API_KEY="$GOOGLE_MAPS_API_KEY" \
     --dart-define=GOOGLE_PLACES_API_KEY="$GOOGLE_PLACES_API_KEY" \
     --dart-define=FIREBASE_API_KEY="$FIREBASE_API_KEY"

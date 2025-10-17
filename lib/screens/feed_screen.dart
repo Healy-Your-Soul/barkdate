@@ -1199,13 +1199,13 @@ class _FeedScreenState extends State<FeedScreen> {
   Widget _buildFriendsSection() {
     final cardWidth = AppResponsive.horizontalCardWidth(
       context,
-      mobile: 170,
+      mobile: 150, // tighter on small screens
       tablet: 200,
     );
     final cardHeight = AppResponsive.horizontalCardHeight(
       context,
-      mobile: 100,
-      tablet: 120,
+      mobile: 96, // cap height to avoid overflow banners
+      tablet: 116,
     );
     
     return Padding(
@@ -1232,17 +1232,20 @@ class _FeedScreenState extends State<FeedScreen> {
                 return SizedBox(
                   width: cardWidth,
                   child: AppCard(
-                    padding: AppResponsive.cardPadding(context),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppResponsive.cardPadding(context).horizontal / 2,
+                      vertical: AppResponsive.cardPadding(context).vertical / 2,
+                    ),
                     child: Row(
                       children: [
                         CircleAvatar(
-                          radius: AppResponsive.avatarRadius(context, 20),
+                          radius: AppResponsive.avatarRadius(context, 16),
                           backgroundImage: photo != null && photo.isNotEmpty ? NetworkImage(photo) : null,
                           child: (photo == null || photo.isEmpty) 
-                              ? Icon(Icons.pets, size: AppResponsive.iconSize(context, 18)) 
+                              ? Icon(Icons.pets, size: AppResponsive.iconSize(context, 16)) 
                               : null,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Flexible(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
