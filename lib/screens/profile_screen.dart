@@ -22,11 +22,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _userProfile;
   Map<String, dynamic>? _dogProfile;
   bool _isLoading = true;
+  bool _hasInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _loadProfileData();
+    // Don't load data here - wait for didChangeDependencies to ensure screen is visible
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // Only load once when screen becomes visible
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      
+      // Check if this route is currently active/visible
+      final route = ModalRoute.of(context);
+      if (route != null && route.isCurrent) {
+        _loadProfileData();
+      }
+    }
   }
 
   Future<void> _loadProfileData() async {

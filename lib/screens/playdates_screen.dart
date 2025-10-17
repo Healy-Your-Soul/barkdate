@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
+import 'package:barkdate/services/cache_service.dart';
 import 'package:barkdate/widgets/playdate_response_bottom_sheet.dart';
 import 'package:barkdate/widgets/playdate_action_popup.dart';
 import 'package:barkdate/widgets/app_card.dart';
@@ -39,6 +40,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
   final ScrollController _upcomingController = ScrollController();
   final Map<String, GlobalKey> _playdateKeys = {};
   String? _highlightId;
+  bool _hasInitialized = false;
 
   @override
   void initState() {
@@ -48,8 +50,24 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
       _tabController.index = widget.initialTabIndex!;
     }
     _highlightId = widget.highlightPlaydateId;
-    _loadPlaydates();
-    _initRealtime();
+    // Don't load data here - wait for didChangeDependencies to ensure screen is visible
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // Only load once when screen becomes visible
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      
+      // Check if this route is currently active/visible
+      final route = ModalRoute.of(context);
+      if (route != null && route.isCurrent) {
+        _loadPlaydates();
+        _initRealtime();
+      }
+    }
   }
 
   Future<void> _loadPlaydates() async {
@@ -65,14 +83,31 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
 
       debugPrint('=== LOADING PLAYDATES FOR USER: ${user.id} ===');
 
-  // Aggregated loading (multi-owner) – legacy direct queries removed
+      // Check cache first and show immediately (Option A)
+      final cachedUpcoming = CacheService().getCachedPlaydateList(user.id, 'upcoming');
+      final cachedPast = CacheService().getCachedPlaydateList(user.id, 'past');
       
-  // Multi-owner aware aggregated query (participants pivot)
-  debugPrint('=== GETTING AGGREGATED PLAYDATES (multi-owner) ===');
-  final aggregated = await PlaydateQueryService.getUserPlaydatesAggregated(user.id);
-  final upcoming = aggregated['upcoming'] ?? [];
-  final past = aggregated['past'] ?? [];
-  debugPrint('=== FOUND ${upcoming.length} UPCOMING / ${past.length} PAST (AGGREGATED) ===');
+      if (cachedUpcoming != null || cachedPast != null) {
+        if (mounted) {
+          setState(() {
+            if (cachedUpcoming != null) _upcomingPlaydates = cachedUpcoming;
+            if (cachedPast != null) _pastPlaydates = cachedPast;
+            _isLoading = false;
+          });
+        }
+      }
+
+      // Aggregated loading (multi-owner) – legacy direct queries removed
+      // Multi-owner aware aggregated query (participants pivot)
+      debugPrint('=== GETTING AGGREGATED PLAYDATES (multi-owner) ===');
+      final aggregated = await PlaydateQueryService.getUserPlaydatesAggregated(user.id);
+      final upcoming = aggregated['upcoming'] ?? [];
+      final past = aggregated['past'] ?? [];
+      debugPrint('=== FOUND ${upcoming.length} UPCOMING / ${past.length} PAST (AGGREGATED) ===');
+
+      // Cache the fresh data
+      CacheService().cachePlaydateList(user.id, 'upcoming', upcoming);
+      CacheService().cachePlaydateList(user.id, 'past', past);
 
       // Get both incoming and outgoing requests
       debugPrint('=== GETTING INCOMING REQUESTS (Chen is invitee) ===');

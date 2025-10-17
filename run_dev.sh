@@ -56,8 +56,20 @@ echo ""
 # Replace the placeholder in index.html with actual API key for development
 sed "s/{{GOOGLE_MAPS_API_KEY}}/$GOOGLE_MAPS_API_KEY/g" web/index.html.template > web/index.html 2>/dev/null || true
 
+# Kill any stale Flutter web server on the default port to avoid conflicts
+if lsof -ti:8080 >/dev/null 2>&1; then
+  echo -e "${YELLOW}🧹 Killing stale process on port 8080...${NC}"
+  lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+fi
+
+# Choose a port (default 8080). If still busy, fall back to 8081
+PORT=8080
+if lsof -ti:${PORT} >/dev/null 2>&1; then
+  PORT=8081
+fi
+
 # Start Flutter web app
-flutter run -d chrome --web-renderer=html \
+flutter run -d chrome --web-port=${PORT} \
     --dart-define=GOOGLE_MAPS_API_KEY="$GOOGLE_MAPS_API_KEY" \
     --dart-define=GOOGLE_PLACES_API_KEY="$GOOGLE_PLACES_API_KEY" \
     --dart-define=FIREBASE_API_KEY="$FIREBASE_API_KEY"

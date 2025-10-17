@@ -52,21 +52,41 @@ class _FeedScreenState extends State<FeedScreen> {
   List<Event> _myEvents = [];
   List<Event> _suggestedEvents = [];
   List<Map<String, dynamic>> _friendDogs = [];
+  bool _hasInitialized = false;
 
   @override
   void initState() {
     super.initState();
+    // Don't load data here - wait for didChangeDependencies to ensure screen is visible
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     
-    // Parallel load all data sections for faster initial load
-    Future.wait([
+    // Only load once when screen becomes visible
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      
+      // Check if this route is currently active/visible
+      final route = ModalRoute.of(context);
+      if (route != null && route.isCurrent) {
+        _initializeScreen();
+      }
+    }
+  }
+
+  Future<void> _initializeScreen() async {
+    // Load all data in parallel for faster initial load
+    await Future.wait([
       _loadNearbyDogs(),
       _loadDashboardData(),
       _loadCheckInStatus(),
       _loadFeedSections(),
-    ]).then((_) {
-      // Setup subscriptions after initial load
-      _setupRealtimeSubscriptions();
-    });
+    ]);
+    
+    // Setup subscriptions after initial load
+    _setupRealtimeSubscriptions();
   }
 
   @override
@@ -216,20 +236,26 @@ class _FeedScreenState extends State<FeedScreen> {
         return;
       }
 
-      // Check cache first for instant display
+      // Prepare variables to collect data
+      List<Map<String, dynamic>> playdates = [];
+      List<Event> myEvents = [];
+      List<Event> suggestedEvents = [];
+      List<Map<String, dynamic>> friends = [];
+
+      // Check cache first for quick initial display
       final cachedPlaydates = CacheService().getCachedPlaydateList(user.id, 'upcoming');
-      if (cachedPlaydates != null && mounted) {
-        setState(() => _upcomingFeedPlaydates = cachedPlaydates);
+      if (cachedPlaydates != null) {
+        playdates = cachedPlaydates;
       }
       
       final cachedEvents = CacheService().getCachedEventList('suggested_${user.id}');
-      if (cachedEvents != null && mounted) {
-        setState(() => _suggestedEvents = cachedEvents.cast<Event>());
+      if (cachedEvents != null) {
+        suggestedEvents = cachedEvents.cast<Event>();
       }
 
       final cachedFriends = CacheService().getCachedFriendList('user_${user.id}');
-      if (cachedFriends != null && mounted) {
-        setState(() => _friendDogs = cachedFriends);
+      if (cachedFriends != null) {
+        friends = cachedFriends;
       }
 
       // Load fresh data in background
@@ -270,21 +296,24 @@ class _FeedScreenState extends State<FeedScreen> {
       ]);
 
       // Update cache with fresh data
-      final playdates = (results[0] as Map)['upcoming'] as List<Map<String, dynamic>>? ?? [];
+      playdates = (results[0] as Map)['upcoming'] as List<Map<String, dynamic>>? ?? [];
       CacheService().cachePlaydateList(user.id, 'upcoming', playdates);
       
-      final suggestedEvents = results[2] as List<Event>;
+      myEvents = results[1] as List<Event>;
+      
+      suggestedEvents = results[2] as List<Event>;
       CacheService().cacheEventList('suggested_${user.id}', suggestedEvents);
 
-      final friends = results[3] as List<Map<String, dynamic>>;
+      friends = results[3] as List<Map<String, dynamic>>;
       if (myDogId != null && friends.isNotEmpty) {
         CacheService().cacheFriendList('user_${user.id}', friends);
       }
 
+      // Single setState to update ALL sections at once
       if (mounted) {
         setState(() {
           _upcomingFeedPlaydates = playdates;
-          _myEvents = results[1] as List<Event>;
+          _myEvents = myEvents;
           _suggestedEvents = suggestedEvents;
           _friendDogs = friends;
         });
@@ -866,7 +895,7 @@ class _FeedScreenState extends State<FeedScreen> {
       context.isSmallMobile ? 85 : 95,
     );
     final iconSize = AppResponsive.iconSize(context, 20);
-    final iconContainerSize = AppResponsive.iconSize(context, 36);
+    final iconContainerSize = AppResponsive.iconSize(context, 34); // Reduced from 36
     final padding = AppResponsive.cardPadding(context);
     
     return SizedBox(
@@ -875,7 +904,7 @@ class _FeedScreenState extends State<FeedScreen> {
         padding: EdgeInsets.all(padding.left * 0.8), // Slightly less padding
         onTap: onTap,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.min, // Minimize size to prevent overflow
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Stack(
@@ -915,16 +944,18 @@ class _FeedScreenState extends State<FeedScreen> {
                   ),
               ],
             ),
-            SizedBox(height: context.isSmallMobile ? 4 : 6),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                fontSize: AppResponsive.fontSize(context, 11),
+            const SizedBox(height: 2), // Reduced spacing to prevent overflow
+            Flexible( // Allow text to shrink if needed
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: AppResponsive.fontSize(context, 11),
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -1204,8 +1235,8 @@ class _FeedScreenState extends State<FeedScreen> {
     );
     final cardHeight = AppResponsive.horizontalCardHeight(
       context,
-      mobile: 96, // cap height to avoid overflow banners
-      tablet: 116,
+      mobile: 120, // Increased from 96 to fit vertical buttons
+      tablet: 140,  // Increased from 116
     );
     
     return Padding(
@@ -1232,21 +1263,18 @@ class _FeedScreenState extends State<FeedScreen> {
                 return SizedBox(
                   width: cardWidth,
                   child: AppCard(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppResponsive.cardPadding(context).horizontal / 2,
-                      vertical: AppResponsive.cardPadding(context).vertical / 2,
-                    ),
+                    padding: EdgeInsets.all(AppResponsive.cardPadding(context).left * 0.6), // Tighter padding
                     child: Row(
                       children: [
                         CircleAvatar(
-                          radius: AppResponsive.avatarRadius(context, 16),
+                          radius: AppResponsive.avatarRadius(context, 14), // Slightly smaller
                           backgroundImage: photo != null && photo.isNotEmpty ? NetworkImage(photo) : null,
                           child: (photo == null || photo.isEmpty) 
-                              ? Icon(Icons.pets, size: AppResponsive.iconSize(context, 16)) 
+                              ? Icon(Icons.pets, size: AppResponsive.iconSize(context, 14)) 
                               : null,
                         ),
                         const SizedBox(width: 6),
-                        Flexible(
+                        Expanded( // Use Expanded instead of Flexible
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -1256,23 +1284,27 @@ class _FeedScreenState extends State<FeedScreen> {
                                 dogName,
                                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                   fontWeight: FontWeight.w600,
-                                  fontSize: AppResponsive.fontSize(context, 13),
+                                  fontSize: AppResponsive.fontSize(context, 12), // Slightly smaller
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 4),
-                              Row(
+                              const SizedBox(height: 2),
+                              // Vertical stack to prevent horizontal overflow
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  Flexible(
+                                  SizedBox(
+                                    height: 28, // Compact height
                                     child: AppButton(
                                       text: 'Bark',
                                       size: AppButtonSize.small,
                                       onPressed: () {},
                                     ),
                                   ),
-                                  const SizedBox(width: 4),
-                                  Flexible(
+                                  const SizedBox(height: 2),
+                                  SizedBox(
+                                    height: 28, // Compact height
                                     child: AppButton(
                                       text: 'Invite',
                                       size: AppButtonSize.small,

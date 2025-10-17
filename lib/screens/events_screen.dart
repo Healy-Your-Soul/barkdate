@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/models/event.dart';
 import 'package:barkdate/services/event_service.dart';
+import 'package:barkdate/services/cache_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/widgets/event_card.dart';
@@ -27,6 +28,7 @@ class _EventsScreenState extends State<EventsScreen>
   bool _isLoading = true;
   String? _error;
   String? _selectedCategory;
+  bool _hasInitialized = false;
 
   final List<String> _categories = [
     'All',
@@ -40,7 +42,23 @@ class _EventsScreenState extends State<EventsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadEvents();
+    // Don't load data here - wait for didChangeDependencies to ensure screen is visible
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // Only load once when screen becomes visible
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      
+      // Check if this route is currently active/visible
+      final route = ModalRoute.of(context);
+      if (route != null && route.isCurrent) {
+        _loadEvents();
+      }
+    }
   }
 
   @override
@@ -63,6 +81,20 @@ class _EventsScreenState extends State<EventsScreen>
         return;
       }
 
+      // Check cache first and show immediately (Option A)
+      final cachedAllEvents = CacheService().getCachedEventList('all_events');
+      final cachedMyEvents = CacheService().getCachedEventList('my_events_${user.id}');
+      final cachedHostingEvents = CacheService().getCachedEventList('hosting_events_${user.id}');
+      
+      if (cachedAllEvents != null || cachedMyEvents != null || cachedHostingEvents != null) {
+        setState(() {
+          if (cachedAllEvents != null) _allEvents = cachedAllEvents.cast<Event>();
+          if (cachedMyEvents != null) _myEvents = cachedMyEvents.cast<Event>();
+          if (cachedHostingEvents != null) _hostingEvents = cachedHostingEvents.cast<Event>();
+          _isLoading = false;
+        });
+      }
+
       // Load all events
       final allEvents = await EventService.getUpcomingEvents();
       
@@ -71,6 +103,11 @@ class _EventsScreenState extends State<EventsScreen>
       
       // Load user's hosting events
       final hostingEvents = await EventService.getUserOrganizedEvents(user.id);
+
+      // Cache the fresh data
+      CacheService().cacheEventList('all_events', allEvents);
+      CacheService().cacheEventList('my_events_${user.id}', myEvents);
+      CacheService().cacheEventList('hosting_events_${user.id}', hostingEvents);
 
       setState(() {
         _allEvents = allEvents;
