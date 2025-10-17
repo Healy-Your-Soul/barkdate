@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
+import 'package:barkdate/widgets/app_button.dart';
 
 /// High‑level adaptive playdate action button.
 /// Displays one of:
@@ -357,52 +358,54 @@ class _PlaydateActionButtonState extends State<PlaydateActionButton> {
 
 		switch (_state) {
 			case 'pending_outgoing':
-				return Padding(
-					padding: widget.padding,
-					child: OutlinedButton.icon(
-						onPressed: _cancelOutgoing,
-						icon: const Icon(Icons.hourglass_bottom, size: 16),
-						label: const Text('Pending'),
-					),
-				);
+        return Padding(
+          padding: widget.padding,
+          child: AppButton(
+            text: 'Pending',
+            icon: Icons.hourglass_bottom,
+            type: AppButtonType.outline,
+            onPressed: _cancelOutgoing,
+          ),
+        );
 			case 'pending_incoming':
-				return Padding(
-					padding: widget.padding,
-					child: Row(
-						mainAxisSize: MainAxisSize.min,
-						children: [
-							ElevatedButton(
-								onPressed: _accept,
-								style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10)),
-								child: const Text('Accept'),
-							),
-							const SizedBox(width: 8),
-							OutlinedButton(
-								onPressed: _decline,
-								child: const Text('Decline'),
-							)
-						],
-					),
-				);
+        return Padding(
+          padding: widget.padding,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppButton(
+                text: 'Accept',
+                onPressed: _accept,
+              ),
+              const SizedBox(width: 8),
+              AppButton(
+                text: 'Decline',
+                type: AppButtonType.outline,
+                onPressed: _decline,
+              ),
+            ],
+          ),
+        );
 			case 'confirmed':
-				return Padding(
-					padding: widget.padding,
-					child: ElevatedButton.icon(
-						onPressed: _showConfirmedSheet,
-						icon: const Icon(Icons.event_available),
-						label: const Text('Scheduled'),
-						style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-					),
-				);
+        return Padding(
+          padding: widget.padding,
+          child: AppButton(
+            text: 'Scheduled',
+            icon: Icons.event_available,
+            customColor: Colors.green,
+            onPressed: _showConfirmedSheet,
+          ),
+        );
 			default:
-				return Padding(
-					padding: widget.padding,
-					child: OutlinedButton.icon(
-						onPressed: _createRequest,
-						icon: const Icon(Icons.calendar_today, size: 16),
-						label: const Text('Playdate'),
-					),
-				);
+        return Padding(
+          padding: widget.padding,
+          child: AppButton(
+            text: 'Playdate',
+            icon: Icons.calendar_today,
+            type: AppButtonType.outline,
+            onPressed: _createRequest,
+          ),
+        );
 		}
 	}
 }

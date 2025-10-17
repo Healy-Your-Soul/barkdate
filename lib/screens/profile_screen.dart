@@ -8,6 +8,8 @@ import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/widgets/dog_share_dialog.dart';
+import 'package:barkdate/widgets/app_card.dart';
+import 'package:barkdate/widgets/app_button.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -116,7 +118,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 case 'edit_dog':
                   await _editProfile(mode: EditMode.editDog);
                   break;
-                case 'edit_owner':
+                case 'edit_human':
                   await _editProfile(mode: EditMode.editOwner);
                   break;
                 case 'edit_both':
@@ -156,12 +158,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               const PopupMenuItem(
-                value: 'edit_owner',
+                value: 'edit_human',
                 child: Row(
                   children: [
                     Icon(Icons.person),
                     SizedBox(width: 12),
-                    Text('Edit Owner Profile'),
+                    Text('Edit My Human'),
                   ],
                 ),
               ),
@@ -193,99 +195,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Profile header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+            // Dog hero image with overlay
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: AppImageCard(
+                imageUrl: _dogProfile?['main_photo_url'] != null &&
+                        _dogProfile!['main_photo_url'].toString().isNotEmpty
+                    ? _dogProfile!['main_photo_url']
+                    : null,
+                height: 220,
+                overlay: Positioned(
+                  top: 12,
+                  right: 12,
+                  child: AppButton(
+                    text: _dogProfile == null ? 'Add Dog' : 'Edit Dog',
+                    size: AppButtonSize.small,
+                    onPressed: () => _editProfile(mode: _dogProfile != null ? EditMode.editDog : EditMode.createProfile),
+                  ),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.5),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _dogProfile?['name'] ?? 'Add Your Dog',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _dogProfile?['bio'] ?? 'Your furry best friend',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: Column(
+            ),
+
+            // Stats card
+            AppCard(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
                 children: [
-                  Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        backgroundImage: _dogProfile?['main_photo_url'] != null &&
-                                        _dogProfile!['main_photo_url'].toString().isNotEmpty
-                            ? NetworkImage(_dogProfile!['main_photo_url'])
-                            : null,
-                        onBackgroundImageError: _dogProfile?['main_photo_url'] != null &&
-                                               _dogProfile!['main_photo_url'].toString().isNotEmpty
-                            ? (exception, stackTrace) {
-                                debugPrint('Error loading dog avatar: $exception');
-                              }
-                            : null,
-                        child: _dogProfile?['main_photo_url'] == null ||
-                               _dogProfile!['main_photo_url'].toString().isEmpty
-                            ? Icon(
-                                Icons.pets,
-                                size: 50,
-                                color: Theme.of(context).colorScheme.onPrimary,
-                              )
-                            : null,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: () => _editProfile(mode: _dogProfile != null ? EditMode.editDog : EditMode.createProfile),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.tertiary,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.2),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              _dogProfile == null ? Icons.add : Icons.edit,
-                              size: 16,
-                              color: Theme.of(context).colorScheme.onTertiary,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _dogProfile?['name'] ?? 'Add Your Dog',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _dogProfile?['bio'] ?? 'Your furry best friend',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Stats row
-                  Row(
-                    children: [
-                      Expanded(child: _buildStatItem(context, '23', 'Playdates')),
-                      Expanded(child: _buildStatItem(context, '89', 'Friends')),
-                      Expanded(child: _buildStatItem(context, '156', 'Posts')),
-                    ],
-                  ),
+                  Expanded(child: _buildStatItem(context, '23', 'Playdates')),
+                  Expanded(child: _buildStatItem(context, '89', 'Friends')),
+                  Expanded(child: _buildStatItem(context, '156', 'Posts')),
                 ],
               ),
             ),
             
             const SizedBox(height: 24),
             
-            // My Owner section
-            _buildMyOwnerSection(context),
+            // My Human section
+            _buildMyHumanSection(context),
             
             const SizedBox(height: 24),
             
@@ -378,16 +359,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildMyOwnerSection(BuildContext context) {
-    return Container(
+  Widget _buildMyHumanSection(BuildContext context) {
+    return AppCard(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-        ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -397,14 +371,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'My Owner',
+                  'My Human',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 Row(
                   children: [
-                    TextButton.icon(
+                    AppButton(
+                      text: 'Share',
+                      icon: Icons.share,
+                      type: AppButtonType.outline,
+                      size: AppButtonSize.small,
                       onPressed: () async {
                         // Share the current dog profile
                         if (_dogProfile != null) {
@@ -423,26 +401,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           );
                         }
                       },
-                      icon: Icon(
-                        Icons.share,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      label: Text(
-                        'Share',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
                     ),
-                    TextButton(
+                    const SizedBox(width: 8),
+                    AppButton(
+                      text: 'Edit',
+                      type: AppButtonType.outline,
+                      size: AppButtonSize.small,
                       onPressed: () => _editProfile(mode: EditMode.editOwner),
-                      child: Text(
-                        'Edit',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
                     ),
                   ],
                 ),
@@ -484,7 +449,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _userProfile?['name'] ?? 'No owner info yet',
+                        _userProfile?['name'] ?? 'My human\'s info coming soon',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -522,43 +487,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required VoidCallback onTap,
     bool isPremium = false,
   }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      leading: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: isPremium 
-            ? Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.2)
-            : Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(
-          icon,
-          color: isPremium 
-            ? Theme.of(context).colorScheme.tertiary
-            : Theme.of(context).colorScheme.primary,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: AppCard(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        onTap: onTap,
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: isPremium
+                    ? Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.2)
+                    : Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: isPremium
+                    ? Theme.of(context).colorScheme.tertiary
+                    : Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+            ),
+          ],
         ),
       ),
-      title: Text(
-        title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: Theme.of(context).colorScheme.onSurface,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-        ),
-      ),
-      trailing: Icon(
-        Icons.arrow_forward_ios,
-        size: 16,
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-      ),
-      onTap: onTap,
     );
   }
 }

@@ -4,6 +4,15 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
 import 'package:barkdate/widgets/playdate_response_bottom_sheet.dart';
 import 'package:barkdate/widgets/playdate_action_popup.dart';
+import 'package:barkdate/widgets/app_card.dart';
+import 'package:barkdate/widgets/app_button.dart';
+import 'package:barkdate/widgets/app_bottom_sheet.dart';
+import 'package:barkdate/widgets/app_section_header.dart';
+import 'package:barkdate/widgets/app_empty_state.dart';
+import 'package:barkdate/design_system/app_responsive.dart';
+import 'package:barkdate/design_system/app_spacing.dart';
+import 'package:barkdate/design_system/app_typography.dart';
+import 'package:barkdate/design_system/app_styles.dart';
 
 class PlaydatesScreen extends StatefulWidget {
   final int? initialTabIndex; // 0=Requests, 1=Upcoming, 2=Past
@@ -262,22 +271,12 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
 
     final totalRequests = _pendingRequests.length + _sentRequests.length;
     if (totalRequests == 0) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.inbox, size: 64, color: Theme.of(context).hintColor),
-            const SizedBox(height: 16),
-            Text('No pending requests', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text('Incoming and sent requests will appear here', style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => _loadPlaydates(),
-              child: const Text('Refresh'),
-            ),
-          ],
-        ),
+      return AppEmptyState(
+        icon: Icons.inbox,
+        title: 'No pending requests',
+        message: 'Incoming and sent requests will appear here',
+        actionText: 'Refresh',
+        onAction: _loadPlaydates,
       );
     }
 
@@ -287,15 +286,11 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     // Add incoming requests section if any
     if (_pendingRequests.isNotEmpty) {
       allWidgets.add(
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            'Incoming Requests (${_pendingRequests.length})',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.green,
-            ),
-          ),
+        const SizedBox(height: 8),
+      );
+      allWidgets.add(
+        AppSectionHeader(
+          title: 'Incoming Requests (${_pendingRequests.length})',
         ),
       );
       
@@ -307,15 +302,11 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     // Add sent requests section if any
     if (_sentRequests.isNotEmpty) {
       allWidgets.add(
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            'Sent Requests (${_sentRequests.length})',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.orange,
-            ),
-          ),
+        const SizedBox(height: 8),
+      );
+      allWidgets.add(
+        AppSectionHeader(
+          title: 'Sent Requests (${_sentRequests.length})',
         ),
       );
       
@@ -336,110 +327,167 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     final inviteeDog = request['invitee_dog'];
     final status = request['status'] ?? 'pending';
     
-    return Card(
-      margin: const EdgeInsets.all(8.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return AppCard(
+      margin: EdgeInsets.symmetric(
+        horizontal: AppResponsive.screenPadding(context).left,
+        vertical: 8,
+      ),
+      padding: AppResponsive.cardPadding(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: AppResponsive.avatarRadius(context, 20),
+                backgroundColor: Colors.green,
+                child: Icon(
+                  Icons.pets,
+                  color: Colors.white,
+                  size: AppResponsive.iconSize(context, 20),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Playdate Invitation!',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: AppResponsive.fontSize(context, 16),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'From: ${inviteeDog?['name'] ?? 'Unknown Dog'} (human: ${requester?['name'] ?? 'Unknown'})',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: AppResponsive.fontSize(context, 14),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (inviteeDog != null)
+                      Text(
+                        'For: ${inviteeDog['name']} (${inviteeDog['breed'] ?? 'Mixed'})',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: AppResponsive.fontSize(context, 12),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(status),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: InkWell(
+                  onTap: status == 'accepted' && playdate != null 
+                    ? () => _showPlaydatePopup(playdate)
+                    : null,
+                  child: Text(
+                    status == 'accepted' ? 'SET' : status.toUpperCase(),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: AppResponsive.fontSize(context, 11),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: context.isSmallMobile ? 8 : 12),
+          if (playdate != null) ...[
             Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: Colors.green,
-                  child: Icon(Icons.pets, color: Colors.white),
+                Icon(
+                  Icons.location_on,
+                  size: AppResponsive.iconSize(context, 16),
+                  color: Theme.of(context).hintColor,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 4),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Playdate Invitation!',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'From: ${requester?['name'] ?? 'Unknown'}',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      if (inviteeDog != null)
-                        Text(
-                          'For: ${inviteeDog['name']} (${inviteeDog['breed'] ?? 'Mixed'})',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(status),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: InkWell(
-                    onTap: status == 'accepted' && playdate != null 
-                      ? () => _showPlaydatePopup(playdate)
-                      : null,
-                    child: Text(
-                      status == 'accepted' ? 'SET' : status.toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  child: Text(
+                    playdate['location'] ?? 'No location',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: AppResponsive.fontSize(context, 14),
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            if (playdate != null) ...[
-              Row(
-                children: [
-                  Icon(Icons.location_on, size: 16, color: Theme.of(context).hintColor),
-                  const SizedBox(width: 4),
-                  Text(playdate['location'] ?? 'No location'),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(Icons.access_time, size: 16, color: Theme.of(context).hintColor),
-                  const SizedBox(width: 4),
-                  Text(_formatDateTime(playdate['scheduled_at'])),
-                ],
-              ),
-              if (playdate['description'] != null) ...[
-                const SizedBox(height: 8),
-                Text(playdate['description']),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  Icons.access_time,
+                  size: AppResponsive.iconSize(context, 16),
+                  color: Theme.of(context).hintColor,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    _formatDateTime(playdate['scheduled_at']),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: AppResponsive.fontSize(context, 14),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
-            ],
-            const SizedBox(height: 12),
-            if (status == 'pending') ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => _respondToRequest(request, 'declined'),
-                    child: const Text('Decline'),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () => _showResponseBottomSheet(request),
-                    child: const Text('Suggest Changes'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () => _respondToRequest(request, 'accepted'),
-                    child: const Text('Accept'),
-                  ),
-                ],
+            ),
+            if (playdate['description'] != null) ...[
+              SizedBox(height: context.isSmallMobile ? 6 : 8),
+              Text(
+                playdate['description'],
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: AppResponsive.fontSize(context, 14),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ],
-        ),
+          SizedBox(height: context.isSmallMobile ? 8 : 12),
+          if (status == 'pending') ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                AppButton(
+                  text: 'Decline',
+                  type: AppButtonType.outline,
+                  size: AppButtonSize.small,
+                  onPressed: () => _respondToRequest(request, 'declined'),
+                ),
+                const SizedBox(width: 8),
+                AppButton(
+                  text: 'Suggest Changes',
+                  type: AppButtonType.outline,
+                  size: AppButtonSize.small,
+                  onPressed: () => _showResponseBottomSheet(request),
+                ),
+                const SizedBox(width: 8),
+                AppButton(
+                  text: 'Accept',
+                  size: AppButtonSize.small,
+                  onPressed: () => _respondToRequest(request, 'accepted'),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -450,104 +498,160 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     final inviteeDog = request['invitee_dog'];
     final status = request['status'] ?? 'pending';
     
-    return Card(
-      margin: const EdgeInsets.all(8.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  child: Text(inviteeDog?['name']?.substring(0, 1) ?? '?'),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Sent to ${inviteeDog?['name'] ?? 'Unknown Dog'}!',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Owner: ${invitee?['name'] ?? 'Unknown'}',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      if (inviteeDog?['breed'] != null)
-                        Text(
-                          inviteeDog['breed'],
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                    ],
+    return AppCard(
+      margin: EdgeInsets.symmetric(
+        horizontal: AppResponsive.screenPadding(context).left,
+        vertical: 8,
+      ),
+      padding: AppResponsive.cardPadding(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: AppResponsive.avatarRadius(context, 20),
+                child: Text(
+                  inviteeDog?['name']?.substring(0, 1) ?? '?',
+                  style: TextStyle(
+                    fontSize: AppResponsive.fontSize(context, 16),
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(status),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: InkWell(
-                    onTap: status == 'accepted' && playdate != null 
-                      ? () => _showPlaydatePopup(playdate)
-                      : null,
-                    child: Text(
-                      status == 'accepted' ? 'SET' : status.toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Sent to ${inviteeDog?['name'] ?? 'Unknown Dog'}!',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        fontSize: AppResponsive.fontSize(context, 16),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Human: ${invitee?['name'] ?? 'Unknown'}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: AppResponsive.fontSize(context, 14),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (inviteeDog?['breed'] != null)
+                      Text(
+                        inviteeDog['breed'],
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: AppResponsive.fontSize(context, 12),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(status),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: InkWell(
+                  onTap: status == 'accepted' && playdate != null 
+                    ? () => _showPlaydatePopup(playdate)
+                    : null,
+                  child: Text(
+                    status == 'accepted' ? 'SET' : status.toUpperCase(),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: AppResponsive.fontSize(context, 11),
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
+              ),
+            ],
+          ),
+          SizedBox(height: context.isSmallMobile ? 8 : 12),
+          if (playdate != null) ...[
+            Row(
+              children: [
+                Icon(
+                  Icons.location_on,
+                  size: AppResponsive.iconSize(context, 16),
+                  color: Theme.of(context).hintColor,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    playdate['location'] ?? 'No location',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: AppResponsive.fontSize(context, 14),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            if (playdate != null) ...[
-              Row(
-                children: [
-                  Icon(Icons.location_on, size: 16, color: Theme.of(context).hintColor),
-                  const SizedBox(width: 4),
-                  Text(playdate['location'] ?? 'No location'),
-                ],
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  Icons.access_time,
+                  size: AppResponsive.iconSize(context, 16),
+                  color: Theme.of(context).hintColor,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    _formatDateTime(playdate['scheduled_at']),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: AppResponsive.fontSize(context, 14),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            if (playdate['description'] != null) ...[
+              SizedBox(height: context.isSmallMobile ? 6 : 8),
+              Text(
+                playdate['description'],
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: AppResponsive.fontSize(context, 14),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(Icons.access_time, size: 16, color: Theme.of(context).hintColor),
-                  const SizedBox(width: 4),
-                  Text(_formatDateTime(playdate['scheduled_at'])),
-                ],
-              ),
-              if (playdate['description'] != null) ...[
-                const SizedBox(height: 8),
-                Text(playdate['description']),
+            ],
+          ],
+          SizedBox(height: context.isSmallMobile ? 8 : 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (status == 'pending') ...[
+                AppButton(
+                  text: 'Cancel',
+                  type: AppButtonType.outline,
+                  size: AppButtonSize.small,
+                  onPressed: () => _cancelRequest(request['id']),
+                ),
+              ] else if (status == 'declined') ...[
+                AppButton(
+                  text: 'Send New Request',
+                  size: AppButtonSize.small,
+                  onPressed: () => _resendRequest(request),
+                ),
               ],
             ],
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (status == 'pending') ...[
-                  TextButton(
-                    onPressed: () => _cancelRequest(request['id']),
-                    child: const Text('Cancel'),
-                  ),
-                ] else if (status == 'declined') ...[
-                  TextButton(
-                    onPressed: () => _resendRequest(request),
-                    child: const Text('Send New Request'),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -591,22 +695,12 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     }
 
     if (_upcomingPlaydates.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.calendar_today, size: 64, color: Theme.of(context).hintColor),
-            const SizedBox(height: 16),
-            Text('No upcoming playdates', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text('Confirmed playdates will appear here', style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => _loadPlaydates(),
-              child: const Text('Refresh'),
-            ),
-          ],
-        ),
+      return AppEmptyState(
+        icon: Icons.calendar_today,
+        title: 'No upcoming playdates',
+        message: 'Confirmed playdates will appear here',
+        actionText: 'Refresh',
+        onAction: _loadPlaydates,
       );
     }
 
@@ -614,95 +708,123 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
       onRefresh: _loadPlaydates,
       child: ListView.builder(
         controller: _upcomingController,
+        padding: AppResponsive.screenPadding(context).copyWith(top: 12, bottom: 12),
         itemCount: _upcomingPlaydates.length,
         itemBuilder: (context, index) {
           final playdate = _upcomingPlaydates[index];
           _playdateKeys[playdate['id']] = GlobalKey();
           return Container(
             key: playdate['id'] == _highlightId ? _playdateKeys[playdate['id']] : null,
-            child: Card(
-              margin: const EdgeInsets.all(8.0),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: Colors.green,
-                          child: const Icon(Icons.pets, color: Colors.white),
+            margin: const EdgeInsets.only(bottom: 12),
+            child: AppCard(
+              padding: AppResponsive.cardPadding(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: AppResponsive.avatarRadius(context, 20),
+                        backgroundColor: Colors.green,
+                        child: Icon(
+                          Icons.pets,
+                          color: Colors.white,
+                          size: AppResponsive.iconSize(context, 20),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                playdate['title'] ?? 'Playdate',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              if (playdate['organizer'] != null || playdate['participant'] != null)
-                                Text(
-                                  'With: ${_getOtherPartyName(playdate)}',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                            ],
-                          ),
-                        ),
-                        Material(
-                          color: Colors.transparent,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              debugPrint('=== SET BUTTON CLICKED FOR PLAYDATE: ${playdate['id']} ===');
-                              debugPrint('=== PLAYDATE DATA: $playdate ===');
-                              _showPlaydatePopup(playdate);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: const Text(
-                              'EDIT',
-                              style: TextStyle(
-                                fontSize: 14,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              playdate['title'] ?? 'Playdate',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
+                                fontSize: AppResponsive.fontSize(context, 16),
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
+                            if (playdate['organizer'] != null || playdate['participant'] != null)
+                              Text(
+                                'With: ${_getOtherPartyName(playdate)} and their human',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontSize: AppResponsive.fontSize(context, 14),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                          ],
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Icon(Icons.location_on, size: 16, color: Theme.of(context).hintColor),
-                        const SizedBox(width: 4),
-                        Text(playdate['location'] ?? 'Location TBD'),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.access_time, size: 16, color: Theme.of(context).hintColor),
-                        const SizedBox(width: 4),
-                        Text(_formatDateTime(playdate['scheduled_at'])),
-                      ],
-                    ),
-                    if (playdate['description'] != null) ...[
-                      const SizedBox(height: 8),
-                      Text(playdate['description']),
+                      ),
+                      AppButton(
+                        text: 'Edit',
+                        size: AppButtonSize.small,
+                        type: AppButtonType.outline,
+                        onPressed: () {
+                          debugPrint('=== EDIT BUTTON CLICKED FOR PLAYDATE: ${playdate['id']} ===');
+                          _showPlaydatePopup(playdate);
+                        },
+                      ),
                     ],
+                  ),
+                  SizedBox(height: context.isSmallMobile ? 8 : 12),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        size: AppResponsive.iconSize(context, 16),
+                        color: Theme.of(context).hintColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          playdate['location'] ?? 'Location TBD',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontSize: AppResponsive.fontSize(context, 14),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: AppResponsive.iconSize(context, 16),
+                        color: Theme.of(context).hintColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          _formatDateTime(playdate['scheduled_at']),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontSize: AppResponsive.fontSize(context, 14),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (playdate['description'] != null) ...[
+                    SizedBox(height: context.isSmallMobile ? 6 : 8),
+                    Text(
+                      playdate['description'],
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: AppResponsive.fontSize(context, 14),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
-                ),
+                ],
               ),
             ),
           );
@@ -717,40 +839,67 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     }
 
     if (_pastPlaydates.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.history, size: 64, color: Theme.of(context).hintColor),
-            const SizedBox(height: 16),
-            Text('No past playdates', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text('Completed playdates will appear here', style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => _loadPlaydates(),
-              child: const Text('Refresh'),
-            ),
-          ],
-        ),
+      return AppEmptyState(
+        icon: Icons.history,
+        title: 'No past playdates',
+        message: 'Completed playdates will appear here',
+        actionText: 'Refresh',
+        onAction: _loadPlaydates,
       );
     }
 
     return RefreshIndicator(
       onRefresh: _loadPlaydates,
       child: ListView.builder(
+        padding: AppResponsive.screenPadding(context).copyWith(top: 12, bottom: 12),
         itemCount: _pastPlaydates.length,
         itemBuilder: (context, index) {
           final playdate = _pastPlaydates[index];
-          return Card(
-            margin: const EdgeInsets.all(8.0),
-            child: ListTile(
-              title: Text(playdate['location'] ?? 'Unknown location'),
-              subtitle: Text(_formatDateTime(playdate['scheduled_at'])),
-              trailing: const Icon(Icons.arrow_forward_ios),
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: AppCard(
+              padding: AppResponsive.cardPadding(context),
               onTap: () {
-                // Navigate to playdate recap
+                // Navigate to playdate recap (coming soon)
               },
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.history,
+                    size: AppResponsive.iconSize(context, 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          playdate['location'] ?? 'Unknown location',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontSize: AppResponsive.fontSize(context, 16),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatDateTime(playdate['scheduled_at']),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: AppResponsive.fontSize(context, 12),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: AppResponsive.iconSize(context, 16),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -809,11 +958,10 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
   }
 
   Future<void> _showResponseBottomSheet(Map<String, dynamic> request) async {
-    await showModalBottomSheet<void>(
+    await AppBottomSheet.show<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => PlaydateResponseBottomSheet(
+      title: 'Respond to Playdate',
+      child: PlaydateResponseBottomSheet(
         request: request,
         onResponseSent: () => _loadPlaydates(),
       ),

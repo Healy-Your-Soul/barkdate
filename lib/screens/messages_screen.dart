@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:barkdate/data/sample_data.dart';
 import 'package:barkdate/models/message.dart';
 import 'package:barkdate/screens/chat_detail_screen.dart';
+import 'package:barkdate/widgets/app_card.dart';
+import 'package:barkdate/widgets/app_empty_state.dart';
 
 class MessagesScreen extends StatelessWidget {
   const MessagesScreen({super.key});
@@ -29,21 +31,43 @@ class MessagesScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: SampleData.chatPreviews.length,
-        itemBuilder: (context, index) {
-          final chat = SampleData.chatPreviews[index];
-          return _buildChatPreviewTile(context, chat);
-        },
-      ),
+      body: SampleData.chatPreviews.isEmpty
+          ? const AppEmptyState(
+              icon: Icons.chat_bubble_outline,
+              title: 'No messages yet',
+              message: 'Start chatting with nearby dogs and their humans!',
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: SampleData.chatPreviews.length,
+              itemBuilder: (context, index) {
+                final chat = SampleData.chatPreviews[index];
+                return _buildChatPreviewTile(context, chat);
+              },
+            ),
     );
   }
 
   Widget _buildChatPreviewTile(BuildContext context, ChatPreview chat) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      leading: Stack(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: AppCard(
+        padding: const EdgeInsets.all(12),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatDetailScreen(
+              recipientName: chat.otherUserName,
+              dogName: chat.otherDogName,
+              matchId: null,
+              recipientId: chat.otherUserId,
+            ),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Stack(
         children: [
           CircleAvatar(
             radius: 28,
@@ -75,67 +99,64 @@ class MessagesScreen extends StatelessWidget {
                 ),
               ),
             ),
-        ],
-      ),
-      title: Text(
-        chat.otherUserName,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: Theme.of(context).colorScheme.onSurface,
-        ),
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'with ${chat.otherDogName}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            ],
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            chat.lastMessage,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: chat.unreadCount > 0 
-                ? Theme.of(context).colorScheme.onSurface
-                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              fontWeight: chat.unreadCount > 0 ? FontWeight.w500 : FontWeight.normal,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    chat.otherUserName,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'with ${chat.otherDogName} (human: ${chat.otherUserName})',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    chat.lastMessage,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: chat.unreadCount > 0
+                              ? Theme.of(context).colorScheme.onSurface
+                              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          fontWeight: chat.unreadCount > 0 ? FontWeight.w500 : FontWeight.normal,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            _formatMessageTime(chat.lastMessageTime),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-          if (chat.unreadCount > 0) ...[
-            const SizedBox(height: 4),
-            Icon(
-              Icons.circle,
-              size: 8,
-              color: Theme.of(context).colorScheme.primary,
+            const SizedBox(width: 8),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  _formatMessageTime(chat.lastMessageTime),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                ),
+                if (chat.unreadCount > 0) ...[
+                  const SizedBox(height: 4),
+                  Icon(
+                    Icons.circle,
+                    size: 8,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ],
+              ],
             ),
           ],
-        ],
-      ),
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ChatDetailScreen(
-            recipientName: chat.otherUserName,
-            dogName: chat.otherDogName,
-            matchId: null, // demo mode for now
-            recipientId: chat.otherUserId,
-          ),
         ),
       ),
     );

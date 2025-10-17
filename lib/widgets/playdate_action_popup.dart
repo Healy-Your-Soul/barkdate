@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:barkdate/widgets/app_button.dart';
 
 /// Beautiful popup for confirmed playdates with action buttons
 /// Inspired by Flutter_beautiful_popup templates
@@ -145,34 +146,19 @@ class PlaydateActionPopup extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: ElevatedButton.icon(
+                        child: AppButton(
+                          text: 'Chat',
+                          icon: Icons.chat_bubble,
                           onPressed: onChat,
-                          icon: const Icon(Icons.chat_bubble),
-                          label: const Text('Chat'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: ElevatedButton.icon(
+                        child: AppButton(
+                          text: 'Reschedule',
+                          icon: Icons.schedule,
+                          customColor: Colors.orange,
                           onPressed: onReschedule,
-                          icon: const Icon(Icons.schedule),
-                          label: const Text('Reschedule'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
                         ),
                       ),
                     ],
@@ -184,18 +170,18 @@ class PlaydateActionPopup extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: TextButton(
+                        child: AppButton(
+                          text: 'Cancel Playdate',
+                          type: AppButtonType.text,
+                          customColor: Colors.red,
                           onPressed: onCancel,
-                          child: const Text(
-                            'Cancel Playdate',
-                            style: TextStyle(color: Colors.red),
-                          ),
                         ),
                       ),
                       Expanded(
-                        child: TextButton(
+                        child: AppButton(
+                          text: 'Close',
+                          type: AppButtonType.text,
                           onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Close'),
                         ),
                       ),
                     ],

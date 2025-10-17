@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:barkdate/theme.dart';
+import 'package:barkdate/design_system/app_theme.dart';
 import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 import 'package:barkdate/screens/main_navigation.dart';
 import 'package:barkdate/screens/onboarding/welcome_screen.dart';
@@ -8,6 +8,7 @@ import 'package:barkdate/screens/auth_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/settings_service.dart';
 import 'package:barkdate/services/notification_manager.dart';
+import 'package:barkdate/services/cache_service.dart';
 import 'package:barkdate/firebase_options.dart';
 
 void main() async {
@@ -27,6 +28,9 @@ void main() async {
   // Initialize comprehensive notification system
   await NotificationManager.initialize();
   
+  // Start cache cleanup (periodic cleanup every minute)
+  CacheService().startPeriodicCleanup();
+  
   runApp(const MyApp());
 }
 
@@ -41,8 +45,8 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: 'BarkDate',
           debugShowCheckedModeBanner: false,
-          theme: lightTheme,
-          darkTheme: darkTheme,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
           themeMode: SettingsService().themeMode, // Use settings service theme
           home: const SupabaseAuthWrapper(), // Use Supabase Auth only
           routes: {

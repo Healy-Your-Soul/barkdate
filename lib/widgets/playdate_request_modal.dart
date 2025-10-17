@@ -3,6 +3,8 @@ import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
+import 'package:barkdate/widgets/app_button.dart';
+import 'package:barkdate/widgets/app_card.dart';
 
 /// Modal for creating playdate requests
 /// Allows user to select date/time, location, and send invitation message
@@ -449,15 +451,7 @@ class _PlaydateRequestModalState extends State<PlaydateRequestModal> {
                     const SizedBox(height: 24),
 
                     // Summary card
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-                        ),
-                      ),
+                    AppCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -495,24 +489,20 @@ class _PlaydateRequestModalState extends State<PlaydateRequestModal> {
               child: Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
+                    child: AppButton(
+                      text: 'Cancel',
+                      type: AppButtonType.outline,
                       onPressed: _isLoading ? null : () => Navigator.pop(context),
-                      child: const Text('Cancel'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     flex: 2,
-                    child: ElevatedButton.icon(
+                    child: AppButton(
+                      text: _isLoading ? 'Sending...' : 'Send Invitation',
+                      icon: Icons.send,
+                      isLoading: _isLoading,
                       onPressed: _isLoading ? null : _sendPlaydateRequest,
-                      icon: _isLoading
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.send, size: 18),
-                      label: Text(_isLoading ? 'Sending...' : 'Send Invitation'),
                     ),
                   ),
                 ],

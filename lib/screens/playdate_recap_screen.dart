@@ -6,6 +6,8 @@ import 'package:barkdate/supabase/bark_playdate_services.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:barkdate/services/selected_image.dart';
+import 'package:barkdate/widgets/app_card.dart';
+import 'package:barkdate/widgets/app_button.dart';
 
 class PlaydateRecapScreen extends StatefulWidget {
   final String playdateId;
@@ -309,44 +311,39 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Playdate info card
-            Card(
-              elevation: 0,
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.playdateData['title'] ?? 'Playdate',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.playdateData['title'] ?? 'Playdate',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.location_on, size: 16, color: Theme.of(context).hintColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        widget.playdateData['location'] ?? 'Unknown location',
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          widget.playdateData['location'] ?? 'Unknown location',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          _formatDate(DateTime.parse(widget.playdateData['scheduled_at'])),
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.calendar_today, size: 16, color: Theme.of(context).hintColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatDate(DateTime.parse(widget.playdateData['scheduled_at'])),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
             
@@ -490,30 +487,20 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
+                  child: AppButton(
+                    text: 'From Gallery',
+                    icon: Icons.photo_library,
+                    type: AppButtonType.outline,
                     onPressed: _pickImages,
-                    icon: const Icon(Icons.photo_library),
-                    label: const Text('From Gallery'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: OutlinedButton.icon(
+                  child: AppButton(
+                    text: 'Take Photo',
+                    icon: Icons.camera_alt,
+                    type: AppButtonType.outline,
                     onPressed: _takePhoto,
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Take Photo'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
                   ),
                 ),
               ],
@@ -567,9 +554,7 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
             ],
             
             // Share to feed option
-            Card(
-              elevation: 0,
-              color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+            AppCard(
               child: CheckboxListTile(
                 title: const Text('Share to Social Feed'),
                 subtitle: const Text('Let others see this wonderful playdate!'),
@@ -589,35 +574,12 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
             const SizedBox(height: 24),
             
             // Submit button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _submitRecap,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _isSubmitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : const Text(
-                        'Save Recap',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-              ),
+            AppButton(
+              text: 'Save Recap',
+              onPressed: _isSubmitting ? null : _submitRecap,
+              isLoading: _isSubmitting,
+              isFullWidth: true,
+              size: AppButtonSize.large,
             ),
             
             const SizedBox(height: 32),

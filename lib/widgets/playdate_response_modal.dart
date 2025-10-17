@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/widgets/app_button.dart';
 
 class PlaydateResponseModal extends StatefulWidget {
   final Map<String, dynamic> playdateRequest;
@@ -283,44 +284,25 @@ class _PlaydateResponseModalState extends State<PlaydateResponseModal> {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
+                AppButton(
+                  text: 'Cancel',
+                  type: AppButtonType.text,
                   onPressed: _isProcessing ? null : () => Navigator.pop(context),
-                  child: const Text('Cancel'),
                 ),
                 const SizedBox(width: 12),
-                ElevatedButton(
+                AppButton(
+                  text: _selectedResponse == 'accepted'
+                      ? 'Accept Playdate'
+                      : _selectedResponse == 'declined'
+                          ? 'Decline Playdate'
+                          : 'Send Counter-Proposal',
                   onPressed: _isProcessing ? null : _handleResponse,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _selectedResponse == 'accepted'
-                        ? Colors.green
-                        : _selectedResponse == 'declined'
-                            ? Colors.red
-                            : Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: _isProcessing
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : Text(
-                          _selectedResponse == 'accepted'
-                              ? 'Accept Playdate'
-                              : _selectedResponse == 'declined'
-                                  ? 'Decline Playdate'
-                                  : 'Send Counter-Proposal',
-                        ),
+                  isLoading: _isProcessing,
+                  customColor: _selectedResponse == 'accepted'
+                      ? Colors.green
+                      : _selectedResponse == 'declined'
+                          ? Colors.red
+                          : null,
                 ),
               ],
             ),

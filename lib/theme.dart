@@ -1,6 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+// Airbnb-inspired Design System Constants
+class DesignSystem {
+  // Spacing (8px grid system)
+  static const double spacing4 = 4.0;
+  static const double spacing8 = 8.0;
+  static const double spacing12 = 12.0;
+  static const double spacing16 = 16.0;
+  static const double spacing20 = 20.0;
+  static const double spacing24 = 24.0;
+  static const double spacing32 = 32.0;
+  static const double spacing40 = 40.0;
+  static const double spacing48 = 48.0;
+
+  // Border Radius
+  static const double radiusSmall = 8.0;
+  static const double radiusMedium = 12.0;
+  static const double radiusLarge = 16.0;
+  static const double radiusXLarge = 20.0;
+
+  // Elevation
+  static const double elevation0 = 0.0;
+  static const double elevation2 = 2.0;
+  static const double elevation4 = 4.0;
+  static const double elevation8 = 8.0;
+
+  // Card dimensions
+  static const double cardMinHeight = 200.0;
+  static const double cardMaxHeight = 300.0;
+  static const double imageAspectRatio = 16 / 9;
+
+  // Animation durations
+  static const Duration animationFast = Duration(milliseconds: 150);
+  static const Duration animationMedium = Duration(milliseconds: 300);
+  static const Duration animationSlow = Duration(milliseconds: 500);
+}
+
 class LightModeColors {
   static const lightPrimary = Color(0xFF2D7D32);
   static const lightOnPrimary = Color(0xFFFFFFFF);

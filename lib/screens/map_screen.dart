@@ -4,9 +4,15 @@ import 'package:location/location.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:barkdate/services/park_service.dart';
 import 'package:barkdate/services/places_service.dart';
+import 'package:barkdate/services/checkin_service.dart';
+import 'package:barkdate/models/checkin.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/widgets/checkin_button.dart';
 import 'dart:async';
+import 'package:barkdate/widgets/app_bottom_sheet.dart';
+import 'package:barkdate/widgets/app_button.dart';
+import 'package:barkdate/widgets/app_card.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -29,12 +35,14 @@ class _MapScreenState extends State<MapScreen> {
   bool _isSearching = false;
   List<PlaceResult> _searchResults = [];
   bool _showingSearchResults = false;
+  CheckIn? _activeCheckIn;
 
   @override
   void initState() {
     super.initState();
     _initializeMap();
     _setupRealTimeDogCounts();
+    _loadActiveCheckIn();
   }
 
   @override
@@ -99,6 +107,22 @@ class _MapScreenState extends State<MapScreen> {
       _setDefaultLocation();
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadActiveCheckIn() async {
+    final user = SupabaseConfig.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final checkIn = await CheckInService.getActiveCheckIn(user.id);
+      if (mounted) {
+        setState(() {
+          _activeCheckIn = checkIn;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading active check-in: $e');
     }
   }
 
@@ -256,11 +280,11 @@ class _MapScreenState extends State<MapScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_showingSearchResults ? 'Search Results' : 'Dog Parks'),
-        backgroundColor: const Color(0xFF2E7D32),
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
         actions: [
           IconButton(
-            icon: const Icon(Icons.my_location),
+            icon: Icon(Icons.my_location, color: Theme.of(context).colorScheme.onPrimaryContainer),
             onPressed: _centerOnMyLocation,
             tooltip: 'My location',
           ),
@@ -270,10 +294,12 @@ class _MapScreenState extends State<MapScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                // Check-in status banner
+                CheckInStatusBanner(),
                 // Search bar
                 Container(
                   padding: const EdgeInsets.all(16.0),
-                  color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                  color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.15),
                   child: Row(
                     children: [
                       Expanded(
@@ -303,13 +329,9 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      ElevatedButton(
+                      AppButton(
+                        text: 'Search',
                         onPressed: _isSearching ? null : () => _searchPlaces(_searchController.text),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2E7D32),
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Search'),
                       ),
                     ],
                   ),
@@ -336,7 +358,96 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ],
             ),
+      floatingActionButton: _activeCheckIn == null 
+          ? FloatingActionButton.extended(
+              onPressed: _showCheckInOptions,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.pets),
+              label: const Text('Check In'),
+            )
+          : null,
     );
+  }
+
+  void _showCheckInOptions() {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Check In at a Park',
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        itemCount: _nearbyParks.length,
+        itemBuilder: (context, index) {
+          final park = _nearbyParks[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: AppCard(
+              onTap: () {
+                Navigator.pop(context);
+                _checkInAtPark(park);
+              },
+              child: Row(
+                children: [
+                  const Icon(Icons.park),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(park['name'] ?? 'Unknown Park',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(park['address'] ?? '',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios, size: 16),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _checkInAtPark(Map<String, dynamic> park) async {
+    final checkIn = await CheckInService.checkInAtPark(
+      parkId: park['id'],
+      parkName: park['name'] ?? 'Unknown Park',
+      latitude: park['latitude'],
+      longitude: park['longitude'],
+    );
+
+    if (checkIn != null) {
+      setState(() {
+        _activeCheckIn = checkIn;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Woof! I\'m checked in at ${park['name']}! 🐕'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+      
+      // Refresh dog counts
+      _loadParksData();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to check in. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _buildParksList() {
@@ -556,19 +667,38 @@ class _MapScreenState extends State<MapScreen> {
               
               const SizedBox(height: 24),
               
-              // Action button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    final uri = Uri.parse(
-                        'https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}');
-                    launchUrl(uri, mode: LaunchMode.externalApplication);
-                  },
-                  icon: const Icon(Icons.directions),
-                  label: const Text('Get Directions'),
-                ),
-              ),
+                  // Action buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _checkInAtPark({
+                              'id': 'place_${place.latitude}_${place.longitude}',
+                              'name': place.name,
+                              'latitude': place.latitude,
+                              'longitude': place.longitude,
+                            });
+                          },
+                          icon: const Icon(Icons.pets),
+                          label: const Text('Check In'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            final uri = Uri.parse(
+                                'https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}');
+                            launchUrl(uri, mode: LaunchMode.externalApplication);
+                          },
+                          icon: const Icon(Icons.directions),
+                          label: const Text('Directions'),
+                        ),
+                      ),
+                    ],
+                  ),
             ],
           ),
         );
@@ -654,9 +784,13 @@ class _MapScreenState extends State<MapScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Close'),
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _checkInAtPark(park);
+                      },
+                      icon: const Icon(Icons.pets),
+                      label: const Text('Check In'),
                     ),
                   ),
                   const SizedBox(width: 12),

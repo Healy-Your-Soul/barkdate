@@ -449,75 +449,83 @@ class PlaydateRequestService {
   /// Get pending playdate requests for a user
   static Future<List<Map<String, dynamic>>> getPendingRequests(String userId) async {
     try {
-      // Try the RPC function first (if available after SQL update)
-      try {
-        final rpcResult = await SupabaseConfig.client
-            .rpc('get_pending_playdate_requests', params: {'user_id_param': userId});
-        
-        if (rpcResult != null && rpcResult is List && rpcResult.isNotEmpty) {
-          return List<Map<String, dynamic>>.from(rpcResult);
-        }
-      } catch (rpcError) {
-        debugPrint('RPC function not available, falling back to basic query: $rpcError');
-      }
-
-      // Fallback to simple query without complex joins
+      // Use efficient joined query with Postgrest
       final requests = await SupabaseConfig.client
           .from('playdate_requests')
-          .select('*')
+          .select('''
+            *,
+            playdate:playdate_id(*),
+            requester:requester_id(id, name, avatar_url),
+            invitee_dog:invitee_dog_id(id, name, breed, main_photo_url),
+            requester_dog:requester_dog_id(id, name, breed, main_photo_url)
+          ''')
           .eq('invitee_id', userId)
           .eq('status', 'pending')
           .order('created_at', ascending: false);
 
-      // Manually fetch related data for each request
-      final enrichedRequests = <Map<String, dynamic>>[];
-      
-      for (final request in requests) {
-        final enrichedRequest = Map<String, dynamic>.from(request);
-        
-        // Get playdate details
-        try {
-          final playdate = await SupabaseConfig.client
-              .from('playdates')
-              .select('*')
-              .eq('id', request['playdate_id'])
-              .maybeSingle();
-          enrichedRequest['playdate'] = playdate;
-        } catch (e) {
-          debugPrint('Error fetching playdate: $e');
-        }
-
-        // Get requester details
-        try {
-          final requester = await SupabaseConfig.client
-              .from('users')
-              .select('name, avatar_url')
-              .eq('id', request['requester_id'])
-              .maybeSingle();
-          enrichedRequest['requester'] = requester;
-        } catch (e) {
-          debugPrint('Error fetching requester: $e');
-        }
-
-        // Get invitee dog details
-        try {
-          final inviteeDog = await SupabaseConfig.client
-              .from('dogs')
-              .select('name, main_photo_url, breed')
-              .eq('id', request['invitee_dog_id'])
-              .maybeSingle();
-          enrichedRequest['invitee_dog'] = inviteeDog;
-        } catch (e) {
-          debugPrint('Error fetching invitee dog: $e');
-        }
-
-        enrichedRequests.add(enrichedRequest);
-      }
-
-      return enrichedRequests;
+      return List<Map<String, dynamic>>.from(requests);
     } catch (e) {
-      debugPrint('Error getting pending requests: $e');
-      return [];
+      debugPrint('Error getting pending requests with joins: $e');
+      
+      // Fallback to manual enrichment if joins fail
+      try {
+        final requests = await SupabaseConfig.client
+            .from('playdate_requests')
+            .select('*')
+            .eq('invitee_id', userId)
+            .eq('status', 'pending')
+            .order('created_at', ascending: false);
+
+        // Manually fetch related data for each request
+        final enrichedRequests = <Map<String, dynamic>>[];
+        
+        for (final request in requests) {
+          final enrichedRequest = Map<String, dynamic>.from(request);
+          
+          // Get playdate details
+          try {
+            final playdate = await SupabaseConfig.client
+                .from('playdates')
+                .select('*')
+                .eq('id', request['playdate_id'])
+                .maybeSingle();
+            enrichedRequest['playdate'] = playdate;
+          } catch (e) {
+            debugPrint('Error fetching playdate: $e');
+          }
+
+          // Get requester details
+          try {
+            final requester = await SupabaseConfig.client
+                .from('users')
+                .select('name, avatar_url')
+                .eq('id', request['requester_id'])
+                .maybeSingle();
+            enrichedRequest['requester'] = requester;
+          } catch (e) {
+            debugPrint('Error fetching requester: $e');
+          }
+
+          // Get invitee dog details
+          try {
+            final inviteeDog = await SupabaseConfig.client
+                .from('dogs')
+                .select('name, main_photo_url, breed')
+                .eq('id', request['invitee_dog_id'])
+                .maybeSingle();
+            enrichedRequest['invitee_dog'] = inviteeDog;
+          } catch (e) {
+            debugPrint('Error fetching invitee dog: $e');
+          }
+
+          enrichedRequests.add(enrichedRequest);
+        }
+
+        return enrichedRequests;
+      } catch (fallbackError) {
+        debugPrint('Error in fallback enrichment: $fallbackError');
+        return [];
+      }
     }
   }
 
@@ -526,70 +534,91 @@ class PlaydateRequestService {
     try {
       debugPrint('=== GETTING SENT REQUESTS FOR USER: $userId ===');
       
-      // Get requests where user is the requester
+      // Use efficient joined query with Postgrest
       final requests = await SupabaseConfig.client
           .from('playdate_requests')
-          .select('*')
+          .select('''
+            *,
+            playdate:playdate_id(*),
+            invitee:invitee_id(id, name, avatar_url),
+            invitee_dog:invitee_dog_id(id, name, breed, main_photo_url),
+            requester_dog:requester_dog_id(id, name, breed, main_photo_url)
+          ''')
           .eq('requester_id', userId)
           .eq('status', 'pending')
           .order('created_at', ascending: false);
 
-      debugPrint('Found ${requests.length} sent requests');
-
-      // Manually fetch related data for each request
-      final enrichedRequests = <Map<String, dynamic>>[];
-      
-      for (final request in requests) {
-        final enrichedRequest = Map<String, dynamic>.from(request);
-        
-        // Get playdate details
-        try {
-          final playdate = await SupabaseConfig.client
-              .from('playdates')
-              .select('*')
-              .eq('id', request['playdate_id'])
-              .single();
-          enrichedRequest['playdate'] = playdate;
-        } catch (e) {
-          debugPrint('Error fetching playdate: $e');
-          enrichedRequest['playdate'] = null;
-        }
-
-        // Get invitee (recipient) details
-        try {
-          final invitee = await SupabaseConfig.client
-              .from('users')
-              .select('id, name, avatar_url')
-              .eq('id', request['invitee_id'])
-              .single();
-          enrichedRequest['invitee'] = invitee;
-        } catch (e) {
-          debugPrint('Error fetching invitee: $e');
-          enrichedRequest['invitee'] = null;
-        }
-
-        // Get invitee dog details
-        try {
-          final inviteeDog = await SupabaseConfig.client
-              .from('dogs')
-              .select('id, name, breed, main_photo_url')
-              .eq('id', request['invitee_dog_id'])
-              .single();
-          enrichedRequest['invitee_dog'] = inviteeDog;
-        } catch (e) {
-          debugPrint('Error fetching invitee dog: $e');
-          enrichedRequest['invitee_dog'] = null;
-        }
-
-        enrichedRequests.add(enrichedRequest);
-      }
-
-      debugPrint('Returning ${enrichedRequests.length} enriched sent requests');
-      return enrichedRequests;
+      debugPrint('Found ${requests.length} sent requests with joins');
+      return List<Map<String, dynamic>>.from(requests);
 
     } catch (e) {
-      debugPrint('Error getting sent requests: $e');
-      return [];
+      debugPrint('Error getting sent requests with joins: $e');
+      
+      // Fallback to manual enrichment if joins fail
+      try {
+        final requests = await SupabaseConfig.client
+            .from('playdate_requests')
+            .select('*')
+            .eq('requester_id', userId)
+            .eq('status', 'pending')
+            .order('created_at', ascending: false);
+
+        debugPrint('Found ${requests.length} sent requests (fallback)');
+
+        // Manually fetch related data for each request
+        final enrichedRequests = <Map<String, dynamic>>[];
+        
+        for (final request in requests) {
+          final enrichedRequest = Map<String, dynamic>.from(request);
+          
+          // Get playdate details
+          try {
+            final playdate = await SupabaseConfig.client
+                .from('playdates')
+                .select('*')
+                .eq('id', request['playdate_id'])
+                .single();
+            enrichedRequest['playdate'] = playdate;
+          } catch (e) {
+            debugPrint('Error fetching playdate: $e');
+            enrichedRequest['playdate'] = null;
+          }
+
+          // Get invitee (recipient) details
+          try {
+            final invitee = await SupabaseConfig.client
+                .from('users')
+                .select('id, name, avatar_url')
+                .eq('id', request['invitee_id'])
+                .single();
+            enrichedRequest['invitee'] = invitee;
+          } catch (e) {
+            debugPrint('Error fetching invitee: $e');
+            enrichedRequest['invitee'] = null;
+          }
+
+          // Get invitee dog details
+          try {
+            final inviteeDog = await SupabaseConfig.client
+                .from('dogs')
+                .select('id, name, breed, main_photo_url')
+                .eq('id', request['invitee_dog_id'])
+                .single();
+            enrichedRequest['invitee_dog'] = inviteeDog;
+          } catch (e) {
+            debugPrint('Error fetching invitee dog: $e');
+            enrichedRequest['invitee_dog'] = null;
+          }
+
+          enrichedRequests.add(enrichedRequest);
+        }
+
+        debugPrint('Returning ${enrichedRequests.length} enriched sent requests');
+        return enrichedRequests;
+      } catch (fallbackError) {
+        debugPrint('Error in fallback enrichment: $fallbackError');
+        return [];
+      }
     }
   }
 
@@ -984,21 +1013,38 @@ class DogFriendshipService {
   /// Get friends for a dog
   static Future<List<Map<String, dynamic>>> getDogFriends(String dogId) async {
     try {
-      final friendships = await SupabaseConfig.client
+      // First try with dog1_id relationship
+      final friendships1 = await SupabaseConfig.client
           .from('dog_friendships')
           .select('''
             *,
-            friend_dog:dogs(
+            friend_dog:dogs!dog_friendships_dog2_id_fkey(
               id, name, main_photo_url, breed, age,
               user:users(id, name, avatar_url)
             )
           ''')
-          .or('dog1_id.eq.$dogId,dog2_id.eq.$dogId')
+          .eq('dog1_id', dogId)
           .order('friendship_level', ascending: false)
           .order('created_at', ascending: false);
 
-      // Map the friend dog data correctly
-      return friendships.map((friendship) {
+      // Then try with dog2_id relationship
+      final friendships2 = await SupabaseConfig.client
+          .from('dog_friendships')
+          .select('''
+            *,
+            friend_dog:dogs!dog_friendships_dog1_id_fkey(
+              id, name, main_photo_url, breed, age,
+              user:users(id, name, avatar_url)
+            )
+          ''')
+          .eq('dog2_id', dogId)
+          .order('friendship_level', ascending: false)
+          .order('created_at', ascending: false);
+
+      // Combine and map the results
+      final allFriendships = [...friendships1, ...friendships2];
+      
+      return allFriendships.map((friendship) {
         final friendDogId = friendship['dog1_id'] == dogId 
             ? friendship['dog2_id'] 
             : friendship['dog1_id'];

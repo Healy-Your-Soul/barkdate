@@ -3,6 +3,8 @@ import 'package:barkdate/models/message.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'dart:async';
+import 'package:barkdate/widgets/app_button.dart';
+import 'package:barkdate/design_system/app_styles.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   final String recipientName;
@@ -236,19 +238,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             ),
             child: Row(
               children: [
-                IconButton(
+                AppIconButton(
+                  icon: Icons.camera_alt_outlined,
                   onPressed: () {},
-                  icon: Icon(
-                    Icons.camera_alt_outlined,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
+                  hasBorder: true,
                 ),
-                IconButton(
+                const SizedBox(width: 8),
+                AppIconButton(
+                  icon: Icons.photo_outlined,
                   onPressed: () {},
-                  icon: Icon(
-                    Icons.photo_outlined,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
+                  hasBorder: true,
                 ),
                 Expanded(
                   child: TextField(
@@ -259,7 +258,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: AppStyles.borderRadiusSM,
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
@@ -269,22 +268,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton(
-                  onPressed: _isSending ? null : _sendMessage,
-                  icon: _isSending
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
+                _isSending
+                    ? SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Center(
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: Theme.of(context).colorScheme.primary,
                           ),
-                        )
-                      : Icon(
-                          Icons.send,
-                          color: Theme.of(context).colorScheme.primary,
                         ),
-                ),
+                      )
+                    : AppIconButton(
+                        icon: Icons.send,
+                        color: Theme.of(context).colorScheme.primary,
+                        onPressed: _sendMessage,
+                      ),
               ],
             ),
           ),
@@ -312,12 +311,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isMe 
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(20).copyWith(
-                  bottomLeft: Radius.circular(isMe ? 20 : 4),
-                  bottomRight: Radius.circular(isMe ? 4 : 20),
+                color: isMe
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(AppStyles.radiusLG).copyWith(
+                  bottomLeft: Radius.circular(isMe ? AppStyles.radiusLG : AppStyles.radiusXS),
+                  bottomRight: Radius.circular(isMe ? AppStyles.radiusXS : AppStyles.radiusLG),
                 ),
               ),
               child: Text(

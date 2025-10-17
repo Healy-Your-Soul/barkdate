@@ -3,6 +3,8 @@ import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
+import 'package:barkdate/widgets/app_button.dart';
+import 'package:barkdate/widgets/app_card.dart';
 
 /// Enhanced playdate response bottom sheet with progressive disclosure
 /// Inspired by FluffyChat invitations + Beacon multi-step flows
@@ -158,16 +160,8 @@ class _PlaydateResponseBottomSheetState extends State<PlaydateResponseBottomShee
             ),
 
             // Playdate Details Card
-            Container(
+            AppCard(
               margin: const EdgeInsets.symmetric(horizontal: 20),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                ),
-              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -264,22 +258,13 @@ class _PlaydateResponseBottomSheetState extends State<PlaydateResponseBottomShee
                                 const SizedBox(height: 20),
                                 _buildMessageSection(theme),
                                 const SizedBox(height: 24),
-                                ElevatedButton.icon(
-                                  onPressed: _isLoading ? null : () => _handleCounterProposal(),
-                                  icon: _isLoading 
-                                    ? const SizedBox(
-                                        width: 16, 
-                                        height: 16,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
-                                      )
-                                    : const Icon(Icons.send),
-                                  label: Text(_isLoading ? 'Sending...' : 'Send Counter-Proposal'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: theme.colorScheme.secondary,
-                                    foregroundColor: theme.colorScheme.onSecondary,
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                  ),
-                                ),
+                    AppButton(
+                      text: _isLoading ? 'Sending...' : 'Send Counter-Proposal',
+                      icon: Icons.send,
+                      isLoading: _isLoading,
+                      onPressed: _isLoading ? null : () => _handleCounterProposal(),
+                      customColor: theme.colorScheme.secondary,
+                    ),
                               ],
                             ),
                           ),
