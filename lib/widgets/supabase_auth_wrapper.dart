@@ -5,6 +5,7 @@ import 'package:barkdate/screens/main_navigation.dart';
 import 'package:barkdate/screens/onboarding/welcome_screen.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/services/preload_service.dart';
 
 enum ProfileStatus {
   complete,
@@ -67,8 +68,20 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
 
               switch (profileSnapshot.data) {
                 case ProfileStatus.complete:
-                  // Profile complete, go to main app
-                  return const MainNavigation();
+                  // Profile complete, warm caches and go to main app
+                  return FutureBuilder<void>(
+                    future: PreloadService.warmFeedCaches(session.user.id),
+                    builder: (context, cacheSnapshot) {
+                      if (cacheSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Scaffold(
+                          body: Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+                      return const MainNavigation();
+                    },
+                  );
                 
                 case ProfileStatus.needsDogProfile:
                   // User exists but needs dog profile

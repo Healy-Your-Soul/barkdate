@@ -169,7 +169,72 @@ class _FeedScreenState extends State<FeedScreen> {
         return;
       }
 
-      // Resolve myDogId without triggering UI updates
+      // INSTAGRAM/FACEBOOK STYLE: Cache-first instant loading
+      debugPrint('🚀 Starting cache-first feed loading for ${user.id}');
+      
+      // 1. INSTANT: Check cache first and render immediately if available
+      bool hasCachedData = false;
+      
+      // Check nearby dogs cache
+      final cachedNearbyRaw = CacheService().getCachedNearbyDogs(user.id);
+      debugPrint('🔍 Cache check for nearby dogs: ${cachedNearbyRaw?.length ?? 'null'}');
+      if (cachedNearbyRaw != null && cachedNearbyRaw.isNotEmpty) {
+        debugPrint('✓ Found cached nearby dogs: ${cachedNearbyRaw.length}');
+        final List<Dog> cachedDogs = cachedNearbyRaw.map<Dog>((data) {
+          final userData = data['users'] as Map<String, dynamic>?;
+          return Dog(
+            id: data['id'] as String,
+            name: data['name'] as String,
+            breed: data['breed'] as String,
+            age: data['age'] as int,
+            size: data['size'] as String,
+            gender: data['gender'] as String,
+            bio: data['bio'] as String? ?? '',
+            photos: List<String>.from(data['photo_urls'] ?? []),
+            ownerId: (data['user_id'] ?? userData?['id'] ?? '') as String,
+            ownerName: userData?['name'] as String? ?? 'Unknown Owner',
+            distanceKm: 2.5,
+          );
+        }).toList();
+        
+        if (mounted) {
+          setState(() {
+            _nearbyDogs = cachedDogs;
+            hasCachedData = true;
+          });
+        }
+      }
+
+      // Check other caches
+      final cachedPlaydates = CacheService().getCachedPlaydateList(user.id, 'upcoming');
+      final cachedEvents = CacheService().getCachedEventList('suggested_${user.id}');
+      final cachedFriends = CacheService().getCachedFriendList('user_${user.id}');
+      
+      debugPrint('🔍 Cache check - Playdates: ${cachedPlaydates?.length ?? 'null'}, Events: ${cachedEvents?.length ?? 'null'}, Friends: ${cachedFriends?.length ?? 'null'}');
+      
+      if (cachedPlaydates != null || cachedEvents != null || cachedFriends != null) {
+        if (mounted) {
+          setState(() {
+            if (cachedPlaydates != null) _upcomingFeedPlaydates = cachedPlaydates;
+            if (cachedEvents != null) _suggestedEvents = cachedEvents.cast<Event>();
+            if (cachedFriends != null) _friendDogs = cachedFriends;
+            hasCachedData = true;
+          });
+        }
+      }
+
+      // If we have cached data, show it instantly and mark loading as complete
+      if (hasCachedData && mounted) {
+        setState(() {
+          _isInitialLoading = false;
+        });
+        debugPrint('⚡ INSTANT: Feed rendered from cache in ~1ms');
+      }
+
+      // 2. BACKGROUND: Fetch fresh data silently (don't block UI)
+      debugPrint('🔄 BACKGROUND: Fetching fresh data...');
+      
+      // Resolve myDogId for fresh fetch
       String? myDogId;
       try {
         final userDogs = await BarkDateUserService.getUserDogs(user.id);
@@ -178,31 +243,24 @@ class _FeedScreenState extends State<FeedScreen> {
         }
       } catch (_) {}
 
-      // Fetch all sections in parallel WITHOUT intermediate setState
+      // Fetch fresh data in parallel
       final results = await Future.wait([
-        // Nearby dogs
         BarkDateMatchService.getNearbyDogs(user.id).catchError((_) => <Map<String, dynamic>>[]),
-        // Playdates
         PlaydateQueryService.getUserPlaydatesAggregated(user.id).catchError((_) => {'upcoming': <Map<String, dynamic>>[]}),
-        // My events
         EventService.getUserParticipatingEvents(user.id).catchError((_) => <Event>[]),
-        // Suggested events
         (myDogId != null
             ? EventService.getRecommendedEvents(dogId: myDogId!, dogAge: '3', dogSize: 'medium')
             : EventService.getUpcomingEvents(limit: 8)).catchError((_) => <Event>[]),
-        // Friends
         (myDogId != null
             ? DogFriendshipService.getDogFriends(myDogId!)
             : Future.value(<Map<String, dynamic>>[])).catchError((_) => <Map<String, dynamic>>[]),
-        // Dashboard counters
         _getUpcomingPlaydatesCount(user.id).catchError((_) => 0),
         notif_service.NotificationService.getUnreadCount(user.id).catchError((_) => 0),
         _getMutualBarksCount(user.id).catchError((_) => 0),
-        // Check-in status
         CheckInService.getActiveCheckIn(user.id).catchError((_) => null),
       ]);
 
-      // Unpack
+      // Unpack fresh data
       final nearbyDogsRaw = (results[0] as List).cast<Map<String, dynamic>>();
       final playdatesMap = (results[1] as Map);
       final myEvents = (results[2] as List).cast<Event>();
@@ -213,8 +271,11 @@ class _FeedScreenState extends State<FeedScreen> {
       final mutualCount = results[7] as int;
       final activeCheckIn = results[8];
 
-      // Convert nearby dogs → Dog model
-      final List<Dog> nearbyDogs = nearbyDogsRaw.map<Dog>((data) {
+      // Cache fresh data
+      CacheService().cacheNearbyDogs(user.id, nearbyDogsRaw);
+      
+      // Convert fresh nearby dogs to Dog objects
+      final List<Dog> freshNearbyDogs = nearbyDogsRaw.map<Dog>((data) {
         final userData = data['users'] as Map<String, dynamic>?;
         return Dog(
           id: data['id'] as String,
@@ -234,21 +295,10 @@ class _FeedScreenState extends State<FeedScreen> {
       // Playdates list
       final playdates = (playdatesMap['upcoming'] as List?)?.cast<Map<String, dynamic>>() ?? <Map<String, dynamic>>[];
 
-      // Persist caches for fast next render
-      final uidForCache = SupabaseAuth.currentUser?.id;
-      if (uidForCache != null) {
-        CacheService().cacheNearbyDogs(uidForCache, nearbyDogsRaw);
-        CacheService().cachePlaydateList(uidForCache, 'upcoming', playdates);
-        CacheService().cacheEventList('suggested_${uidForCache}', suggestedEvents);
-        if (myDogId != null && friends.isNotEmpty) {
-          CacheService().cacheFriendList('user_${uidForCache}', friends);
-        }
-      }
-
-      // Single setState for ALL sections
+      // 3. UPDATE: Replace with fresh data when ready (seamless update)
       if (mounted) {
         setState(() {
-          _nearbyDogs = nearbyDogs;
+          _nearbyDogs = freshNearbyDogs;
           _upcomingFeedPlaydates = playdates;
           _myEvents = myEvents;
           _suggestedEvents = suggestedEvents;
@@ -260,12 +310,18 @@ class _FeedScreenState extends State<FeedScreen> {
           _isInitialLoading = false;
           _isLoading = false;
         });
+        debugPrint('✅ FRESH: Feed updated with fresh data');
       }
 
-      // Cache after update
-      // (Already cached above)
+      // Cache the fresh data
+      CacheService().cachePlaydateList(user.id, 'upcoming', playdates);
+      CacheService().cacheEventList('suggested_${user.id}', suggestedEvents);
+      if (myDogId != null && friends.isNotEmpty) {
+        CacheService().cacheFriendList('user_${user.id}', friends);
+      }
 
-      if (_upcomingFeedPlaydates.isEmpty && _myEvents.isEmpty && _suggestedEvents.isEmpty && _friendDogs.isEmpty) {
+      // If no data found, load sample data
+      if (_nearbyDogs.isEmpty && _upcomingFeedPlaydates.isEmpty && _myEvents.isEmpty && _suggestedEvents.isEmpty && _friendDogs.isEmpty) {
         _loadSampleFeedData();
       }
     } catch (e) {

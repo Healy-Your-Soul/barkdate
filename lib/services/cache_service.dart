@@ -10,13 +10,13 @@ class CacheService {
   // Cache storage with expiry tracking
   final Map<String, CacheEntry> _cache = {};
   
-  // Cache configuration
-  static const Duration userProfileTTL = Duration(minutes: 5);
-  static const Duration dogProfileTTL = Duration(minutes: 5);
-  static const Duration playdateListTTL = Duration(minutes: 2);
-  static const Duration eventListTTL = Duration(minutes: 2);
-  static const Duration friendListTTL = Duration(minutes: 3);
-  static const Duration nearbyDogsTTL = Duration(minutes: 5);
+  // Cache configuration - Extended TTL for better performance
+  static const Duration userProfileTTL = Duration(minutes: 15);
+  static const Duration dogProfileTTL = Duration(minutes: 15);
+  static const Duration playdateListTTL = Duration(minutes: 10);
+  static const Duration eventListTTL = Duration(minutes: 10);
+  static const Duration friendListTTL = Duration(minutes: 10);
+  static const Duration nearbyDogsTTL = Duration(minutes: 15);
 
   /// Get cached value
   T? get<T>(String key) {
