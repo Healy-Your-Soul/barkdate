@@ -3,6 +3,7 @@ import 'package:barkdate/screens/auth/sign_up_screen.dart';
 import 'package:barkdate/screens/auth/forgot_password_screen.dart';
 import 'package:barkdate/screens/main_navigation.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/services/preload_service.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -41,7 +42,11 @@ class _SignInScreenState extends State<SignInScreen> {
       
       if (mounted) {
         if (response.user != null) {
-          // Success! User is logged in
+          // Pre-warm feed caches before entering the home to make first frame instant
+          final uid = response.user!.id;
+          await PreloadService.warmFeedCaches(uid);
+          
+          // Success! Navigate to main app
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const MainNavigation()),

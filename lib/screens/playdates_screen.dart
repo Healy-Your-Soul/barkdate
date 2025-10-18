@@ -40,8 +40,6 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
   final ScrollController _upcomingController = ScrollController();
   final Map<String, GlobalKey> _playdateKeys = {};
   String? _highlightId;
-  bool _hasInitialized = false;
-
   @override
   void initState() {
     super.initState();
@@ -50,23 +48,9 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
       _tabController.index = widget.initialTabIndex!;
     }
     _highlightId = widget.highlightPlaydateId;
-    // Don't load data here - wait for didChangeDependencies to ensure screen is visible
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    
-    // Only load once when screen becomes visible
-    if (!_hasInitialized) {
-      _hasInitialized = true;
-      
-      // Use post-frame callback to ensure screen is ready
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _loadPlaydates();
-        _initRealtime();
-      });
-    }
+    // Load immediately - lazy loading doesn't work with IndexedStack
+    _loadPlaydates();
+    _initRealtime();
   }
 
   Future<void> _loadPlaydates() async {

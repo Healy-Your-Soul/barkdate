@@ -17,9 +17,26 @@ class SupabaseAuthWrapper extends StatefulWidget {
 
   @override
   State<SupabaseAuthWrapper> createState() => _SupabaseAuthWrapperState();
+
+  /// Clear profile cache (call when user signs out or updates profile)
+  static void clearProfileCache(String userId) {
+    _SupabaseAuthWrapperState.clearProfileCache(userId);
+  }
 }
 
 class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
+  // Cache profile status to avoid redundant database queries on app refresh
+  static final Map<String, ProfileStatus> _profileStatusCache = {};
+  static final Map<String, DateTime> _cacheTimestamps = {};
+  static const _cacheExpiry = Duration(minutes: 15);
+
+  /// Clear profile cache (call when user signs out or updates profile)
+  static void clearProfileCache(String userId) {
+    _profileStatusCache.remove('profile_status_$userId');
+    _cacheTimestamps.remove('profile_status_$userId');
+    debugPrint('🗑️ Cleared profile status cache for $userId');
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<AuthState>(
@@ -78,6 +95,37 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
   }
 
   Future<ProfileStatus> _checkUserProfileComplete(String userId) async {
+    // Check cache first for instant app refresh
+    final cacheKey = 'profile_status_$userId';
+    final cachedStatus = _profileStatusCache[cacheKey];
+    final cacheTime = _cacheTimestamps[cacheKey];
+    
+    if (cachedStatus != null && cacheTime != null) {
+      final age = DateTime.now().difference(cacheTime);
+      if (age <= _cacheExpiry) {
+        debugPrint('✓ Returning CACHED profile status for $userId (age: ${age.inSeconds}s)');
+        
+        // Verify in background (don't block UI)
+        _verifyProfileStatusInBackground(userId);
+        
+        return cachedStatus;
+      } else {
+        debugPrint('⚠️ Profile status cache expired for $userId (age: ${age.inSeconds}s)');
+      }
+    }
+
+    // No cache or expired - fetch fresh
+    debugPrint('Fetching FRESH profile status for $userId');
+    final status = await _fetchProfileStatus(userId);
+    
+    // Cache the result
+    _profileStatusCache[cacheKey] = status;
+    _cacheTimestamps[cacheKey] = DateTime.now();
+    
+    return status;
+  }
+
+  Future<ProfileStatus> _fetchProfileStatus(String userId) async {
     try {
       // Check if user has profile in Supabase
       final userResponse = await Supabase.instance.client
@@ -114,8 +162,30 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
       }
       
     } catch (e) {
-      print('Error checking user profile: $e');
+      debugPrint('Error checking user profile: $e');
       return ProfileStatus.needsFullSetup;
     }
+  }
+
+  void _verifyProfileStatusInBackground(String userId) {
+    // Verify in background without blocking UI
+    _fetchProfileStatus(userId).then((freshStatus) {
+      final cacheKey = 'profile_status_$userId';
+      final cachedStatus = _profileStatusCache[cacheKey];
+      
+      if (freshStatus != cachedStatus) {
+        // Status changed! Update cache and possibly navigate
+        debugPrint('⚠️ Profile status changed from $cachedStatus to $freshStatus');
+        _profileStatusCache[cacheKey] = freshStatus;
+        _cacheTimestamps[cacheKey] = DateTime.now();
+        
+        // If user needs onboarding now, trigger rebuild to show correct screen
+        if (mounted && freshStatus != ProfileStatus.complete) {
+          setState(() {});
+        }
+      }
+    }).catchError((e) {
+      debugPrint('Background profile verification failed: $e');
+    });
   }
 }

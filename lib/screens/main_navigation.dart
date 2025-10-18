@@ -24,20 +24,31 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
   String? _dogAvatarUrl;
-
-  final List<Widget> _screens = [
-    const FeedScreen(),
-    const MapScreen(),
-    const EventsScreen(),
-    const PlaydatesScreen(),
-    const MessagesScreen(),
-    const ProfileScreen(),
-  ];
+  
+  // Simple direct screen selection - no caching needed
+  Widget _getScreen(int index) {
+    switch (index) {
+      case 0:
+        return const FeedScreen();
+      case 1:
+        return const MapScreen();
+      case 2:
+        return const EventsScreen();
+      case 3:
+        return const PlaydatesScreen();
+      case 4:
+        return const MessagesScreen();
+      case 5:
+        return const ProfileScreen();
+      default:
+        return const FeedScreen();
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _loadDogAvatar();
+    // Don't load avatar eagerly - only load when Profile tab is accessed
   }
 
   Future<void> _loadDogAvatar() async {
@@ -58,15 +69,17 @@ class _MainNavigationState extends State<MainNavigation> {
 
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
+    
+    // Load avatar only when Profile tab (index 5) is first accessed
+    if (index == 5 && _dogAvatarUrl == null) {
+      _loadDogAvatar();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
-      ),
+      body: _getScreen(_selectedIndex), // Only create and show the active screen
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,

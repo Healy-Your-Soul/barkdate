@@ -5,6 +5,7 @@ import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/settings_service.dart';
+import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -32,8 +33,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Navigator.of(context).pop();
                 
                 try {
+                  final userId = SupabaseConfig.auth.currentUser?.id;
+                  
                   // Real Supabase sign out! 🚪
                   await SupabaseAuth.signOut();
+                  
+                  // Clear profile status cache to prevent stale data on next sign-in
+                  if (userId != null) {
+                    SupabaseAuthWrapper.clearProfileCache(userId);
+                  }
                   
                   // Navigate to sign in and clear all previous routes
                   Navigator.of(context).pushAndRemoveUntil(

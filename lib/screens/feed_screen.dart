@@ -42,6 +42,7 @@ class _FeedScreenState extends State<FeedScreen> {
   FilterOptions _filterOptions = FilterOptions();
   bool _isRefreshing = false;
   bool _isLoading = true;
+  bool _isInitialLoading = false;
   List<Dog> _nearbyDogs = [];
   String? _error;
   int _upcomingPlaydates = 0;
@@ -56,14 +57,12 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   void initState() {
     super.initState();
-    
-    // Load data immediately since Feed is the default tab
-    Future.wait([
-      _loadNearbyDogs(),
-      _loadDashboardData(),
-      _loadCheckInStatus(),
-      _loadFeedSections(),
-    ]).then((_) {
+    _isInitialLoading = true;
+    // Hydrate UI immediately from cache (if any), then refresh in background
+    setState(() {
+      _hydrateFromCache();
+    });
+    _loadAllFeedData().then((_) {
       _setupRealtimeSubscriptions();
     });
   }
@@ -72,8 +71,8 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   void didUpdateWidget(FeedScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Refresh feed when widget updates (e.g., user returns from event creation)
-    _refreshFeed();
+    // Don't automatically refresh on every rebuild - user can pull-to-refresh manually
+    // This prevents unnecessary API calls when the widget rebuilds for other reasons
   }
 
   List<Dog> get _filteredDogs {
@@ -152,15 +151,214 @@ class _FeedScreenState extends State<FeedScreen> {
 
   Future<void> _refreshFeed() async {
     setState(() => _isRefreshing = true);
-    
-    // Reload fresh data from database! 🔄
-    await Future.wait([
-      _loadNearbyDogs(),
-      _loadDashboardData(),
-      _loadFeedSections(), // Add this to refresh events and playdates
-    ]);
-    
+    await _loadAllFeedData();
     setState(() => _isRefreshing = false);
+  }
+
+  // Unified, batched loader to prevent staged UI updates
+  Future<void> _loadAllFeedData() async {
+    try {
+      final user = SupabaseAuth.currentUser;
+      if (user == null) {
+        _loadSampleFeedData();
+        setState(() {
+          _nearbyDogs = SampleData.nearbyDogs;
+          _isInitialLoading = false;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Resolve myDogId without triggering UI updates
+      String? myDogId;
+      try {
+        final userDogs = await BarkDateUserService.getUserDogs(user.id);
+        if (userDogs.isNotEmpty) {
+          myDogId = userDogs.first['id'] as String?;
+        }
+      } catch (_) {}
+
+      // Fetch all sections in parallel WITHOUT intermediate setState
+      final results = await Future.wait([
+        // Nearby dogs
+        BarkDateMatchService.getNearbyDogs(user.id).catchError((_) => <Map<String, dynamic>>[]),
+        // Playdates
+        PlaydateQueryService.getUserPlaydatesAggregated(user.id).catchError((_) => {'upcoming': <Map<String, dynamic>>[]}),
+        // My events
+        EventService.getUserParticipatingEvents(user.id).catchError((_) => <Event>[]),
+        // Suggested events
+        (myDogId != null
+            ? EventService.getRecommendedEvents(dogId: myDogId!, dogAge: '3', dogSize: 'medium')
+            : EventService.getUpcomingEvents(limit: 8)).catchError((_) => <Event>[]),
+        // Friends
+        (myDogId != null
+            ? DogFriendshipService.getDogFriends(myDogId!)
+            : Future.value(<Map<String, dynamic>>[])).catchError((_) => <Map<String, dynamic>>[]),
+        // Dashboard counters
+        _getUpcomingPlaydatesCount(user.id).catchError((_) => 0),
+        notif_service.NotificationService.getUnreadCount(user.id).catchError((_) => 0),
+        _getMutualBarksCount(user.id).catchError((_) => 0),
+        // Check-in status
+        CheckInService.getActiveCheckIn(user.id).catchError((_) => null),
+      ]);
+
+      // Unpack
+      final nearbyDogsRaw = (results[0] as List).cast<Map<String, dynamic>>();
+      final playdatesMap = (results[1] as Map);
+      final myEvents = (results[2] as List).cast<Event>();
+      final suggestedEvents = (results[3] as List).cast<Event>();
+      final friends = (results[4] as List).cast<Map<String, dynamic>>();
+      final upcomingCount = results[5] as int;
+      final unreadCount = results[6] as int;
+      final mutualCount = results[7] as int;
+      final activeCheckIn = results[8];
+
+      // Convert nearby dogs → Dog model
+      final List<Dog> nearbyDogs = nearbyDogsRaw.map<Dog>((data) {
+        final userData = data['users'] as Map<String, dynamic>?;
+        return Dog(
+          id: data['id'] as String,
+          name: data['name'] as String,
+          breed: data['breed'] as String,
+          age: data['age'] as int,
+          size: data['size'] as String,
+          gender: data['gender'] as String,
+          bio: data['bio'] as String? ?? '',
+          photos: List<String>.from(data['photo_urls'] ?? []),
+          ownerId: (data['user_id'] ?? userData?['id'] ?? '') as String,
+          ownerName: userData?['name'] as String? ?? 'Unknown Owner',
+          distanceKm: 2.5,
+        );
+      }).toList();
+
+      // Playdates list
+      final playdates = (playdatesMap['upcoming'] as List?)?.cast<Map<String, dynamic>>() ?? <Map<String, dynamic>>[];
+
+      // Persist caches for fast next render
+      final uidForCache = SupabaseAuth.currentUser?.id;
+      if (uidForCache != null) {
+        CacheService().cacheNearbyDogs(uidForCache, nearbyDogsRaw);
+        CacheService().cachePlaydateList(uidForCache, 'upcoming', playdates);
+        CacheService().cacheEventList('suggested_${uidForCache}', suggestedEvents);
+        if (myDogId != null && friends.isNotEmpty) {
+          CacheService().cacheFriendList('user_${uidForCache}', friends);
+        }
+      }
+
+      // Single setState for ALL sections
+      if (mounted) {
+        setState(() {
+          _nearbyDogs = nearbyDogs;
+          _upcomingFeedPlaydates = playdates;
+          _myEvents = myEvents;
+          _suggestedEvents = suggestedEvents;
+          _friendDogs = friends;
+          _upcomingPlaydates = upcomingCount;
+          _unreadNotifications = unreadCount;
+          _mutualBarks = mutualCount;
+          _hasActiveCheckIn = activeCheckIn != null;
+          _isInitialLoading = false;
+          _isLoading = false;
+        });
+      }
+
+      // Cache after update
+      // (Already cached above)
+
+      if (_upcomingFeedPlaydates.isEmpty && _myEvents.isEmpty && _suggestedEvents.isEmpty && _friendDogs.isEmpty) {
+        _loadSampleFeedData();
+      }
+    } catch (e) {
+      debugPrint('Error in _loadAllFeedData: $e');
+      _loadSampleFeedData();
+      if (mounted) {
+        setState(() {
+          _isInitialLoading = false;
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // ===== Cache-first helpers =====
+  bool get _hasAnyData =>
+      _nearbyDogs.isNotEmpty ||
+      _upcomingFeedPlaydates.isNotEmpty ||
+      _myEvents.isNotEmpty ||
+      _suggestedEvents.isNotEmpty ||
+      _friendDogs.isNotEmpty;
+
+  void _hydrateFromCache() {
+    final user = SupabaseAuth.currentUser;
+    if (user == null) return;
+
+    final cachedNearbyRaw = CacheService().getCachedNearbyDogs(user.id);
+    if (cachedNearbyRaw != null && cachedNearbyRaw.isNotEmpty) {
+      _nearbyDogs = cachedNearbyRaw.map<Dog>((data) {
+        final userData = data['users'] as Map<String, dynamic>?;
+        return Dog(
+          id: data['id'] as String,
+          name: data['name'] as String,
+          breed: data['breed'] as String,
+          age: data['age'] as int,
+          size: data['size'] as String,
+          gender: data['gender'] as String,
+          bio: data['bio'] as String? ?? '',
+          photos: List<String>.from(data['photo_urls'] ?? []),
+          ownerId: (data['user_id'] ?? userData?['id'] ?? '') as String,
+          ownerName: userData?['name'] as String? ?? 'Unknown Owner',
+          distanceKm: 2.5,
+        );
+      }).toList();
+    }
+
+    final pd = CacheService().getCachedPlaydateList(user.id, 'upcoming');
+    if (pd != null) _upcomingFeedPlaydates = pd;
+
+    final se = CacheService().getCachedEventList('suggested_${user.id}');
+    if (se != null) _suggestedEvents = se.cast<Event>();
+
+    final fr = CacheService().getCachedFriendList('user_${user.id}');
+    if (fr != null) _friendDogs = fr;
+  }
+
+  Widget _buildFeedSkeleton() {
+    return ListView(
+      children: [
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Container(height: 20, width: 140, color: Colors.white10),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 80,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemBuilder: (_, __) => Container(
+              width: 90,
+              decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(12)),
+            ),
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemCount: 5,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Container(height: 20, width: 180, color: Colors.white10),
+        ),
+        const SizedBox(height: 12),
+        ...List.generate(4, (_) => Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Container(
+                height: 110,
+                decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(12)),
+              ),
+            )),
+      ],
+    );
   }
 
   Future<void> _loadDashboardData() async {
@@ -561,6 +759,24 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Show skeleton on true first load (no cache available yet)
+    if (_isInitialLoading && !_hasAnyData) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Nearby Friends',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+            ),
+          ),
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          elevation: 0,
+        ),
+        body: _buildFeedSkeleton(),
+      );
+    }
+    
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -886,8 +1102,7 @@ class _FeedScreenState extends State<FeedScreen> {
         padding: EdgeInsets.all(padding.left * 0.8), // Slightly less padding
         onTap: onTap,
         child: Column(
-          mainAxisSize: MainAxisSize.min, // Minimize size to prevent overflow
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center, // Center content
           children: [
             Stack(
               clipBehavior: Clip.none,
@@ -929,14 +1144,14 @@ class _FeedScreenState extends State<FeedScreen> {
             const SizedBox(height: 2), // Reduced spacing to prevent overflow
             Flexible( // Allow text to shrink if needed
               child: Text(
-                title,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  fontSize: AppResponsive.fontSize(context, 11),
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              title,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                fontSize: AppResponsive.fontSize(context, 11),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

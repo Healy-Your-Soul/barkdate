@@ -16,6 +16,7 @@ class CacheService {
   static const Duration playdateListTTL = Duration(minutes: 2);
   static const Duration eventListTTL = Duration(minutes: 2);
   static const Duration friendListTTL = Duration(minutes: 3);
+  static const Duration nearbyDogsTTL = Duration(minutes: 5);
 
   /// Get cached value
   T? get<T>(String key) {
@@ -102,6 +103,16 @@ class CacheService {
   /// Get cached friend list
   List<Map<String, dynamic>>? getCachedFriendList(String dogId) {
     return get<List<Map<String, dynamic>>>('friends_$dogId');
+  }
+
+  /// Cache nearby dogs (raw rows) per user
+  void cacheNearbyDogs(String userId, List<Map<String, dynamic>> rawDogs) {
+    set('nearby_$userId', rawDogs, nearbyDogsTTL);
+  }
+
+  /// Get cached nearby dogs (raw rows)
+  List<Map<String, dynamic>>? getCachedNearbyDogs(String userId) {
+    return get<List<Map<String, dynamic>>>('nearby_$userId');
   }
 
   /// Invalidate user-related caches

@@ -3,6 +3,11 @@ import 'package:flutter/foundation.dart';
 
 /// BarkDate-specific Supabase service classes
 class BarkDateUserService {
+  // Cache for getUserDogs to prevent duplicate API calls
+  static final Map<String, List<Map<String, dynamic>>> _userDogsCache = {};
+  static final Map<String, DateTime> _cacheTimestamps = {};
+  static const _cacheExpiryMinutes = 5;
+
   /// Get user profile
   static Future<Map<String, dynamic>?> getUserProfile(String userId) async {
     return await SupabaseService.selectSingle(
@@ -171,7 +176,23 @@ class BarkDateUserService {
 
   /// Get user's dogs (including shared access)
   static Future<List<Map<String, dynamic>>> getUserDogs(String userId) async {
-    debugPrint('=== GET USER DOGS DEBUG ===');
+    // Check cache first
+    final cacheKey = 'user_dogs_$userId';
+    final now = DateTime.now();
+    
+    if (_userDogsCache.containsKey(cacheKey) && _cacheTimestamps.containsKey(cacheKey)) {
+      final cacheTime = _cacheTimestamps[cacheKey]!;
+      final ageSeconds = now.difference(cacheTime).inSeconds;
+      
+      if (now.difference(cacheTime).inMinutes < _cacheExpiryMinutes) {
+        debugPrint('✓ Returning CACHED user dogs for $userId (age: ${ageSeconds}s)');
+        return _userDogsCache[cacheKey]!;
+      } else {
+        debugPrint('⚠ Cache expired for $userId (age: ${ageSeconds}s)');
+      }
+    }
+    
+    debugPrint('=== GET USER DOGS DEBUG (FRESH FETCH) ===');
     debugPrint('Getting dogs for user ID: $userId');
     debugPrint('Search filters: {user_id: $userId, is_active: true}');
     
@@ -190,6 +211,10 @@ class BarkDateUserService {
     // );
     
     final allDogs = [...ownedDogs]; // + sharedDogs when implemented
+    
+    // Cache the result
+    _userDogsCache[cacheKey] = allDogs;
+    _cacheTimestamps[cacheKey] = now;
     
     debugPrint('Found ${allDogs.length} dogs for user (${ownedDogs.length} owned)');
     for (var dog in allDogs) {
@@ -210,6 +235,22 @@ class BarkDateUserService {
     debugPrint('=== END GET USER DOGS DEBUG ===');
     
     return allDogs;
+  }
+
+  /// Clear the getUserDogs cache for a specific user
+  /// Call this after updating dog profiles to ensure fresh data
+  static void clearUserDogsCache(String userId) {
+    final cacheKey = 'user_dogs_$userId';
+    _userDogsCache.remove(cacheKey);
+    _cacheTimestamps.remove(cacheKey);
+    debugPrint('🗑️ Cleared getUserDogs cache for user: $userId');
+  }
+
+  /// Clear all getUserDogs cache
+  static void clearAllUserDogsCache() {
+    _userDogsCache.clear();
+    _cacheTimestamps.clear();
+    debugPrint('🗑️ Cleared all getUserDogs cache');
   }
 
   /// Add new dog with enhanced ownership support

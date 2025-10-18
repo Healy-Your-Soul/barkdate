@@ -7,6 +7,7 @@ import 'package:barkdate/services/photo_upload_service.dart';
 import 'package:barkdate/screens/main_navigation.dart';
 import 'package:barkdate/widgets/enhanced_image_picker.dart';
 import 'package:barkdate/services/selected_image.dart';
+import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 
 enum EditMode { createProfile, editDog, editOwner, editBoth }
 
@@ -466,6 +467,12 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             backgroundColor: Colors.green,
           ),
         );
+        
+        // Clear profile cache so it fetches fresh status (now has dog profile)
+        final uid = SupabaseConfig.auth.currentUser?.id;
+        if (uid != null) {
+          SupabaseAuthWrapper.clearProfileCache(uid);
+        }
         
         // Navigate to main app
         Navigator.pushAndRemoveUntil(
