@@ -70,9 +70,10 @@ class _FeedScreenState extends State<FeedScreen> {
 
 
   @override
-  void dispose() {
-    _cancelSubscriptions();
-    super.dispose();
+  void didUpdateWidget(FeedScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Refresh feed when widget updates (e.g., user returns from event creation)
+    _refreshFeed();
   }
 
   List<Dog> get _filteredDogs {
@@ -156,6 +157,7 @@ class _FeedScreenState extends State<FeedScreen> {
     await Future.wait([
       _loadNearbyDogs(),
       _loadDashboardData(),
+      _loadFeedSections(), // Add this to refresh events and playdates
     ]);
     
     setState(() => _isRefreshing = false);
