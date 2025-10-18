@@ -52,42 +52,22 @@ class _FeedScreenState extends State<FeedScreen> {
   List<Event> _myEvents = [];
   List<Event> _suggestedEvents = [];
   List<Map<String, dynamic>> _friendDogs = [];
-  bool _hasInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    // Don't load data here - wait for didChangeDependencies to ensure screen is visible
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
     
-    // Only load once when screen becomes visible
-    if (!_hasInitialized) {
-      _hasInitialized = true;
-      
-      // Check if this route is currently active/visible
-      final route = ModalRoute.of(context);
-      if (route != null && route.isCurrent) {
-        _initializeScreen();
-      }
-    }
-  }
-
-  Future<void> _initializeScreen() async {
-    // Load all data in parallel for faster initial load
-    await Future.wait([
+    // Load data immediately since Feed is the default tab
+    Future.wait([
       _loadNearbyDogs(),
       _loadDashboardData(),
       _loadCheckInStatus(),
       _loadFeedSections(),
-    ]);
-    
-    // Setup subscriptions after initial load
-    _setupRealtimeSubscriptions();
+    ]).then((_) {
+      _setupRealtimeSubscriptions();
+    });
   }
+
 
   @override
   void dispose() {

@@ -61,12 +61,11 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     if (!_hasInitialized) {
       _hasInitialized = true;
       
-      // Check if this route is currently active/visible
-      final route = ModalRoute.of(context);
-      if (route != null && route.isCurrent) {
+      // Use post-frame callback to ensure screen is ready
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadPlaydates();
         _initRealtime();
-      }
+      });
     }
   }
 
