@@ -30,6 +30,7 @@ import 'package:barkdate/services/event_service.dart';
 import 'package:barkdate/models/event.dart';
 // Cache service
 import 'package:barkdate/services/cache_service.dart';
+import 'package:barkdate/services/preload_service.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -39,10 +40,14 @@ class FeedScreen extends StatefulWidget {
 }
 
 class _FeedScreenState extends State<FeedScreen> {
+  // Static flag to prevent multiple FeedScreen instances from loading simultaneously
+  static bool _isGloballyLoading = false;
+  
   FilterOptions _filterOptions = FilterOptions();
   bool _isRefreshing = false;
   bool _isLoading = true;
   bool _isInitialLoading = false;
+  bool _hasLoadedOnce = false; // Prevent double loading
   List<Dog> _nearbyDogs = [];
   String? _error;
   int _upcomingPlaydates = 0;
@@ -63,6 +68,7 @@ class _FeedScreenState extends State<FeedScreen> {
       _hydrateFromCache();
     });
     _loadAllFeedData().then((_) {
+      _hasLoadedOnce = true; // Mark as loaded to prevent double loading
       _setupRealtimeSubscriptions();
     });
   }
@@ -151,12 +157,29 @@ class _FeedScreenState extends State<FeedScreen> {
 
   Future<void> _refreshFeed() async {
     setState(() => _isRefreshing = true);
+    // Allow refresh even after first load
+    final wasLoadedOnce = _hasLoadedOnce;
+    _hasLoadedOnce = false; // Temporarily allow loading
     await _loadAllFeedData();
+    _hasLoadedOnce = wasLoadedOnce; // Restore state
     setState(() => _isRefreshing = false);
   }
 
   // Unified, batched loader to prevent staged UI updates
   Future<void> _loadAllFeedData() async {
+    // Prevent double loading - only load once per session
+    if (_hasLoadedOnce) {
+      debugPrint('⚠️ Skipping double load - already loaded once');
+      return;
+    }
+    
+    // Prevent multiple FeedScreen instances from loading simultaneously
+    if (_isGloballyLoading) {
+      debugPrint('⚠️ Skipping load - another FeedScreen is already loading');
+      return;
+    }
+    _isGloballyLoading = true;
+
     try {
       final user = SupabaseAuth.currentUser;
       if (user == null) {
@@ -229,6 +252,9 @@ class _FeedScreenState extends State<FeedScreen> {
           _isInitialLoading = false;
         });
         debugPrint('⚡ INSTANT: Feed rendered from cache in ~1ms');
+      } else {
+        // No cached data - this shouldn't happen if SupabaseAuthWrapper is working correctly
+        debugPrint('⚠️ No cached data found - cache warming should have completed before FeedScreen loads');
       }
 
       // 2. BACKGROUND: Fetch fresh data silently (don't block UI)
@@ -333,6 +359,8 @@ class _FeedScreenState extends State<FeedScreen> {
           _isLoading = false;
         });
       }
+    } finally {
+      _isGloballyLoading = false; // Reset global flag
     }
   }
 

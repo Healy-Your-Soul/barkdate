@@ -68,17 +68,26 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
 
               switch (profileSnapshot.data) {
                 case ProfileStatus.complete:
-                  // Profile complete, warm caches and go to main app
+                  // Profile complete, warm caches first then show app
+                  debugPrint('🚀 Profile complete - warming caches for ${session.user.id}');
                   return FutureBuilder<void>(
                     future: PreloadService.warmFeedCaches(session.user.id),
                     builder: (context, cacheSnapshot) {
                       if (cacheSnapshot.connectionState == ConnectionState.waiting) {
                         return const Scaffold(
                           body: Center(
-                            child: CircularProgressIndicator(),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircularProgressIndicator(),
+                                SizedBox(height: 16),
+                                Text('Loading your feed...'),
+                              ],
+                            ),
                           ),
                         );
                       }
+                      debugPrint('✅ Cache warming completed - showing MainNavigation');
                       return const MainNavigation();
                     },
                   );
