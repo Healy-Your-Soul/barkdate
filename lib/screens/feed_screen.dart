@@ -58,11 +58,55 @@ class _FeedScreenState extends State<FeedScreen> {
   List<Event> _myEvents = [];
   List<Event> _suggestedEvents = [];
   List<Map<String, dynamic>> _friendDogs = [];
+  String? _myPrimaryDogId;
+  final ScrollController _scrollController = ScrollController();
+
+  // Pagination state
+  static const int _dogsPageSize = 20;
+  static const int _playdatesPageSize = 20;
+  static const int _eventsPageSize = 20;
+  static const int _friendsPageSize = 20;
+
+  int _nearbyDogsPage = 0;
+  bool _hasMoreNearbyDogs = true;
+  bool _isLoadingMoreDogs = false;
+
+  int _playdatesPage = 0;
+  bool _hasMorePlaydates = true;
+  bool _isLoadingMorePlaydates = false;
+
+  int _myEventsPage = 0;
+  bool _hasMoreMyEvents = true;
+  bool _isLoadingMoreMyEvents = false;
+
+  int _suggestedEventsPage = 0;
+  bool _hasMoreSuggestedEvents = true;
+  bool _isLoadingMoreSuggestedEvents = false;
+
+  int _friendsPage = 0;
+  bool _hasMoreFriends = true;
+  bool _isLoadingMoreFriends = false;
+
+  void _handleScrollPagination() {
+    if (!_hasMoreNearbyDogs || _isLoadingMoreDogs || _isRefreshing) {
+      return;
+    }
+
+    if (!_scrollController.hasClients) {
+      return;
+    }
+
+    final threshold = _scrollController.position.maxScrollExtent - 400;
+    if (_scrollController.position.pixels >= threshold) {
+      _loadMoreNearbyDogs();
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _isInitialLoading = true;
+    _scrollController.addListener(_handleScrollPagination);
     // Hydrate UI immediately from cache (if any), then refresh in background
     setState(() {
       _hydrateFromCache();
@@ -71,6 +115,13 @@ class _FeedScreenState extends State<FeedScreen> {
       _hasLoadedOnce = true; // Mark as loaded to prevent double loading
       _setupRealtimeSubscriptions();
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_handleScrollPagination);
+    _scrollController.dispose();
+    super.dispose();
   }
 
 
@@ -102,6 +153,31 @@ class _FeedScreenState extends State<FeedScreen> {
     }).toList();
   }
 
+  Dog _mapDogFromRaw(Map<String, dynamic> data) {
+    final userData = data['users'] as Map<String, dynamic>?;
+    final photosRaw = data['photo_urls'] ?? data['photos'] ?? data['photoUrls'] ?? [];
+    final ownerNameValue = data['owner_name'] ?? userData?['name'] ?? 'Unknown Owner';
+    final ownerIdValue = data['user_id'] ?? userData?['id'] ?? '';
+    final distance = (data['distance_km'] ?? data['distanceKm']) as num?;
+
+    return Dog(
+      id: data['id'] as String? ?? '',
+      name: data['name'] as String? ?? 'Doggo',
+      breed: data['breed'] as String? ?? 'Mixed',
+      age: (data['age'] as num?)?.toInt() ?? 0,
+      size: data['size'] as String? ?? 'medium',
+      gender: data['gender'] as String? ?? 'unknown',
+      bio: data['bio'] as String? ?? '',
+      photos: ((photosRaw as List?) ?? [])
+          .whereType<dynamic>()
+          .map((e) => e.toString())
+          .toList(),
+      ownerId: ownerIdValue.toString(),
+      ownerName: ownerNameValue.toString(),
+      distanceKm: distance?.toDouble() ?? 0.0,
+    );
+  }
+
   Future<void> _loadNearbyDogs() async {
     try {
       setState(() {
@@ -111,46 +187,220 @@ class _FeedScreenState extends State<FeedScreen> {
 
       final user = SupabaseAuth.currentUser;
       if (user == null) {
-        // If not logged in, show sample data
         setState(() {
           _nearbyDogs = SampleData.nearbyDogs;
+          _hasMoreNearbyDogs = false;
           _isLoading = false;
         });
         return;
       }
 
-      // Get real nearby dogs from database! 🎉
-      final dogData = await BarkDateMatchService.getNearbyDogs(user.id);
-      
-      // Convert database data to Dog objects
-      final List<Dog> dogs = dogData.map<Dog>((data) {
-        final userData = data['users'] as Map<String, dynamic>?;
-        return Dog(
-          id: data['id'] as String,
-          name: data['name'] as String,
-          breed: data['breed'] as String,
-          age: data['age'] as int,
-          size: data['size'] as String,
-          gender: data['gender'] as String,
-          bio: data['bio'] as String? ?? '',
-          photos: List<String>.from(data['photo_urls'] ?? []),
-          ownerId: (data['user_id'] ?? userData?['id'] ?? '') as String,
-          ownerName: userData?['name'] as String? ?? 'Unknown Owner',
-          distanceKm: 2.5, // TODO: Calculate real distance based on location
-        );
-      }).toList();
+      final dogData = await BarkDateMatchService.getNearbyDogs(
+        user.id,
+        limit: _dogsPageSize,
+        offset: 0,
+      );
+
+      final dogs = dogData.map(_mapDogFromRaw).toList();
 
       setState(() {
         _nearbyDogs = dogs;
+        _nearbyDogsPage = 0;
+        _hasMoreNearbyDogs = dogData.length >= _dogsPageSize;
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading nearby dogs: $e');
+      debugPrint('Error loading nearby dogs: $e');
       setState(() {
         _error = e.toString();
-        _isLoading = false;
-        // Fallback to sample data
         _nearbyDogs = SampleData.nearbyDogs;
+        _hasMoreNearbyDogs = false;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadMoreNearbyDogs() async {
+    final user = SupabaseAuth.currentUser;
+    if (user == null || !_hasMoreNearbyDogs || _isLoadingMoreDogs) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingMoreDogs = true;
+    });
+
+    try {
+      final nextPage = _nearbyDogsPage + 1;
+      final offset = nextPage * _dogsPageSize;
+      final dogData = await BarkDateMatchService.getNearbyDogs(
+        user.id,
+        limit: _dogsPageSize,
+        offset: offset,
+      );
+
+      final dogs = dogData.map(_mapDogFromRaw).toList();
+
+      setState(() {
+        _nearbyDogs.addAll(dogs);
+        _nearbyDogsPage = nextPage;
+        _hasMoreNearbyDogs = dogData.length >= _dogsPageSize;
+        _isLoadingMoreDogs = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading more nearby dogs: $e');
+      setState(() {
+        _isLoadingMoreDogs = false;
+        _hasMoreNearbyDogs = false;
+      });
+    }
+  }
+
+  Future<void> _loadMorePlaydates() async {
+    final user = SupabaseAuth.currentUser;
+    if (user == null || !_hasMorePlaydates || _isLoadingMorePlaydates) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingMorePlaydates = true;
+    });
+
+    try {
+      final nextPage = _playdatesPage + 1;
+      final offset = nextPage * _playdatesPageSize;
+      final data = await PlaydateQueryService.getUserPlaydatesAggregated(
+        user.id,
+        upcomingLimit: _playdatesPageSize,
+        upcomingOffset: offset,
+      );
+      final upcoming = (data['upcoming'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+
+      setState(() {
+        _upcomingFeedPlaydates.addAll(upcoming);
+        _playdatesPage = nextPage;
+        _hasMorePlaydates = upcoming.length >= _playdatesPageSize;
+        _isLoadingMorePlaydates = false;
+      });
+
+      if (upcoming.isNotEmpty) {
+        CacheService().cachePlaydateList(user.id, 'upcoming', _upcomingFeedPlaydates);
+      }
+    } catch (e) {
+      debugPrint('Error loading more playdates: $e');
+      setState(() {
+        _isLoadingMorePlaydates = false;
+        _hasMorePlaydates = false;
+      });
+    }
+  }
+
+  Future<void> _loadMoreMyEvents() async {
+    final user = SupabaseAuth.currentUser;
+    if (user == null || !_hasMoreMyEvents || _isLoadingMoreMyEvents) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingMoreMyEvents = true;
+    });
+
+    try {
+      final nextPage = _myEventsPage + 1;
+      final offset = nextPage * _eventsPageSize;
+      final events = await EventService.getUserParticipatingEvents(
+        user.id,
+        limit: _eventsPageSize,
+        offset: offset,
+      );
+
+      setState(() {
+        _myEvents.addAll(events);
+        _myEventsPage = nextPage;
+        _hasMoreMyEvents = events.length >= _eventsPageSize;
+        _isLoadingMoreMyEvents = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading more my events: $e');
+      setState(() {
+        _isLoadingMoreMyEvents = false;
+        _hasMoreMyEvents = false;
+      });
+    }
+  }
+
+  Future<void> _loadMoreSuggestedEvents() async {
+    if (!_hasMoreSuggestedEvents || _isLoadingMoreSuggestedEvents) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingMoreSuggestedEvents = true;
+    });
+
+    try {
+      final nextPage = _suggestedEventsPage + 1;
+      final offset = nextPage * _eventsPageSize;
+      final events = await EventService.getUpcomingEvents(
+        limit: _eventsPageSize,
+        offset: offset,
+      );
+
+      setState(() {
+        _suggestedEvents.addAll(events);
+        _suggestedEventsPage = nextPage;
+        _hasMoreSuggestedEvents = events.length >= _eventsPageSize;
+        _isLoadingMoreSuggestedEvents = false;
+      });
+
+      final user = SupabaseAuth.currentUser;
+      if (user != null && events.isNotEmpty) {
+        CacheService().cacheEventList('suggested_${user.id}', _suggestedEvents);
+      }
+    } catch (e) {
+      debugPrint('Error loading more suggested events: $e');
+      setState(() {
+        _isLoadingMoreSuggestedEvents = false;
+        _hasMoreSuggestedEvents = false;
+      });
+    }
+  }
+
+  Future<void> _loadMoreFriends() async {
+    final dogId = _myPrimaryDogId;
+    if (dogId == null || !_hasMoreFriends || _isLoadingMoreFriends) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingMoreFriends = true;
+    });
+
+    try {
+      final nextPage = _friendsPage + 1;
+      final offset = nextPage * _friendsPageSize;
+      final friends = await DogFriendshipService.getDogFriends(
+        dogId,
+        limit: _friendsPageSize,
+        offset: offset,
+      );
+
+      setState(() {
+        _friendDogs.addAll(friends);
+        _friendsPage = nextPage;
+        _hasMoreFriends = friends.length >= _friendsPageSize;
+        _isLoadingMoreFriends = false;
+      });
+
+      final user = SupabaseAuth.currentUser;
+      if (user != null && friends.isNotEmpty) {
+        CacheService().cacheFriendList('user_${user.id}', _friendDogs);
+      }
+    } catch (e) {
+      debugPrint('Error loading more friends: $e');
+      setState(() {
+        _isLoadingMoreFriends = false;
+        _hasMoreFriends = false;
       });
     }
   }
@@ -203,26 +453,13 @@ class _FeedScreenState extends State<FeedScreen> {
       debugPrint('🔍 Cache check for nearby dogs: ${cachedNearbyRaw?.length ?? 'null'}');
       if (cachedNearbyRaw != null && cachedNearbyRaw.isNotEmpty) {
         debugPrint('✓ Found cached nearby dogs: ${cachedNearbyRaw.length}');
-        final List<Dog> cachedDogs = cachedNearbyRaw.map<Dog>((data) {
-          final userData = data['users'] as Map<String, dynamic>?;
-          return Dog(
-            id: data['id'] as String,
-            name: data['name'] as String,
-            breed: data['breed'] as String,
-            age: data['age'] as int,
-            size: data['size'] as String,
-            gender: data['gender'] as String,
-            bio: data['bio'] as String? ?? '',
-            photos: List<String>.from(data['photo_urls'] ?? []),
-            ownerId: (data['user_id'] ?? userData?['id'] ?? '') as String,
-            ownerName: userData?['name'] as String? ?? 'Unknown Owner',
-            distanceKm: 2.5,
-          );
-        }).toList();
+        final List<Dog> cachedDogs = cachedNearbyRaw.map(_mapDogFromRaw).toList();
         
         if (mounted) {
           setState(() {
             _nearbyDogs = cachedDogs;
+            _nearbyDogsPage = 0;
+            _hasMoreNearbyDogs = cachedNearbyRaw.length >= _dogsPageSize;
             hasCachedData = true;
           });
         }
@@ -238,9 +475,21 @@ class _FeedScreenState extends State<FeedScreen> {
       if (cachedPlaydates != null || cachedEvents != null || cachedFriends != null) {
         if (mounted) {
           setState(() {
-            if (cachedPlaydates != null) _upcomingFeedPlaydates = cachedPlaydates;
-            if (cachedEvents != null) _suggestedEvents = cachedEvents.cast<Event>();
-            if (cachedFriends != null) _friendDogs = cachedFriends;
+            if (cachedPlaydates != null) {
+              _upcomingFeedPlaydates = cachedPlaydates;
+              _playdatesPage = 0;
+              _hasMorePlaydates = cachedPlaydates.length >= _playdatesPageSize;
+            }
+            if (cachedEvents != null) {
+              _suggestedEvents = cachedEvents.cast<Event>();
+              _suggestedEventsPage = 0;
+              _hasMoreSuggestedEvents = cachedEvents.length >= _eventsPageSize;
+            }
+            if (cachedFriends != null) {
+              _friendDogs = cachedFriends;
+              _friendsPage = 0;
+              _hasMoreFriends = cachedFriends.length >= _friendsPageSize;
+            }
             hasCachedData = true;
           });
         }
@@ -262,23 +511,52 @@ class _FeedScreenState extends State<FeedScreen> {
       
       // Resolve myDogId for fresh fetch
       String? myDogId;
+      int? myDogAge;
+      String? myDogSize;
       try {
         final userDogs = await BarkDateUserService.getUserDogs(user.id);
         if (userDogs.isNotEmpty) {
-          myDogId = userDogs.first['id'] as String?;
+          final primaryDog = userDogs.first;
+          myDogId = primaryDog['id'] as String?;
+          myDogAge = (primaryDog['age'] as num?)?.toInt();
+          myDogSize = (primaryDog['size'] as String?)?.toLowerCase();
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Error fetching primary dog: $e');
+      }
 
       // Fetch fresh data in parallel
       final results = await Future.wait([
-        BarkDateMatchService.getNearbyDogs(user.id).catchError((_) => <Map<String, dynamic>>[]),
-        PlaydateQueryService.getUserPlaydatesAggregated(user.id).catchError((_) => {'upcoming': <Map<String, dynamic>>[]}),
-        EventService.getUserParticipatingEvents(user.id).catchError((_) => <Event>[]),
+        BarkDateMatchService.getNearbyDogs(
+          user.id,
+          limit: _dogsPageSize,
+          offset: 0,
+        ).catchError((_) => <Map<String, dynamic>>[]),
+        PlaydateQueryService.getUserPlaydatesAggregated(
+          user.id,
+          upcomingLimit: _playdatesPageSize,
+          upcomingOffset: 0,
+        ).catchError((_) => {'upcoming': <Map<String, dynamic>>[]}),
+        EventService.getUserParticipatingEvents(
+          user.id,
+          limit: _eventsPageSize,
+          offset: 0,
+        ).catchError((_) => <Event>[]),
         (myDogId != null
-            ? EventService.getRecommendedEvents(dogId: myDogId!, dogAge: '3', dogSize: 'medium')
-            : EventService.getUpcomingEvents(limit: 8)).catchError((_) => <Event>[]),
+            ? EventService.getRecommendedEvents(
+                dogId: myDogId!,
+                dogAge: (myDogAge ?? 3).toString(),
+                dogSize: myDogSize ?? 'medium',
+                limit: _eventsPageSize,
+                offset: 0,
+              )
+            : EventService.getUpcomingEvents(limit: _eventsPageSize, offset: 0)).catchError((_) => <Event>[]),
         (myDogId != null
-            ? DogFriendshipService.getDogFriends(myDogId!)
+            ? DogFriendshipService.getDogFriends(
+                myDogId!,
+                limit: _friendsPageSize,
+                offset: 0,
+              )
             : Future.value(<Map<String, dynamic>>[])).catchError((_) => <Map<String, dynamic>>[]),
         _getUpcomingPlaydatesCount(user.id).catchError((_) => 0),
         notif_service.NotificationService.getUnreadCount(user.id).catchError((_) => 0),
@@ -301,22 +579,7 @@ class _FeedScreenState extends State<FeedScreen> {
       CacheService().cacheNearbyDogs(user.id, nearbyDogsRaw);
       
       // Convert fresh nearby dogs to Dog objects
-      final List<Dog> freshNearbyDogs = nearbyDogsRaw.map<Dog>((data) {
-        final userData = data['users'] as Map<String, dynamic>?;
-        return Dog(
-          id: data['id'] as String,
-          name: data['name'] as String,
-          breed: data['breed'] as String,
-          age: data['age'] as int,
-          size: data['size'] as String,
-          gender: data['gender'] as String,
-          bio: data['bio'] as String? ?? '',
-          photos: List<String>.from(data['photo_urls'] ?? []),
-          ownerId: (data['user_id'] ?? userData?['id'] ?? '') as String,
-          ownerName: userData?['name'] as String? ?? 'Unknown Owner',
-          distanceKm: 2.5,
-        );
-      }).toList();
+      final List<Dog> freshNearbyDogs = nearbyDogsRaw.map(_mapDogFromRaw).toList();
 
       // Playdates list
       final playdates = (playdatesMap['upcoming'] as List?)?.cast<Map<String, dynamic>>() ?? <Map<String, dynamic>>[];
@@ -325,16 +588,27 @@ class _FeedScreenState extends State<FeedScreen> {
       if (mounted) {
         setState(() {
           _nearbyDogs = freshNearbyDogs;
+          _nearbyDogsPage = 0;
+          _hasMoreNearbyDogs = nearbyDogsRaw.length >= _dogsPageSize;
           _upcomingFeedPlaydates = playdates;
+          _playdatesPage = 0;
+          _hasMorePlaydates = playdates.length >= _playdatesPageSize;
           _myEvents = myEvents;
+          _myEventsPage = 0;
+          _hasMoreMyEvents = myEvents.length >= _eventsPageSize;
           _suggestedEvents = suggestedEvents;
+          _suggestedEventsPage = 0;
+          _hasMoreSuggestedEvents = suggestedEvents.length >= _eventsPageSize;
           _friendDogs = friends;
+          _friendsPage = 0;
+          _hasMoreFriends = friends.length >= _friendsPageSize;
           _upcomingPlaydates = upcomingCount;
           _unreadNotifications = unreadCount;
           _mutualBarks = mutualCount;
           _hasActiveCheckIn = activeCheckIn != null;
           _isInitialLoading = false;
           _isLoading = false;
+          _myPrimaryDogId = myDogId;
         });
         debugPrint('✅ FRESH: Feed updated with fresh data');
       }
@@ -378,32 +652,31 @@ class _FeedScreenState extends State<FeedScreen> {
 
     final cachedNearbyRaw = CacheService().getCachedNearbyDogs(user.id);
     if (cachedNearbyRaw != null && cachedNearbyRaw.isNotEmpty) {
-      _nearbyDogs = cachedNearbyRaw.map<Dog>((data) {
-        final userData = data['users'] as Map<String, dynamic>?;
-        return Dog(
-          id: data['id'] as String,
-          name: data['name'] as String,
-          breed: data['breed'] as String,
-          age: data['age'] as int,
-          size: data['size'] as String,
-          gender: data['gender'] as String,
-          bio: data['bio'] as String? ?? '',
-          photos: List<String>.from(data['photo_urls'] ?? []),
-          ownerId: (data['user_id'] ?? userData?['id'] ?? '') as String,
-          ownerName: userData?['name'] as String? ?? 'Unknown Owner',
-          distanceKm: 2.5,
-        );
-      }).toList();
+      _nearbyDogs = cachedNearbyRaw.map(_mapDogFromRaw).toList();
+      _nearbyDogsPage = 0;
+      _hasMoreNearbyDogs = cachedNearbyRaw.length >= _dogsPageSize;
     }
 
     final pd = CacheService().getCachedPlaydateList(user.id, 'upcoming');
-    if (pd != null) _upcomingFeedPlaydates = pd;
+    if (pd != null) {
+      _upcomingFeedPlaydates = pd;
+      _playdatesPage = 0;
+      _hasMorePlaydates = pd.length >= _playdatesPageSize;
+    }
 
     final se = CacheService().getCachedEventList('suggested_${user.id}');
-    if (se != null) _suggestedEvents = se.cast<Event>();
+    if (se != null) {
+      _suggestedEvents = se.cast<Event>();
+      _suggestedEventsPage = 0;
+      _hasMoreSuggestedEvents = se.length >= _eventsPageSize;
+    }
 
     final fr = CacheService().getCachedFriendList('user_${user.id}');
-    if (fr != null) _friendDogs = fr;
+    if (fr != null) {
+      _friendDogs = fr;
+      _friendsPage = 0;
+      _hasMoreFriends = fr.length >= _friendsPageSize;
+    }
   }
 
   Widget _buildFeedSkeleton() {
@@ -597,6 +870,17 @@ class _FeedScreenState extends State<FeedScreen> {
     final now = DateTime.now();
     
     setState(() {
+      _hasMoreNearbyDogs = false;
+      _hasMorePlaydates = false;
+      _hasMoreMyEvents = false;
+      _hasMoreSuggestedEvents = false;
+      _hasMoreFriends = false;
+      _nearbyDogsPage = 0;
+      _playdatesPage = 0;
+      _myEventsPage = 0;
+      _suggestedEventsPage = 0;
+      _friendsPage = 0;
+      _myPrimaryDogId = null;
       // Sample upcoming playdates
       _upcomingFeedPlaydates = [
         {
@@ -902,6 +1186,7 @@ class _FeedScreenState extends State<FeedScreen> {
       body: RefreshIndicator(
         onRefresh: _refreshFeed,
         child: CustomScrollView(
+          controller: _scrollController,
           slivers: [
             // Dashboard section
             SliverToBoxAdapter(
@@ -917,11 +1202,27 @@ class _FeedScreenState extends State<FeedScreen> {
 
             // My Events section
             if (_myEvents.isNotEmpty)
-              SliverToBoxAdapter(child: _buildEventsSection('My Events', _myEvents)),
+              SliverToBoxAdapter(
+                child: _buildEventsSection(
+                  'My Events',
+                  _myEvents,
+                  hasMore: _hasMoreMyEvents,
+                  isLoading: _isLoadingMoreMyEvents,
+                  onLoadMore: _loadMoreMyEvents,
+                ),
+              ),
 
             // Suggested Events section
             if (_suggestedEvents.isNotEmpty)
-              SliverToBoxAdapter(child: _buildEventsSection('Suggested Events', _suggestedEvents)),
+              SliverToBoxAdapter(
+                child: _buildEventsSection(
+                  'Suggested Events',
+                  _suggestedEvents,
+                  hasMore: _hasMoreSuggestedEvents,
+                  isLoading: _isLoadingMoreSuggestedEvents,
+                  onLoadMore: _loadMoreSuggestedEvents,
+                ),
+              ),
 
             // Friends section
             if (_friendDogs.isNotEmpty)
@@ -952,27 +1253,30 @@ class _FeedScreenState extends State<FeedScreen> {
             ),
             
             // Dogs list
-            _filteredDogs.isEmpty
-                ? SliverToBoxAdapter(child: _buildEmptyState())
-                : SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final dog = _filteredDogs[index];
-                        return Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                          child: GestureDetector(
-                            onTap: () => _showDogProfile(dog),
-                            child: DogCard(
-                              dog: dog,
-                              onBarkPressed: () => _onBarkPressed(context, dog),
-                              onPlaydatePressed: () => _onPlaydatePressed(context, dog),
-                            ),
-                          ),
-                        );
-                      },
-                      childCount: _filteredDogs.length,
-                    ),
-                  ),
+            if (_filteredDogs.isEmpty)
+              SliverToBoxAdapter(child: _buildEmptyState())
+            else ...[
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final dog = _filteredDogs[index];
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: GestureDetector(
+                        onTap: () => _showDogProfile(dog),
+                        child: DogCard(
+                          dog: dog,
+                          onBarkPressed: () => _onBarkPressed(context, dog),
+                          onPlaydatePressed: () => _onPlaydatePressed(context, dog),
+                        ),
+                      ),
+                    );
+                  },
+                  childCount: _filteredDogs.length,
+                ),
+              ),
+              SliverToBoxAdapter(child: _buildDogsLoadMoreIndicator()),
+            ],
           ],
         ),
       ),
@@ -1281,6 +1585,68 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
+  Widget _buildDogsLoadMoreIndicator() {
+    if (_isLoadingMoreDogs) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (!_hasMoreNearbyDogs) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: Text(
+            'No more dogs nearby within your current radius.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+        child: TextButton.icon(
+          onPressed: _loadMoreNearbyDogs,
+          icon: const Icon(Icons.pets),
+          label: const Text('Load more dogs'),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadMoreFooter({
+    required bool hasMore,
+    required bool isLoading,
+    required VoidCallback onLoadMore,
+    required String label,
+  }) {
+    if (isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (!hasMore) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: OutlinedButton(
+          onPressed: onLoadMore,
+          child: Text(label),
+        ),
+      ),
+    );
+  }
+
   // ========= Airbnb-style feed sections =========
 
   Widget _buildUpcomingPlaydatesSection() {
@@ -1385,12 +1751,24 @@ class _FeedScreenState extends State<FeedScreen> {
               itemCount: _upcomingFeedPlaydates.length.clamp(0, 10),
             ),
           ),
+          _buildLoadMoreFooter(
+            hasMore: _hasMorePlaydates,
+            isLoading: _isLoadingMorePlaydates,
+            onLoadMore: _loadMorePlaydates,
+            label: 'Load more playdates',
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildEventsSection(String title, List<Event> events) {
+  Widget _buildEventsSection(
+    String title,
+    List<Event> events, {
+    required bool hasMore,
+    required bool isLoading,
+    required VoidCallback onLoadMore,
+  }) {
     final cardWidth = AppResponsive.horizontalCardWidth(
       context,
       mobile: 260,
@@ -1503,6 +1881,12 @@ class _FeedScreenState extends State<FeedScreen> {
               itemCount: events.length.clamp(0, 10),
             ),
           ),
+          _buildLoadMoreFooter(
+            hasMore: hasMore,
+            isLoading: isLoading,
+            onLoadMore: onLoadMore,
+            label: 'Load more $title',
+          ),
         ],
       ),
     );
@@ -1608,6 +1992,12 @@ class _FeedScreenState extends State<FeedScreen> {
               ),
               itemCount: _friendDogs.length.clamp(0, 20),
             ),
+          ),
+          _buildLoadMoreFooter(
+            hasMore: _hasMoreFriends,
+            isLoading: _isLoadingMoreFriends,
+            onLoadMore: _loadMoreFriends,
+            label: 'Load more friends',
           ),
         ],
       ),

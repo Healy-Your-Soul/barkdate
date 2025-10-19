@@ -1011,7 +1011,11 @@ class PlaydateRecapService {
 
 class DogFriendshipService {
   /// Get friends for a dog
-  static Future<List<Map<String, dynamic>>> getDogFriends(String dogId) async {
+  static Future<List<Map<String, dynamic>>> getDogFriends(
+    String dogId, {
+    int limit = 20,
+    int offset = 0,
+  }) async {
     try {
       // First try with dog1_id relationship
       final friendships1 = await SupabaseConfig.client
@@ -1024,8 +1028,9 @@ class DogFriendshipService {
             )
           ''')
           .eq('dog1_id', dogId)
-          .order('friendship_level', ascending: false)
-          .order('created_at', ascending: false);
+      .order('friendship_level', ascending: false)
+      .order('created_at', ascending: false)
+      .range(0, offset + limit - 1);
 
       // Then try with dog2_id relationship
       final friendships2 = await SupabaseConfig.client
@@ -1039,12 +1044,22 @@ class DogFriendshipService {
           ''')
           .eq('dog2_id', dogId)
           .order('friendship_level', ascending: false)
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .range(0, offset + limit - 1);
 
       // Combine and map the results
       final allFriendships = [...friendships1, ...friendships2];
       
-      return allFriendships.map((friendship) {
+      allFriendships.sort((a, b) {
+        final createdA = a['created_at'] as String?;
+        final createdB = b['created_at'] as String?;
+        if (createdA == null || createdB == null) {
+          return 0;
+        }
+        return DateTime.parse(createdB).compareTo(DateTime.parse(createdA));
+      });
+
+      final paginated = allFriendships.skip(offset).take(limit).map((friendship) {
         final friendDogId = friendship['dog1_id'] == dogId 
             ? friendship['dog2_id'] 
             : friendship['dog1_id'];
@@ -1054,6 +1069,8 @@ class DogFriendshipService {
           'friend_dog_id': friendDogId,
         };
       }).toList();
+
+      return paginated;
 
     } catch (e) {
       debugPrint('Error getting dog friends: $e');
@@ -1190,7 +1207,13 @@ class DogFriendshipService {
 /// Uses playdate_participants as source of truth so multi-dog & multi-owner works.
 class PlaydateQueryService {
   /// Fetch upcoming & past playdates for a user (based on participation) with aggregated participants.
-  static Future<Map<String, List<Map<String, dynamic>>>> getUserPlaydatesAggregated(String userId) async {
+  static Future<Map<String, List<Map<String, dynamic>>>> getUserPlaydatesAggregated(
+    String userId, {
+  int upcomingLimit = 50,
+    int upcomingOffset = 0,
+  int pastLimit = 50,
+    int pastOffset = 0,
+  }) async {
     try {
       final nowIso = DateTime.now().toIso8601String();
 
@@ -1217,21 +1240,37 @@ class PlaydateQueryService {
         };
       }
 
-      // 2. Fetch playdates in two buckets
-    final upcoming = await SupabaseConfig.client
-      .from('playdates')
-      .select('*')
-      .filter('id', 'in', '(${playdateIds.join(',')})')
-      .gte('scheduled_at', nowIso)
-      .neq('status', 'cancelled')
-      .order('scheduled_at', ascending: true) as List<dynamic>;
+      if (playdateIds.isEmpty) {
+        return {
+          'upcoming': [],
+          'past': [],
+        };
+      }
 
-    final past = await SupabaseConfig.client
+    // Prepare IN clause for Supabase filter
+    final playdateIdClause = '(${playdateIds.map((id) => "'$id'").join(',')})';
+
+    // 2. Fetch playdates in two buckets with pagination
+    final upcomingQuery = SupabaseConfig.client
       .from('playdates')
       .select('*')
-      .filter('id', 'in', '(${playdateIds.join(',')})')
-      .lt('scheduled_at', nowIso)
-      .order('scheduled_at', ascending: false) as List<dynamic>;
+      .filter('id', 'in', playdateIdClause)
+          .gte('scheduled_at', nowIso)
+          .neq('status', 'cancelled')
+          .order('scheduled_at', ascending: true);
+
+      final pastQuery = SupabaseConfig.client
+          .from('playdates')
+          .select('*')
+      .filter('id', 'in', playdateIdClause)
+          .lt('scheduled_at', nowIso)
+          .order('scheduled_at', ascending: false);
+
+      final upcoming = await upcomingQuery
+          .range(upcomingOffset, upcomingOffset + upcomingLimit - 1) as List<dynamic>;
+
+      final past = await pastQuery
+          .range(pastOffset, pastOffset + pastLimit - 1) as List<dynamic>;
 
       // 3. Load participants for all fetched playdates in one query
       final allFetchedIds = [
