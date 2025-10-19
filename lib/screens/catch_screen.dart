@@ -103,7 +103,7 @@ class _CatchScreenState extends State<CatchScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                '${currentDog.distanceKm.toStringAsFixed(1)} miles away',
+                                '${currentDog.distanceKm.toStringAsFixed(1)} km away',
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                 ),

@@ -141,7 +141,7 @@ class _FilterSheetState extends State<FilterSheet> {
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           Text(
-                            '${_filters.maxDistance.round()} miles',
+                            '${_filters.maxDistance.round()} km',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: Theme.of(context).colorScheme.primary,

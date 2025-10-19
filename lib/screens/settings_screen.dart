@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:barkdate/screens/help_screen.dart';
 import 'package:barkdate/screens/auth/sign_in_screen.dart';
@@ -6,6 +7,7 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/settings_service.dart';
 import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
+import 'package:barkdate/services/cache_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -15,6 +17,60 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  int _searchRadiusKm = 25;
+  bool _isLoadingRadius = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSearchRadius();
+  }
+
+  Future<void> _loadSearchRadius() async {
+    final user = SupabaseConfig.auth.currentUser;
+    if (user == null) {
+      setState(() => _isLoadingRadius = false);
+      return;
+    }
+
+    try {
+      final profile = await SupabaseService.selectSingle('users', filters: {'id': user.id});
+      if (!mounted) return;
+      setState(() {
+        _searchRadiusKm = (profile?['search_radius_km'] as int?) ?? 25;
+        _isLoadingRadius = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading search radius: $e');
+      if (!mounted) return;
+      setState(() => _isLoadingRadius = false);
+    }
+  }
+
+  Future<void> _updateSearchRadius(int radiusKm) async {
+    final userId = SupabaseConfig.auth.currentUser?.id;
+    if (userId == null) return;
+
+    setState(() {
+      _searchRadiusKm = radiusKm;
+    });
+
+    try {
+      await SupabaseConfig.client
+          .from('users')
+          .update({'search_radius_km': radiusKm})
+          .eq('id', userId);
+      CacheService().invalidate('nearby_$userId');
+    } catch (e) {
+      debugPrint('Error updating search radius: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update search radius: $e')),
+        );
+      }
+    }
+  }
+
 
   void _showSignOutDialog(BuildContext context) {
     showDialog(

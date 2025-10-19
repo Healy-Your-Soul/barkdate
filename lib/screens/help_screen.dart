@@ -68,7 +68,7 @@ class _HelpScreenState extends State<HelpScreen> {
       questions: [
         FAQItem(
           question: 'Is my location information safe?',
-          answer: 'We only share your general area (within a few miles) with other users, never your exact location. You can control location sharing in Settings > Privacy.',
+          answer: 'We only share your general area (within a few kilometers) with other users, never your exact location. You can control location sharing in Settings > Privacy.',
         ),
         FAQItem(
           question: 'How do I block someone?',

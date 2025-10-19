@@ -52,7 +52,7 @@ class DogProfileSheet extends StatelessWidget {
                   Icon(Icons.location_on, size: 18, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
                   const SizedBox(width: 4),
                   Text(
-                    '${dog.distanceKm.toStringAsFixed(1)} miles away',
+                    '${dog.distanceKm.toStringAsFixed(1)} km away',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
                   ),
                 ],

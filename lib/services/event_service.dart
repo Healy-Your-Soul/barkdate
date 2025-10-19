@@ -11,6 +11,7 @@ class EventService {
     List<String>? targetSizes,
     double? maxPrice,
     int limit = 50,
+    int offset = 0,
   }) async {
     try {
       // Build base query
@@ -32,9 +33,9 @@ class EventService {
       }
 
       // Apply ordering and limit, then execute
-      final data = await query
-          .order('start_time', ascending: true)
-          .limit(limit);
+    final data = await query
+      .order('start_time', ascending: true)
+      .range(offset, offset + limit - 1);
 
       return data.map((json) {
         // Add organizer info from joined users table
@@ -62,6 +63,7 @@ class EventService {
     required String dogAge,
     required String dogSize,
     int limit = 20,
+    int offset = 0,
   }) async {
     try {
       // Map dog age to age groups
@@ -82,6 +84,7 @@ class EventService {
         targetAgeGroups: ageGroups,
         targetSizes: [dogSize.toLowerCase()],
         limit: limit,
+        offset: offset,
       );
     } catch (e) {
       debugPrint('Error fetching recommended events: $e');
@@ -119,7 +122,11 @@ class EventService {
   }
 
   /// Get events a user is participating in
-  static Future<List<Event>> getUserParticipatingEvents(String userId) async {
+  static Future<List<Event>> getUserParticipatingEvents(
+    String userId, {
+    int limit = 20,
+    int offset = 0,
+  }) async {
     try {
       final data = await SupabaseConfig.client
           .from('event_participants')
@@ -134,7 +141,8 @@ class EventService {
             )
           ''')
           .eq('user_id', userId)
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .range(offset, offset + limit - 1);
 
       return data.map((json) {
         final eventData = json['events'] as Map<String, dynamic>?;

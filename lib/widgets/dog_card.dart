@@ -277,7 +277,7 @@ class _DogCardState extends State<DogCard> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${dog.breed}, ${dog.distanceKm.toStringAsFixed(1)} miles',
+                      '${dog.breed}, ${dog.distanceKm.toStringAsFixed(1)} km away',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                       ),

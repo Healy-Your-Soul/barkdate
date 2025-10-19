@@ -223,15 +223,6 @@ class BarkDateUserService {
       debugPrint('Dog keys: ${dog.keys.toList()}');
     }
     
-    // Also try getting ALL dogs to see what's in the database
-    debugPrint('--- Checking ALL dogs in database ---');
-    final allDogsInDb = await SupabaseService.select('dogs', filters: {}, limit: 10);
-    debugPrint('Total dogs in database: ${allDogsInDb.length}');
-    for (var dog in allDogsInDb) {
-      debugPrint('All Dogs - User ID: ${dog['user_id']}, Dog Name: ${dog['name']}, Active: ${dog['is_active']}');
-    }
-    debugPrint('--- End ALL dogs check ---');
-    
     debugPrint('=== END GET USER DOGS DEBUG ===');
     
     return allDogs;
@@ -480,17 +471,59 @@ class BarkDateUserService {
 }
 
 class BarkDateMatchService {
-  /// Get nearby dogs for matching
-  static Future<List<Map<String, dynamic>>> getNearbyDogs(String userId) async {
-    return await SupabaseConfig.client
-        .from('dogs')
-        .select('''
-          *,
-          users(name, avatar_url, location)
-        ''')
-        .neq('user_id', userId)
-        .eq('is_active', true)
-        .limit(50);
+  /// Get nearby dogs with pagination and location filtering
+  static Future<List<Map<String, dynamic>>> getNearbyDogs(
+    String userId, {
+    int limit = 20,
+    int offset = 0,
+    double? latitude,
+    double? longitude,
+    int? radiusKm,
+  }) async {
+    try {
+      // Fetch user's stored location and preferences when not provided
+      if (latitude == null || longitude == null || radiusKm == null) {
+        final userProfile = await BarkDateUserService.getUserProfile(userId);
+        latitude ??= (userProfile?['latitude'] as num?)?.toDouble();
+        longitude ??= (userProfile?['longitude'] as num?)?.toDouble();
+        radiusKm ??= userProfile?['search_radius_km'] as int? ?? 25;
+      }
+
+      // Without a location we can't query nearby dogs
+      if (latitude == null || longitude == null) {
+        debugPrint('⚠️ User $userId has no location set - cannot fetch nearby dogs');
+        return [];
+      }
+
+      debugPrint(
+          '📍 Fetching nearby dogs for $userId: lat=$latitude, lng=$longitude, radius=${radiusKm}km, limit=$limit, offset=$offset');
+
+      final response = await SupabaseConfig.client.rpc(
+        'get_nearby_dogs',
+        params: {
+          'p_user_id': userId,
+          'p_latitude': latitude,
+          'p_longitude': longitude,
+          'p_radius_km': radiusKm,
+          'p_limit': limit,
+          'p_offset': offset,
+        },
+      );
+
+      if (response == null) {
+        return [];
+      }
+
+      final dogs = List<Map<String, dynamic>>.from(
+        (response as List).map((item) => Map<String, dynamic>.from(item as Map)),
+      );
+
+      debugPrint('✅ Nearby dogs fetched: ${dogs.length}');
+      return dogs;
+    } catch (e) {
+      debugPrint('❌ Error fetching nearby dogs: $e');
+      return [];
+    }
   }
 
   /// Record a bark/pass action
