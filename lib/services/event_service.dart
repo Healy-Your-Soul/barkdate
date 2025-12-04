@@ -12,6 +12,7 @@ class EventService {
     double? maxPrice,
     int limit = 50,
     int offset = 0,
+    bool publicOnly = true,
   }) async {
     try {
       // Build base query
@@ -26,6 +27,10 @@ class EventService {
           ''')
           .eq('status', 'upcoming')
           .gte('start_time', DateTime.now().toIso8601String());
+
+      if (publicOnly) {
+        query = query.eq('is_public', true);
+      }
 
       // Add category filter if provided
       if (category != null) {
@@ -175,6 +180,9 @@ class EventService {
     double? latitude,
     double? longitude,
     List<String> photoUrls = const [],
+    bool isPublic = true,
+    List<String> invitedDogIds = const [],
+    String? invitationMessage,
   }) async {
     try {
       final user = SupabaseConfig.auth.currentUser;
@@ -199,6 +207,7 @@ class EventService {
         'latitude': latitude,
         'longitude': longitude,
         'photo_urls': photoUrls,
+        'is_public': isPublic,
       };
 
       final data = await SupabaseConfig.client
@@ -214,14 +223,57 @@ class EventService {
           .single();
 
       final userData = data['users'] as Map<String, dynamic>?;
-      return Event.fromJson({
+      final event = Event.fromJson({
         ...data,
         'organizer_name': userData?['name'] ?? 'Unknown',
         'organizer_avatar_url': userData?['avatar_url'] ?? '',
       });
+
+      // Send invitations if provided
+      if (invitedDogIds.isNotEmpty) {
+        await inviteDogs(
+          eventId: event.id,
+          dogIds: invitedDogIds,
+          message: invitationMessage,
+        );
+      }
+
+      return event;
     } catch (e) {
       debugPrint('Error creating event: $e');
       return null;
+    }
+  }
+
+  /// Invite multiple dogs to an event
+  static Future<bool> inviteDogs({
+    required String eventId,
+    required List<String> dogIds,
+    String? message,
+  }) async {
+    if (dogIds.isEmpty) return true;
+
+    try {
+      final user = SupabaseConfig.auth.currentUser;
+      if (user == null) throw Exception('User not authenticated');
+
+      final invitations = dogIds.map((dogId) {
+        return {
+          'event_id': eventId,
+          'dog_id': dogId,
+          'invited_by': user.id,
+          if (message != null && message.trim().isNotEmpty) 'message': message.trim(),
+        };
+      }).toList();
+
+      await SupabaseConfig.client
+          .from('event_invitations')
+          .upsert(invitations, onConflict: 'event_id,dog_id');
+
+      return true;
+    } catch (e) {
+      debugPrint('Error inviting dogs to event: $e');
+      return false;
     }
   }
 

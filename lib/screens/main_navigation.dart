@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/screens/feed_screen.dart';
 import 'package:barkdate/screens/map_screen.dart';
+import 'package:barkdate/screens/map_v2/map_tab_screen.dart'; // New map
 import 'package:barkdate/screens/events_screen.dart';
 import 'package:barkdate/screens/playdates_screen.dart';
 import 'package:barkdate/screens/messages_screen.dart';
@@ -25,13 +26,16 @@ class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
   String? _dogAvatarUrl;
   
+  // Feature flag: set to true to use new map_v2, false for old map
+  static const bool _useMapV2 = true;
+  
   // Simple direct screen selection - no caching needed
   Widget _getScreen(int index) {
     switch (index) {
       case 0:
         return const FeedScreen();
       case 1:
-        return const MapScreen();
+        return _useMapV2 ? const MapTabScreenV2() : const MapScreen();
       case 2:
         return const EventsScreen();
       case 3:

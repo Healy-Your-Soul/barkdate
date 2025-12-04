@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:go_router/go_router.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -44,20 +45,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
       // User is authenticated, go to profile creation
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => CreateProfileScreen(
-            userId: user.id,
-            userName: user.userMetadata?['full_name'] ?? user.email?.split('@')[0],
-            userEmail: user.email,
-            editMode: EditMode.createProfile,
-          ),
-        ),
-      );
+      context.go('/create-profile', extra: {
+        'userId': user.id,
+        'userName': user.userMetadata?['full_name'] ?? user.email?.split('@')[0],
+        'userEmail': user.email,
+        'editMode': EditMode.createProfile,
+      });
     } else {
       // Shouldn't happen, but fallback to auth screen
-      Navigator.pushReplacementNamed(context, '/auth');
+      context.go('/auth');
     }
   }
 

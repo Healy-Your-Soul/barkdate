@@ -4,7 +4,7 @@ import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/screens/chat_detail_screen.dart';
 import 'package:barkdate/screens/report_screen.dart';
 import 'package:barkdate/services/dog_sharing_service.dart';
-import 'package:barkdate/widgets/dog_share_dialog.dart';
+import 'package:barkdate/features/profile/presentation/widgets/share_dog_sheet.dart';
 
 class DogProfileDetail extends StatefulWidget {
   final Dog dog;
@@ -63,12 +63,15 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
     );
   }
 
-  void _onShare() async {
-    // Open new share dialog (manages link + shared users)
-    await DogShareDialog.open(
-      context,
-      dogId: widget.dog.id,
-      dogName: widget.dog.name,
+  void _onShare() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ShareDogSheet(
+        dogId: widget.dog.id,
+        dogName: widget.dog.name,
+      ),
     );
   }
 

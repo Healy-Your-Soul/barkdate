@@ -1,0 +1,7 @@
+{
+  "name": "Dog Friendly Map Assistant",
+  "description": "An AI-powered map to discover dog-friendly places and events near you. Use the Gemini assistant to find the perfect spot with natural language queries.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

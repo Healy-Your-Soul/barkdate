@@ -155,6 +155,63 @@ class CheckInService {
     }
   }
 
+  /// Get dog counts for multiple specific places (optimized for map viewport)
+  static Future<Map<String, int>> getPlaceDogCounts(List<String> placeIds) async {
+    try {
+      if (placeIds.isEmpty) return {};
+
+      // Build OR filter for multiple place IDs
+      final orFilter = placeIds.map((id) => 'park_id.eq.$id').join(',');
+      
+      final data = await SupabaseConfig.client
+          .from('checkins')
+          .select('park_id')
+          .or(orFilter)
+          .eq('status', 'active');
+
+      final Map<String, int> counts = {};
+      for (final item in data) {
+        final parkId = item['park_id'] as String;
+        counts[parkId] = (counts[parkId] ?? 0) + 1;
+      }
+
+      return counts;
+    } catch (e) {
+      debugPrint('Error getting place dog counts: $e');
+      return {};
+    }
+  }
+
+  /// Get active check-ins with user details for a specific place
+  static Future<List<Map<String, dynamic>>> getActiveCheckInsAtPlace(String placeId) async {
+    try {
+      final data = await SupabaseConfig.client
+          .from('checkins')
+          .select('''
+            *,
+            user:user_id (
+              id,
+              username,
+              avatar_url
+            ),
+            dog:dog_id (
+              id,
+              name,
+              breed,
+              main_photo_url
+            )
+          ''')
+          .eq('park_id', placeId)
+          .eq('status', 'active')
+          .order('checked_in_at', ascending: false);
+
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      debugPrint('Error getting active check-ins at place: $e');
+      return [];
+    }
+  }
+
   /// Get nearby parks with dog counts
   static Future<List<Map<String, dynamic>>> getNearbyParksWithCounts({
     required double latitude,

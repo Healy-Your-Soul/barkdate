@@ -8,6 +8,7 @@ import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/settings_service.dart';
 import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 import 'package:barkdate/services/cache_service.dart';
+import 'package:barkdate/widgets/location_settings_widget.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -351,6 +352,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () {
                 _showPrivacySheet(context);
               },
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Location Section
+            _buildSectionHeader(context, 'Location'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: LocationSettingsWidget(
+                onLocationChanged: () {
+                  // Invalidate cache when location changes
+                  final userId = SupabaseConfig.auth.currentUser?.id;
+                  if (userId != null) {
+                    CacheService()
+                      ..invalidate('nearby_$userId')
+                      ..invalidateFeedSnapshot(userId);
+                  }
+                  
+                  // Show feedback
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Location settings updated. Pull to refresh your feed.'),
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                },
+              ),
             ),
             
             const SizedBox(height: 24),

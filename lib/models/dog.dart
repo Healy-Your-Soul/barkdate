@@ -56,6 +56,17 @@ class Dog {
   );
 
   factory Dog.fromJson(Map<String, dynamic> json) {
+    // Handle photos mapping from various possible backend formats
+    List<String> photoList = [];
+    if (json['photos'] != null) {
+      photoList = List<String>.from(json['photos']);
+    } else if (json['main_photo_url'] != null) {
+      photoList.add(json['main_photo_url']);
+      if (json['extra_photo_urls'] != null) {
+        photoList.addAll(List<String>.from(json['extra_photo_urls']));
+      }
+    }
+
     return Dog(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
@@ -64,7 +75,7 @@ class Dog {
       size: json['size'] ?? '',
       gender: json['gender'] ?? '',
       bio: json['bio'] ?? '',
-      photos: List<String>.from(json['photos'] ?? []),
+      photos: photoList,
       ownerId: json['owner_id'] ?? '',
       ownerName: json['owner_name'] ?? '',
       distanceKm: json['distance_km']?.toDouble() ?? 0.0,

@@ -34,9 +34,19 @@
 
   <title>BarkDate - Dog Playdates & Community</title>
   <link rel="manifest" href="manifest.json">
-  
+
+  <script>
+    window._googleMapsLoaded = false;
+    window._onGoogleMapsLoaded = function () {
+      window._googleMapsLoaded = true;
+      if (typeof window.dartMapApiReadyCallback === 'function') {
+        window.dartMapApiReadyCallback();
+      }
+    };
+  </script>
+
   <!-- Google Maps JavaScript API -->
-  <script src="https://maps.googleapis.com/maps/api/js?key={{GOOGLE_MAPS_API_KEY}}&libraries=geometry,places&v=weekly&callback=Function.prototype"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key={{GOOGLE_MAPS_API_KEY}}&libraries=places,geometry&v=weekly&callback=_onGoogleMapsLoaded" async defer loading="async"></script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

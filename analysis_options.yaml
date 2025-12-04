@@ -17,6 +17,9 @@ analyzer:
     - lib/screens/admin_screen_old.dart.backup
     # Exclude reference projects
     - references/**
+    # Exclude draft/test files
+    - draft/**
+    - test_playdates_import.dart
 
 linter:
   rules:

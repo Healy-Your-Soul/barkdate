@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import '../services/park_service.dart';
 import '../models/featured_park.dart';
 import '../services/places_service.dart';
+import '../services/qr_checkin_service.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -26,6 +28,7 @@ class _AdminScreenState extends State<AdminScreen> {
   bool _isLoading = false;
   bool _showSearchResults = false;
   Set<String> _selectedAmenities = {};
+  LatLng? _userLocation; // Add user current location
 
   final List<String> _availableAmenities = [
     'Fenced Area',
@@ -44,6 +47,30 @@ class _AdminScreenState extends State<AdminScreen> {
   void initState() {
     super.initState();
     _loadFeaturedParks();
+    _loadUserLocation();
+  }
+  
+  Future<void> _loadUserLocation() async {
+    try {
+      final location = Location();
+      final currentLocation = await location.getLocation();
+      if (currentLocation.latitude != null && currentLocation.longitude != null) {
+        setState(() {
+          _userLocation = LatLng(currentLocation.latitude!, currentLocation.longitude!);
+          // If no park location selected yet, use user location as default
+          _selectedLocation ??= _userLocation;
+        });
+        // Move map to user location if map is ready
+        _mapController?.animateCamera(CameraUpdate.newLatLng(_userLocation!));
+      }
+    } catch (e) {
+      debugPrint('Error loading user location: $e');
+      // Default to Perth, Australia if location fails
+      setState(() {
+        _userLocation = const LatLng(-31.9505, 115.8605);
+        _selectedLocation ??= _userLocation;
+      });
+    }
   }
 
   @override
@@ -82,7 +109,7 @@ class _AdminScreenState extends State<AdminScreen> {
       final location = Location();
       final currentLocation = await location.getLocation();
       
-      final results = await PlacesService.searchDogFriendlyPlaces(
+      final result = await PlacesService.searchDogFriendlyPlaces(
         latitude: currentLocation.latitude!,
         longitude: currentLocation.longitude!,
         keyword: query,
@@ -90,7 +117,7 @@ class _AdminScreenState extends State<AdminScreen> {
       );
       
       setState(() {
-        _searchResults = results;
+        _searchResults = result.places;
         _showSearchResults = true;
       });
     } catch (e) {
@@ -186,6 +213,102 @@ class _AdminScreenState extends State<AdminScreen> {
       ),
     );
   }
+
+  Future<void> _generateQrCode(FeaturedPark park) async {
+    setState(() => _isLoading = true);
+    try {
+      final code = await QrCheckInService.generateAndSaveCheckInCode(park.id);
+      if (code != null) {
+        _showSuccess('QR code generated successfully!');
+        await _loadFeaturedParks();
+      } else {
+        _showError('Failed to generate QR code');
+      }
+    } catch (e) {
+      _showError('Error generating QR code: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _showQrCodeDialog(FeaturedPark park) {
+    final qrUrl = QrCheckInService.getWebFallbackUrl(park.id, park.qrCheckInCode!);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('QR Code: ${park.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // QR Code placeholder - would use qr_flutter package
+            Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.qr_code_2, size: 80, color: Colors.grey),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'QR Code',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Code: ${park.qrCheckInCode}',
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Scan URL:',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+            const SizedBox(height: 4),
+            SelectableText(
+              qrUrl,
+              style: const TextStyle(fontSize: 11),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '💡 Tip: Use a QR code generator service\nwith the URL above to create a scannable code.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: qrUrl));
+              Navigator.pop(context);
+              _showSuccess('URL copied to clipboard');
+            },
+            child: const Text('Copy URL'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -399,23 +522,109 @@ class _AdminScreenState extends State<AdminScreen> {
                           itemBuilder: (context, index) {
                             final park = _featuredParks[index];
                             return Card(
-                              child: ListTile(
+                              child: ExpansionTile(
                                 title: Text(park.name),
                                 subtitle: Text(park.address ?? 'No address provided'),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () async {
-                                    // TODO: Implement delete functionality
-                                    _showError('Delete functionality not implemented yet');
-                                  },
+                                leading: Icon(
+                                  park.qrCheckInCode != null
+                                      ? Icons.qr_code_2
+                                      : Icons.qr_code,
+                                  color: park.qrCheckInCode != null
+                                      ? Colors.green
+                                      : Colors.grey,
                                 ),
-                                onTap: () {
-                                  // Move map to park location
-                                  final location = LatLng(park.latitude, park.longitude);
-                                  _mapController?.animateCamera(
-                                    CameraUpdate.newLatLngZoom(location, 16),
-                                  );
-                                },
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // QR Code Section
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  const Text(
+                                                    'QR Check-In Code',
+                                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    park.qrCheckInCode ?? 'Not generated',
+                                                    style: TextStyle(
+                                                      color: park.qrCheckInCode != null
+                                                          ? Colors.black87
+                                                          : Colors.grey,
+                                                      fontFamily: 'monospace',
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            if (park.qrCheckInCode != null) ...[
+                                              IconButton(
+                                                icon: const Icon(Icons.copy),
+                                                tooltip: 'Copy QR URL',
+                                                onPressed: () {
+                                                  final url = QrCheckInService.getWebFallbackUrl(
+                                                    park.id,
+                                                    park.qrCheckInCode!,
+                                                  );
+                                                  Clipboard.setData(ClipboardData(text: url));
+                                                  _showSuccess('QR URL copied to clipboard');
+                                                },
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(Icons.qr_code_2),
+                                                tooltip: 'Show QR Code',
+                                                onPressed: () => _showQrCodeDialog(park),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        // Action Buttons
+                                        Row(
+                                          children: [
+                                            if (park.qrCheckInCode == null)
+                                              ElevatedButton.icon(
+                                                onPressed: () => _generateQrCode(park),
+                                                icon: const Icon(Icons.qr_code, size: 18),
+                                                label: const Text('Generate QR Code'),
+                                              )
+                                            else
+                                              OutlinedButton.icon(
+                                                onPressed: () => _generateQrCode(park),
+                                                icon: const Icon(Icons.refresh, size: 18),
+                                                label: const Text('Regenerate'),
+                                              ),
+                                            const SizedBox(width: 8),
+                                            OutlinedButton.icon(
+                                              onPressed: () {
+                                                final location = LatLng(park.latitude, park.longitude);
+                                                _mapController?.animateCamera(
+                                                  CameraUpdate.newLatLngZoom(location, 16),
+                                                );
+                                              },
+                                              icon: const Icon(Icons.map, size: 18),
+                                              label: const Text('View on Map'),
+                                            ),
+                                            const Spacer(),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete, color: Colors.red),
+                                              onPressed: () {
+                                                _showError('Delete functionality not implemented yet');
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
                           },

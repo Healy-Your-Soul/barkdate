@@ -19,6 +19,7 @@ class Event {
   final double? price; // null for free events
   final List<String> photoUrls;
   final bool requiresRegistration;
+  final bool isPublic;
   final String status; // 'upcoming', 'ongoing', 'completed', 'cancelled'
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -44,6 +45,7 @@ class Event {
     this.price,
     required this.photoUrls,
     required this.requiresRegistration,
+    required this.isPublic,
     required this.status,
     required this.createdAt,
     required this.updatedAt,
@@ -70,6 +72,7 @@ class Event {
     double? price,
     List<String>? photoUrls,
     bool? requiresRegistration,
+    bool? isPublic,
     String? status,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -94,6 +97,7 @@ class Event {
     price: price ?? this.price,
     photoUrls: photoUrls ?? this.photoUrls,
     requiresRegistration: requiresRegistration ?? this.requiresRegistration,
+    isPublic: isPublic ?? this.isPublic,
     status: status ?? this.status,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -121,6 +125,7 @@ class Event {
       price: json['price'] as double?,
       photoUrls: List<String>.from(json['photo_urls'] ?? []),
       requiresRegistration: json['requires_registration'] as bool? ?? true,
+      isPublic: json['is_public'] as bool? ?? true,
       status: json['status'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -149,6 +154,7 @@ class Event {
       'price': price,
       'photo_urls': photoUrls,
       'requires_registration': requiresRegistration,
+      'is_public': isPublic,
       'status': status,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),

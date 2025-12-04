@@ -510,8 +510,20 @@ class BarkDateMatchService {
         },
       );
 
-      if (response == null) {
-        return [];
+      if (response == null || (response as List).isEmpty) {
+        debugPrint('⚠️ RPC get_nearby_dogs returned empty/null. Falling back to direct query.');
+        // Fallback: Get all active dogs (excluding own)
+        final fallbackDogs = await SupabaseConfig.client
+            .from('dogs')
+            .select('''
+              *,
+              users:user_id(id, name, avatar_url)
+            ''')
+            .neq('user_id', userId)
+            .eq('is_active', true)
+            .range(offset, offset + limit - 1);
+            
+        return List<Map<String, dynamic>>.from(fallbackDogs);
       }
 
       final dogs = List<Map<String, dynamic>>.from(
@@ -522,7 +534,23 @@ class BarkDateMatchService {
       return dogs;
     } catch (e) {
       debugPrint('❌ Error fetching nearby dogs: $e');
-      return [];
+      // Fallback on error too
+       try {
+        final fallbackDogs = await SupabaseConfig.client
+            .from('dogs')
+            .select('''
+              *,
+              users:user_id(id, name, avatar_url)
+            ''')
+            .neq('user_id', userId)
+            .eq('is_active', true)
+            .range(offset, offset + limit - 1);
+            
+        return List<Map<String, dynamic>>.from(fallbackDogs);
+       } catch (fallbackError) {
+         debugPrint('❌ Fallback query also failed: $fallbackError');
+         return [];
+       }
     }
   }
 
@@ -614,7 +642,7 @@ class BarkDateMessageService {
         .from('messages')
         .select('''
           *,
-          sender:users(name, avatar_url)
+          sender:users!messages_sender_id_fkey(name, avatar_url)
         ''')
         .eq('match_id', matchId)
         .order('created_at', ascending: true);
@@ -635,8 +663,8 @@ class BarkDateMessageService {
         .from('messages')
         .select('''
           *,
-          sender:users(name, avatar_url),
-          receiver:users(name, avatar_url)
+          sender:users!messages_sender_id_fkey(name, avatar_url),
+          receiver:users!messages_receiver_id_fkey(name, avatar_url)
         ''')
         .or('sender_id.eq.$userId,receiver_id.eq.$userId')
         .order('created_at', ascending: false);
@@ -670,8 +698,8 @@ class BarkDatePlaydateService {
         .from('playdates')
         .select('''
           *,
-          organizer:users(name, avatar_url),
-          participant:users(name, avatar_url)
+          organizer:users!playdates_organizer_id_fkey(name, avatar_url),
+          participant:users!playdates_participant_id_fkey(name, avatar_url)
         ''')
         .or('organizer_id.eq.$userId,participant_id.eq.$userId')
         .order('scheduled_at', ascending: false);

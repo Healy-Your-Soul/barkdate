@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:go_router/go_router.dart';
 
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
-import 'package:barkdate/screens/main_navigation.dart';
+import 'package:barkdate/services/photo_upload_service.dart';
+// import 'package:barkdate/screens/main_navigation.dart'; // Removed unused import to fix circular dependency
 import 'package:barkdate/widgets/enhanced_image_picker.dart';
 import 'package:barkdate/services/selected_image.dart';
 import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
@@ -475,11 +477,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         }
         
         // Navigate to main app
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const MainNavigation()),
-          (route) => false,
-        );
+        context.go('/home');
       }
     } catch (e) {
       if (mounted) {
@@ -520,7 +518,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
   Widget _buildTwoStepScreen() {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

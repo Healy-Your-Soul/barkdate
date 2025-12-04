@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:barkdate/screens/auth_screen.dart';
-import 'package:barkdate/screens/main_navigation.dart';
+import 'package:go_router/go_router.dart';
+import 'package:barkdate/features/auth/presentation/screens/sign_in_screen.dart';
+// import 'package:barkdate/screens/main_navigation.dart';
 import 'package:barkdate/screens/onboarding/welcome_screen.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
@@ -87,8 +88,18 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
                           ),
                         );
                       }
-                      debugPrint('✅ Cache warming completed - showing MainNavigation');
-                      return const MainNavigation();
+                      debugPrint('✅ Cache warming completed - redirecting to /home');
+                      // Use addPostFrameCallback to avoid navigation during build
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (context.mounted) {
+                          context.go('/home');
+                        }
+                      });
+                      return const Scaffold(
+                        body: Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
                     },
                   );
                 
@@ -110,7 +121,7 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
           );
         } else {
           // User not signed in, show auth screen
-          return const AuthScreen();
+          return const SignInScreen();
         }
       },
     );

@@ -20,6 +20,7 @@ class PhotoUploadService {
   static const String postImagesBucket = 'post-images';
   static const String chatMediaBucket = 'chat-media';
   static const String playdateAlbumsBucket = 'playdate-albums';
+  static const String eventPhotosBucket = 'event-photos';
 
   /// Compress image bytes (web-safe)
   static Future<Uint8List> _compressBytes(
@@ -290,6 +291,25 @@ class PhotoUploadService {
     );
   }
 
+  /// Upload event photos (multi-image helper)
+  static Future<List<String>> uploadEventPhotos({
+    required List<SelectedImage> imageFiles,
+    required String userId,
+    MultiProgressCallback? onProgress,
+  }) async {
+    if (imageFiles.isEmpty) {
+      return [];
+    }
+
+    final baseFilePath = 'events/$userId/event_${DateTime.now().millisecondsSinceEpoch}';
+    return await uploadMultipleImages(
+      imageFiles: imageFiles,
+      bucketName: eventPhotosBucket,
+      baseFilePath: baseFilePath,
+      onProgress: onProgress,
+    );
+  }
+
   /// Delete image from storage
   static Future<void> deleteImage(String imageUrl, String bucketName) async {
     try {
@@ -504,6 +524,7 @@ class PhotoUploadService {
       postImagesBucket,
       chatMediaBucket,
       playdateAlbumsBucket,
+      eventPhotosBucket,
     ];
 
     for (final bucketName in buckets) {

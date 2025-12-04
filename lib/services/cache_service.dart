@@ -17,6 +17,7 @@ class CacheService {
   static const Duration eventListTTL = Duration(minutes: 10);
   static const Duration friendListTTL = Duration(minutes: 10);
   static const Duration nearbyDogsTTL = Duration(minutes: 15);
+  static const Duration feedSnapshotTTL = Duration(minutes: 5);
 
   /// Get cached value
   T? get<T>(String key) {
@@ -115,10 +116,26 @@ class CacheService {
     return get<List<Map<String, dynamic>>>('nearby_$userId');
   }
 
+  /// Cache aggregated feed snapshot
+  void cacheFeedSnapshot(String userId, Map<String, dynamic> snapshot) {
+    set('feed_$userId', snapshot, feedSnapshotTTL);
+  }
+
+  /// Get cached aggregated feed snapshot
+  Map<String, dynamic>? getCachedFeedSnapshot(String userId) {
+    return get<Map<String, dynamic>>('feed_$userId');
+  }
+
+  /// Invalidate cached feed snapshot
+  void invalidateFeedSnapshot(String userId) {
+    invalidate('feed_$userId');
+  }
+
   /// Invalidate user-related caches
   void invalidateUserCaches(String userId) {
     invalidatePattern('user_$userId');
     invalidatePattern('playdates_$userId');
+    invalidateFeedSnapshot(userId);
   }
 
   /// Invalidate dog-related caches

@@ -10,6 +10,7 @@ class DogCard extends StatefulWidget {
   final VoidCallback onBarkPressed;
   final VoidCallback? onPlaydatePressed;
   final VoidCallback? onOpenProfile;
+  final VoidCallback? onTap;
 
   const DogCard({
     super.key,
@@ -17,6 +18,7 @@ class DogCard extends StatefulWidget {
     required this.onBarkPressed,
     this.onPlaydatePressed,
     this.onOpenProfile,
+    this.onTap,
   });
 
   @override
@@ -215,9 +217,12 @@ class _DogCardState extends State<DogCard> {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
+      child: InkWell(
+        onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
           children: [
             // Dog photo
             GestureDetector(
@@ -445,6 +450,7 @@ class _DogCardState extends State<DogCard> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
