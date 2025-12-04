@@ -15,7 +15,7 @@ class BarkDateApp extends ConsumerWidget {
       title: 'BarkDate',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system, // Or use a provider to control this
+      themeMode: ThemeMode.light,  // Locked to light mode for consistency
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

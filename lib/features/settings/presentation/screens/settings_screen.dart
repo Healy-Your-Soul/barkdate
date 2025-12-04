@@ -482,17 +482,24 @@ class _AppPreferencesSheetState extends State<AppPreferencesSheet> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text('Theme', style: AppTypography.bodyLarge()),
-                      trailing: DropdownButton<ThemeMode>(
-                        value: _settingsService.themeMode,
-                        underline: const SizedBox(),
-                        items: const [
-                          DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
-                          DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
-                          DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
-                        ],
-                        onChanged: (ThemeMode? mode) {
-                          if (mode != null) _settingsService.setThemeMode(mode);
-                        },
+                      subtitle: Text(
+                        'Dark mode coming soon',
+                        style: AppTypography.caption().copyWith(
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                      ),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '☀️ Light',
+                          style: AppTypography.labelMedium().copyWith(
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
