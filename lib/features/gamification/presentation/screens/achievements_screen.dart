@@ -56,7 +56,7 @@ class AchievementsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Keep engaging with the BarkDate community!',
+                    'Keep engaging with the Bark community!',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
@@ -126,7 +126,7 @@ class AchievementsScreen extends StatelessWidget {
               height: 60,
               decoration: BoxDecoration(
                 color: isEarned 
-                  ? Theme.of(context).colorScheme.primary
+                  ? const Color(0xFF4CAF50) // Bright green for earned
                   : Theme.of(context).colorScheme.outline.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(30),
               ),
@@ -175,7 +175,7 @@ class AchievementsScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
+                  color: const Color(0xFF4CAF50), // Bright green for earned
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(

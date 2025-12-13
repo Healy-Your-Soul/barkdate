@@ -11,13 +11,14 @@ import 'package:barkdate/widgets/enhanced_image_picker.dart';
 import 'package:barkdate/services/selected_image.dart';
 import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 
-enum EditMode { createProfile, editDog, editOwner, editBoth }
+enum EditMode { createProfile, editDog, editOwner, editBoth, addNewDog }
 
 class CreateProfileScreen extends StatefulWidget {
   final String? userId;
   final EditMode editMode;
   final String? userName;
   final String? userEmail;
+  final String? dogId;
   final bool locationEnabled;
 
   const CreateProfileScreen({
@@ -26,6 +27,7 @@ class CreateProfileScreen extends StatefulWidget {
     this.editMode = EditMode.editDog, // Default to simple dog editing
     this.userName,
     this.userEmail,
+    this.dogId,
     this.locationEnabled = false,
   });
 
@@ -50,6 +52,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   final _dogBioController = TextEditingController();
   String _dogSize = 'Medium';
   String _dogGender = 'Male';
+  bool _isPublic = true; // Dog visibility: true = visible in discovery, false = friends only
   List<SelectedImage> _dogPhotos = [];
   SelectedImage? _ownerPhoto;
   Map<String, dynamic>? _dogProfile; // Track existing dog data
@@ -94,8 +97,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     _ownerNameController.text = widget.userName ?? '';
     // Note: We don't pre-fill email in any field since users should enter their own info
     
-    // Load existing data if in any edit mode
-    if (widget.editMode != EditMode.createProfile) {
+    // Load existing data if in edit mode (not for new creation or adding new dog)
+    if (widget.editMode != EditMode.createProfile && widget.editMode != EditMode.addNewDog) {
       _loadExistingData();
     }
   }
@@ -147,7 +150,16 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       final dogProfiles = await BarkDateUserService.getUserDogs(userId);
       
       if (dogProfiles.isNotEmpty) {
-        final dogProfile = dogProfiles.first;
+        // Find specific dog by ID if provided, otherwise use first dog
+        Map<String, dynamic>? dogProfile;
+        if (widget.dogId != null) {
+          dogProfile = dogProfiles.firstWhere(
+            (d) => d['id'] == widget.dogId,
+            orElse: () => dogProfiles.first,
+          );
+        } else {
+          dogProfile = dogProfiles.first;
+        }
         setState(() {
           _dogProfile = dogProfile; // Store dog data for reference
         });
@@ -163,6 +175,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   final rawGender = dogProfile['gender'];
   _dogSize = _normalizeSize(rawSize);
   _dogGender = _normalizeGender(rawGender);
+  _isPublic = dogProfile['is_public'] ?? true;
         
         // Debug: Log the loaded values
         debugPrint('🐕 Dog profile loaded:');
@@ -323,6 +336,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         'main_photo_url': mainPhotoUrl,
         'extra_photo_urls': extraPhotoUrls,
         'photo_urls': dogPhotoUrls, // Keep all photos for backward compatibility
+        'is_public': _isPublic,
       });
 
       // 3) Upload owner avatar and update owner profile (OWNER SECOND! 👤)
@@ -510,6 +524,10 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     }
     if (widget.editMode == EditMode.editOwner) {
       return _buildSingleEditScreen(isDogEdit: false);
+    }
+    // For adding a new dog (not editing existing), show only dog form
+    if (widget.editMode == EditMode.addNewDog) {
+      return _buildAddNewDogScreen();
     }
     
     // Keep existing 2-step UI for creation and editBoth
@@ -941,6 +959,51 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               fillColor: Theme.of(context).colorScheme.surface,
             ),
           ),
+          const SizedBox(height: 24),
+          
+          // Privacy Toggle
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _isPublic ? Icons.public : Icons.lock,
+                  color: _isPublic ? Colors.green : Colors.orange,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _isPublic ? 'Visible to Everyone' : 'Friends Only',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        _isPublic 
+                          ? 'Other users can discover your dog'
+                          : 'Only friends can see your dog',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _isPublic,
+                  onChanged: (value) => setState(() => _isPublic = value),
+                  activeColor: Colors.green,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1221,6 +1284,162 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     });
   }
 
+  /// Build screen for adding a NEW dog (not editing existing)
+  Widget _buildAddNewDogScreen() {
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          'Add New Dog',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: _buildDogInfoStep(),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(24),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _addNewDog,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    minimumSize: const Size(double.infinity, 56),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Add Dog to My Pack',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Add a NEW dog to the user's profile (doesn't edit existing)
+  Future<void> _addNewDog() async {
+    // Validate dog info
+    if (_dogNameController.text.isEmpty || _dogBreedController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your dog\'s name and breed')),
+      );
+      return;
+    }
+    
+    if (_dogPhotos.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add at least one photo of your dog')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    
+    try {
+      String? userId = widget.userId ?? SupabaseConfig.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Upload dog photos
+      List<String> dogPhotoUrls = [];
+      String? mainPhotoUrl;
+      List<String> extraPhotoUrls = [];
+
+      if (_dogPhotos.isNotEmpty) {
+        try {
+          // Generate unique timestamp for this dog's photos to avoid conflicts
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          dogPhotoUrls = await PhotoUploadService.uploadMultipleImages(
+            imageFiles: _dogPhotos,
+            bucketName: PhotoUploadService.dogPhotosBucket,
+            baseFilePath: '$userId/dog_$timestamp/photo',
+          );
+          mainPhotoUrl = dogPhotoUrls.isNotEmpty ? dogPhotoUrls[0] : null;
+          extraPhotoUrls = dogPhotoUrls.length > 1 ? dogPhotoUrls.sublist(1, dogPhotoUrls.length.clamp(1, 4)) : [];
+        } catch (e) {
+          debugPrint('Error uploading dog photos: $e');
+        }
+      }
+
+      // Always create a NEW dog (never update existing)
+      final dogData = {
+        'name': _dogNameController.text.trim(),
+        'breed': _dogBreedController.text.trim(),
+        'age': int.tryParse(_dogAgeController.text) ?? 1,
+        'size': _dogSize,
+        'gender': _dogGender,
+        'bio': _dogBioController.text.trim(),
+        'main_photo_url': mainPhotoUrl,
+        'extra_photo_urls': extraPhotoUrls,
+        'photo_urls': dogPhotoUrls,
+        'is_active': true,  // Ensure the dog is active
+        'is_public': _isPublic, // Privacy setting
+      };
+      
+      debugPrint('🐕 Adding new dog to pack: $dogData');
+      await BarkDateUserService.addDog(userId, dogData);
+      
+      // Clear the cache so the new dog shows up
+      BarkDateUserService.clearUserDogsCache(userId);
+      debugPrint('🗑️ Cleared dogs cache after adding new dog');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${_dogNameController.text} added to your pack! 🐕'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Return success to refresh the profile screen
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add dog: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   /// Build single-screen edit UI (dog or owner only)
   Widget _buildSingleEditScreen({required bool isDogEdit}) {
     return Scaffold(
@@ -1368,6 +1587,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           'main_photo_url': mainPhotoUrl,
           'extra_photo_urls': extraPhotoUrls,
           'photo_urls': dogPhotoUrls,
+          'is_public': _isPublic, // Privacy setting
         };
         
         if (existingDogs.isEmpty) {

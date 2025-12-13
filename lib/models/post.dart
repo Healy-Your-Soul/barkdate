@@ -4,6 +4,7 @@ class Post {
   final String userName;
   final String userPhoto;
   final String dogName;
+  final String? dogId;  // For navigating to dog profile
   final String content;
   final String? imageUrl;
   final List<String> hashtags;
@@ -19,6 +20,7 @@ class Post {
     required this.userName,
     required this.userPhoto,
     required this.dogName,
+    this.dogId,
     required this.content,
     this.imageUrl,
     this.hashtags = const [],
@@ -35,6 +37,7 @@ class Post {
     String? userName,
     String? userPhoto,
     String? dogName,
+    String? dogId,
     String? content,
     String? imageUrl,
     List<String>? hashtags,
@@ -49,6 +52,7 @@ class Post {
     userName: userName ?? this.userName,
     userPhoto: userPhoto ?? this.userPhoto,
     dogName: dogName ?? this.dogName,
+    dogId: dogId ?? this.dogId,
     content: content ?? this.content,
     imageUrl: imageUrl ?? this.imageUrl,
     hashtags: hashtags ?? this.hashtags,

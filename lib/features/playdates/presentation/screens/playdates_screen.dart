@@ -25,79 +25,85 @@ class _PlaydatesScreenState extends ConsumerState<PlaydatesScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          'Playdates',
-          style: AppTypography.h1().copyWith(fontSize: 28),
-        ),
-        centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add, color: Colors.black),
-            onPressed: () {
-              context.push('/create-playdate');
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          FilterTabs(
-            tabs: const ['All', 'Upcoming', 'Pending', 'Past'],
-            selectedTab: _selectedFilter,
-            onTabSelected: (tab) {
-              setState(() => _selectedFilter = tab);
-            },
-          ),
-          Expanded(
-            child: playdatesAsync.when(
-              data: (playdates) {
-                // Filter logic
-                final filteredPlaydates = playdates.where((playdate) {
-                  if (_selectedFilter == 'All') return true;
-                  final status = (playdate['status'] as String?)?.toLowerCase() ?? 'pending';
-                  if (_selectedFilter == 'Pending') return status == 'pending';
-                  if (_selectedFilter == 'Upcoming') return status == 'confirmed'; // Assuming upcoming = confirmed
-                  // Add more logic as needed
-                  return true;
-                }).toList();
-
-                if (filteredPlaydates.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32.0),
-                      child: CuteEmptyState(
-                        icon: Icons.calendar_today_outlined,
-                        title: 'No playdates found',
-                        message: 'Try changing your filter or schedule a new one!',
-                        actionLabel: 'Schedule a Playdate',
-                        onAction: () {
-                          context.push('/create-playdate');
-                        },
-                      ),
-                    ),
-                  );
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.all(24),
-                  itemCount: filteredPlaydates.length,
-                  separatorBuilder: (context, index) => const Divider(height: 32, thickness: 0.5),
-                  itemBuilder: (context, index) {
-                    final playdate = filteredPlaydates[index];
-                    return _buildPlaydateItem(context, playdate);
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Text('Error: $error'),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header matching Messages/Profile style
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Playdates',
+                    style: AppTypography.h1().copyWith(fontSize: 32),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () {
+                      context.push('/create-playdate');
+                    },
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            FilterTabs(
+              tabs: const ['All', 'Upcoming', 'Pending', 'Past'],
+              selectedTab: _selectedFilter,
+              onTabSelected: (tab) {
+                setState(() => _selectedFilter = tab);
+              },
+            ),
+            const SizedBox(height: 24),
+            Expanded(
+              child: playdatesAsync.when(
+                data: (playdates) {
+                  // Filter logic
+                  final filteredPlaydates = playdates.where((playdate) {
+                    if (_selectedFilter == 'All') return true;
+                    final status = (playdate['status'] as String?)?.toLowerCase() ?? 'pending';
+                    if (_selectedFilter == 'Pending') return status == 'pending';
+                    if (_selectedFilter == 'Upcoming') return status == 'confirmed';
+                    return true;
+                  }).toList();
+
+                  if (filteredPlaydates.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: CuteEmptyState(
+                          icon: Icons.calendar_today_outlined,
+                          title: 'No playdates found',
+                          message: 'Try changing your filter or schedule a new one!',
+                          actionLabel: 'Schedule a Playdate',
+                          onAction: () {
+                            context.push('/create-playdate');
+                          },
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    itemCount: filteredPlaydates.length,
+                    separatorBuilder: (context, index) => const Divider(height: 32, thickness: 0.5),
+                    itemBuilder: (context, index) {
+                      final playdate = filteredPlaydates[index];
+                      return _buildPlaydateItem(context, playdate);
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
+                  child: Text('Error: $error'),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

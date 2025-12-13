@@ -10,6 +10,7 @@ import 'package:barkdate/features/profile/domain/repositories/profile_repository
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/dog_sharing_service.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -47,12 +48,6 @@ class ProfileScreen extends ConsumerWidget {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('Share Profile feature coming soon!')),
                               );
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.notifications_outlined),
-                            onPressed: () {
-                              // TODO: Notifications
                             },
                           ),
                         ],
@@ -95,7 +90,7 @@ class ProfileScreen extends ConsumerWidget {
                               separatorBuilder: (context, index) => const SizedBox(width: 16),
                               itemBuilder: (context, index) {
                                 final dog = dogs[index];
-                                return _buildLargeDogCard(context, dog);
+                                return _buildLargeDogCard(context, ref, dog);
                               },
                             ),
                           );
@@ -169,7 +164,7 @@ class ProfileScreen extends ConsumerWidget {
                                   Expanded(
                                     child: OutlinedButton.icon(
                                       onPressed: () {
-                                        context.push('/create-profile', extra: {'editMode': EditMode.createProfile});
+                                        context.push('/create-profile', extra: {'editMode': EditMode.addNewDog});
                                       },
                                       icon: const Icon(Icons.add, size: 16),
                                       label: const Text('Add Dog', style: TextStyle(fontSize: 12)),
@@ -494,7 +489,7 @@ class ProfileScreen extends ConsumerWidget {
 
 
 
-  Widget _buildLargeDogCard(BuildContext context, dynamic dog) {
+  Widget _buildLargeDogCard(BuildContext context, WidgetRef ref, dynamic dog) {
     return GestureDetector(
       onTap: () {
         context.push('/dog-details', extra: dog);
@@ -515,17 +510,108 @@ class ProfileScreen extends ConsumerWidget {
         ),
         child: Stack(
           children: [
-            // Edit Button
+            // 3-dots Menu (Edit + Delete)
             Positioned(
-              top: 16,
-              right: 16,
-              child: IconButton(
-                icon: const Icon(Icons.edit, size: 20, color: Colors.grey),
-                onPressed: () {
-                  context.push('/create-profile', extra: {
-                    'editMode': EditMode.editDog,
-                  });
+              top: 8,
+              right: 8,
+              child: PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, size: 24, color: Colors.grey),
+                onSelected: (value) async {
+                  if (value == 'edit') {
+                    context.push('/create-profile', extra: {
+                      'editMode': EditMode.editDog,
+                      'dogId': dog.id,
+                    });
+                  } else if (value == 'delete') {
+                    // Show confirmation dialog
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Dog Profile'),
+                        content: Text('Are you sure you want to delete ${dog.name}\'s profile? This action cannot be undone.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            style: TextButton.styleFrom(foregroundColor: Colors.red),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      try {
+                        // Get dog ID - handle both Dog model and Map
+                        final dogId = dog is Map ? dog['id'] : dog.id;
+                        debugPrint('🗑️ Deleting dog with ID: $dogId');
+                        debugPrint('🗑️ Dog type: ${dog.runtimeType}');
+                        
+                        if (dogId == null) {
+                          throw Exception('Dog ID is null');
+                        }
+                        
+                        // Soft delete - set is_active to false
+                        await SupabaseConfig.client
+                            .from('dogs')
+                            .update({'is_active': false})
+                            .eq('id', dogId);
+                        
+                        debugPrint('✅ Dog deleted from database');
+                        
+                        // Clear cache and refresh
+                        final userId = SupabaseConfig.auth.currentUser?.id;
+                        if (userId != null) {
+                          BarkDateUserService.clearUserDogsCache(userId);
+                        }
+                        ref.invalidate(userDogsProvider);
+                        ref.invalidate(userProfileProvider);
+                        ref.invalidate(userStatsProvider);
+                        ref.invalidate(profileRepositoryProvider);
+                        
+                        debugPrint('✅ Cache cleared and providers invalidated');
+                        
+                        if (context.mounted) {
+                          final dogName = dog is Map ? dog['name'] : dog.name;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("$dogName's profile deleted")),
+                          );
+                        }
+                      } catch (e) {
+                        debugPrint('❌ Error deleting dog: $e');
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error deleting: $e'), backgroundColor: Colors.red),
+                          );
+                        }
+                      }
+                    }
+                  }
                 },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 20),
+                        SizedBox(width: 8),
+                        Text('Edit'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, size: 20, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Delete', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
             
@@ -561,7 +647,7 @@ class ProfileScreen extends ConsumerWidget {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: const BoxDecoration(
-                            color: Color(0xFFFF385C), // Airbnb-ish pink/red
+                            color: Color(0xFF4CAF50), // Bright green
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(

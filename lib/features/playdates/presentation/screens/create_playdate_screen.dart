@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barkdate/models/dog.dart';
+import 'package:barkdate/widgets/location_picker_field.dart';
+import 'package:barkdate/services/places_service.dart';
 import 'package:intl/intl.dart';
 
 class CreatePlaydateScreen extends ConsumerStatefulWidget {
@@ -19,6 +21,7 @@ class _CreatePlaydateScreenState extends ConsumerState<CreatePlaydateScreen> {
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _selectedTime = const TimeOfDay(hour: 14, minute: 0);
   bool _isSubmitting = false;
+  PlaceAutocomplete? _selectedPlace; // Selected location with coordinates
 
   @override
   void dispose() {
@@ -148,29 +151,15 @@ class _CreatePlaydateScreenState extends ConsumerState<CreatePlaydateScreen> {
 
               const Text('Where', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              TextFormField(
+              LocationPickerField(
                 controller: _locationController,
-                decoration: InputDecoration(
-                  hintText: 'Location (Park, Cafe, etc.)',
-                  prefixIcon: const Icon(Icons.location_on_outlined),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.black, width: 2),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
+                hintText: 'Search for a location...',
+                onPlaceSelected: (place) {
+                  setState(() => _selectedPlace = place);
+                },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter a location';
+                    return 'Please select a location';
                   }
                   return null;
                 },
@@ -183,7 +172,7 @@ class _CreatePlaydateScreenState extends ConsumerState<CreatePlaydateScreen> {
                 child: ElevatedButton(
                   onPressed: _isSubmitting ? null : _submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF385C), // Airbnb Red
+                    backgroundColor: const Color(0xFF4CAF50), // Bright green
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(

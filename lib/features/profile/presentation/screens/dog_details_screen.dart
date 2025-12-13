@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/design_system/app_spacing.dart';
+import 'package:barkdate/services/dog_friendship_service.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
+import 'package:barkdate/supabase/supabase_config.dart';
 
 class DogDetailsScreen extends StatefulWidget {
   final Dog dog;
@@ -18,11 +21,44 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
   late PageController _pageController;
   int _currentPhotoIndex = 0;
   bool _isBarked = false;
+  bool _isLoading = false;
+  String? _friendshipStatus; // null, 'pending', 'accepted', 'declined'
+  String? _friendshipId;
+  String? _myDogId;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
+    _loadFriendshipStatus();
+  }
+
+  Future<void> _loadFriendshipStatus() async {
+    // Get current user's first dog to check friendship
+    final userId = SupabaseConfig.auth.currentUser?.id;
+    if (userId == null) return;
+
+    final myDogs = await BarkDateUserService.getUserDogs(userId);
+    if (myDogs.isEmpty) return;
+
+    _myDogId = myDogs.first['id'];
+    if (_myDogId == null) return;
+
+    // Don't show bark for your own dogs
+    if (_myDogId == widget.dog.id) return;
+
+    final friendship = await DogFriendshipService.getFriendshipStatus(
+      dogId1: _myDogId!,
+      dogId2: widget.dog.id,
+    );
+
+    if (mounted) {
+      setState(() {
+        _friendshipStatus = friendship?['status'];
+        _friendshipId = friendship?['id'];
+        _isBarked = _friendshipStatus != null;
+      });
+    }
   }
 
   @override
@@ -31,15 +67,69 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
     super.dispose();
   }
 
-  void _onBark() {
-    setState(() => _isBarked = !_isBarked);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_isBarked ? 'You barked at ${widget.dog.name}! 🐕' : 'Bark removed'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  Future<void> _onBark() async {
+    if (_myDogId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You need a dog to bark!')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      if (_friendshipStatus == null) {
+        // Send a new bark
+        final success = await DogFriendshipService.sendBark(
+          fromDogId: _myDogId!,
+          toDogId: widget.dog.id,
+        );
+
+        if (success && mounted) {
+          setState(() {
+            _isBarked = true;
+            _friendshipStatus = 'pending';
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('You barked at ${widget.dog.name}! 🐕 Waiting for response...'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Already barked or error occurred')),
+          );
+        }
+      } else if (_friendshipId != null) {
+        // Remove existing bark/friendship
+        final success = await DogFriendshipService.removeFriendship(_friendshipId!);
+
+        if (success && mounted) {
+          setState(() {
+            _isBarked = false;
+            _friendshipStatus = null;
+            _friendshipId = null;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Removed bark from ${widget.dog.name}'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _onMessage() {
@@ -218,11 +308,62 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
 
                         const SizedBox(height: 32),
                         
-                        // Inline Action Button
-                        const SizedBox(height: 32),
-                        
-                        // Removed "Schedule Playdate" button as per user request
-                        // The flow should be initiated from other places or maybe just chat first
+                        // Action Buttons (only show for other people's dogs)
+                        if (_myDogId != null && _myDogId != widget.dog.id) ...[
+                          Row(
+                            children: [
+                              // Bark Button
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _isLoading ? null : _onBark,
+                                  icon: _isLoading 
+                                    ? const SizedBox(
+                                        width: 16, 
+                                        height: 16, 
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : Icon(
+                                        _isBarked ? Icons.pets : Icons.pets_outlined,
+                                        color: _isBarked ? Colors.white : null,
+                                      ),
+                                  label: Text(_getBarkButtonText()),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _isBarked 
+                                      ? (_friendshipStatus == 'accepted' ? Colors.green : Colors.orange)
+                                      : null,
+                                    foregroundColor: _isBarked ? Colors.white : null,
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Message Button
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _onMessage,
+                                  icon: const Icon(Icons.chat_bubble_outline),
+                                  label: const Text('Message'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          // Playdate Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: _onSuggestPlaydate,
+                              icon: const Icon(Icons.calendar_today),
+                              label: const Text('Suggest a Playdate'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            ),
+                          ),
+                        ],
                         
                         const SizedBox(height: 32),
                       ],
@@ -235,6 +376,19 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
         ],
       ),
     );
+  }
+
+  String _getBarkButtonText() {
+    switch (_friendshipStatus) {
+      case 'pending':
+        return 'Bark Sent';
+      case 'accepted':
+        return 'Friends!';
+      case 'declined':
+        return 'Bark Again';
+      default:
+        return 'Bark';
+    }
   }
 
   Widget _buildDetailRow(IconData icon, String label, String value) {

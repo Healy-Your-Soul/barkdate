@@ -25,71 +25,113 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          'Events',
-          style: AppTypography.h1().copyWith(fontSize: 28),
-        ),
-        centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.tune, color: Colors.black), // Filter icon
-            onPressed: () {
-              // TODO: Show filter dialog
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          FilterTabs(
-            tabs: const ['All', 'This Weekend', 'Nearby', 'Free'],
-            selectedTab: _selectedFilter,
-            onTabSelected: (tab) {
-              setState(() => _selectedFilter = tab);
-            },
-          ),
-          Expanded(
-            child: eventsAsync.when(
-              data: (events) {
-                // Filter logic (placeholder for now)
-                final filteredEvents = events; 
-
-                if (filteredEvents.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32.0),
-                      child: CuteEmptyState(
-                        icon: Icons.event_busy,
-                        title: 'No upcoming events',
-                        message: 'There are no events happening nearby right now. Check back later or adjust your filters.',
-                        actionLabel: 'Adjust Filters',
-                        onAction: () {
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header matching Messages/Profile style
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Events',
+                    style: AppTypography.h1().copyWith(fontSize: 32),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.tune),
+                        onPressed: () {
                           // TODO: Show filter dialog
                         },
                       ),
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(24),
-                  itemCount: filteredEvents.length,
-                  itemBuilder: (context, index) {
-                    final event = filteredEvents[index];
-                    return EventCard(event: event);
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Text('Error: $error'),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () {
+                          context.push('/create-event');
+                        },
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            FilterTabs(
+              tabs: const ['All', 'This Weekend', 'Nearby', 'Free'],
+              selectedTab: _selectedFilter,
+              onTabSelected: (tab) {
+                setState(() => _selectedFilter = tab);
+              },
+            ),
+            const SizedBox(height: 24),
+            Expanded(
+              child: eventsAsync.when(
+                data: (events) {
+                  // Apply filter logic based on selected tab
+                  List<Event> filteredEvents = events;
+                  
+                  switch (_selectedFilter) {
+                    case 'This Weekend':
+                      final now = DateTime.now();
+                      final saturday = now.add(Duration(days: DateTime.saturday - now.weekday));
+                      final weekendStart = DateTime(saturday.year, saturday.month, saturday.day);
+                      final weekendEnd = weekendStart.add(const Duration(days: 2));
+                      filteredEvents = events.where((e) =>
+                        e.startTime.isAfter(weekendStart.subtract(const Duration(days: 1))) &&
+                        e.startTime.isBefore(weekendEnd)
+                      ).toList();
+                      break;
+                    case 'Nearby':
+                      // For now, show events that have coordinates (would need user location for proper distance calc)
+                      filteredEvents = events.where((e) => 
+                        e.latitude != null && e.longitude != null
+                      ).toList();
+                      break;
+                    case 'Free':
+                      filteredEvents = events.where((e) => e.isFree).toList();
+                      break;
+                    case 'All':
+                    default:
+                      filteredEvents = events;
+                  } 
+
+                  if (filteredEvents.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: CuteEmptyState(
+                          icon: Icons.event_busy,
+                          title: 'No upcoming events',
+                          message: 'There are no events happening nearby right now. Check back later or adjust your filters.',
+                          actionLabel: 'Adjust Filters',
+                          onAction: () {
+                            // TODO: Show filter dialog
+                          },
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    itemCount: filteredEvents.length,
+                    itemBuilder: (context, index) {
+                      final event = filteredEvents[index];
+                      return EventCard(event: event);
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
+                  child: Text('Error: $error'),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

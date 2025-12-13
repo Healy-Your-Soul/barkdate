@@ -247,6 +247,52 @@ class PlaydateService {
     }
   }
 
+  // Counter-propose playdate with new time/location
+  static Future<bool> counterProposePlaydate({
+    required String requestId,
+    required String playdateId,
+    DateTime? newScheduledAt,
+    String? newLocation,
+    String? message,
+  }) async {
+    try {
+      // Update the playdate with new proposed details
+      final updateData = <String, dynamic>{
+        'status': PlaydateStatus.pending.value,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      
+      if (newScheduledAt != null) {
+        updateData['scheduled_at'] = newScheduledAt.toIso8601String();
+      }
+      if (newLocation != null && newLocation.isNotEmpty) {
+        updateData['location'] = newLocation;
+      }
+
+      await _supabase
+          .from('playdates')
+          .update(updateData)
+          .eq('id', playdateId);
+
+      // Update the request status to counter_proposed
+      await _supabase
+          .from('playdate_requests')
+          .update({
+            'status': PlaydateRequestStatus.counterProposed.value,
+            'counter_message': message,
+            'counter_scheduled_at': newScheduledAt?.toIso8601String(),
+            'counter_location': newLocation,
+            'responded_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', requestId);
+
+      return true;
+    } catch (e) {
+      print('Error counter-proposing playdate: $e');
+      return false;
+    }
+  }
+
   // Get nearby playdates
   static Future<List<Playdate>> getNearbyPlaydates({
     required double latitude,
@@ -404,7 +450,7 @@ class PlaydateService {
       for (final ownershipData in data) {
         final dogData = ownershipData['dog'];
         if (dogData != null) {
-          final dog = EnhancedDog.fromDatabase(dogData, userId);
+          final dog = EnhancedDog.fromDatabase(dogData);
           dogs.add(dog);
         }
       }

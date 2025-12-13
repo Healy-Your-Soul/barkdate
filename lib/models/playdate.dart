@@ -360,6 +360,7 @@ enum PlaydateRequestStatus {
   pending('pending'),
   accepted('accepted'),
   declined('declined'),
+  counterProposed('counter_proposed'),
   expired('expired');
 
   const PlaydateRequestStatus(this.value);

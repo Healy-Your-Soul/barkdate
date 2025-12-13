@@ -6,6 +6,7 @@ import 'package:barkdate/features/messages/presentation/screens/chat_screen.dart
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
 import 'package:barkdate/design_system/app_typography.dart';
+import 'package:barkdate/core/presentation/widgets/filter_tabs.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 
 class MessagesScreen extends ConsumerStatefulWidget {
@@ -51,40 +52,13 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
 
             const SizedBox(height: 24),
 
-            // 2. Filter Tabs
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: List.generate(_filters.length, (index) {
-                  final isSelected = _selectedFilterIndex == index;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedFilterIndex = index),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isSelected ? Colors.black : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: isSelected ? Colors.black : Colors.grey[300]!,
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          _filters[index],
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.black87,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
+            // 2. Filter Tabs - using shared component for consistency
+            FilterTabs(
+              tabs: _filters,
+              selectedTab: _filters[_selectedFilterIndex],
+              onTabSelected: (tab) {
+                setState(() => _selectedFilterIndex = _filters.indexOf(tab));
+              },
             ),
 
             const SizedBox(height: 24),

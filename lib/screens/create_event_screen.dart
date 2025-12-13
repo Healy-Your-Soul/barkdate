@@ -4,9 +4,11 @@ import 'package:barkdate/services/auth_service.dart';
 import 'package:barkdate/services/event_service.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
 import 'package:barkdate/services/selected_image.dart';
+import 'package:barkdate/services/places_service.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/widgets/event_image_uploader.dart';
+import 'package:barkdate/widgets/location_picker_field.dart';
 import 'package:flutter/material.dart';
 
 class CreateEventScreen extends StatefulWidget {
@@ -242,18 +244,28 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               
               const SizedBox(height: 16),
               
-              // Location
-              TextFormField(
+              // Location with autocomplete
+              LocationPickerField(
                 controller: _locationController,
-                decoration: const InputDecoration(
-                  labelText: 'Location',
-                  hintText: 'e.g., Central Park Dog Run',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.location_on),
-                ),
+                hintText: 'Search for a location...',
+                onPlaceSelected: (place) async {
+                  // Try to get coordinates from place details
+                  final details = await PlacesService.getPlaceDetailsByPlaceId(place.placeId);
+                  if (details != null) {
+                    final geometry = details['geometry'] as Map<String, dynamic>?;
+                    final location = geometry?['location'] as Map<String, dynamic>?;
+                    if (location != null && mounted) {
+                      setState(() {
+                        _selectedLatitude = (location['lat'] as num?)?.toDouble();
+                        _selectedLongitude = (location['lng'] as num?)?.toDouble();
+                        _selectedPlaceName = place.structuredFormatting.mainText;
+                      });
+                    }
+                  }
+                },
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a location';
+                    return 'Please select a location';
                   }
                   return null;
                 },

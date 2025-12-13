@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:barkdate/screens/feed_screen.dart';
 import 'package:barkdate/screens/map_screen.dart';
 import 'package:barkdate/screens/map_v2/map_tab_screen.dart'; // New map
@@ -37,9 +38,9 @@ class _MainNavigationState extends State<MainNavigation> {
       case 1:
         return _useMapV2 ? const MapTabScreenV2() : const MapScreen();
       case 2:
-        return const EventsScreen();
-      case 3:
         return const PlaydatesScreen();
+      case 3:
+        return const EventsScreen();
       case 4:
         return const MessagesScreen();
       case 5:
@@ -91,29 +92,29 @@ class _MainNavigationState extends State<MainNavigation> {
         selectedItemColor: Theme.of(context).colorScheme.primary,
         unselectedItemColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
+          BottomNavigationBarItem(
+            icon: Icon(Symbols.home, weight: 300),
+            activeIcon: Icon(Symbols.home, weight: 500, fill: 1),
             label: 'Feed',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.map_outlined),
-            activeIcon: Icon(Icons.map),
+          BottomNavigationBarItem(
+            icon: Icon(Symbols.map, weight: 300),
+            activeIcon: Icon(Symbols.map, weight: 500, fill: 1),
             label: 'Map',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.event_outlined),
-            activeIcon: Icon(Icons.event),
-            label: 'Events',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_outlined),
-            activeIcon: Icon(Icons.calendar_today),
+          BottomNavigationBarItem(
+            icon: Icon(Symbols.calendar_today, weight: 300),
+            activeIcon: Icon(Symbols.calendar_today, weight: 500, fill: 1),
             label: 'Playdates',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
+          BottomNavigationBarItem(
+            icon: Icon(Symbols.event, weight: 300),
+            activeIcon: Icon(Symbols.event, weight: 500, fill: 1),
+            label: 'Events',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Symbols.chat_bubble, weight: 300),
+            activeIcon: Icon(Symbols.chat_bubble, weight: 500, fill: 1),
             label: 'Messages',
           ),
           BottomNavigationBarItem(
@@ -123,14 +124,14 @@ class _MainNavigationState extends State<MainNavigation> {
                     backgroundImage: NetworkImage(_dogAvatarUrl!),
                     onBackgroundImageError: (_, __) {},
                   )
-                : const Icon(Icons.pets),
+                : Icon(Symbols.person, weight: 300),
             activeIcon: _dogAvatarUrl != null && _dogAvatarUrl!.isNotEmpty
                 ? CircleAvatar(
                     radius: 12,
                     backgroundImage: NetworkImage(_dogAvatarUrl!),
                     onBackgroundImageError: (_, __) {},
                   )
-                : const Icon(Icons.pets),
+                : Icon(Symbols.person, weight: 500, fill: 1),
             label: 'Profile',
           ),
         ],

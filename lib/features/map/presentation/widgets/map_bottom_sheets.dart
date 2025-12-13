@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:barkdate/features/map/presentation/providers/map_provider.dart';
 import 'package:barkdate/services/places_service.dart';
 import 'package:barkdate/services/gemini_service.dart';
 import 'package:barkdate/services/checkin_service.dart';
+import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/checkin_button.dart';
 import 'package:barkdate/models/event.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Main bottom sheet manager for map selections
 class MapBottomSheets extends ConsumerWidget {
@@ -183,9 +186,9 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                                   Text('Checked in $timeAgo'),
                                 ],
                               ),
-                              trailing: user?['username'] != null
+                              trailing: user?['name'] != null
                                   ? Text(
-                                      '@${user!['username']}',
+                                      user!['name'],
                                       style: Theme.of(context).textTheme.bodySmall,
                                     )
                                   : null,
@@ -201,12 +204,192 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
     );
   }
 
+  /// Open directions in external maps app
+  Future<void> _openDirections() async {
+    final lat = widget.place.latitude;
+    final lng = widget.place.longitude;
+    final name = Uri.encodeComponent(widget.place.name);
+    
+    // Try opening in Apple Maps on iOS, Google Maps on Android
+    Uri mapsUrl;
+    if (Platform.isIOS) {
+      mapsUrl = Uri.parse('https://maps.apple.com/?daddr=$lat,$lng&q=$name');
+    } else {
+      mapsUrl = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&destination_place_id=${widget.place.placeId}');
+    }
+
+    try {
+      if (await canLaunchUrl(mapsUrl)) {
+        await launchUrl(mapsUrl, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback to Google Maps web
+        final fallback = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+        await launchUrl(fallback, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Error opening directions: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open maps app')),
+        );
+      }
+    }
+  }
+
+  /// Build place tags section for user contributions
+  Widget _buildPlaceTagsSection() {
+    // Common place amenity tags
+    final List<Map<String, dynamic>> availableTags = [
+      {'id': 'dog_friendly', 'icon': Icons.pets, 'label': 'Dog Friendly', 'color': Colors.green},
+      {'id': 'water', 'icon': Icons.water_drop, 'label': 'Water Available', 'color': Colors.blue},
+      {'id': 'poo_bags', 'icon': Icons.shopping_bag, 'label': 'Poo Bags', 'color': Colors.brown},
+      {'id': 'garbage', 'icon': Icons.delete, 'label': 'Trash Bins', 'color': Colors.grey},
+      {'id': 'fenced', 'icon': Icons.fence, 'label': 'Fenced Area', 'color': Colors.orange},
+      {'id': 'shade', 'icon': Icons.wb_shade, 'label': 'Shade Available', 'color': Colors.teal},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Amenities',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => _showAddTagDialog(availableTags),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Add Tag'),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            // Show existing tags (would come from DB in production)
+            if (widget.place.isDogFriendly)
+              _buildTagChip(Icons.pets, 'Dog Friendly', Colors.green),
+            // Show demo amenity tags for the place
+            _buildTagChip(Icons.water_drop, 'Water', Colors.blue),
+            _buildTagChip(Icons.delete, 'Trash Bins', Colors.grey),
+            _buildTagChip(Icons.wb_shade, 'Shade', Colors.teal),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTagChip(IconData icon, String label, Color color, {int? count}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (count != null) ...[
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showAddTagDialog(List<Map<String, dynamic>> tags) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Add Amenity Tag',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Help other dog owners know what\'s available here',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: tags.map((tag) => ActionChip(
+                avatar: Icon(tag['icon'] as IconData, size: 18, color: tag['color'] as Color),
+                label: Text(tag['label'] as String),
+                onPressed: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Tagged as "${tag['label']}"! Thank you! 🐕'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  // TODO: Save tag to database
+                },
+              )).toList(),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.5,
-      minChildSize: 0.3,
-      maxChildSize: 0.85,
+      initialChildSize: 0.45,
+      minChildSize: 0.25,
+      maxChildSize: 0.9,
+      expand: false,
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
@@ -256,27 +439,33 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                 ),
               ),
 
-              // Content
+              // Content - scrollable list
               Expanded(
                 child: ListView(
                   controller: scrollController,
+                  physics: const ClampingScrollPhysics(),
                   padding: const EdgeInsets.all(20),
                   children: [
-                    // Open/Rating status row
+                    // 1. Check-in button
+                    AnimatedCheckInButton(
+                      parkId: widget.place.placeId,
+                      parkName: widget.place.name,
+                      latitude: widget.place.latitude,
+                      longitude: widget.place.longitude,
+                      onCheckInSuccess: widget.onCheckInSuccess,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 2. Open/Rating status
                     Row(
                       children: [
-                        // Open Now badge
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color: widget.place.isOpen ? Colors.green.shade50 : Colors.red.shade50,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: widget.place.isOpen ? Colors.green : Colors.red,
-                              width: 1,
                             ),
                           ),
                           child: Text(
@@ -288,89 +477,56 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                             ),
                           ),
                         ),
-                        
                         const SizedBox(width: 12),
-                        
-                        // Rating
                         if (widget.place.rating > 0) ...[
                           const Icon(Icons.star, color: Colors.amber, size: 18),
                           const SizedBox(width: 4),
-                          Text(
-                            '${widget.place.rating}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                          ),
+                          Text('${widget.place.rating}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
                         ],
                       ],
                     ),
-
                     const SizedBox(height: 16),
 
-                    // Category row
+                    // 3. Category
                     Row(
                       children: [
-                        const Text('Categories: ',
-                            style: TextStyle(color: Colors.grey)),
+                        const Text('Categories: ', style: TextStyle(color: Colors.grey)),
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer,
+                            color: const Color(0xFF4CAF50).withOpacity(0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             widget.place.category.displayName.toLowerCase(),
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: const TextStyle(fontSize: 13, color: Color(0xFF2E7D32), fontWeight: FontWeight.w500),
                           ),
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 16),
-                    
-                    // Dog-Friendly Status Badge
+
+                    // 4. Dog-Friendly Badge
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
-                        color: widget.place.isDogFriendly 
-                            ? (widget.place.isFeaturedPark 
-                                ? Colors.green.shade50 
-                                : Colors.orange.shade50)
+                        color: widget.place.isDogFriendly
+                            ? (widget.place.isFeaturedPark ? Colors.green.shade50 : Colors.orange.shade50)
                             : Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: widget.place.isDogFriendly 
-                              ? (widget.place.isFeaturedPark 
-                                  ? Colors.green.shade300 
-                                  : Colors.orange.shade300)
+                          color: widget.place.isDogFriendly
+                              ? (widget.place.isFeaturedPark ? Colors.green.shade300 : Colors.orange.shade300)
                               : Colors.grey.shade300,
-                          width: 1,
                         ),
                       ),
                       child: Row(
                         children: [
                           Icon(
-                            widget.place.isFeaturedPark 
-                                ? Icons.verified 
-                                : (widget.place.isDogFriendly 
-                                    ? Icons.pets 
-                                    : Icons.help_outline),
+                            widget.place.isFeaturedPark ? Icons.verified : (widget.place.isDogFriendly ? Icons.pets : Icons.help_outline),
                             size: 20,
-                            color: widget.place.isDogFriendly 
-                                ? (widget.place.isFeaturedPark 
-                                    ? Colors.green.shade700 
-                                    : Colors.orange.shade700)
+                            color: widget.place.isDogFriendly
+                                ? (widget.place.isFeaturedPark ? Colors.green.shade700 : Colors.orange.shade700)
                                 : Colors.grey.shade600,
                           ),
                           const SizedBox(width: 10),
@@ -383,62 +539,65 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 14,
-                                    color: widget.place.isDogFriendly 
-                                        ? (widget.place.isFeaturedPark 
-                                            ? Colors.green.shade800 
-                                            : Colors.orange.shade800)
+                                    color: widget.place.isDogFriendly
+                                        ? (widget.place.isFeaturedPark ? Colors.green.shade800 : Colors.orange.shade800)
                                         : Colors.grey.shade700,
                                   ),
                                 ),
                                 if (!widget.place.isDogFriendly)
-                                  Text(
-                                    'Call ahead to confirm dogs are welcome',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
+                                  Text('Call ahead to confirm dogs are welcome', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                               ],
                             ),
                           ),
-                          if (widget.place.isFeaturedPark)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.green.shade100,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'BARKDATE',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green.shade800,
-                                ),
-                              ),
-                            ),
                         ],
                       ),
                     ),
+                    const SizedBox(height: 16),
 
-                    const SizedBox(height: 24),
+                    // 5. Photo
+                    if (widget.place.photoReference != null && widget.place.photoReference!.isNotEmpty) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          height: 150,
+                          width: double.infinity,
+                          child: Image.network(
+                            PlacesService.getPhotoUrl(widget.place.photoReference!, maxWidth: 600),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: Colors.grey.shade200,
+                              child: Center(child: Icon(Icons.park, size: 48, color: Colors.grey.shade400)),
+                            ),
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(child: CircularProgressIndicator(strokeWidth: 2));
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
-                    // Check In Button (prominent)
-                    CheckInButton(
-                      parkId: widget.place.placeId,
-                      parkName: widget.place.name,
-                      latitude: widget.place.latitude,
-                      longitude: widget.place.longitude,
-                      onCheckInSuccess: () {
-                        if (widget.onCheckInSuccess != null) {
-                          widget.onCheckInSuccess!();
-                        }
-                      },
+                    // 6. Get Directions
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _openDirections,
+                        icon: const Icon(Icons.directions),
+                        label: const Text('Get Directions'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
                     ),
-
                     const SizedBox(height: 20),
 
-                    // Who's Here Now section
+                    // 7. Place Tags
+                    _buildPlaceTagsSection(),
+                    const SizedBox(height: 20),
+
+                    // 8. Who's Here Now
                     if (widget.dogCount > 0) ...[
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -447,75 +606,43 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.shade50,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.pets,
-                                  color: Colors.green,
-                                  size: 20,
-                                ),
+                                decoration: BoxDecoration(color: Colors.green.shade50, shape: BoxShape.circle),
+                                child: const Icon(Icons.pets, color: Colors.green, size: 20),
                               ),
                               const SizedBox(width: 12),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Who\'s Here Now',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${widget.dogCount} ${widget.dogCount == 1 ? 'dog' : 'dogs'} checked in',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
+                                  const Text('Who\'s Here Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                  Text('${widget.dogCount} ${widget.dogCount == 1 ? 'dog' : 'dogs'} checked in',
+                                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
                                 ],
                               ),
                             ],
                           ),
-                          TextButton(
-                            onPressed: _showActiveCheckInsDialog,
-                            child: const Text('See all'),
-                          ),
+                          TextButton(onPressed: _showActiveCheckInsDialog, child: const Text('See all')),
                         ],
                       ),
                       const SizedBox(height: 20),
                     ],
 
-                    // Upcoming Events section
+                    // 9. Events
                     if (widget.events.isNotEmpty) ...[
-                      const Text(
-                        'Upcoming Events',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
+                      const Text('Upcoming Events', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       const SizedBox(height: 12),
                       ...widget.events.map((event) => Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor:
-                                    Theme.of(context).colorScheme.primaryContainer,
-                                child: Text(event.categoryIcon),
-                              ),
-                              title: Text(event.title),
-                              subtitle: Text(event.formattedDate),
-                              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                              onTap: () {
-                                ref
-                                    .read(mapSelectionProvider.notifier)
-                                    .selectEvent(event);
-                              },
-                            ),
-                          )),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            child: Text(event.categoryIcon),
+                          ),
+                          title: Text(event.title),
+                          subtitle: Text(event.formattedDate),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                          onTap: () => ref.read(mapSelectionProvider.notifier).selectEvent(event),
+                        ),
+                      )),
                     ],
                   ],
                 ),
@@ -851,6 +978,138 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Animated Check-in button with green/red color transition
+class AnimatedCheckInButton extends StatefulWidget {
+  final String parkId;
+  final String parkName;
+  final double? latitude;
+  final double? longitude;
+  final VoidCallback? onCheckInSuccess;
+
+  const AnimatedCheckInButton({
+    super.key,
+    required this.parkId,
+    required this.parkName,
+    this.latitude,
+    this.longitude,
+    this.onCheckInSuccess,
+  });
+
+  @override
+  State<AnimatedCheckInButton> createState() => _AnimatedCheckInButtonState();
+}
+
+class _AnimatedCheckInButtonState extends State<AnimatedCheckInButton> {
+  bool _isCheckedIn = false;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkStatus();
+  }
+
+  Future<void> _checkStatus() async {
+    try {
+      final user = SupabaseConfig.auth.currentUser;
+      if (user == null) return;
+      final checkIn = await CheckInService.getActiveCheckIn(user.id);
+      if (mounted && checkIn != null && checkIn.parkId == widget.parkId) {
+        setState(() => _isCheckedIn = true);
+      }
+    } catch (e) {
+      debugPrint('Error checking status: $e');
+    }
+  }
+
+  Future<void> _toggleCheckIn() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    try {
+      if (_isCheckedIn) {
+        // Check out
+        final success = await CheckInService.checkOut();
+        if (success && mounted) {
+          setState(() => _isCheckedIn = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Checked out! See you next time 🐾'),
+              backgroundColor: Color(0xFF4CAF50),
+            ),
+          );
+        }
+      } else {
+        // Check in
+        final checkIn = await CheckInService.checkInAtPark(
+          parkId: widget.parkId,
+          parkName: widget.parkName,
+          latitude: widget.latitude,
+          longitude: widget.longitude,
+        );
+        if (checkIn != null && mounted) {
+          setState(() => _isCheckedIn = true);
+          widget.onCheckInSuccess?.call();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Woof! Checked in at ${widget.parkName}! 🐕'),
+              backgroundColor: const Color(0xFF4CAF50),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final buttonColor = _isCheckedIn ? const Color(0xFFF44336) : const Color(0xFF4CAF50);
+    
+    return Container(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _isLoading ? null : _toggleCheckIn,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: buttonColor,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 2,
+        ),
+        icon: _isLoading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Icon(_isCheckedIn ? Icons.logout : Icons.pets, size: 20),
+        label: Text(
+          _isLoading
+              ? (_isCheckedIn ? 'Leaving...' : 'Checking in...')
+              : (_isCheckedIn ? 'Check Out' : 'Check In'),
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 }

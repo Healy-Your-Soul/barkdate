@@ -573,11 +573,92 @@ class PlacesService {
     };
   }
 
-  // Simple autocomplete for admin - mock for now to avoid CORS
+  // Autocomplete using Google Places API (real implementation for web)
   static Future<List<PlaceAutocomplete>> autocomplete(String input) async {
     if (input.isEmpty) return [];
     
-    // Return mock autocomplete results based on input
+    // Use real Google Places API on web
+    if (kIsWeb) {
+      try {
+        await mapsApiReadyCompleter.future;
+        
+        final Object google = _requireJsProperty(globalThis, 'google', 'google not found');
+        final Object maps = _requireJsProperty(google, 'maps', 'google.maps not found');
+        final Object places = _requireJsProperty(maps, 'places', 'google.maps.places not found');
+        final Object autocompleteStatics = _requireJsProperty(
+          places, 
+          'AutocompleteSuggestion', 
+          'AutocompleteSuggestion not found',
+        );
+
+        final Map<String, Object?> request = {
+          'input': input,
+          'language': 'en-AU',
+          'includedRegionCodes': ['AU'],
+        };
+
+        final dynamic response = await promiseToFuture(
+          callMethod(autocompleteStatics, 'fetchAutocompleteSuggestions', [jsify(request)]),
+        );
+
+        final results = <PlaceAutocomplete>[];
+        
+        if (response != null && hasProperty(response, 'suggestions')) {
+          final dynamic rawSuggestions = getProperty(response, 'suggestions');
+          if (rawSuggestions is List) {
+            for (final suggestion in rawSuggestions) {
+              try {
+                final placePrediction = getProperty(suggestion, 'placePrediction');
+                if (placePrediction != null) {
+                  final placeId = (getProperty(placePrediction, 'placeId') as String?) ?? '';
+                  final textObj = getProperty(placePrediction, 'text');
+                  final description = textObj != null 
+                      ? ((getProperty(textObj, 'text') as String?) ?? '') 
+                      : '';
+                  
+                  // Extract structured formatting
+                  String mainText = description.split(',').first.trim();
+                  String secondaryText = description.contains(',') 
+                      ? description.split(',').skip(1).join(',').trim() 
+                      : '';
+                  
+                  final structuredFormat = getProperty(placePrediction, 'structuredFormat');
+                  if (structuredFormat != null) {
+                    final mainTextObj = getProperty(structuredFormat, 'mainText');
+                    final secondaryTextObj = getProperty(structuredFormat, 'secondaryText');
+                    if (mainTextObj != null) {
+                      mainText = (getProperty(mainTextObj, 'text') as String?) ?? mainText;
+                    }
+                    if (secondaryTextObj != null) {
+                      secondaryText = (getProperty(secondaryTextObj, 'text') as String?) ?? secondaryText;
+                    }
+                  }
+                  
+                  results.add(PlaceAutocomplete(
+                    placeId: placeId,
+                    description: description,
+                    structuredFormatting: PlaceStructuredFormatting(
+                      mainText: mainText,
+                      secondaryText: secondaryText,
+                    ),
+                  ));
+                }
+              } catch (e) {
+                debugPrint('Error parsing suggestion: $e');
+              }
+            }
+          }
+        }
+        
+        debugPrint('📍 Autocomplete found ${results.length} results for "$input"');
+        return results;
+      } catch (e) {
+        debugPrint('❌ Google Autocomplete error: $e');
+        // Fall back to mock data
+      }
+    }
+    
+    // Fallback mock data for non-web or errors
     return [
       PlaceAutocomplete(
         placeId: 'mock_auto_emerald',
@@ -668,10 +749,24 @@ class PlacesService {
     }
   }
 
-  // Get photo URL from photo reference
+  // Get photo URL from photo reference using Google Places Photos API
   static String getPhotoUrl(String photoReference, {int maxWidth = 400}) {
-    // Return a placeholder image for now
-    return 'https://via.placeholder.com/${maxWidth}x${(maxWidth * 0.6).round()}?text=Dog+Park';
+    // For NEW Places API, the photoReference is the full photo resource name
+    // Format: places/{place_id}/photos/{photo_id}
+    // We need to use the Places Photo API with the new format
+    
+    // The API key used in index.html
+    const apiKey = 'AIzaSyAbZGdAyEUXEkN-1CtVvPCWIsxkAY8_4ss';
+    
+    // Check if it's a NEW API photo reference (contains 'places/')
+    if (photoReference.contains('places/')) {
+      // For NEW API, construct the photo URL
+      // Format: https://places.googleapis.com/v1/{photoName}/media?maxWidthPx={maxWidth}&key={apiKey}
+      return 'https://places.googleapis.com/v1/$photoReference/media?maxWidthPx=$maxWidth&key=$apiKey';
+    }
+    
+    // For legacy Places API photo references
+    return 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=$maxWidth&photo_reference=$photoReference&key=$apiKey';
   }
 
   static Future<void> _waitForGoogleMapsApi({bool verbose = false}) async {

@@ -8,7 +8,7 @@ import 'package:barkdate/services/gemini_service.dart';
 import 'package:barkdate/services/checkin_service.dart';
 import 'package:barkdate/widgets/checkin_button.dart';
 import 'package:barkdate/models/event.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Main bottom sheet manager for map selections
 class MapBottomSheets extends ConsumerWidget {
@@ -210,238 +210,319 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.5,
-      minChildSize: 0.3,
-      maxChildSize: 0.85,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 10,
-                offset: const Offset(0, -2),
-              ),
-            ],
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.55,
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
           ),
-          child: Column(
-            children: [
-              // Handle bar
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // Header with close button
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 8, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.place.name,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
-
-              // Header with close button
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 8, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.place.name,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () {
-                        ref.read(mapSelectionProvider.notifier).clearSelection();
-                      },
-                    ),
-                  ],
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    ref.read(mapSelectionProvider.notifier).clearSelection();
+                  },
                 ),
-              ),
+              ],
+            ),
+          ),
 
-              // Content
-              Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(20),
-                  children: [
-                    // Open/Rating status row
-                    Row(
-                      children: [
-                        // Open Now badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: widget.place.isOpen ? Colors.green.shade50 : Colors.red.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: widget.place.isOpen ? Colors.green : Colors.red,
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            widget.place.isOpen ? 'Open Now' : 'Closed',
-                            style: TextStyle(
-                              color: widget.place.isOpen ? Colors.green.shade700 : Colors.red.shade700,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        
-                        const SizedBox(width: 12),
-                        
-                        // Rating
-                        if (widget.place.rating > 0) ...[
-                          const Icon(Icons.star, color: Colors.amber, size: 18),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${widget.place.rating}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+          // Content - simple scrollable list
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. CHECK-IN BUTTON (FIRST)
+                  CheckInButton(
+                    parkId: widget.place.placeId,
+                    parkName: widget.place.name,
+                    onCheckInSuccess: widget.onCheckInSuccess,
+                  ),
+                  const SizedBox(height: 16),
 
+                  // 2. WHO'S HERE NOW
+                  if (widget.dogCount > 0) ...[
+                    _buildWhosHereSection(),
                     const SizedBox(height: 16),
-
-                    // Category row
-                    Row(
-                      children: [
-                        const Text('Categories: ',
-                            style: TextStyle(color: Colors.grey)),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            widget.place.category.displayName.toLowerCase(),
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Check In Button (prominent)
-                    CheckInButton(
-                      parkId: widget.place.placeId,
-                      parkName: widget.place.name,
-                      onCheckInSuccess: () {
-                        if (widget.onCheckInSuccess != null) {
-                          widget.onCheckInSuccess!();
-                        }
-                      },
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Who's Here Now section
-                    if (widget.dogCount > 0) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.shade50,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.pets,
-                                  color: Colors.green,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Who\'s Here Now',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${widget.dogCount} ${widget.dogCount == 1 ? 'dog' : 'dogs'} checked in',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          TextButton(
-                            onPressed: _showActiveCheckInsDialog,
-                            child: const Text('See all'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-
-                    // Upcoming Events section
-                    if (widget.events.isNotEmpty) ...[
-                      const Text(
-                        'Upcoming Events',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ...widget.events.map((event) => Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor:
-                                    Theme.of(context).colorScheme.primaryContainer,
-                                child: Text(event.categoryIcon),
-                              ),
-                              title: Text(event.title),
-                              subtitle: Text(event.formattedDate),
-                              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                              onTap: () {
-                                ref
-                                    .read(mapSelectionProvider.notifier)
-                                    .selectEvent(event);
-                              },
-                            ),
-                          )),
-                    ],
                   ],
-                ),
+
+                  // 3. OPEN/RATING STATUS
+                  _buildOpenRatingRow(),
+                  const SizedBox(height: 16),
+
+                  // 4. CATEGORIES
+                  _buildCategoryRow(),
+                  const SizedBox(height: 16),
+
+                  // 5. AMENITIES / DOG-FRIENDLY STATUS
+                  _buildDogFriendlyBadge(),
+                  const SizedBox(height: 16),
+
+                  // 6. PHOTO (if available)
+                  if (widget.place.photoReference != null && 
+                      widget.place.photoReference!.isNotEmpty) ...[
+                    _buildPlacePhoto(),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // 7. GET DIRECTIONS
+                  _buildDirectionsButton(),
+                  const SizedBox(height: 16),
+
+                  // 8. UPCOMING EVENTS
+                  if (widget.events.isNotEmpty) _buildEventsSection(),
+                ],
               ),
-            ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWhosHereSection() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.pets, color: Colors.green, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Who\'s Here Now',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                Text(
+                  '${widget.dogCount} ${widget.dogCount == 1 ? 'dog' : 'dogs'} checked in',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: _showActiveCheckInsDialog,
+            child: const Text('See all'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOpenRatingRow() {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: widget.place.isOpen ? Colors.green.shade50 : Colors.red.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: widget.place.isOpen ? Colors.green : Colors.red,
+            ),
+          ),
+          child: Text(
+            widget.place.isOpen ? 'Open Now' : 'Closed',
+            style: TextStyle(
+              color: widget.place.isOpen ? Colors.green.shade700 : Colors.red.shade700,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        if (widget.place.rating > 0) ...[
+          const Icon(Icons.star, color: Colors.amber, size: 18),
+          const SizedBox(width: 4),
+          Text(
+            '${widget.place.rating}',
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCategoryRow() {
+    return Row(
+      children: [
+        Text('Category: ', style: TextStyle(color: Colors.grey.shade600)),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            widget.place.category.displayName,
+            style: TextStyle(
+              fontSize: 13,
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDogFriendlyBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: widget.place.isDogFriendly ? Colors.green.shade50 : Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: widget.place.isDogFriendly ? Colors.green.shade300 : Colors.orange.shade300,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            widget.place.isDogFriendly ? Icons.pets : Icons.help_outline,
+            size: 20,
+            color: widget.place.isDogFriendly ? Colors.green.shade700 : Colors.orange.shade700,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              widget.place.isDogFriendly ? 'Dog Friendly' : 'Call ahead to confirm dogs welcome',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: widget.place.isDogFriendly ? Colors.green.shade800 : Colors.orange.shade800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlacePhoto() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        height: 140,
+        width: double.infinity,
+        child: Image.network(
+          PlacesService.getPhotoUrl(widget.place.photoReference!, maxWidth: 600),
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => Container(
+            color: Colors.grey.shade200,
+            child: Center(child: Icon(Icons.park, size: 48, color: Colors.grey.shade400)),
+          ),
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDirectionsButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () async {
+          final lat = widget.place.latitude;
+          final lng = widget.place.longitude;
+          final url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+          if (await canLaunchUrl(url)) {
+            await launchUrl(url, mode: LaunchMode.externalApplication);
+          }
+        },
+        icon: const Icon(Icons.directions),
+        label: const Text('Get Directions'),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEventsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Upcoming Events',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        const SizedBox(height: 12),
+        ...widget.events.map((event) => Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              child: Text(event.categoryIcon),
+            ),
+            title: Text(event.title),
+            subtitle: Text(event.formattedDate),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              ref.read(mapSelectionProvider.notifier).selectEvent(event);
+            },
+          ),
+        )),
+      ],
     );
   }
 }

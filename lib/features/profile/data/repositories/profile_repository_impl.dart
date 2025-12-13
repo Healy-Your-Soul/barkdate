@@ -12,7 +12,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
   @override
   Future<List<Dog>> getUserDogs(String userId) async {
-    final dogsData = await BarkDateUserService.getUserDogsEnhanced(userId);
+    // Use direct query instead of RPC (RPC has bug that only returns 1 dog)
+    final dogsData = await BarkDateUserService.getUserDogs(userId);
     return dogsData.map((data) => Dog.fromJson(data)).toList();
   }
 

@@ -26,6 +26,8 @@ import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 import 'package:barkdate/features/profile/presentation/screens/accept_share_screen.dart';
 import 'package:barkdate/screens/admin_screen.dart';
 import 'package:barkdate/screens/qr_checkin_screen.dart';
+import 'package:barkdate/screens/create_event_screen.dart';
+import 'package:barkdate/features/notifications/presentation/screens/notifications_screen.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
@@ -58,6 +60,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             userName: extra?['userName'],
             userEmail: extra?['userEmail'],
             editMode: extra?['editMode'] ?? EditMode.createProfile,
+            dogId: extra?['dogId'],
           );
         },
       ),
@@ -92,16 +95,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/events',
-                builder: (context, state) => const EventsScreen(),
+                path: '/playdates',
+                builder: (context, state) => const PlaydatesScreen(),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/playdates',
-                builder: (context, state) => const PlaydatesScreen(),
+                path: '/events',
+                builder: (context, state) => const EventsScreen(),
               ),
             ],
           ),
@@ -156,6 +159,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/create-event',
+        builder: (context, state) {
+          return const CreateEventScreen();
+        },
+      ),
+      GoRoute(
         path: '/event-details',
         builder: (context, state) {
           final event = state.extra as dynamic; // Can be Event object or Map
@@ -180,6 +189,20 @@ final routerProvider = Provider<GoRouter>((ref) {
             recipientAvatarUrl: extra['recipientAvatarUrl'],
           );
         },
+      ),
+      // Social Feed (Sniff Around) - accessible from main feed
+      GoRoute(
+        path: '/social-feed',
+        builder: (context, state) {
+          final initialTab = int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0;
+          final openCreatePost = state.uri.queryParameters['create'] == 'true';
+          return SocialFeedScreen(initialTab: initialTab, openCreatePost: openCreatePost);
+        },
+      ),
+      // Notifications
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
       // Admin route (unlisted - not in nav bar)
       GoRoute(

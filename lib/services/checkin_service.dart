@@ -183,15 +183,19 @@ class CheckInService {
   }
 
   /// Get active check-ins with user details for a specific place
+  /// Auto-expires check-ins older than 3 hours
   static Future<List<Map<String, dynamic>>> getActiveCheckInsAtPlace(String placeId) async {
     try {
+      // Calculate cutoff time (3 hours ago)
+      final cutoffTime = DateTime.now().subtract(const Duration(hours: 3)).toIso8601String();
+      
       final data = await SupabaseConfig.client
           .from('checkins')
           .select('''
             *,
             user:user_id (
               id,
-              username,
+              name,
               avatar_url
             ),
             dog:dog_id (
@@ -203,6 +207,7 @@ class CheckInService {
           ''')
           .eq('park_id', placeId)
           .eq('status', 'active')
+          .gte('checked_in_at', cutoffTime) // Only check-ins from last 3 hours
           .order('checked_in_at', ascending: false);
 
       return List<Map<String, dynamic>>.from(data);

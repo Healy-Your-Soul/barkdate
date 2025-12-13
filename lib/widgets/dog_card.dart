@@ -313,12 +313,8 @@ class _DogCardState extends State<DogCard> {
                     child: ElevatedButton(
                       onPressed: widget.onBarkPressed,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isDark 
-                          ? DarkModeColors.darkBarkButton 
-                          : LightModeColors.lightBarkButton,
-                        foregroundColor: isDark 
-                          ? DarkModeColors.darkOnBarkButton 
-                          : LightModeColors.lightOnBarkButton,
+                        backgroundColor: const Color(0xFF4CAF50), // Bright green
+                        foregroundColor: Colors.white,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         shape: RoundedRectangleBorder(
@@ -329,9 +325,7 @@ class _DogCardState extends State<DogCard> {
                         'Bark',
                         style: theme.textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: isDark 
-                            ? DarkModeColors.darkOnBarkButton 
-                            : LightModeColors.lightOnBarkButton,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -414,9 +408,9 @@ class _DogCardState extends State<DogCard> {
                             : OutlinedButton(
                                 onPressed: widget.onPlaydatePressed,
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: theme.colorScheme.primary,
-                                  side: BorderSide(
-                                    color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                                  foregroundColor: const Color(0xFF4CAF50),
+                                  side: const BorderSide(
+                                    color: Color(0xFF4CAF50),
                                     width: 1,
                                   ),
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -427,10 +421,10 @@ class _DogCardState extends State<DogCard> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(
+                                    const Icon(
                                       Icons.calendar_today,
                                       size: 12,
-                                      color: theme.colorScheme.primary,
+                                      color: Color(0xFF4CAF50),
                                     ),
                                     const SizedBox(width: 2),
                                     Text(
@@ -438,7 +432,7 @@ class _DogCardState extends State<DogCard> {
                                       style: theme.textTheme.labelSmall?.copyWith(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w600,
-                                        color: theme.colorScheme.primary,
+                                        color: const Color(0xFF4CAF50),
                                       ),
                                     ),
                                   ],

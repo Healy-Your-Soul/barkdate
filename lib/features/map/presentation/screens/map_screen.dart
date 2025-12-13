@@ -7,6 +7,8 @@ import 'package:barkdate/features/map/presentation/widgets/map_search_bar.dart';
 import 'package:barkdate/features/map/presentation/widgets/map_filter_chips.dart';
 import 'package:barkdate/features/map/presentation/widgets/map_bottom_sheets.dart';
 import 'package:barkdate/services/places_service.dart';
+import 'package:barkdate/services/checkin_service.dart';
+import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/checkin_button.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
@@ -263,7 +265,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           // Search This Area button
           if (!mapDataAsync.isLoading && !selection.hasSelection)
             Positioned(
-              top: 80,
+              top: 50,
               left: 0,
               right: 0,
               child: Center(
@@ -275,7 +277,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   label: const Text('Search this area'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: const Color(0xFF4CAF50),
                     elevation: 4,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
@@ -288,7 +290,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           // Loading indicator
           if (mapDataAsync.isLoading)
              Positioned(
-               top: 80,
+               top: 50,
                left: 0,
                right: 0,
                child: Center(
@@ -350,20 +352,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             const SizedBox(height: 16),
                             SizedBox(
                               width: double.infinity,
-                              child: ElevatedButton.icon(
+                              child: AnimatedAiButton(
                                 onPressed: () {
                                   ref.read(mapSelectionProvider.notifier).showAiAssistant();
                                 },
-                                icon: const Icon(Icons.auto_awesome),
-                                label: const Text('AI Map Assistant'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(context).colorScheme.primary,
-                                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
                               ),
                             ),
                           ],
@@ -374,24 +366,39 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 : const SizedBox.shrink(),
           ),
 
-          // Recenter button
+          // Recenter button - positioned at top-right of map area
           Positioned(
             right: 16,
-            bottom: selection.hasSelection ? 320 : 280,
+            top: 8,
             child: FloatingActionButton.small(
+              heroTag: 'recenter_btn',
               onPressed: _recenterMap,
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              backgroundColor: Colors.white,
               elevation: 4,
-              child: Icon(
+              child: const Icon(
                 Icons.my_location,
-                color: Theme.of(context).colorScheme.primary,
+                color: Color(0xFF4CAF50),
               ),
             ),
           ),
 
-          // Bottom sheets - as Positioned widget instead of Scaffold.bottomSheet
-          if (selection.hasSelection)
-          // Bottom sheets - as Positioned widget instead of Scaffold.bottomSheet
+          // Floating check-in status indicator
+          Positioned(
+            left: 16,
+            top: 8,
+            child: FloatingCheckInIndicator(
+              onTap: (placeId, placeName) {
+                // Find the place and select it
+                final places = mapDataAsync.value?.places ?? [];
+                final place = places.where((p) => p.placeId == placeId).firstOrNull;
+                if (place != null) {
+                  ref.read(mapSelectionProvider.notifier).selectPlace(place);
+                }
+              },
+            ),
+          ),
+
+          // Bottom sheets
           if (selection.hasSelection)
             Positioned.fill(
               child: MapBottomSheets(
@@ -404,6 +411,217 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Animated AI button with gradient and glow effect
+class AnimatedAiButton extends StatefulWidget {
+  final VoidCallback onPressed;
+
+  const AnimatedAiButton({super.key, required this.onPressed});
+
+  @override
+  State<AnimatedAiButton> createState() => _AnimatedAiButtonState();
+}
+
+class _AnimatedAiButtonState extends State<AnimatedAiButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _shimmerAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat();
+    _shimmerAnimation = Tween<double>(begin: -1.0, end: 2.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _shimmerAnimation,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF6366F1).withOpacity(0.3),
+                blurRadius: 8,
+                spreadRadius: 0,
+              ),
+            ],
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: const [
+                Color(0xFF6366F1), // Indigo
+                Color(0xFF8B5CF6), // Purple
+                Color(0xFF06B6D4), // Cyan
+              ],
+              stops: [
+                0.0,
+                0.5 + (_shimmerAnimation.value * 0.3),
+                1.0,
+              ].map((s) => s.clamp(0.0, 1.0)).toList(),
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: widget.onPressed,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.auto_awesome,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'AI Map Assistant',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'BETA',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Floating indicator showing current check-in status
+class FloatingCheckInIndicator extends StatefulWidget {
+  final Function(String placeId, String placeName)? onTap;
+
+  const FloatingCheckInIndicator({super.key, this.onTap});
+
+  @override
+  State<FloatingCheckInIndicator> createState() => _FloatingCheckInIndicatorState();
+}
+
+class _FloatingCheckInIndicatorState extends State<FloatingCheckInIndicator> {
+  String? _checkedInPlaceId;
+  String? _checkedInPlaceName;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCheckInStatus();
+  }
+
+  Future<void> _loadCheckInStatus() async {
+    final user = SupabaseConfig.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final checkIn = await CheckInService.getActiveCheckIn(user.id);
+      if (mounted) {
+        setState(() {
+          _checkedInPlaceId = checkIn?.parkId;
+          _checkedInPlaceName = checkIn?.parkName;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading check-in status: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_checkedInPlaceId == null) return const SizedBox.shrink();
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () {
+          if (_checkedInPlaceId != null && _checkedInPlaceName != null) {
+            widget.onTap?.call(_checkedInPlaceId!, _checkedInPlaceName!);
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF4CAF50),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF4CAF50).withOpacity(0.3),
+                blurRadius: 6,
+                spreadRadius: 0,
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.pets, color: Colors.white, size: 16),
+              const SizedBox(width: 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 100),
+                child: Text(
+                  _checkedInPlaceName ?? 'Checked In',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

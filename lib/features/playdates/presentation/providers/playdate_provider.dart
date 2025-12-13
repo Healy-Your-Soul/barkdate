@@ -4,6 +4,7 @@ import 'package:barkdate/features/playdates/data/repositories/playdate_repositor
 import 'package:barkdate/features/messages/domain/repositories/message_repository.dart';
 import 'package:barkdate/features/messages/data/repositories/message_repository_impl.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
 
 // Repositories
 final playdateRepositoryProvider = Provider<PlaydateRepository>((ref) {
@@ -37,8 +38,14 @@ final mutualMatchesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) a
   return await repository.getMutualMatches(user.id);
 });
 
-// Messages for a specific match
+// Messages for a specific match (one-time fetch)
 final messagesProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, matchId) async {
   final repository = ref.watch(messageRepositoryProvider);
   return await repository.getMessages(matchId);
 });
+
+// Real-time messages stream for a specific match
+final messagesStreamProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, matchId) {
+  return BarkDateMessageService.streamMessages(matchId);
+});
+

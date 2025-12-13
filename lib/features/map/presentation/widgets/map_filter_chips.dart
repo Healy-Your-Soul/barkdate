@@ -5,6 +5,8 @@ import 'package:barkdate/features/map/presentation/providers/map_provider.dart';
 class MapFilterChips extends ConsumerWidget {
   const MapFilterChips({super.key});
 
+  static const greenColor = Color(0xFF4CAF50);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final filters = ref.watch(mapFiltersProvider);
@@ -21,6 +23,12 @@ class MapFilterChips extends ConsumerWidget {
                 child: ChoiceChip(
                   label: const Text('All'),
                   selected: filters.category == 'all',
+                  selectedColor: greenColor.withOpacity(0.2),
+                  checkmarkColor: greenColor,
+                  labelStyle: TextStyle(
+                    color: filters.category == 'all' ? greenColor : Colors.black87,
+                    fontWeight: filters.category == 'all' ? FontWeight.w600 : FontWeight.w400,
+                  ),
                   onSelected: (_) {
                     ref.read(mapFiltersProvider.notifier).setCategory('all');
                   },
@@ -31,6 +39,12 @@ class MapFilterChips extends ConsumerWidget {
                 child: ChoiceChip(
                   label: const Text('Cafes'),
                   selected: filters.category == 'cafe',
+                  selectedColor: greenColor.withOpacity(0.2),
+                  checkmarkColor: greenColor,
+                  labelStyle: TextStyle(
+                    color: filters.category == 'cafe' ? greenColor : Colors.black87,
+                    fontWeight: filters.category == 'cafe' ? FontWeight.w600 : FontWeight.w400,
+                  ),
                   onSelected: (_) {
                     ref.read(mapFiltersProvider.notifier).setCategory('cafe');
                   },
@@ -41,6 +55,12 @@ class MapFilterChips extends ConsumerWidget {
                 child: ChoiceChip(
                   label: const Text('Parks'),
                   selected: filters.category == 'park',
+                  selectedColor: greenColor.withOpacity(0.2),
+                  checkmarkColor: greenColor,
+                  labelStyle: TextStyle(
+                    color: filters.category == 'park' ? greenColor : Colors.black87,
+                    fontWeight: filters.category == 'park' ? FontWeight.w600 : FontWeight.w400,
+                  ),
                   onSelected: (_) {
                     ref.read(mapFiltersProvider.notifier).setCategory('park');
                   },
@@ -51,6 +71,12 @@ class MapFilterChips extends ConsumerWidget {
                 child: ChoiceChip(
                   label: const Text('Stores'),
                   selected: filters.category == 'store',
+                  selectedColor: greenColor.withOpacity(0.2),
+                  checkmarkColor: greenColor,
+                  labelStyle: TextStyle(
+                    color: filters.category == 'store' ? greenColor : Colors.black87,
+                    fontWeight: filters.category == 'store' ? FontWeight.w600 : FontWeight.w400,
+                  ),
                   onSelected: (_) {
                     ref.read(mapFiltersProvider.notifier).setCategory('store');
                   },
@@ -72,6 +98,8 @@ class MapFilterChips extends ConsumerWidget {
             FilterChip(
               label: const Text('Dog Water Bowls'),
               selected: filters.amenities.contains('Dog Water Bowls'),
+              selectedColor: greenColor.withOpacity(0.2),
+              checkmarkColor: greenColor,
               onSelected: (_) {
                 ref.read(mapFiltersProvider.notifier).toggleAmenity('Dog Water Bowls');
               },
@@ -79,6 +107,8 @@ class MapFilterChips extends ConsumerWidget {
             FilterChip(
               label: const Text('Shaded Areas'),
               selected: filters.amenities.contains('Shaded Areas'),
+              selectedColor: greenColor.withOpacity(0.2),
+              checkmarkColor: greenColor,
               onSelected: (_) {
                 ref.read(mapFiltersProvider.notifier).toggleAmenity('Shaded Areas');
               },
@@ -100,7 +130,7 @@ class MapFilterChips extends ConsumerWidget {
               onChanged: (value) {
                 ref.read(mapFiltersProvider.notifier).setShowEvents(value);
               },
-              activeColor: Theme.of(context).colorScheme.primary,
+              activeColor: greenColor,
             ),
           ],
         ),

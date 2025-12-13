@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:go_router/go_router.dart';
 import 'package:barkdate/data/sample_data.dart';
 import 'package:barkdate/models/post.dart';
+import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
 import 'package:barkdate/services/selected_image.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
@@ -12,23 +13,53 @@ import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
 
 
 class SocialFeedScreen extends StatefulWidget {
-  const SocialFeedScreen({super.key});
+  final int initialTab;
+  final bool openCreatePost;
+  
+  const SocialFeedScreen({
+    super.key,
+    this.initialTab = 0,
+    this.openCreatePost = false,
+  });
 
   @override
   State<SocialFeedScreen> createState() => _SocialFeedScreenState();
 }
 
-class _SocialFeedScreenState extends State<SocialFeedScreen> {
+class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerProviderStateMixin {
   List<Post> _posts = [];
   final TextEditingController _postController = TextEditingController();
   SelectedImage? _selectedImage;
   bool _isPosting = false;
   bool _isLoading = false;
+  
+  // New: Track current user and their likes
+  String? _currentUserId;
+  Set<String> _likedPostIds = {};
+  
+  // New: Tab controller for "For You" / "Following"
+  late TabController _tabController;
+  int _selectedTab = 0; // 0 = For You, 1 = Following
 
   @override
   void initState() {
     super.initState();
+    _selectedTab = widget.initialTab;
+    _tabController = TabController(length: 2, vsync: this, initialIndex: widget.initialTab);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      setState(() => _selectedTab = _tabController.index);
+      _loadFeed();
+    });
+    _currentUserId = SupabaseConfig.auth.currentUser?.id;
     _loadFeed();
+    
+    // Auto-open create post dialog if requested
+    if (widget.openCreatePost) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showCreatePostDialog();
+      });
+    }
   }
 
   @override
@@ -42,12 +73,19 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Social Feed',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🐕', style: TextStyle(fontSize: 24)),
+            const SizedBox(width: 8),
+            Text(
+              'Sniff Around',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
+            ),
+          ],
         ),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         elevation: 0,
@@ -61,12 +99,25 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         actions: [
           IconButton(
             icon: Icon(
-              Icons.add_box_outlined,
+              Icons.add,
+              size: 28,
               color: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
             onPressed: _showCreatePostDialog,
+            tooltip: 'Create Post',
           ),
+          const SizedBox(width: 8),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: Theme.of(context).colorScheme.onPrimaryContainer,
+          unselectedLabelColor: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.5),
+          indicatorColor: Theme.of(context).colorScheme.primary,
+          tabs: const [
+            Tab(text: 'For You'),
+            Tab(text: 'Following'),
+          ],
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -75,7 +126,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
               child: _posts.isEmpty
                   ? _buildEmptyState()
                   : ListView.builder(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                       itemCount: _posts.length,
                       itemBuilder: (context, index) {
                         final post = _posts[index];
@@ -88,66 +139,117 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
   }
 
   Widget _buildPostCard(BuildContext context, Post post) {
+    final isOwnPost = post.userId == _currentUserId;
+    
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Post header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: post.userPhoto.isNotEmpty && !post.userPhoto.contains('placeholder')
-                      ? NetworkImage(post.userPhoto)
-                      : null,
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  onBackgroundImageError: post.userPhoto.isNotEmpty && !post.userPhoto.contains('placeholder')
-                      ? (exception, stackTrace) {
-                          debugPrint('Error loading profile image: $exception');
-                        }
-                      : null,
-                  child: post.userPhoto.isEmpty || post.userPhoto.contains('placeholder')
-                      ? Icon(
-                          Icons.person,
-                          size: 20,
-                          color: Theme.of(context).colorScheme.primary,
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.dogName,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
+          // Post header - tappable to view dog profile
+          InkWell(
+            onTap: post.dogId != null ? () => _navigateToDogProfile(post.dogId!) : null,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundImage: post.userPhoto.isNotEmpty && !post.userPhoto.contains('placeholder')
+                        ? NetworkImage(post.userPhoto)
+                        : null,
+                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                    onBackgroundImageError: post.userPhoto.isNotEmpty && !post.userPhoto.contains('placeholder')
+                        ? (exception, stackTrace) {
+                            debugPrint('Error loading profile image: $exception');
+                          }
+                        : null,
+                    child: post.userPhoto.isEmpty || post.userPhoto.contains('placeholder')
+                        ? Icon(
+                            Icons.pets,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.primary,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              post.dogName,
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            if (post.dogId != null) ...[
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.chevron_right,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                              ),
+                            ],
+                          ],
                         ),
-                      ),
-                      Text(
-                        'with ${post.userName} • ${_formatPostTime(post.timestamp)}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        Text(
+                          'with ${post.userName} • ${_formatPostTime(post.timestamp)}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          ),
                         ),
-                      ),
+                      ],
+                    ),
+                  ),
+                  // More options menu
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_horiz,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        _deletePost(post);
+                      } else if (value == 'report') {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Report feature coming soon')),
+                        );
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      if (isOwnPost)
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Delete Post', style: TextStyle(color: Colors.red)),
+                            ],
+                          ),
+                        ),
+                      if (!isOwnPost)
+                        const PopupMenuItem(
+                          value: 'report',
+                          child: Row(
+                            children: [
+                              Icon(Icons.flag_outlined),
+                              SizedBox(width: 8),
+                              Text('Report'),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
-                ),
-                IconButton(
-                  onPressed: () {},
-                  icon: Icon(
-                    Icons.more_horiz,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           
@@ -204,7 +306,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
               ),
             ),
           
-          // Post actions
+          // Post actions - using bone emoji 🦴 instead of hearts
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -212,13 +314,8 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
               children: [
                 Row(
                   children: [
-                    _buildActionButton(
-                      context,
-                      icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
-                      count: post.likes,
-                      color: post.isLiked ? Colors.red : null,
-                      onPressed: () => _toggleLike(post),
-                    ),
+                    // Bone button (like) 🦴
+                    _buildBoneButton(context, post),
                     const SizedBox(width: 24),
                     _buildActionButton(
                       context,
@@ -238,6 +335,38 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+  
+  /// Build the bone "like" button using emoji
+  Widget _buildBoneButton(BuildContext context, Post post) {
+    final isLiked = _likedPostIds.contains(post.id);
+    
+    return GestureDetector(
+      onTap: () => _toggleLike(post),
+      child: Row(
+        children: [
+          Text(
+            '🦴',
+            style: TextStyle(
+              fontSize: 22,
+              color: isLiked ? null : Colors.grey,
+            ),
+          ),
+          if (post.likes > 0) ...[
+            const SizedBox(width: 4),
+            Text(
+              post.likes.toString(),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: isLiked 
+                    ? Colors.amber[700] 
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                fontWeight: isLiked ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -291,16 +420,53 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
     }
   }
 
-  void _toggleLike(Post post) {
+  /// Toggle like on a post - now persists to database
+  Future<void> _toggleLike(Post post) async {
+    if (_currentUserId == null) return;
+    
+    final isCurrentlyLiked = _likedPostIds.contains(post.id);
+    
+    // Optimistic UI update
     setState(() {
+      if (isCurrentlyLiked) {
+        _likedPostIds.remove(post.id);
+      } else {
+        _likedPostIds.add(post.id);
+      }
+      
       final index = _posts.indexWhere((p) => p.id == post.id);
       if (index >= 0) {
         _posts[index] = post.copyWith(
-          isLiked: !post.isLiked,
-          likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+          isLiked: !isCurrentlyLiked,
+          likes: isCurrentlyLiked ? post.likes - 1 : post.likes + 1,
         );
       }
     });
+    
+    // Persist to database
+    try {
+      await BarkDateSocialService.togglePostLike(post.id, _currentUserId!);
+    } catch (e) {
+      debugPrint('Error toggling like: $e');
+      // Revert on error
+      if (mounted) {
+        setState(() {
+          if (isCurrentlyLiked) {
+            _likedPostIds.add(post.id);
+          } else {
+            _likedPostIds.remove(post.id);
+          }
+          
+          final index = _posts.indexWhere((p) => p.id == post.id);
+          if (index >= 0) {
+            _posts[index] = post.copyWith(
+              isLiked: isCurrentlyLiked,
+              likes: isCurrentlyLiked ? post.likes + 1 : post.likes - 1,
+            );
+          }
+        });
+      }
+    }
   }
 
   void _showComments(Post post) {
@@ -427,8 +593,27 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
     setState(() => _isLoading = true);
     
     try {
-      // Load posts from Supabase
-      final postsData = await BarkDateSocialService.getFeedPosts();
+      List<Map<String, dynamic>> postsData;
+      
+      // Load different feeds based on selected tab
+      if (_selectedTab == 0) {
+        // "For You" tab - all public posts
+        postsData = await BarkDateSocialService.getFeedPosts();
+      } else {
+        // "Following" tab - posts from dog friends only
+        if (_currentUserId == null) {
+          postsData = [];
+        } else {
+          postsData = await BarkDateSocialService.getFollowingFeedPosts(
+            userId: _currentUserId!,
+          );
+        }
+      }
+      
+      // Load user's liked posts for UI state
+      if (_currentUserId != null) {
+        _likedPostIds = await BarkDateSocialService.getUserLikedPostIds(_currentUserId!);
+      }
       
       // Convert to Post objects
       final posts = postsData.map((postData) {
@@ -436,22 +621,25 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         final dogPhoto = postData['dog']?['main_photo_url'];
         final userAvatar = postData['user']?['avatar_url'];
         final finalPhoto = dogPhoto ?? userAvatar ?? 'https://via.placeholder.com/150';
+        final postId = postData['id'] ?? '';
         
         return Post(
-          id: postData['id'] ?? '',
+          id: postId,
           userId: postData['user_id'] ?? '',
           userName: postData['user']?['name'] ?? 'Unknown User',
           userPhoto: finalPhoto,
           dogName: postData['dog']?['name'] ?? 'Unnamed Dog',
+          dogId: postData['dog']?['id'],  // Include dogId for navigation
           content: postData['content'] ?? '',
           imageUrl: postData['image_urls']?.isNotEmpty == true 
               ? postData['image_urls'][0] 
               : null,
           timestamp: DateTime.tryParse(postData['created_at'] ?? '') ?? 
-              DateTime.now().subtract(const Duration(minutes: 5)), // Fallback to 5 minutes ago instead of "now"
+              DateTime.now().subtract(const Duration(minutes: 5)),
           likes: postData['likes_count'] ?? 0,
           comments: postData['comments_count'] ?? 0,
           hashtags: _extractHashtags(postData['content'] ?? ''),
+          isLiked: _likedPostIds.contains(postId),
         );
       }).toList();
       
@@ -465,7 +653,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
       debugPrint('Error loading feed: $e');
       if (mounted) {
         setState(() {
-          _posts = List.from(SampleData.socialPosts); // Fallback to sample data
+          _posts = List.from(SampleData.socialPosts);
           _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
@@ -482,18 +670,91 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         .map((match) => match.group(0)!)
         .toList();
   }
+  
+  /// Navigate to dog profile
+  Future<void> _navigateToDogProfile(String dogId) async {
+    try {
+      // Fetch dog data and navigate
+      final dogData = await SupabaseConfig.client
+          .from('dogs')
+          .select('*, user:users(name, avatar_url)')
+          .eq('id', dogId)
+          .single();
+      
+      if (mounted) {
+        final dog = Dog.fromJson(dogData);
+        context.push('/dog/${dog.id}', extra: dog);
+      }
+    } catch (e) {
+      debugPrint('Error navigating to dog profile: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load dog profile')),
+        );
+      }
+    }
+  }
+  
+  /// Delete a post
+  Future<void> _deletePost(Post post) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Post?'),
+        content: const Text('This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirm == true) {
+      try {
+        await BarkDateSocialService.deletePost(post.id);
+        
+        setState(() {
+          _posts.removeWhere((p) => p.id == post.id);
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Post deleted')),
+          );
+        }
+      } catch (e) {
+        debugPrint('Error deleting post: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting post: $e')),
+          );
+        }
+      }
+    }
+  }
 
   /// Build empty state when no posts
   Widget _buildEmptyState() {
+    final isFollowingTab = _selectedTab == 1;
+    
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: CuteEmptyState(
-          icon: Icons.pets,
-          title: 'No Posts Yet!',
-          message: 'Be the first to share your dog\'s adventure! Tap the + button to create a post.',
-          actionLabel: 'Create First Post',
-          onAction: _showCreatePostDialog,
+          icon: isFollowingTab ? Icons.group : Icons.pets,
+          title: isFollowingTab ? 'No Friend Posts Yet!' : 'No Posts Yet!',
+          message: isFollowingTab 
+              ? 'Once your dog makes friends, their posts will appear here! Start barking to connect.'
+              : 'Be the first to share your dog\'s adventure! Tap the + button to create a post.',
+          actionLabel: isFollowingTab ? 'Find Dogs to Follow' : 'Create First Post',
+          onAction: isFollowingTab ? () => context.pop() : _showCreatePostDialog,
         ),
       ),
     );
@@ -501,6 +762,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
 
   @override
   void dispose() {
+    _tabController.dispose();
     _postController.dispose();
     super.dispose();
   }

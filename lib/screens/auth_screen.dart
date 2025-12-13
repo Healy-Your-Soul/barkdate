@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -268,36 +269,45 @@ class _AuthScreenState extends State<AuthScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // BarkDate Logo
-          Container(
-            width: isWide ? 120 : 80,
-            height: isWide ? 120 : 80,
-            decoration: BoxDecoration(
-              color: isDark ? DarkModeColors.darkSurface : LightModeColors.lightSurface,
-              borderRadius: BorderRadius.circular(isWide ? 30 : 20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.pets,
-              size: isWide ? 60 : 40,
-              color: isDark ? DarkModeColors.darkPrimary : LightModeColors.lightPrimary,
+          // Logo from SVG
+          SizedBox(
+            width: isWide ? 160 : 100,
+            height: isWide ? 160 : 100,
+            child: SvgPicture.asset(
+              'assets/images/logo.svg',
+              fit: BoxFit.contain,
+              placeholderBuilder: (context) {
+                // Fallback while loading or if SVG fails
+                return Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? DarkModeColors.darkSurface : LightModeColors.lightSurface,
+                    borderRadius: BorderRadius.circular(isWide ? 30 : 20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.pets,
+                    size: isWide ? 60 : 40,
+                    color: const Color(0xFFED924D), // New primary color
+                  ),
+                );
+              },
             ),
           ),
           SizedBox(height: isWide ? 32 : 16),
           
-          // Title
+          // Title - using Joti One font for 'Bark'
           Text(
-            'BarkDate',
-            style: GoogleFonts.inter(
-              fontSize: isWide ? FontSizes.displayMedium : FontSizes.headlineLarge,
-              fontWeight: FontWeight.bold,
-              color: isDark ? DarkModeColors.darkPrimary : LightModeColors.lightPrimary,
+            'Bark',
+            style: GoogleFonts.jotiOne(
+              fontSize: isWide ? 48 : 36,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFFED924D), // New primary color
             ),
           ),
           SizedBox(height: isWide ? 16 : 8),
@@ -305,9 +315,9 @@ class _AuthScreenState extends State<AuthScreen> {
           // Tagline
           Text(
             'Connect. Play. Grow Together.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: isWide ? FontSizes.titleLarge : FontSizes.bodyLarge,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w400,
               color: isDark ? DarkModeColors.darkSecondary : LightModeColors.lightSecondary,
             ),
             textAlign: TextAlign.center,
@@ -317,9 +327,9 @@ class _AuthScreenState extends State<AuthScreen> {
             const SizedBox(height: 32),
             Text(
               'The perfect platform for dog owners to connect, schedule playdates, and build a community of furry friends.',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: FontSizes.bodyLarge,
-                fontWeight: FontWeight.w400,
+                fontWeight: FontWeight.w300,
                 color: isDark ? DarkModeColors.darkSecondary : LightModeColors.lightSecondary,
                 height: 1.5,
               ),

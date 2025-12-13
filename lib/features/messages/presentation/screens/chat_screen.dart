@@ -38,7 +38,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final messagesAsync = ref.watch(messagesProvider(widget.matchId));
+    // Use stream provider for real-time updates
+    final messagesAsync = ref.watch(messagesStreamProvider(widget.matchId));
     final currentUser = SupabaseConfig.auth.currentUser;
 
     return Scaffold(
@@ -217,8 +218,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         content: text,
       );
       _messageController.clear();
-      // Refresh messages
-      ref.invalidate(messagesProvider(widget.matchId));
+      // Real-time stream handles message updates automatically
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

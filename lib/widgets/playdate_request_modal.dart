@@ -3,6 +3,7 @@ import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
+import 'package:barkdate/services/notification_manager.dart';
 import 'package:barkdate/widgets/app_button.dart';
 import 'package:barkdate/widgets/app_card.dart';
 
@@ -185,6 +186,20 @@ class _PlaydateRequestModalState extends State<PlaydateRequestModal> {
 
       if (mounted) {
         if (playdateId != null) {
+          // Send notification to the invitee
+          try {
+            await NotificationManager.sendPlaydateInviteNotification(
+              receiverUserId: widget.targetUserId,
+              senderName: _myDog!.name,
+              playdateId: playdateId,
+              playdateDate: _combinedDateTime,
+              location: _locationController.text.trim(),
+            );
+          } catch (e) {
+            debugPrint('Failed to send notification: $e');
+            // Don't fail the whole flow if notification fails
+          }
+          
           Navigator.pop(context, true); // Return success
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
