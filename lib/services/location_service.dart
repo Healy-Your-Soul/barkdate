@@ -273,4 +273,99 @@ class LocationService {
       return false;
     }
   }
+
+  // ============================================
+  // LIVE LOCATION SHARING (Phase 5)
+  // ============================================
+
+  /// Update live location in database (separate from static location)
+  static Future<void> updateLiveLocation(
+    String userId,
+    double latitude,
+    double longitude,
+  ) async {
+    try {
+      await SupabaseConfig.client.from('users').update({
+        'live_latitude': latitude,
+        'live_longitude': longitude,
+        'live_location_updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
+      debugPrint('📍 Live location updated: $latitude, $longitude');
+    } catch (e) {
+      debugPrint('❌ Error updating live location: $e');
+    }
+  }
+
+  /// Set live location privacy: 'off', 'friends', 'all'
+  static Future<void> setLiveLocationPrivacy(
+    String userId,
+    String privacy,
+  ) async {
+    try {
+      if (!['off', 'friends', 'all'].contains(privacy)) {
+        debugPrint('⚠️ Invalid privacy setting: $privacy');
+        return;
+      }
+      await SupabaseConfig.client.from('users').update({
+        'live_location_privacy': privacy,
+      }).eq('id', userId);
+      debugPrint('🔒 Live location privacy set to: $privacy');
+    } catch (e) {
+      debugPrint('❌ Error setting live location privacy: $e');
+    }
+  }
+
+  /// Stop live location sharing (clears live location from DB)
+  static Future<void> stopLiveSharing(String userId) async {
+    try {
+      await SupabaseConfig.client.from('users').update({
+        'live_latitude': null,
+        'live_longitude': null,
+        'live_location_updated_at': null,
+        'live_location_privacy': 'off',
+      }).eq('id', userId);
+      debugPrint('🛑 Stopped live location sharing');
+    } catch (e) {
+      debugPrint('❌ Error stopping live sharing: $e');
+    }
+  }
+
+  /// Get current live location privacy setting
+  static Future<String> getLiveLocationPrivacy(String userId) async {
+    try {
+      final response = await SupabaseConfig.client
+          .from('users')
+          .select('live_location_privacy')
+          .eq('id', userId)
+          .single();
+      return response['live_location_privacy'] ?? 'off';
+    } catch (e) {
+      debugPrint('❌ Error getting live location privacy: $e');
+      return 'off';
+    }
+  }
+
+  /// Get nearby live users using the database function
+  static Future<List<Map<String, dynamic>>> getNearbyLiveUsers(
+    String userId,
+    double latitude,
+    double longitude, {
+    double radiusKm = 5.0,
+  }) async {
+    try {
+      final response = await SupabaseConfig.client.rpc(
+        'get_nearby_live_users',
+        params: {
+          'p_user_id': userId,
+          'p_latitude': latitude,
+          'p_longitude': longitude,
+          'p_radius_km': radiusKm,
+        },
+      );
+      return List<Map<String, dynamic>>.from(response ?? []);
+    } catch (e) {
+      debugPrint('❌ Error getting nearby live users: $e');
+      return [];
+    }
+  }
 }

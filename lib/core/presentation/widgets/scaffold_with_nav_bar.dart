@@ -57,7 +57,8 @@ class ScaffoldWithNavBar extends StatelessWidget {
                     onTap: () => _goBranch(index),
                     behavior: HitTestBehavior.opaque,
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         // Top indicator line (Facebook style)
                         Container(
@@ -70,13 +71,13 @@ class ScaffoldWithNavBar extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         // Icon
                         Icon(
                           item.icon,
                           weight: isSelected ? 500 : 300,
                           fill: isSelected ? 1 : 0,
-                          size: 24,
+                          size: 22,
                           color: isSelected ? greenColor : unselectedColor,
                         ),
                         const SizedBox(height: 2),
@@ -84,7 +85,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
                         Text(
                           item.label,
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                             color: isSelected ? greenColor : unselectedColor,
                           ),

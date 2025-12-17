@@ -78,7 +78,14 @@ class MapViewportController extends StateNotifier<MapViewportState> {
   }
 
   void updateBounds(LatLngBounds bounds) {
-    state = state.copyWith(bounds: bounds);
+    // Calculate center from bounds midpoint
+    final centerLat = (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
+    final centerLng = (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
+    
+    state = state.copyWith(
+      bounds: bounds,
+      center: LatLng(centerLat, centerLng),
+    );
   }
 
   void setMoving(bool isMoving) {

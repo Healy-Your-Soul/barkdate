@@ -108,6 +108,7 @@ class PlacesService {
     required double longitude,
     int radius = 5000,
     String? keyword,
+    List<String>? primaryTypes, // Optional: filter by specific types (e.g., just parks)
     String? pageToken, // Note: pageToken is not directly supported in the new API in the same way
   }) async {
     if (!kIsWeb) {
@@ -163,7 +164,7 @@ class PlacesService {
         'fields': fields,
         'language': 'en-AU',
         'region': 'AU',
-        'includedPrimaryTypes': _defaultPrimaryTypes,
+        'includedPrimaryTypes': primaryTypes ?? _defaultPrimaryTypes,
       };
       
       // --- THIS IS THE CORRECTED LOGIC ---
@@ -914,13 +915,13 @@ extension PlaceCategoryExtension on PlaceCategory {
   String get displayName {
     switch (this) {
       case PlaceCategory.park:
-        return 'Dog Park';
+        return 'Park';
       case PlaceCategory.petStore:
         return 'Pet Store';
       case PlaceCategory.veterinary:
         return 'Veterinary';
       case PlaceCategory.restaurant:
-        return 'Dog-Friendly Cafe';
+        return 'Cafe';  // Just "Cafe" - verified places show separate badge
       case PlaceCategory.other:
         return 'Other';
     }

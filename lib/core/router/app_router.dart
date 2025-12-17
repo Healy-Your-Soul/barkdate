@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:barkdate/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:barkdate/features/auth/presentation/screens/sign_up_screen.dart';
 import 'package:barkdate/features/feed/presentation/screens/feed_screen.dart';
-import 'package:barkdate/features/map/presentation/screens/map_screen.dart';
+import 'package:barkdate/screens/map_v2/map_tab_screen.dart'; // Using V2 with live location & improvements
 import 'package:barkdate/features/events/presentation/screens/events_screen.dart';
 import 'package:barkdate/features/playdates/presentation/screens/playdates_screen.dart';
 import 'package:barkdate/features/playdates/presentation/screens/create_playdate_screen.dart';
@@ -88,7 +88,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/map',
-                builder: (context, state) => const MapScreen(),
+                builder: (context, state) => const MapTabScreenV2(),
               ),
             ],
           ),

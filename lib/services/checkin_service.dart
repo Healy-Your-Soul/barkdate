@@ -62,9 +62,16 @@ class CheckInService {
   static Future<bool> checkOut() async {
     try {
       final user = SupabaseConfig.auth.currentUser;
-      if (user == null) return false;
+      debugPrint('🚪 CheckInService.checkOut() called');
+      debugPrint('🚪 User: ${user?.id}');
+      if (user == null) {
+        debugPrint('🚪 No user logged in!');
+        return false;
+      }
 
       final now = DateTime.now();
+      debugPrint('🚪 Updating checkins with status=active for user ${user.id}');
+      
       final data = await SupabaseConfig.client
           .from('checkins')
           .update({
@@ -75,21 +82,28 @@ class CheckInService {
           .eq('status', 'active')
           .select();
 
+      debugPrint('🚪 Checkout result: ${data.length} rows updated');
+      debugPrint('🚪 Data: $data');
+      
       return data.isNotEmpty;
     } catch (e) {
-      debugPrint('Error checking out: $e');
+      debugPrint('❌ Error checking out: $e');
       return false;
     }
   }
 
-  /// Get user's active check-in
+  /// Get user's active check-in (auto-expires after 4 hours)
   static Future<CheckIn?> getActiveCheckIn(String userId) async {
     try {
+      // Check-ins older than 4 hours are considered expired
+      final cutoffTime = DateTime.now().subtract(const Duration(hours: 4)).toIso8601String();
+      
       final data = await SupabaseConfig.client
           .from('checkins')
           .select()
           .eq('user_id', userId)
           .eq('status', 'active')
+          .gte('checked_in_at', cutoffTime)  // Only within last 3 hours
           .order('checked_in_at', ascending: false)
           .limit(1);
 

@@ -29,20 +29,20 @@ class MapFilterChips extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: ChoiceChip(
-                  label: const Text('Cafes'),
-                  selected: filters.category == 'cafe',
+                  label: const Text('Parks'),
+                  selected: filters.category == 'park',
                   onSelected: (_) {
-                    ref.read(mapFiltersProvider.notifier).setCategory('cafe');
+                    ref.read(mapFiltersProvider.notifier).setCategory('park');
                   },
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: ChoiceChip(
-                  label: const Text('Parks'),
-                  selected: filters.category == 'park',
+                  label: const Text('Cafes'),
+                  selected: filters.category == 'cafe',
                   onSelected: (_) {
-                    ref.read(mapFiltersProvider.notifier).setCategory('park');
+                    ref.read(mapFiltersProvider.notifier).setCategory('cafe');
                   },
                 ),
               ),

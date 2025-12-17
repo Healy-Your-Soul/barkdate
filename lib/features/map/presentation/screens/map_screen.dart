@@ -10,6 +10,7 @@ import 'package:barkdate/services/places_service.dart';
 import 'package:barkdate/services/checkin_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/checkin_button.dart';
+import 'package:barkdate/widgets/live_location_toggle.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -380,6 +381,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 color: Color(0xFF4CAF50),
               ),
             ),
+          ),
+
+          // Live Location Toggle (Phase 5)
+          Positioned(
+            right: 16,
+            top: 60,
+            child: const LiveLocationToggle(),
           ),
 
           // Floating check-in status indicator
