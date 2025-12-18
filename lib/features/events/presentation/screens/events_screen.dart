@@ -44,7 +44,36 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                       IconButton(
                         icon: const Icon(Icons.tune),
                         onPressed: () {
-                          // TODO: Show filter dialog
+                          showModalBottomSheet(
+                            context: context,
+                            builder: (context) => Container(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Filter Events', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 16),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: ['All', 'This Weekend', 'Nearby', 'Free'].map((filter) {
+                                      final isSelected = _selectedFilter == filter;
+                                      return ChoiceChip(
+                                        label: Text(filter),
+                                        selected: isSelected,
+                                        onSelected: (selected) {
+                                          setState(() => _selectedFilter = filter);
+                                          Navigator.pop(context);
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                  const SizedBox(height: 24),
+                                ],
+                              ),
+                            ),
+                          );
                         },
                       ),
                       IconButton(
@@ -105,10 +134,10 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                         child: CuteEmptyState(
                           icon: Icons.event_busy,
                           title: 'No upcoming events',
-                          message: 'There are no events happening nearby right now. Check back later or adjust your filters.',
-                          actionLabel: 'Adjust Filters',
+                          message: 'There are no events happening nearby right now. Be the first to create one!',
+                          actionLabel: 'Create New Event',
                           onAction: () {
-                            // TODO: Show filter dialog
+                            context.push('/create-event');
                           },
                         ),
                       ),

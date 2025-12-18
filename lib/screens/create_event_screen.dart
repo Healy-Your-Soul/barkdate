@@ -1,15 +1,21 @@
 import 'package:barkdate/screens/dog_friend_selector_dialog.dart';
-import 'package:barkdate/screens/map_location_picker_screen.dart';
+import 'package:barkdate/features/playdates/presentation/screens/map_picker_screen.dart';
+import 'package:barkdate/features/playdates/presentation/widgets/dog_search_sheet.dart';
 import 'package:barkdate/services/auth_service.dart';
 import 'package:barkdate/services/event_service.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
 import 'package:barkdate/services/selected_image.dart';
 import 'package:barkdate/services/places_service.dart';
+import 'package:barkdate/services/location_service.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/widgets/event_image_uploader.dart';
 import 'package:barkdate/widgets/location_picker_field.dart';
+import 'package:barkdate/models/dog.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:intl/intl.dart';
 
 class CreateEventScreen extends StatefulWidget {
   const CreateEventScreen({super.key});
@@ -52,6 +58,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   final List<String> _invitedDogIds = [];
   final Map<String, DogFriendOption> _friendOptionLookup = {};
   bool _loadingFriends = false;
+  bool _isLoadingMapLocation = false; // For map picker button loading
+  List<Dog> _invitedDogs = []; // For invite-only with DogSearchSheet
 
   final List<Map<String, dynamic>> _categories = [
     {'id': 'birthday', 'name': 'Birthday Party', 'icon': '🎂'},
@@ -75,27 +83,24 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Create Event'),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-        actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _createEvent,
-            child: _isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Create'),
-          ),
-        ],
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.black),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text(
+          'Create Event',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
       ),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -139,6 +144,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
+                runSpacing: 8,
                 children: _categories.map((category) {
                   final isSelected = _selectedCategory == category['id'];
                   return FilterChip(
@@ -181,125 +187,109 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               
               const SizedBox(height: 16),
               
-              // Date and time selection
-              Text(
-                'Date & Time',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+              // DATE AND TIME - Playdate style
+              const Text('When', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    ListTile(
+                      onTap: _selectDate,
+                      leading: const Icon(Icons.calendar_today_outlined, color: Colors.black),
+                      title: const Text('Date'),
+                      trailing: Text(
+                        _selectedDate != null 
+                            ? DateFormat('MMM d, y').format(_selectedDate!)
+                            : 'Select date',
+                        style: TextStyle(fontWeight: _selectedDate != null ? FontWeight.bold : FontWeight.normal),
+                      ),
+                    ),
+                    Divider(height: 1, color: Colors.grey[300]),
+                    ListTile(
+                      onTap: _selectStartTime,
+                      leading: const Icon(Icons.access_time, color: Colors.black),
+                      title: const Text('Start Time'),
+                      trailing: Text(
+                        _selectedStartTime?.format(context) ?? 'Select time',
+                        style: TextStyle(fontWeight: _selectedStartTime != null ? FontWeight.bold : FontWeight.normal),
+                      ),
+                    ),
+                    Divider(height: 1, color: Colors.grey[300]),
+                    ListTile(
+                      onTap: _selectEndTime,
+                      leading: const Icon(Icons.access_time_filled, color: Colors.black),
+                      title: const Text('End Time'),
+                      trailing: Text(
+                        _selectedEndTime?.format(context) ?? 'Select time',
+                        style: TextStyle(fontWeight: _selectedEndTime != null ? FontWeight.bold : FontWeight.normal),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
               
+              const SizedBox(height: 24),
+              
+              // LOCATION - Playdate style
+              const Text('Where', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
-                    child: ListTile(
-                      title: Text(_selectedDate != null
-                          ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
-                          : 'Select Date'),
-                      leading: const Icon(Icons.calendar_today),
-                      onTap: _selectDate,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
-                        ),
-                      ),
+                    child: LocationPickerField(
+                      controller: _locationController,
+                      hintText: 'Search for a location...',
+                      onPlaceSelected: (place) async {
+                        final details = await PlacesService.getPlaceDetailsByPlaceId(place.placeId);
+                        if (details != null) {
+                          final geometry = details['geometry'] as Map<String, dynamic>?;
+                          final location = geometry?['location'] as Map<String, dynamic>?;
+                          if (location != null && mounted) {
+                            setState(() {
+                              _selectedLatitude = (location['lat'] as num?)?.toDouble();
+                              _selectedLongitude = (location['lng'] as num?)?.toDouble();
+                              _selectedPlaceName = place.structuredFormatting.mainText;
+                            });
+                          }
+                        }
+                      },
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please select a location';
+                        }
+                        return null;
+                      },
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ListTile(
-                      title: Text(_selectedStartTime != null
-                          ? _selectedStartTime!.format(context)
-                          : 'Start Time'),
-                      leading: const Icon(Icons.access_time),
-                      onTap: _selectStartTime,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
-                        ),
-                      ),
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    child: _isLoadingMapLocation
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : IconButton(
+                            onPressed: _openMapPicker,
+                            icon: Icon(Icons.map, color: Theme.of(context).primaryColor),
+                            tooltip: 'Pick on Map',
+                          ),
                   ),
                 ],
               ),
               
-              const SizedBox(height: 8),
-              
-              ListTile(
-                title: Text(_selectedEndTime != null
-                    ? _selectedEndTime!.format(context)
-                    : 'End Time'),
-                leading: const Icon(Icons.access_time),
-                onTap: _selectEndTime,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(
-                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Location with autocomplete
-              LocationPickerField(
-                controller: _locationController,
-                hintText: 'Search for a location...',
-                onPlaceSelected: (place) async {
-                  // Try to get coordinates from place details
-                  final details = await PlacesService.getPlaceDetailsByPlaceId(place.placeId);
-                  if (details != null) {
-                    final geometry = details['geometry'] as Map<String, dynamic>?;
-                    final location = geometry?['location'] as Map<String, dynamic>?;
-                    if (location != null && mounted) {
-                      setState(() {
-                        _selectedLatitude = (location['lat'] as num?)?.toDouble();
-                        _selectedLongitude = (location['lng'] as num?)?.toDouble();
-                        _selectedPlaceName = place.structuredFormatting.mainText;
-                      });
-                    }
-                  }
-                },
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please select a location';
-                  }
-                  return null;
-                },
-              ),
-
-              const SizedBox(height: 8),
-
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: _isLoading ? null : _openLocationPicker,
-                  icon: const Icon(Icons.map_outlined),
-                  label: Text(
-                    _selectedLatitude == null
-                        ? 'Pick location on map'
-                        : 'Update map location',
-                  ),
-                ),
-              ),
-
-              if (_selectedLatitude != null && _selectedLongitude != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    '${_selectedPlaceName ?? 'Custom location'} • '
-                    '${_selectedLatitude!.toStringAsFixed(4)}, '
-                    '${_selectedLongitude!.toStringAsFixed(4)}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.outline,
-                        ),
-                  ),
-                ),
-              
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               
               // Max participants
               Text(
@@ -394,7 +384,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   ),
                 ],
               ),
-              if (!_isPublicEvent)
+              if (!_isPublicEvent) ...[
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
@@ -404,28 +394,88 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                         ),
                   ),
                 ),
-
-              const SizedBox(height: 12),
-
-              OutlinedButton.icon(
-                onPressed: _loadingFriends ? null : _inviteDogFriends,
-                icon: _loadingFriends
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.group_add_outlined),
-                label: Text(
-                  _invitedDogIds.isEmpty
-                      ? 'Invite dog friends'
-                      : 'Inviting ${_invitedDogIds.length} dog friends',
+                
+                const SizedBox(height: 16),
+                
+                // INVITED DOGS SECTION - Playdate style
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Inviting', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    TextButton.icon(
+                      onPressed: _openDogSearch,
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Add Dog'),
+                    ),
+                  ],
                 ),
-              ),
-
-              const SizedBox(height: 8),
-
-              _buildInvitedDogChips(),
+                const SizedBox(height: 8),
+                if (_invitedDogs.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: const Center(
+                      child: Text('No dogs invited yet. Tap "Add Dog" to start!'),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    height: 90,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _invitedDogs.length,
+                      itemBuilder: (context, index) {
+                        final dog = _invitedDogs[index];
+                        return Stack(
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.only(right: 12, top: 4),
+                              width: 64,
+                              child: Column(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 28,
+                                    backgroundImage: dog.photos.isNotEmpty 
+                                        ? NetworkImage(dog.photos.first)
+                                        : null,
+                                    child: dog.photos.isEmpty 
+                                        ? const Icon(Icons.pets) 
+                                        : null,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    dog.name,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: InkWell(
+                                onTap: () => _removeDog(dog),
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close, size: 12, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+              ],
 
               const SizedBox(height: 16),
               
@@ -510,15 +560,33 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               
               const SizedBox(height: 32),
               
-              // Create button
+              // Create button - Playdate style
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 56,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _createEvent,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
                   child: _isLoading
-                      ? const CircularProgressIndicator()
-                      : const Text('Create Event'),
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text(
+                          'Create Event',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
                 ),
               ),
               
@@ -591,30 +659,78 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       _selectedImages.removeAt(index);
     });
   }
-
-  Future<void> _openLocationPicker() async {
-    final result = await Navigator.push<MapLocationResult?>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MapLocationPickerScreen(
-          initialLatitude: _selectedLatitude,
-          initialLongitude: _selectedLongitude,
-          initialLabel: _locationController.text.isNotEmpty
-              ? _locationController.text
-              : null,
-        ),
+  
+  /// Open DogSearchSheet for invite-only events (playdate style)
+  void _openDogSearch() async {
+    final result = await showModalBottomSheet<List<Dog>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DogSearchSheet(
+        excludedDogIds: _invitedDogs.map((d) => d.id).toList(),
       ),
     );
-
-    if (result != null) {
+    
+    if (result != null && result.isNotEmpty) {
       setState(() {
-        _selectedLatitude = result.latitude;
-        _selectedLongitude = result.longitude;
-        _selectedPlaceName = result.placeName;
-        _locationController.text = result.address ??
-            result.placeName ??
-            '${result.latitude.toStringAsFixed(5)}, ${result.longitude.toStringAsFixed(5)}';
+        _invitedDogs.addAll(result);
       });
+    }
+  }
+  
+  /// Remove a dog from the invite list
+  void _removeDog(Dog dog) {
+    setState(() {
+      _invitedDogs.removeWhere((d) => d.id == dog.id);
+    });
+  }
+
+  /// Pre-fetch location and open map picker (playdate style)
+  Future<void> _openMapPicker() async {
+    setState(() => _isLoadingMapLocation = true);
+    
+    try {
+      final position = await LocationService.getCurrentLocation();
+      if (!mounted) return;
+      
+      setState(() => _isLoadingMapLocation = false);
+      
+      final result = await Navigator.of(context).push<PlaceResult>(
+        MaterialPageRoute(
+          builder: (context) => MapPickerScreen(
+            initialLocation: position != null 
+                ? LatLng(position.latitude, position.longitude)
+                : null,
+          ),
+        ),
+      );
+      
+      if (result != null && mounted) {
+        setState(() {
+          _selectedLatitude = result.latitude;
+          _selectedLongitude = result.longitude;
+          _selectedPlaceName = result.name;
+          _locationController.text = result.name;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error getting location: $e');
+      if (mounted) {
+        setState(() => _isLoadingMapLocation = false);
+        // Still open map with default location
+        final result = await Navigator.of(context).push<PlaceResult>(
+          MaterialPageRoute(builder: (context) => const MapPickerScreen()),
+        );
+        
+        if (result != null && mounted) {
+          setState(() {
+            _selectedLatitude = result.latitude;
+            _selectedLongitude = result.longitude;
+            _selectedPlaceName = result.name;
+            _locationController.text = result.name;
+          });
+        }
+      }
     }
   }
 
