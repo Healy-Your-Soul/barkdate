@@ -820,10 +820,13 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         elevation: 0,
         actions: [
           // QR Scan button
-          IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
-            tooltip: 'Scan QR Code',
-            onPressed: () => context.push('/qr-scan'),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              icon: const Icon(Icons.qr_code_scanner),
+              tooltip: 'Scan QR Code',
+              onPressed: () => context.push('/qr-scan'),
+            ),
           ),
         ],
       ),

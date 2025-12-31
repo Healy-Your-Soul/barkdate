@@ -294,13 +294,36 @@ class _AdminScreenState extends State<AdminScreen> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () {
+          TextButton.icon(
+            onPressed: () async {
+              // Generate filename: BarkDate_QR_{ParkName}_{Code}.png
+              final sanitizedName = park.name
+                  .replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')
+                  .replaceAll(RegExp(r'_+'), '_');
+              final filename = 'BarkDate_QR_${sanitizedName}_${park.qrCheckInCode}.png';
+              
               Clipboard.setData(ClipboardData(text: qrUrl));
               Navigator.pop(context);
-              _showSuccess('URL copied to clipboard');
+              _showSuccess('URL copied!\nSave QR as: $filename');
             },
-            child: const Text('Copy URL'),
+            icon: const Icon(Icons.copy, size: 16),
+            label: const Text('Copy URL'),
+          ),
+          TextButton.icon(
+            onPressed: () async {
+              // Generate filename: BarkDate_QR_{ParkName}_{Code}.png
+              final sanitizedName = park.name
+                  .replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')
+                  .replaceAll(RegExp(r'_+'), '_');
+              final filename = 'BarkDate_QR_${sanitizedName}_${park.qrCheckInCode}.png';
+              
+              // Use browser download on web
+              Clipboard.setData(ClipboardData(text: 'Filename: $filename\nURL: $qrUrl'));
+              Navigator.pop(context);
+              _showSuccess('QR Info copied!\nUse filename: $filename');
+            },
+            icon: const Icon(Icons.download, size: 16),
+            label: const Text('Get Info'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
