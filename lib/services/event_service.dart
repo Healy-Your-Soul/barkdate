@@ -180,7 +180,8 @@ class EventService {
     double? latitude,
     double? longitude,
     List<String> photoUrls = const [],
-    bool isPublic = true,
+    // bool isPublic = true, // Remove or keep deprecated
+    String visibility = 'public',
     List<String> invitedDogIds = const [],
     String? invitationMessage,
   }) async {
@@ -207,7 +208,9 @@ class EventService {
         'latitude': latitude,
         'longitude': longitude,
         'photo_urls': photoUrls,
-        'is_public': isPublic,
+        // 'is_public': isPublic,
+        'visibility': visibility,
+        'is_public': visibility == 'public', // Set deprecated field for backward compatibility
       };
 
       final data = await SupabaseConfig.client

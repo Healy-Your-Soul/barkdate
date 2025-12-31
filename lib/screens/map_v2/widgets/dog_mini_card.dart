@@ -7,7 +7,9 @@ class DogMiniCard extends StatelessWidget {
   final String? dogPhotoUrl;
   final String timeAgo;
   final bool isFriend;
+  final bool isOwnDog; // Can't bark at yourself!
   final VoidCallback onBark;
+  final VoidCallback? onAddToPack;
   final VoidCallback onClose;
 
   const DogMiniCard({
@@ -17,7 +19,9 @@ class DogMiniCard extends StatelessWidget {
     this.dogPhotoUrl,
     required this.timeAgo,
     required this.isFriend,
+    this.isOwnDog = false,
     required this.onBark,
+    this.onAddToPack,
     required this.onClose,
   });
 
@@ -94,22 +98,71 @@ class DogMiniCard extends StatelessWidget {
             
             const SizedBox(height: 12),
             
-            // Bark button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onBark,
-                child: const Text('Bark!'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+            // Actions - hidden for own dog
+            if (!isOwnDog)
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!isFriend && onAddToPack != null)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: onAddToPack,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.brown,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        child: const Text('Add to Pack'),
+                      ),
+                    ),
+                  
+                  if (!isFriend) const SizedBox(height: 8),
+                  
+                  SizedBox(
+                    width: double.infinity,
+                    child: isFriend 
+                      ? ElevatedButton.icon(
+                          onPressed: onBark,
+                          icon: const Icon(Icons.record_voice_over, size: 16),
+                          label: const Text('Bark 👋'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                        )
+                      : OutlinedButton.icon(
+                          onPressed: onBark,
+                          icon: const Icon(Icons.record_voice_over, size: 14),
+                          label: const Text('Bark 👋'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            side: const BorderSide(color: Colors.orange),
+                            foregroundColor: Colors.orange,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                        ),
                   ),
+                ],
+              )
+            else
+              Text(
+                'This is you!',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
                 ),
               ),
-            ),
           ],
         ),
       ),

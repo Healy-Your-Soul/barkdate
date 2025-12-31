@@ -36,7 +36,7 @@ class EventsService {
           .lte('longitude', east)
           .gte('start_time', from.toIso8601String())
           .lte('start_time', to.toIso8601String())
-          .eq('is_public', true)
+          .neq('visibility', 'invite_only')
           .or('status.eq.upcoming,status.eq.ongoing')
           .order('start_time', ascending: true)
           .limit(limit);
@@ -72,7 +72,7 @@ class EventsService {
           .eq('place_id', placeId)
           .gte('start_time', from.toIso8601String())
           .lte('start_time', to.toIso8601String())
-          .eq('is_public', true)
+          .neq('visibility', 'invite_only')
           .or('status.eq.upcoming,status.eq.ongoing')
           .order('start_time', ascending: true)
           .limit(limit);

@@ -10,6 +10,8 @@ import 'package:barkdate/services/photo_upload_service.dart';
 import 'package:barkdate/widgets/enhanced_image_picker.dart';
 import 'package:barkdate/services/selected_image.dart';
 import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
+import 'package:barkdate/services/dog_breed_service.dart';
+import 'package:barkdate/widgets/location_picker_field.dart';
 
 enum EditMode { createProfile, editDog, editOwner, editBoth, addNewDog }
 
@@ -300,6 +302,11 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         userId = user.id;
       }
 
+      // Add breed if new
+      if (_dogBreedController.text.isNotEmpty) {
+        await DogBreedService.addBreed(_dogBreedController.text);
+      }
+
       // Ensure user profile exists (created by database trigger)
       await _ensureUserProfileExists(userId);
 
@@ -365,13 +372,27 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         // Success! Show confirmation 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Profile updated successfully! 🎉'),
+            content: Text('Profile created successfully! 🎉'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
         );
-        // Return success to caller (if called from ProfileScreen)
-        Navigator.pop(context, true);
+        
+        // Clear profile cache so auth wrapper knows profile is now complete
+        final uid = SupabaseConfig.auth.currentUser?.id;
+        if (uid != null) {
+          SupabaseAuthWrapper.clearProfileCache(uid);
+        }
+        
+        // Navigate based on mode:
+        // - createProfile mode: Screen is rendered inline by SupabaseAuthWrapper, 
+        //   so we must use context.go() to navigate to the main app
+        // - edit modes: Screen was pushed as a separate route, so we can pop back
+        if (widget.editMode == EditMode.createProfile) {
+          context.go('/home');
+        } else {
+          Navigator.pop(context, true);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -801,19 +822,13 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           ),
           const SizedBox(height: 16),
           
-          // Location field
-          TextFormField(
+          // Location field with Google Places autocomplete
+          LocationPickerField(
             controller: _ownerLocationController,
-            decoration: InputDecoration(
-              labelText: 'Location',
-              hintText: widget.locationEnabled ? 'Auto-detected' : 'Enter your city',
-              prefixIcon: const Icon(Icons.location_on),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-              fillColor: Theme.of(context).colorScheme.surface,
-            ),
+            hintText: widget.locationEnabled ? 'Auto-detected or search...' : 'Search your city...',
+            onPlaceSelected: (place) {
+              debugPrint('📍 Location selected: ${place.structuredFormatting.mainText}');
+            },
           ),
         ],
       ),
@@ -862,19 +877,85 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           const SizedBox(height: 16),
           
           // Breed field
-          TextFormField(
-            controller: _dogBreedController,
-            textCapitalization: TextCapitalization.words,
-            decoration: InputDecoration(
-              labelText: 'Breed*',
-              hintText: 'Golden Retriever',
-              suffixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-              fillColor: Theme.of(context).colorScheme.surface,
-            ),
+          // Breed field (Autocomplete)
+          Autocomplete<String>(
+            optionsBuilder: (TextEditingValue textEditingValue) async {
+              if (textEditingValue.text.isEmpty) {
+                return const Iterable<String>.empty();
+              }
+              return await DogBreedService.searchBreeds(textEditingValue.text);
+            },
+            initialValue: TextEditingValue(text: _dogBreedController.text),
+            onSelected: (String selection) {
+              _dogBreedController.text = selection;
+            },
+            fieldViewBuilder: (BuildContext context, TextEditingController fieldTextEditingController, FocusNode fieldFocusNode, VoidCallback onFieldSubmitted) {
+              // Sync controller
+              if (fieldTextEditingController.text != _dogBreedController.text && fieldTextEditingController.text.isNotEmpty) {
+               // Only sync if local is empty or different? 
+               // Actually we should use the fieldTextEditingController as the main one, but we have _dogBreedController used elsewhere.
+               // Let's hook a listener.
+              }
+              
+              // We need to sync the changes back to _dogBreedController for validation and saving
+              fieldTextEditingController.addListener(() {
+                _dogBreedController.text = fieldTextEditingController.text;
+              });
+
+              // Initial value sync
+              if (fieldTextEditingController.text.isEmpty && _dogBreedController.text.isNotEmpty) {
+                 fieldTextEditingController.text = _dogBreedController.text;
+              }
+
+              return TextFormField(
+                controller: fieldTextEditingController,
+                focusNode: fieldFocusNode,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  labelText: 'Breed*',
+                  hintText: 'Golden Retriever',
+                  suffixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surface,
+                ),
+                validator: (value) {
+                   if (value == null || value.isEmpty) {
+                     return 'Please select or enter a breed';
+                   }
+                   return null;
+                },
+              );
+            },
+            optionsViewBuilder: (context, onSelected, options) {
+              return Align(
+                alignment: Alignment.topLeft,
+                child: Material(
+                  elevation: 4,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: MediaQuery.of(context).size.width - 48, // Adjust based on padding
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(8),
+                      shrinkWrap: true,
+                      itemCount: options.length,
+                      itemBuilder: (context, index) {
+                        final option = options.elementAt(index);
+                        return ListTile(
+                          title: Text(option),
+                          onTap: () {
+                            onSelected(option);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 16),
           

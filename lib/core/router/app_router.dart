@@ -26,10 +26,14 @@ import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 import 'package:barkdate/features/profile/presentation/screens/accept_share_screen.dart';
 import 'package:barkdate/screens/admin_screen.dart';
 import 'package:barkdate/screens/qr_checkin_screen.dart';
+import 'package:barkdate/screens/qr_scan_screen.dart';
 import 'package:barkdate/screens/create_event_screen.dart';
 import 'package:barkdate/features/notifications/presentation/screens/notifications_screen.dart';
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/',
     routes: [
       GoRoute(
@@ -208,6 +212,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin',
         builder: (context, state) => const AdminScreen(),
+      ),
+      GoRoute(
+        path: '/qr-scan',
+        builder: (context, state) => const QrScanScreen(),
       ),
       // QR Check-in route for deep links and web fallback
       GoRoute(

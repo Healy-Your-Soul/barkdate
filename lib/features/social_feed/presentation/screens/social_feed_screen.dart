@@ -10,6 +10,7 @@ import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/comment_modal.dart';
 import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
+import 'package:barkdate/features/playdates/presentation/widgets/dog_search_sheet.dart';
 
 
 class SocialFeedScreen extends StatefulWidget {
@@ -306,6 +307,47 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
               ),
             ),
           
+          // Tagged dogs display (like Instagram - small text under image)
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _getPostTags(post.id),
+            builder: (context, snapshot) {
+              final tags = snapshot.data ?? [];
+              if (tags.isEmpty) return const SizedBox.shrink();
+              
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: GestureDetector(
+                  onTap: () {
+                    // Show all tagged dogs
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) => _buildTaggedDogsSheet(tags),
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.pets,
+                        size: 14,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        tags.length == 1
+                            ? 'with ${tags.first['dog_name'] ?? 'a friend'}'
+                            : 'with ${tags.first['dog_name'] ?? 'a friend'} and ${tags.length - 1} others',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          
           // Post actions - using bone emoji 🦴 instead of hearts
           Padding(
             padding: const EdgeInsets.all(16),
@@ -532,7 +574,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
   }
 
   /// Handle post creation from new screen
-  Future<void> _handleCreatePost(String content, SelectedImage? image) async {
+  Future<void> _handleCreatePost(String content, SelectedImage? image, List<Dog> taggedDogs) async {
     setState(() => _isLoading = true);
 
     try {
@@ -558,16 +600,43 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
       final dogId = userDogs.isNotEmpty ? userDogs.first['id'] : null;
 
       // Create post in database
-      await BarkDateSocialService.createPost(
-        userId: userId,
-        content: content,
-        dogId: dogId,
-        imageUrls: imageUrl != null ? [imageUrl] : null,
-      );
+      final postResult = await SupabaseConfig.client
+          .from('posts')
+          .insert({
+            'user_id': userId,
+            'dog_id': dogId,
+            'content': content,
+            'image_urls': imageUrl != null ? [imageUrl] : null,
+          })
+          .select()
+          .single();
+      
+      final postId = postResult['id'] as String;
+
+      // Save tags if any
+      if (taggedDogs.isNotEmpty && dogId != null) {
+        for (final taggedDog in taggedDogs) {
+          try {
+            await SupabaseConfig.client.from('post_tags').insert({
+              'post_id': postId,
+              'tagger_dog_id': dogId,
+              'tagged_dog_id': taggedDog.id,
+              'is_collaborator': false,
+            });
+          } catch (e) {
+            debugPrint('Error tagging dog ${taggedDog.name}: $e');
+            // Continue with other tags even if one fails
+          }
+        }
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Post created successfully!')),
+          SnackBar(
+            content: Text(taggedDogs.isNotEmpty 
+                ? 'Post created with ${taggedDogs.length} tags!' 
+                : 'Post created successfully!'),
+          ),
         );
         
         // Reload feed to show new post
@@ -760,6 +829,118 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
     );
   }
 
+  /// Get approved tags for a post
+  Future<List<Map<String, dynamic>>> _getPostTags(String postId) async {
+    try {
+      final result = await SupabaseConfig.client
+          .from('post_tags')
+          .select('''
+            id,
+            tagged_dog_id,
+            is_collaborator,
+            dogs!post_tags_tagged_dog_id_fkey(id, name, photos)
+          ''')
+          .eq('post_id', postId)
+          .eq('status', 'approved');
+      
+      return (result as List).map((tag) {
+        final dog = tag['dogs'] as Map<String, dynamic>?;
+        return {
+          'id': tag['id'],
+          'dog_id': tag['tagged_dog_id'],
+          'dog_name': dog?['name'] ?? 'Unknown',
+          'dog_photo': (dog?['photos'] as List?)?.isNotEmpty == true 
+              ? dog!['photos'][0] 
+              : null,
+          'is_collaborator': tag['is_collaborator'] ?? false,
+        };
+      }).toList();
+    } catch (e) {
+      debugPrint('Error fetching post tags: $e');
+      return [];
+    }
+  }
+
+  /// Build sheet showing all tagged dogs
+  Widget _buildTaggedDogsSheet(List<Map<String, dynamic>> tags) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Text(
+            'Tagged Dogs',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...tags.map((tag) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                _navigateToDogProfile(tag['dog_id']);
+              },
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundImage: tag['dog_photo'] != null 
+                        ? NetworkImage(tag['dog_photo']) 
+                        : null,
+                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                    child: tag['dog_photo'] == null 
+                        ? const Icon(Icons.pets) 
+                        : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tag['dog_name'],
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (tag['is_collaborator'] == true)
+                          Text(
+                            '✨ Contributor',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                  ),
+                ],
+              ),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -770,7 +951,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
 
 /// New full-screen create post screen with tabs
 class _CreatePostScreen extends StatefulWidget {
-  final Function(String content, SelectedImage? image) onPost;
+  final Function(String content, SelectedImage? image, List<Dog> taggedDogs) onPost;
   final bool isPosting;
 
   const _CreatePostScreen({
@@ -788,6 +969,32 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
   final TextEditingController _textController = TextEditingController();
   SelectedImage? _selectedImage;
   bool _isLoading = false;
+  List<Dog> _taggedDogs = []; // Tagged dogs for this post (max 15)
+
+  void _openTagSearch() async {
+    final result = await showModalBottomSheet<List<Dog>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DogSearchSheet(
+        excludedDogIds: _taggedDogs.map((d) => d.id).toList(),
+      ),
+    );
+    
+    if (result != null && result.isNotEmpty && mounted) {
+      setState(() {
+        // Enforce max 15 tags
+        final remaining = 15 - _taggedDogs.length;
+        _taggedDogs.addAll(result.take(remaining));
+      });
+    }
+  }
+
+  void _removeTag(Dog dog) {
+    setState(() {
+      _taggedDogs.removeWhere((d) => d.id == dog.id);
+    });
+  }
 
   @override
   void initState() {
@@ -830,7 +1037,7 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
     setState(() => _isLoading = true);
     
     try {
-      await widget.onPost(_textController.text.trim(), _selectedImage);
+      await widget.onPost(_textController.text.trim(), _selectedImage, _taggedDogs);
       if (mounted) {
         Navigator.pop(context);
       }
@@ -1085,6 +1292,9 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                                     contentPadding: EdgeInsets.zero,
                                   ),
                                 ),
+                                const SizedBox(height: 16),
+                                // Tag Dogs Section
+                                _buildTagDogsSection(),
                               ],
                             ),
                           ),
@@ -1111,6 +1321,9 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                                     contentPadding: EdgeInsets.zero,
                                   ),
                                 ),
+                                const SizedBox(height: 16),
+                                // Tag Dogs Section
+                                _buildTagDogsSection(),
                               ],
                             ),
                           ),
@@ -1125,6 +1338,108 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
           ),
         ),
       ),
+    );
+  }
+
+  /// Build the Tag Dogs section with button and avatar chips
+  Widget _buildTagDogsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Tag Dogs button
+        GestureDetector(
+          onTap: _taggedDogs.length < 15 ? _openTagSearch : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.pets,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _taggedDogs.isEmpty 
+                      ? 'Tag dogs...' 
+                      : 'Tag more dogs (${_taggedDogs.length}/15)',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.add,
+                  size: 18,
+                  color: _taggedDogs.length < 15 
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.grey,
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Show tagged dogs as small chips
+        if (_taggedDogs.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _taggedDogs.map((dog) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      radius: 12,
+                      backgroundImage: dog.photos.isNotEmpty 
+                          ? NetworkImage(dog.photos.first) 
+                          : null,
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      child: dog.photos.isEmpty 
+                          ? const Icon(Icons.pets, size: 12) 
+                          : null,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      dog.name,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: () => _removeTag(dog),
+                      child: Icon(
+                        Icons.close,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ],
     );
   }
 }

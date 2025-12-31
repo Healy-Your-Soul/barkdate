@@ -23,6 +23,11 @@ import 'package:barkdate/widgets/live_location_toggle.dart';
 import 'package:barkdate/utils/dog_marker_generator.dart';
 import 'package:barkdate/screens/map_v2/widgets/dog_mini_card.dart';
 import 'package:barkdate/screens/map_v2/widgets/place_mini_card.dart';
+import 'package:barkdate/screens/map_v2/widgets/place_mini_card.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
+import 'package:go_router/go_router.dart';
+import 'package:barkdate/services/dog_friendship_service.dart';
 
 /// New map tab with AI assistant, event integration, and improved UX
 class MapTabScreenV2 extends ConsumerStatefulWidget {
@@ -61,12 +66,16 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   
   // Current user's check-in status (for top-left floating button)
   CheckIn? _currentUserCheckIn;
+  String? _userDogPhotoUrl; // Photo for check-in marker
 
   @override
   void initState() {
     super.initState();
     _getUserLocation();
     _loadUserCheckIn(); // Load user's current check-in status
+    
+    // Auto-cleanup stale check-ins on startup (4+ hours old)
+    CheckInService.autoCheckoutInactiveUsers();
     
     // Auto-refresh check-ins every 30 seconds
     _checkInRefreshTimer = Timer.periodic(
@@ -79,12 +88,29 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       const Duration(seconds: 30),
       (_) => _refreshLiveUsers(),
     );
+    
+    // Realtime subscription for check-ins (instant updates)
+    _setupCheckinSubscription();
+  }
+  
+  StreamSubscription? _checkinSubscription;
+  
+  void _setupCheckinSubscription() {
+    _checkinSubscription = Supabase.instance.client
+      .from('checkins')
+      .stream(primaryKey: ['id'])
+      .listen((_) {
+        debugPrint('📍 Realtime: Check-in update received');
+        _refreshCheckInCounts();
+        _loadUserCheckIn();
+      });
   }
 
   @override
   void dispose() {
     _checkInRefreshTimer?.cancel();
     _liveUsersRefreshTimer?.cancel();
+    _checkinSubscription?.cancel();
     super.dispose();
   }
 
@@ -362,7 +388,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       // Get check-in count for this place
       final dogCount = _checkInCounts[place.placeId] ?? 0;
 
-      // Generate custom marker based on category
+      // Generate custom marker based on category (no count badge on marker)
       final categoryName = place.category.name;
       final icon = await DogMarkerGenerator.createPlaceMarker(
         category: categoryName,
@@ -401,12 +427,11 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       }
     }
 
-    // Add live user markers (Phase 5) - dog photos with colored borders
-    for (final marker in _liveUserMarkers) {
-      newMarkers.add(marker);
-    }
+    // PRIVACY: Live GPS markers removed from public view
+    // Users' real-time locations are never shown to others
+    // Only check-in locations (at parks) are displayed
 
-    // Add checked-in user marker (special paw icon at check-in location)
+    // Add checked-in user marker (dog photo at check-in location)
     if (_currentUserCheckIn != null && 
         _currentUserCheckIn!.latitude != null && 
         _currentUserCheckIn!.longitude != null) {
@@ -415,9 +440,19 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       
       // Only show if within 4 hours
       if (hoursAgo < 4) {
+        // Traffic light system: Green <1h, Orange 1-2h, Red 2-3h
         final borderColor = hoursAgo < 1 ? Colors.green 
             : hoursAgo < 2 ? Colors.orange 
-            : Colors.red;
+            : hoursAgo < 3 ? Colors.red
+            : Colors.grey; // Stale (3-4h)
+        
+        // Create dog photo marker with colored border
+        final icon = await DogMarkerGenerator.createDogMarker(
+          imageUrl: _userDogPhotoUrl,
+          borderColor: borderColor,
+          size: 50,
+          borderWidth: 4,
+        );
         
         newMarkers.add(Marker(
           markerId: const MarkerId('my_checkin'),
@@ -429,11 +464,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             title: '🐕 You\'re here!',
             snippet: _currentUserCheckIn!.parkName,
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            hoursAgo < 1 ? BitmapDescriptor.hueGreen 
-                : hoursAgo < 2 ? BitmapDescriptor.hueOrange 
-                : BitmapDescriptor.hueRed,
-          ),
+          icon: icon,
           zIndex: 10, // Show on top
         ));
       }
@@ -504,8 +535,23 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     try {
       final checkIn = await CheckInService.getActiveCheckIn(user.id);
       debugPrint('📍 Check-in loaded: ${checkIn?.parkName ?? "None"}');
+      
+      // Fetch dog photo for check-in marker
+      String? dogPhotoUrl;
+      if (checkIn != null) {
+        final dogData = await Supabase.instance.client
+            .from('dogs')
+            .select('main_photo_url')
+            .eq('id', checkIn.dogId)
+            .maybeSingle();
+        dogPhotoUrl = dogData?['main_photo_url'] as String?;
+      }
+      
       if (mounted) {
-        setState(() => _currentUserCheckIn = checkIn);
+        setState(() {
+          _currentUserCheckIn = checkIn;
+          _userDogPhotoUrl = dogPhotoUrl;
+        });
         _updateMarkers(); // Refresh markers to show/hide check-in marker
       }
     } catch (e) {
@@ -959,6 +1005,19 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
               child: _buildCheckInStatusButton(),
             ),
 
+          // Scan QR Button
+          Positioned(
+            right: 16,
+            top: 8,
+            child: FloatingActionButton.small(
+              heroTag: 'scan_qr_fab',
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              child: const Icon(Icons.qr_code_scanner),
+              onPressed: () => context.push('/qr-scan'),
+            ),
+          ),
+
           // Dog mini card popup when a live dog marker is tapped
           if (_selectedLiveDog != null)
             Positioned(
@@ -975,6 +1034,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                                _selectedLiveDog!['avatar_url'] as String?,
                   timeAgo: _formatTimeAgo(_calculateHoursAgo(_selectedLiveDog!['live_location_updated_at'] as String?)),
                   isFriend: _selectedLiveDog!['is_friend'] as bool? ?? false,
+                  // Can't bark at yourself!
+                  isOwnDog: _selectedLiveDog!['user_id'] == Supabase.instance.client.auth.currentUser?.id,
                   onBark: () {
                     // TODO: Send bark to user
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -984,6 +1045,42 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                       ),
                     );
                     setState(() => _selectedLiveDog = null);
+                  },
+                  onAddToPack: () async {
+                    try {
+                      final currentUser = Supabase.instance.client.auth.currentUser;
+                      if (currentUser == null) return;
+                      
+                      final dogs = await BarkDateUserService.getUserDogs(currentUser.id);
+                      if (dogs.isEmpty) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please create a dog profile first')),
+                          );
+                        }
+                        return;
+                      }
+                      final myDogId = dogs.first['id'] as String;
+
+                      final targetDogId = _selectedLiveDog!['dog_id'] as String;
+                      final success = await DogFriendshipService.sendBark(
+                        fromDogId: myDogId,
+                        toDogId: targetDogId,
+                      );
+
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(success 
+                              ? 'Request sent! 🐾' 
+                              : 'Could not send request'
+                            ),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      debugPrint('Error sending friend request: $e');
+                    }
                   },
                   onClose: () => setState(() => _selectedLiveDog = null),
                 ),
@@ -1026,8 +1123,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
               left: 0,
               right: 0,
               bottom: 0,
-              child: GestureDetector(
-                onTap: () {}, // Catch taps
+              // CRITICAL: PointerInterceptor prevents click-through to Google Maps Platform View
+              // This is the official Flutter solution for Platform View gesture issues on web
+              child: PointerInterceptor(
                 child: Container(
                   height: MediaQuery.of(context).size.height * 0.45,
                   decoration: BoxDecoration(

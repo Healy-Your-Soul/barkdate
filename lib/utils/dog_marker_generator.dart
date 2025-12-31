@@ -311,4 +311,175 @@ class DogMarkerGenerator {
     
     return byteData!.buffer.asUint8List();
   }
+  
+  /// Create a place marker with dog count badge
+  /// 
+  /// [category] - Place category (park, cafe, store, vet, etc.)
+  /// [dogCount] - Number of dogs currently checked in
+  /// [size] - Size of the marker in pixels (default 48)
+  static Future<BitmapDescriptor> createPlaceMarkerWithCount({
+    required String category,
+    required int dogCount,
+    int size = 48,
+  }) async {
+    // Create a cache key that includes dog count
+    final cacheKey = 'place_${category}_${dogCount}_$size';
+    
+    // Return cached version if available
+    if (_cache.containsKey(cacheKey)) {
+      return _cache[cacheKey]!;
+    }
+
+    try {
+      // Get color based on category
+      Color markerColor;
+      String icon;
+      
+      switch (category.toLowerCase()) {
+        case 'park':
+        case 'dog_park':
+          markerColor = Colors.green;
+          icon = '🌳';
+          break;
+        case 'cafe':
+        case 'restaurant':
+          markerColor = Colors.orange;
+          icon = '☕';
+          break;
+        case 'store':
+        case 'pet_store':
+        case 'petstore':
+          markerColor = Colors.blue;
+          icon = '🏪';
+          break;
+        case 'veterinary':
+        case 'vet':
+          markerColor = Colors.red;
+          icon = '🏥';
+          break;
+        default:
+          markerColor = Colors.purple;
+          icon = '📍';
+      }
+      
+      final markerBytes = await _createPlaceMarkerWithCountImage(
+        color: markerColor,
+        icon: icon,
+        dogCount: dogCount,
+        size: size,
+      );
+      
+      final descriptor = BitmapDescriptor.bytes(markerBytes);
+      _cache[cacheKey] = descriptor;
+      return descriptor;
+    } catch (e) {
+      debugPrint('Error creating place marker with count: $e');
+      return BitmapDescriptor.defaultMarker;
+    }
+  }
+  
+  /// Create the place marker image with count badge
+  static Future<Uint8List> _createPlaceMarkerWithCountImage({
+    required Color color,
+    required String icon,
+    required int dogCount,
+    required int size,
+  }) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final paint = Paint();
+    
+    final center = Offset(size / 2, size / 2 + 4); // Offset down to leave room for badge
+    final radius = (size - 12) / 2; // Smaller to leave room for badge
+    
+    // Draw shadow
+    paint
+      ..color = Colors.black.withValues(alpha: 0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+    canvas.drawCircle(center + const Offset(1, 1), radius - 2, paint);
+    
+    // Reset paint
+    paint.maskFilter = null;
+    
+    // Draw colored circle
+    paint.color = color;
+    canvas.drawCircle(center, radius - 2, paint);
+    
+    // Draw white border
+    paint
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(center, radius - 3, paint);
+    
+    // Draw icon in center (using letter for reliability)
+    final letterIcon = icon == '🌳' ? 'P' : (icon == '☕' ? 'C' : (icon == '🏪' ? 'S' : (icon == '🏥' ? 'V' : '•')));
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: letterIcon,
+        style: TextStyle(
+          fontSize: size * 0.35,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        center.dx - textPainter.width / 2,
+        center.dy - textPainter.height / 2,
+      ),
+    );
+    
+    // Draw dog count badge (top right) if count > 0
+    if (dogCount > 0) {
+      final badgeRadius = size * 0.22;
+      final badgeCenter = Offset(size - badgeRadius - 2, badgeRadius + 2);
+      
+      // Badge background (red/orange circle)
+      paint
+        ..style = PaintingStyle.fill
+        ..color = dogCount >= 6 ? Colors.red : (dogCount >= 3 ? Colors.orange : Colors.green);
+      canvas.drawCircle(badgeCenter, badgeRadius, paint);
+      
+      // Badge border
+      paint
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = Colors.white;
+      canvas.drawCircle(badgeCenter, badgeRadius, paint);
+      
+      // Badge text (dog count)
+      final countText = dogCount > 9 ? '9+' : dogCount.toString();
+      final badgeTextPainter = TextPainter(
+        text: TextSpan(
+          text: countText,
+          style: TextStyle(
+            fontSize: badgeRadius * 1.1,
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      badgeTextPainter.layout();
+      badgeTextPainter.paint(
+        canvas,
+        Offset(
+          badgeCenter.dx - badgeTextPainter.width / 2,
+          badgeCenter.dy - badgeTextPainter.height / 2,
+        ),
+      );
+    }
+    
+    // Convert to bytes
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(size, size);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    
+    return byteData!.buffer.asUint8List();
+  }
 }

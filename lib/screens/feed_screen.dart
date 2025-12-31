@@ -1088,6 +1088,22 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
+  /// Build a distance filter chip
+  Widget _buildDistanceChip(String label, double maxKm) {
+    final isSelected = _filterOptions.maxDistance == maxKm;
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) {
+        setState(() {
+          _filterOptions = _filterOptions.copyWith(maxDistance: maxKm);
+        });
+      },
+      selectedColor: Theme.of(context).colorScheme.primaryContainer,
+      checkmarkColor: Theme.of(context).colorScheme.primary,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Show skeleton on true first load (no cache available yet)
@@ -1190,6 +1206,22 @@ class _FeedScreenState extends State<FeedScreen> {
             // Friends section
             if (_friendDogs.isNotEmpty)
               SliverToBoxAdapter(child: _buildFriendsSection()),
+            
+            // Distance filter chips - quick access
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Wrap(
+                  spacing: 8,
+                  children: [
+                    _buildDistanceChip('Within 2km', 2.0),
+                    _buildDistanceChip('Within 5km', 5.0),
+                    _buildDistanceChip('Within 10km', 10.0),
+                    _buildDistanceChip('All', 100.0),
+                  ],
+                ),
+              ),
+            ),
             
             // Dogs list header
             SliverToBoxAdapter(

@@ -210,7 +210,7 @@ class _CreatePlaydateScreenState extends ConsumerState<CreatePlaydateScreen> {
       final myDogsRes = await SupabaseConfig.client
           .from('dogs')
           .select('id, name')
-          .eq('owner_id', user.id)
+          .eq('user_id', user.id)
           .limit(1);
           
       if (myDogsRes.isEmpty) throw Exception('You need a dog profile to create a playdate!');

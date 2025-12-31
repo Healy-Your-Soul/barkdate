@@ -74,6 +74,14 @@ class FeedFeatureScreen extends ConsumerWidget {
                 ),
               ),
 
+              // 1.5 Find Your Pack Search Bar
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                  child: _buildPackSearchBar(context),
+                ),
+              ),
+
             // 2. Upcoming Playdates Section
             SliverToBoxAdapter(
               child: _buildSectionHeader(context, "Upcoming Playdates", () {
@@ -146,16 +154,22 @@ class FeedFeatureScreen extends ConsumerWidget {
 
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
 
-            // 4. Nearby Dogs Header
+            // 4. Nearby Dogs Header with Toggle
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Nearby Dogs',
-                      style: AppTypography.h2(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Nearby Dogs',
+                          style: AppTypography.h2(),
+                        ),
+                        // Toggle buttons will be managed by parent
+                      ],
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
@@ -165,6 +179,8 @@ class FeedFeatureScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
+                    // Friends / All Toggle
+                    _NearbyDogsToggle(),
                   ],
                 ),
               ),
@@ -347,6 +363,51 @@ class FeedFeatureScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  /// Build the "Find Your Pack" search bar (clean, just the search field)
+  Widget _buildPackSearchBar(BuildContext context) {
+    // Just the search bar - filter chips are inside the modal as tabs
+    return GestureDetector(
+      onTap: () {
+        _showPackSearchSheet(context);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.search,
+              size: 20,
+              color: Colors.grey[500],
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Find your pack...',
+              style: AppTypography.bodyMedium().copyWith(
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPackSearchSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _PackSearchModal(),
     );
   }
 
@@ -653,3 +714,240 @@ class FeedFeatureScreen extends ConsumerWidget {
   }
 }
 
+/// Toggle between Friends and All Dogs in Nearby section
+class _NearbyDogsToggle extends StatefulWidget {
+  @override
+  State<_NearbyDogsToggle> createState() => _NearbyDogsToggleState();
+}
+
+class _NearbyDogsToggleState extends State<_NearbyDogsToggle> {
+  int _selectedIndex = 1; // 0 = Friends, 1 = All (default to All)
+  
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: [
+          _buildToggleButton(0, 'My Pack', Icons.group),
+          _buildToggleButton(1, 'All Dogs', Icons.pets),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildToggleButton(int index, String label, IconData icon) {
+    final isSelected = _selectedIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedIndex = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: isSelected ? [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ] : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected 
+                    ? Theme.of(context).colorScheme.primary 
+                    : Colors.grey[600],
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected 
+                      ? Theme.of(context).colorScheme.primary 
+                      : Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Search modal with filter tabs (All, Friends, Nearby, New)
+class _PackSearchModal extends StatefulWidget {
+  @override
+  State<_PackSearchModal> createState() => _PackSearchModalState();
+}
+
+class _PackSearchModalState extends State<_PackSearchModal> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
+  
+  final List<Map<String, dynamic>> _tabs = [
+    {'label': 'All', 'icon': Icons.pets},
+    {'label': 'Friends', 'icon': Icons.group},
+    {'label': 'Nearby', 'icon': Icons.location_on},
+    {'label': 'New', 'icon': Icons.auto_awesome},
+  ];
+  
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: _tabs.length, vsync: this);
+  }
+  
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) => Column(
+        children: [
+          // Handle
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 8),
+          
+          // Search field
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              controller: _searchController,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Search dogs, friends...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: const Color(0xFFF5F5F5),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              onChanged: (value) {
+                // TODO: Trigger search
+                setState(() {});
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          
+          // Filter tabs - fit all 4 without scrolling
+          TabBar(
+            controller: _tabController,
+            isScrollable: false, // Stretch to fit all tabs
+            labelColor: Theme.of(context).colorScheme.primary,
+            unselectedLabelColor: Colors.grey[600],
+            indicatorColor: Theme.of(context).colorScheme.primary,
+            indicatorSize: TabBarIndicatorSize.tab,
+            labelPadding: EdgeInsets.zero, // No extra padding
+            tabs: _tabs.map((tab) => Tab(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(tab['icon'] as IconData, size: 16),
+                  const SizedBox(width: 4),
+                  Text(tab['label'] as String, style: const TextStyle(fontSize: 13)),
+                ],
+              ),
+            )).toList(),
+          ),
+          
+          // Tab content
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // All Dogs
+                _buildSearchResults(scrollController, 'All Dogs'),
+                // Friends
+                _buildSearchResults(scrollController, 'Friends'),
+                // Nearby
+                _buildSearchResults(scrollController, 'Nearby Dogs'),
+                // New
+                _buildSearchResults(scrollController, 'New Dogs'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildSearchResults(ScrollController controller, String category) {
+    final query = _searchController.text;
+    
+    if (query.isEmpty) {
+      return ListView(
+        controller: controller,
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text('Recent $category', style: AppTypography.labelMedium()),
+          const SizedBox(height: 24),
+          Center(
+            child: Column(
+              children: [
+                Icon(Icons.pets, size: 48, color: Colors.grey[300]),
+                const SizedBox(height: 12),
+                Text(
+                  'Start typing to search $category...',
+                  style: AppTypography.bodyMedium().copyWith(color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+    
+    // TODO: Implement actual search results
+    return ListView(
+      controller: controller,
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('Results for "$query" in $category', style: AppTypography.labelMedium()),
+        const SizedBox(height: 16),
+        // Placeholder for search results
+        Center(
+          child: Text(
+            'Searching...',
+            style: AppTypography.bodyMedium().copyWith(color: Colors.grey),
+          ),
+        ),
+      ],
+    );
+  }
+}

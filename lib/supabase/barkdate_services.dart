@@ -894,6 +894,42 @@ class BarkDateSocialService {
     return comments;
   }
 
+  /// Stream comments for a post
+  static Stream<List<Map<String, dynamic>>> streamComments(String postId) {
+    final controller = StreamController<List<Map<String, dynamic>>>.broadcast();
+    
+    // Initial fetch
+    getPostComments(postId).then((comments) {
+      if (!controller.isClosed) controller.add(comments);
+    });
+
+    final channel = SupabaseConfig.client
+        .channel('public:post_comments:$postId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'post_comments',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'post_id',
+            value: postId,
+          ),
+          callback: (payload) {
+            getPostComments(postId).then((comments) {
+              if (!controller.isClosed) controller.add(comments);
+            });
+          },
+        )
+        .subscribe();
+
+    controller.onCancel = () {
+      SupabaseConfig.client.removeChannel(channel);
+      controller.close();
+    };
+
+    return controller.stream;
+  }
+
   /// Add comment to post
   static Future<Map<String, dynamic>> addComment({
     required String postId,

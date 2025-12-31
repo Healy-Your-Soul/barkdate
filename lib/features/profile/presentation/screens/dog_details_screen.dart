@@ -7,6 +7,7 @@ import 'package:barkdate/design_system/app_spacing.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/services/notification_manager.dart';
 
 class DogDetailsScreen extends StatefulWidget {
   final Dog dog;
@@ -67,10 +68,10 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
     super.dispose();
   }
 
-  Future<void> _onBark() async {
+  Future<void> _onAddToPack() async {
     if (_myDogId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You need a dog to bark!')),
+        const SnackBar(content: Text('You need a dog to add friends!')),
       );
       return;
     }
@@ -79,7 +80,7 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
 
     try {
       if (_friendshipStatus == null) {
-        // Send a new bark
+        // Send a new friend request
         final success = await DogFriendshipService.sendBark(
           fromDogId: _myDogId!,
           toDogId: widget.dog.id,
@@ -92,13 +93,13 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('You barked at ${widget.dog.name}! 🐕 Waiting for response...'),
+              content: Text('Friend request sent to ${widget.dog.name}! 🐕'),
               behavior: SnackBarBehavior.floating,
             ),
           );
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Already barked or error occurred')),
+            const SnackBar(content: Text('Already friends or error occurred')),
           );
         }
       } else if (_friendshipId != null) {
@@ -113,7 +114,7 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Removed bark from ${widget.dog.name}'),
+              content: Text('Removed ${widget.dog.name} from pack'),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -128,6 +129,44 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _onBarkPoke() async {
+    if (_myDogId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You need a dog to bark!')),
+      );
+      return;
+    }
+
+    // Get my dog details for the notification
+    final myDogName = (await BarkDateUserService.getUserDogs(SupabaseConfig.auth.currentUser!.id)).firstWhere((d) => d['id'] == _myDogId)['name'];
+
+    try {
+      await NotificationManager.sendBarkNotification(
+        receiverUserId: widget.dog.ownerId,
+        senderDogName: myDogName ?? 'Someone',
+        receiverDogName: widget.dog.name,
+        senderUserId: SupabaseConfig.auth.currentUser?.id,
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('You barked at ${widget.dog.name}! 👋'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error sending bark poke: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not send bark right now')),
+        );
       }
     }
   }
@@ -243,45 +282,65 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Title Section
-                        Text(
-                          widget.dog.name,
-                          style: AppTypography.h1().copyWith(fontSize: 32),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${widget.dog.breed} • ${widget.dog.age} years old',
-                          style: AppTypography.h3().copyWith(fontWeight: FontWeight.normal),
-                        ),
-                        const SizedBox(height: 8),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.star, size: 16, color: Colors.black),
-                            const SizedBox(width: 4),
-                            Text('4.98', style: AppTypography.labelMedium()), // Mock rating
-                            const SizedBox(width: 4),
-                            Text('·', style: AppTypography.labelMedium()),
-                            const SizedBox(width: 4),
-                            Text('12 reviews', style: AppTypography.labelMedium().copyWith(decoration: TextDecoration.underline)),
-                            const Spacer(),
-                            Text('${widget.dog.distanceKm.toStringAsFixed(1)} miles away', style: AppTypography.bodySmall()),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.dog.name,
+                                    style: AppTypography.h1().copyWith(fontSize: 32),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${widget.dog.breed} • ${widget.dog.age} years old',
+                                    style: AppTypography.h3().copyWith(fontWeight: FontWeight.normal),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Distance badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.location_on, size: 14, color: Theme.of(context).colorScheme.primary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${widget.dog.distanceKm.toStringAsFixed(1)} km',
+                                    style: AppTypography.labelSmall().copyWith(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
 
                         const Divider(height: 48),
 
-                        // Host Section
+                        // Human Section
                         Row(
                           children: [
                             CircleAvatar(
                               radius: 24,
-                              backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=${widget.dog.ownerId}'), // Mock owner image
+                              backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=${widget.dog.ownerId}'),
                             ),
                             const SizedBox(width: 16),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Hosted by ${widget.dog.ownerName}', style: AppTypography.h3().copyWith(fontSize: 16)),
-                                Text('Superhost · 3 years barking', style: AppTypography.bodySmall().copyWith(color: Colors.grey[600])),
+                                Text('My human ${widget.dog.ownerName}', style: AppTypography.h3().copyWith(fontSize: 16)),
+                                Text('${widget.dog.age} years barking together', style: AppTypography.bodySmall().copyWith(color: Colors.grey[600])),
                               ],
                             ),
                           ],
@@ -312,10 +371,10 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
                         if (_myDogId != null && _myDogId != widget.dog.id) ...[
                           Row(
                             children: [
-                              // Bark Button
+                              // Add to Pack Button (Primary)
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed: _isLoading ? null : _onBark,
+                                  onPressed: _isLoading ? null : _onAddToPack,
                                   icon: _isLoading 
                                     ? const SizedBox(
                                         width: 16, 
@@ -323,13 +382,13 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
                                         child: CircularProgressIndicator(strokeWidth: 2),
                                       )
                                     : Icon(
-                                        _isBarked ? Icons.pets : Icons.pets_outlined,
+                                        _isBarked ? Icons.check : Icons.group_add,
                                         color: _isBarked ? Colors.white : null,
                                       ),
-                                  label: Text(_getBarkButtonText()),
+                                  label: Text(_getAddButtonText()),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: _isBarked 
-                                      ? (_friendshipStatus == 'accepted' ? Colors.green : Colors.orange)
+                                      ? (_friendshipStatus == 'accepted' ? Colors.green : Colors.grey)
                                       : null,
                                     foregroundColor: _isBarked ? Colors.white : null,
                                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -350,18 +409,36 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
-                          // Playdate Button
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: _onSuggestPlaydate,
-                              icon: const Icon(Icons.calendar_today),
-                              label: const Text('Suggest a Playdate'),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                          const SizedBox(height: 12),
+                          
+                          // Secondary Row: Bark + Playdate
+                          Row(
+                            children: [
+                              // Bark Poke Button
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _onBarkPoke,
+                                  icon: const Icon(Icons.pets, color: Colors.orange),
+                                  label: const Text('Bark 👋'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    side: BorderSide(color: Colors.orange.withOpacity(0.5)),
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 12),
+                              // Playdate Button
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _onSuggestPlaydate,
+                                  icon: const Icon(Icons.calendar_today),
+                                  label: const Text('Playdate'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                         
@@ -378,16 +455,16 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
     );
   }
 
-  String _getBarkButtonText() {
+  String _getAddButtonText() {
     switch (_friendshipStatus) {
       case 'pending':
-        return 'Bark Sent';
+        return 'Request Sent';
       case 'accepted':
-        return 'Friends!';
+        return 'In Pack';
       case 'declined':
-        return 'Bark Again';
+        return 'Try Again';
       default:
-        return 'Bark';
+        return 'Add to Pack';
     }
   }
 

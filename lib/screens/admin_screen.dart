@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../services/park_service.dart';
 import '../models/featured_park.dart';
 import '../services/places_service.dart';
@@ -241,32 +242,33 @@ class _AdminScreenState extends State<AdminScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // QR Code placeholder - would use qr_flutter package
+            // QR Code display using qr_flutter
             Container(
-              width: 200,
-              height: 200,
+              width: 220,
+              height: 220,
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.qr_code_2, size: 80, color: Colors.grey),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'QR Code',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Code: ${park.qrCheckInCode}',
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 12,
+              child: QrImageView(
+                data: qrUrl,
+                version: QrVersions.auto,
+                size: 200.0,
+                backgroundColor: Colors.white,
+                embeddedImage: const AssetImage('assets/images/logo.png'), // Optional: Add app logo if available
+                embeddedImageStyle: const QrEmbeddedImageStyle(
+                  size: Size(30, 30),
+                ),
+                errorStateBuilder: (cxt, err) {
+                  return const Center(
+                    child: Text(
+                      'Uh oh! Something went wrong...',
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                ],
+                  );
+                },
               ),
             ),
             const SizedBox(height: 16),

@@ -4,6 +4,11 @@ import 'package:barkdate/services/places_service.dart';
 import 'package:barkdate/services/checkin_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/models/checkin.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:barkdate/screens/map_v2/widgets/dog_mini_card.dart';
+import 'package:timeago/timeago.dart' as timeago;
+import 'package:barkdate/supabase/barkdate_services.dart';
+import 'package:barkdate/services/dog_friendship_service.dart';
 
 /// Shows a simple place details sheet (DEPRECATED - use PlaceSheetContent instead)
 void showPlaceSheet(BuildContext context, PlaceResult place) {
@@ -335,6 +340,22 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     }
   }
   
+  /// Get crowdedness label based on dog count
+  String _getCrowdednessLabel(int dogCount) {
+    if (dogCount == 0) return 'Empty';
+    if (dogCount < 3) return 'Quiet';
+    if (dogCount < 6) return 'Moderate';
+    return 'Busy';
+  }
+  
+  /// Get crowdedness color based on dog count
+  Color _getCrowdednessColor(int dogCount) {
+    if (dogCount == 0) return Colors.grey;
+    if (dogCount < 3) return Colors.green;
+    if (dogCount < 6) return Colors.orange;
+    return Colors.red;
+  }
+  
   /// Get color for category to match marker colors
   Color _getCategoryColor(PlaceCategory category) {
     switch (category) {
@@ -356,15 +377,17 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     final isHere = _currentCheckIn?.parkId == widget.place.placeId;
     final isElsewhere = _currentCheckIn != null && !isHere;
 
-    // Container with content - scrollController passed from parent
+    // Container with scrollable content
+    // Gesture absorption is handled at the parent level in map_tab_screen.dart
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: ListView(
-        controller: widget.scrollController, // Use the passed scrollController!
-        primary: false, // Let the sheet control scrolling
+        controller: widget.scrollController,
+        primary: false,
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),
         children: [
           // Handle bar removed - wrapper already has one
@@ -396,19 +419,41 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             ),
             const SizedBox(height: 16),
 
-            // WHO'S HERE - Dog Avatars Carousel
-            if (_checkedInDogs.isNotEmpty) ...[
-              Row(
-                children: [
-                  const Icon(Icons.pets, color: Colors.green, size: 18),
-                  const SizedBox(width: 6),
-                  Text(
-                    '$_dogCount ${_dogCount == 1 ? 'dog' : 'dogs'} here now',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            // DOG COUNT & CROWDEDNESS - Always visible
+            Row(
+              children: [
+                Icon(Icons.pets, color: _getCrowdednessColor(_dogCount), size: 18),
+                const SizedBox(width: 6),
+                Text(
+                  _dogCount == 0 
+                      ? 'No dogs here right now' 
+                      : '$_dogCount ${_dogCount == 1 ? 'dog' : 'dogs'} here now',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+                const SizedBox(width: 8),
+                // Crowdedness badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _getCrowdednessColor(_dogCount).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: _getCrowdednessColor(_dogCount)),
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
+                  child: Text(
+                    _getCrowdednessLabel(_dogCount),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: _getCrowdednessColor(_dogCount),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // WHO'S HERE - Dog Avatars Carousel (only if dogs present)
+            if (_checkedInDogs.isNotEmpty) ...[
               SizedBox(
                 height: 60,
                 child: ListView.builder(
@@ -439,13 +484,84 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                     
                     return GestureDetector(
                       onTap: () {
-                        // Show mini popup for this dog
-                        setState(() => _selectedDog = {
-                          ...checkIn,
-                          'dog_name': dogName,
-                          'dog_photo_url': photoUrl,
-                          'user_name': user?['name'],
-                        });
+                         // Show dog mini card in a dialog
+                         // Calculate time ago string
+                         String timeAgoStr = 'Just now';
+                         if (checkedInAt != null) {
+                           final checkInTime = DateTime.tryParse(checkedInAt);
+                           if (checkInTime != null) {
+                             timeAgoStr = timeago.format(checkInTime);
+                           }
+                         }
+
+                         showDialog(
+                           context: context,
+                           builder: (context) => Dialog(
+                             backgroundColor: Colors.transparent,
+                             elevation: 0,
+                             child: DogMiniCard(
+                               dogName: dogName,
+                               humanName: user?['name'],
+                               dogPhotoUrl: photoUrl,
+                               timeAgo: timeAgoStr,
+                               isFriend: false, // We check friendship status if available, default false. Ideally fetch this.
+                               isOwnDog: user?['id'] == Supabase.instance.client.auth.currentUser?.id,
+                               onAddToPack: () async {
+                                 // Close dialog first
+                                 // Navigator.pop(context); // Optional: keep open or close? User might want to see success.
+                                 // Let's keep it open and show snackbar on top.
+                                 
+                                 try {
+                                   final currentUser = Supabase.instance.client.auth.currentUser;
+                                   if (currentUser == null) return;
+                                   
+                                   final dogs = await BarkDateUserService.getUserDogs(currentUser.id);
+                                   if (dogs.isEmpty) {
+                                     ScaffoldMessenger.of(context).showSnackBar(
+                                       const SnackBar(content: Text('Please create a dog profile first')),
+                                     );
+                                     return;
+                                   }
+                                   final myDogId = dogs.first['id'] as String;
+
+                                   final targetDogId = dog?['id'] as String?;
+                                   if (targetDogId == null) return;
+
+                                   final success = await DogFriendshipService.sendBark(
+                                     fromDogId: myDogId,
+                                     toDogId: targetDogId,
+                                   );
+
+                                   ScaffoldMessenger.of(context).showSnackBar(
+                                     SnackBar(
+                                       content: Text(success 
+                                         ? 'Request sent! 🐾' 
+                                         : 'Could not send request'
+                                       ),
+                                     ),
+                                   );
+                                   
+                                   // Close dialog on success
+                                   if (success) {
+                                     Navigator.pop(context);
+                                   }
+                                 } catch (e) {
+                                   debugPrint('Error sending friend request: $e');
+                                 }
+                               },
+                               onBark: () {
+                                 ScaffoldMessenger.of(context).showSnackBar(
+                                   SnackBar(
+                                     content: Text('🐕 You barked at $dogName!'),
+                                     backgroundColor: Colors.orange,
+                                   ),
+                                 );
+                                 Navigator.pop(context);
+                               },
+                               onClose: () => Navigator.pop(context),
+                             ),
+                           ),
+                         );
                       },
                       child: Padding(
                         padding: const EdgeInsets.only(right: 8),
@@ -659,9 +775,9 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
               ),
             ),
             const SizedBox(height: 20),
-            ],
-          ),
-        );
+        ],
+      ),
+    );
   }
 
   Widget _buildCheckInButton(bool isHere, bool isElsewhere) {

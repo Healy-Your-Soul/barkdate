@@ -333,7 +333,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         pageBuilder: (context, animation, secondaryAnimation) => 
             _CreatePostScreen(
               onPost: _handleCreatePost,
-              isPosting: _isLoading,
+              isPosting: _isPosting,
             ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(0.0, 1.0);

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/settings_service.dart';
 import 'package:barkdate/services/notification_manager.dart';
@@ -29,6 +30,10 @@ void main() async {
   }
 
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Configure Google Fonts to NOT check asset manifest (fixes web debug mode)
+  // This forces Google Fonts to always fetch from HTTP instead of looking for bundled assets
+  GoogleFonts.config.allowRuntimeFetching = true;
   
   // Initialize Firebase (for FCM, not auth)
   await Firebase.initializeApp(

@@ -11,7 +11,7 @@ class MapFilters {
 
   const MapFilters({
     this.searchQuery = '',
-    this.category = 'all',
+    this.category = 'park', // Default to Parks as it's the most important feature
     this.openNow = false,
     this.showEvents = true,
     this.amenities = const [],

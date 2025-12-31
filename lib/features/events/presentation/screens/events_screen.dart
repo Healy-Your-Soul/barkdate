@@ -8,6 +8,7 @@ import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 
 import 'package:barkdate/core/presentation/widgets/filter_tabs.dart';
+import 'package:barkdate/supabase/supabase_config.dart';
 
 class EventsScreen extends ConsumerStatefulWidget {
   const EventsScreen({super.key});
@@ -57,7 +58,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                                   Wrap(
                                     spacing: 8,
                                     runSpacing: 8,
-                                    children: ['All', 'This Weekend', 'Nearby', 'Free'].map((filter) {
+                                    children: ['All', 'This Weekend', 'Nearby', 'Free', 'My Events'].map((filter) {
                                       final isSelected = _selectedFilter == filter;
                                       return ChoiceChip(
                                         label: Text(filter),
@@ -89,7 +90,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
             ),
             const SizedBox(height: 24),
             FilterTabs(
-              tabs: const ['All', 'This Weekend', 'Nearby', 'Free'],
+              tabs: const ['All', 'This Weekend', 'Nearby', 'Free', 'My Events'],
               selectedTab: _selectedFilter,
               onTabSelected: (tab) {
                 setState(() => _selectedFilter = tab);
@@ -121,6 +122,14 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                       break;
                     case 'Free':
                       filteredEvents = events.where((e) => e.isFree).toList();
+                      break;
+                    case 'My Events':
+                      final userId = SupabaseConfig.auth.currentUser?.id;
+                      if (userId != null) {
+                        filteredEvents = events.where((e) => e.organizerId == userId).toList();
+                      } else {
+                        filteredEvents = [];
+                      }
                       break;
                     case 'All':
                     default:

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:barkdate/models/post.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
@@ -22,6 +23,7 @@ class _CommentModalState extends State<CommentModal> {
   bool _isLoading = true;
   bool _isPosting = false;
   String? _currentUserId;
+  StreamSubscription? _commentsSubscription;
 
   @override
   void initState() {
@@ -32,6 +34,7 @@ class _CommentModalState extends State<CommentModal> {
 
   @override
   void dispose() {
+    _commentsSubscription?.cancel();
     _commentController.dispose();
     super.dispose();
   }
@@ -57,23 +60,23 @@ class _CommentModalState extends State<CommentModal> {
   Future<void> _loadComments() async {
     setState(() => _isLoading = true);
     
-    try {
-      final comments = await BarkDateSocialService.getPostComments(widget.post.id);
-      if (mounted) {
-        setState(() {
-          _comments = comments;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading comments: $e');
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading comments: $e')),
-        );
-      }
-    }
+    _commentsSubscription?.cancel();
+    _commentsSubscription = BarkDateSocialService.streamComments(widget.post.id).listen(
+      (comments) {
+        if (mounted) {
+          setState(() {
+            _comments = comments;
+            _isLoading = false;
+          });
+        }
+      },
+      onError: (e) {
+        debugPrint('Error streaming comments: $e');
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      },
+    );
   }
 
   Future<void> _addComment() async {
@@ -89,7 +92,7 @@ class _CommentModalState extends State<CommentModal> {
       );
       
       _commentController.clear();
-      await _loadComments(); // Reload comments to show the new one
+      // await _loadComments(); // Requirement for real-time means we don't need manual reload
       
       if (mounted) {
         // Hide keyboard

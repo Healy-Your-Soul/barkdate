@@ -41,7 +41,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   double? _price;
   bool _requiresRegistration = true;
   bool _isLoading = false;
-  bool _isPublicEvent = true;
+  String _visibility = 'public'; // 'public', 'friends', 'invite_only'
+  bool _isFree = true;
 
   final List<String> _selectedAgeGroups = [];
   final List<String> _selectedSizes = [];
@@ -315,40 +316,45 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               const SizedBox(height: 16),
               
               // Price
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _priceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Price (optional)',
-                        hintText: '0.00',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.attach_money),
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      onChanged: (value) {
-                        _price = double.tryParse(value);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: CheckboxListTile(
-                      title: const Text('Free Event'),
-                      value: _price == null || _price == 0,
-                      onChanged: (value) {
-                        setState(() {
-                          if (value == true) {
-                            _price = null;
-                            _priceController.clear();
-                          }
-                        });
-                      },
-                    ),
-                  ),
-                ],
+              // Price
+              CheckboxListTile(
+                title: const Text('This event is free'),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: _isFree,
+                onChanged: (value) {
+                  setState(() {
+                    _isFree = value ?? false;
+                    if (_isFree) {
+                      _price = 0;
+                      _priceController.clear();
+                    }
+                  });
+                },
               ),
+              
+              if (!_isFree) ...[
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _priceController,
+                  decoration: const InputDecoration(
+                    labelText: 'Price',
+                    hintText: '0.00',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.attach_money),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (value) {
+                    _price = double.tryParse(value);
+                  },
+                  validator: (value) {
+                    if (!_isFree && (value == null || value.isEmpty)) {
+                      return 'Please enter a price';
+                    }
+                    return null;
+                  },
+                ),
+              ],
               
               const SizedBox(height: 16),
               
@@ -365,30 +371,36 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   ChoiceChip(
                     avatar: const Icon(Icons.public, size: 18),
                     label: const Text('Public'),
-                    selected: _isPublicEvent,
+                    selected: _visibility == 'public',
                     onSelected: (selected) {
-                      if (selected) {
-                        setState(() => _isPublicEvent = true);
-                      }
+                      if (selected) setState(() => _visibility = 'public');
+                    },
+                  ),
+                  ChoiceChip(
+                    avatar: const Icon(Icons.group, size: 18),
+                    label: const Text('Friends Only'),
+                    selected: _visibility == 'friends',
+                    onSelected: (selected) {
+                      if (selected) setState(() => _visibility = 'friends');
                     },
                   ),
                   ChoiceChip(
                     avatar: const Icon(Icons.lock_outline, size: 18),
                     label: const Text('Invite only'),
-                    selected: !_isPublicEvent,
+                    selected: _visibility == 'invite_only',
                     onSelected: (selected) {
-                      if (selected) {
-                        setState(() => _isPublicEvent = false);
-                      }
+                      if (selected) setState(() => _visibility = 'invite_only');
                     },
                   ),
                 ],
               ),
-              if (!_isPublicEvent) ...[
+              if (_visibility != 'public') ...[
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
-                    'Only invited dog friends will see this event.',
+                    _visibility == 'friends' 
+                        ? 'Visible to your dog friends and their owners.'
+                        : 'Only invited dog friends will see this event.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.outline,
                         ),
@@ -898,7 +910,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       return;
     }
 
-    if (!_isPublicEvent && _invitedDogIds.isEmpty) {
+    if (_visibility == 'invite_only' && _invitedDogIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Invite at least one dog or set the event to public.')),
       );
@@ -968,7 +980,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         latitude: _selectedLatitude,
         longitude: _selectedLongitude,
         photoUrls: photoUrls,
-        isPublic: _isPublicEvent,
+        visibility: _visibility,
         invitedDogIds: List.of(_invitedDogIds),
       );
 

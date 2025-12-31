@@ -115,7 +115,7 @@ class _LiveLocationToggleState extends State<LiveLocationToggle> {
         itemBuilder: (context) => [
           _buildMenuItem('off', 'Off', Icons.location_off, Colors.grey),
           _buildMenuItem('friends', 'Friends Only', Icons.people, Colors.orange),
-          _buildMenuItem('all', 'Everyone', Icons.public, Colors.green),
+          // 'Everyone' removed for privacy - live GPS never shared publicly
         ],
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
