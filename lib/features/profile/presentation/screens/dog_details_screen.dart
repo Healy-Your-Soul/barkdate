@@ -145,6 +145,26 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
     final myDogName = (await BarkDateUserService.getUserDogs(SupabaseConfig.auth.currentUser!.id)).firstWhere((d) => d['id'] == _myDogId)['name'];
 
     try {
+      // Use BarkDateBarkService with rate limiting (3/day for non-friends)
+      final success = await BarkDateBarkService.sendBark(
+        fromDogId: _myDogId!,
+        toDogId: widget.dog.id,
+      );
+
+      if (!success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You\'ve reached your daily bark limit for this pup! 🐕'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Also send push notification
       await NotificationManager.sendBarkNotification(
         receiverUserId: widget.dog.ownerId,
         senderDogName: myDogName ?? 'Someone',
@@ -155,7 +175,7 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('You barked at ${widget.dog.name}! 👋'),
+            content: Text('You barked at ${widget.dog.name}! 🐕'),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.orange,
           ),

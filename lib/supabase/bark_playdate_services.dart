@@ -1017,60 +1017,65 @@ class DogFriendshipService {
     int offset = 0,
   }) async {
     try {
-      // First try with dog1_id relationship
-      final friendships1 = await SupabaseConfig.client
+      // Query friendships where this dog is either the requester or receiver
+      // Column names are: dog_id (requester) and friend_dog_id (receiver)
+      final friendships = await SupabaseConfig.client
           .from('dog_friendships')
-          .select('''
-            *,
-            friend_dog:dogs!dog_friendships_dog2_id_fkey(
-              id, name, main_photo_url, breed, age,
-              user:users(id, name, avatar_url)
-            )
-          ''')
-          .eq('dog1_id', dogId)
-      .order('friendship_level', ascending: false)
-      .order('created_at', ascending: false)
-      .range(0, offset + limit - 1);
-
-      // Then try with dog2_id relationship
-      final friendships2 = await SupabaseConfig.client
-          .from('dog_friendships')
-          .select('''
-            *,
-            friend_dog:dogs!dog_friendships_dog1_id_fkey(
-              id, name, main_photo_url, breed, age,
-              user:users(id, name, avatar_url)
-            )
-          ''')
-          .eq('dog2_id', dogId)
-          .order('friendship_level', ascending: false)
+          .select('*')
+          .eq('status', 'accepted')
+          .or('dog_id.eq.$dogId,friend_dog_id.eq.$dogId')
           .order('created_at', ascending: false)
-          .range(0, offset + limit - 1);
+          .range(offset, offset + limit - 1);
 
-      // Combine and map the results
-      final allFriendships = [...friendships1, ...friendships2];
+      if (friendships.isEmpty) return [];
+
+      // Get all friend dog IDs
+      final friendDogIds = friendships.map((f) {
+        return f['dog_id'] == dogId ? f['friend_dog_id'] : f['dog_id'];
+      }).whereType<String>().toSet().toList();
+
+      if (friendDogIds.isEmpty) return [];
+
+      // Fetch friend dog details
+      final dogs = await SupabaseConfig.client
+          .from('dogs')
+          .select('id, name, main_photo_url, breed, age, user_id')
+          .filter('id', 'in', '(${friendDogIds.join(',')})');
+
+      // Fetch owners for these dogs
+      final userIds = dogs.map((d) => d['user_id']).whereType<String>().toSet().toList();
+      Map<String, Map<String, dynamic>> userMap = {};
       
-      allFriendships.sort((a, b) {
-        final createdA = a['created_at'] as String?;
-        final createdB = b['created_at'] as String?;
-        if (createdA == null || createdB == null) {
-          return 0;
-        }
-        return DateTime.parse(createdB).compareTo(DateTime.parse(createdA));
-      });
-
-      final paginated = allFriendships.skip(offset).take(limit).map((friendship) {
-        final friendDogId = friendship['dog1_id'] == dogId 
-            ? friendship['dog2_id'] 
-            : friendship['dog1_id'];
+      if (userIds.isNotEmpty) {
+        final users = await SupabaseConfig.client
+            .from('users')
+            .select('id, name, avatar_url')
+            .filter('id', 'in', '(${userIds.join(',')})');
         
+        for (final user in users) {
+          userMap[user['id']] = user;
+        }
+      }
+
+      // Map dogs to results with user info
+      final dogMap = <String, Map<String, dynamic>>{};
+      for (final dog in dogs) {
+        final dogData = Map<String, dynamic>.from(dog);
+        if (dogData['user_id'] != null && userMap.containsKey(dogData['user_id'])) {
+          dogData['user'] = userMap[dogData['user_id']];
+        }
+        dogMap[dog['id']] = dogData;
+      }
+
+      // Build result list with friendship info
+      return friendships.map((f) {
+        final friendId = f['dog_id'] == dogId ? f['friend_dog_id'] : f['dog_id'];
         return {
-          ...friendship,
-          'friend_dog_id': friendDogId,
+          ...f,
+          'friend_dog_id': friendId,
+          'friend_dog': dogMap[friendId],
         };
       }).toList();
-
-      return paginated;
 
     } catch (e) {
       debugPrint('Error getting dog friends: $e');
@@ -1086,16 +1091,15 @@ class DogFriendshipService {
     String friendshipLevel = 'acquaintance',
   }) async {
     try {
-      // Ensure consistent ordering (smaller ID first)
-      final sortedIds = [dog1Id, dog2Id]..sort();
-      
+      // Use dog_id and friend_dog_id columns
       await SupabaseConfig.client
           .from('dog_friendships')
           .insert({
-            'dog1_id': sortedIds[0],
-            'dog2_id': sortedIds[1],
+            'dog_id': dog1Id,
+            'friend_dog_id': dog2Id,
             'formed_through_playdate_id': playdateId,
             'friendship_level': friendshipLevel,
+            'status': 'accepted',
           });
 
       return true;

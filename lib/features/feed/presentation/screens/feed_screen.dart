@@ -232,11 +232,25 @@ class FeedFeatureScreen extends ConsumerWidget {
                   ),
                 );
               },
-              loading: () => const SliverToBoxAdapter(
+              loading: () => SliverToBoxAdapter(
                 child: Center(
                   child: Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: DogCircularProgress(size: 30),
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const DogLoadingWidget(size: 120),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Sniffing out your pack...',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
