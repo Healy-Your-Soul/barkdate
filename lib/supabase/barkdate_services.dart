@@ -1053,7 +1053,99 @@ class BarkDateSocialService {
   }
 }
 
-/// Friend request service for managing dog friendships
+/// Bark service for "poke" feature between dogs
+class BarkDateBarkService {
+  /// Send a bark to another dog (poke feature)
+  /// Returns: true if successful, false if rate limited or error
+  static Future<bool> sendBark({
+    required String fromDogId,
+    required String toDogId,
+  }) async {
+    try {
+      // Check if can bark (rate limit)
+      final canBarkResult = await canBark(fromDogId: fromDogId, toDogId: toDogId);
+      if (!canBarkResult) {
+        debugPrint('⚠️ Bark rate limited');
+        return false;
+      }
+      
+      await SupabaseConfig.client.from('barks').insert({
+        'from_dog_id': fromDogId,
+        'to_dog_id': toDogId,
+      });
+      
+      debugPrint('🐕 Bark sent successfully!');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error sending bark: $e');
+      return false;
+    }
+  }
+  
+  /// Check if a dog can bark at another (rate limit check)
+  /// Friends: unlimited, Non-friends: 3/day
+  static Future<bool> canBark({
+    required String fromDogId,
+    required String toDogId,
+  }) async {
+    try {
+      // Use RPC function if available, otherwise check manually
+      final result = await SupabaseConfig.client
+          .rpc('can_bark', params: {
+            'sender_dog_id': fromDogId,
+            'receiver_dog_id': toDogId,
+          });
+      
+      return result as bool? ?? false;
+    } catch (e) {
+      // Fallback: manual check if RPC not available
+      debugPrint('⚠️ can_bark RPC failed, checking manually: $e');
+      return await _manualCanBarkCheck(fromDogId, toDogId);
+    }
+  }
+  
+  static Future<bool> _manualCanBarkCheck(String fromDogId, String toDogId) async {
+    // Check if friends
+    final friendship = await SupabaseConfig.client
+        .from('dog_friendships')
+        .select('id')
+        .eq('status', 'accepted')
+        .or('and(dog_id.eq.$fromDogId,friend_dog_id.eq.$toDogId),and(dog_id.eq.$toDogId,friend_dog_id.eq.$fromDogId)')
+        .maybeSingle();
+    
+    if (friendship != null) return true; // Friends can bark unlimited
+    
+    // Count barks in last 24 hours
+    final yesterday = DateTime.now().subtract(const Duration(hours: 24));
+    final barks = await SupabaseConfig.client
+        .from('barks')
+        .select('id')
+        .eq('from_dog_id', fromDogId)
+        .eq('to_dog_id', toDogId)
+        .gte('created_at', yesterday.toIso8601String());
+    
+    return (barks as List).length < 3;
+  }
+  
+  /// Get count of barks received today
+  static Future<int> getBarkCountToday(String dogId) async {
+    try {
+      final today = DateTime.now().toUtc();
+      final startOfDay = DateTime.utc(today.year, today.month, today.day);
+      
+      final result = await SupabaseConfig.client
+          .from('barks')
+          .select('id')
+          .eq('to_dog_id', dogId)
+          .gte('created_at', startOfDay.toIso8601String());
+      
+      return (result as List).length;
+    } catch (e) {
+      return 0;
+    }
+  }
+}
+
 class BarkDateFriendService {
   /// Get pending friend requests for the current user's dogs
   static Future<List<Map<String, dynamic>>> getPendingFriendRequests() async {
