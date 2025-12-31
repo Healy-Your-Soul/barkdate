@@ -192,56 +192,65 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 ),
                 const SizedBox(height: 24),
                 
-                // Google Sign Up Button - Primary CTA
-                OutlinedButton(
-                  onPressed: _isGoogleLoading ? null : _signUpWithGoogle,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: BorderSide(
-                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                // Google Sign Up Button - Official Google Branding
+                Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: const Color(0xFFDADCE0),
+                      width: 1,
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 1,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _isGoogleLoading ? null : _signUpWithGoogle,
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: _isGoogleLoading
+                            ? const Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // Official Google "G" logo
+                                  SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CustomPaint(
+                                      painter: _GoogleLogoPainter(),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Text(
+                                    'Sign up with Google',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0xFF1F1F1F),
+                                      fontFamily: 'Roboto',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
                     ),
                   ),
-                  child: _isGoogleLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  'G',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue.shade700,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Continue with Google',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                          ],
-                        ),
                 ),
                 const SizedBox(height: 24),
                 
@@ -504,4 +513,76 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     );
   }
 }
+
+/// Custom painter for the official Google "G" logo
+class _GoogleLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+    
+    // Blue arc (right side)
+    paint.color = const Color(0xFF4285F4);
+    canvas.drawArc(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      -0.3,
+      1.9,
+      true,
+      paint,
+    );
+    
+    // Green arc (bottom)
+    paint.color = const Color(0xFF34A853);
+    canvas.drawArc(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      1.6,
+      1.1,
+      true,
+      paint,
+    );
+    
+    // Yellow arc (bottom-left)
+    paint.color = const Color(0xFFFBBC05);
+    canvas.drawArc(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      2.7,
+      1.0,
+      true,
+      paint,
+    );
+    
+    // Red arc (top-left)
+    paint.color = const Color(0xFFEA4335);
+    canvas.drawArc(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      3.7,
+      1.1,
+      true,
+      paint,
+    );
+    
+    // White center circle
+    paint.color = Colors.white;
+    canvas.drawCircle(
+      Offset(size.width / 2, size.height / 2),
+      size.width * 0.35,
+      paint,
+    );
+    
+    // Blue horizontal bar
+    paint.color = const Color(0xFF4285F4);
+    canvas.drawRect(
+      Rect.fromLTWH(
+        size.width * 0.48,
+        size.height * 0.38,
+        size.width * 0.52,
+        size.height * 0.24,
+      ),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
 
