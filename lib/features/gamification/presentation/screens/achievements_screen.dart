@@ -8,65 +8,83 @@ class AchievementsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: Text(
-          'Achievements',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => context.pop(),
         ),
+        title: const Text(
+          'Achievements',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header section
+            // Clean header with trophy icon
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(vertical: 32),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey.shade200),
+                ),
               ),
               child: Column(
                 children: [
-                  Icon(
-                    Icons.emoji_events,
-                    size: 60,
-                    color: Theme.of(context).colorScheme.primary,
+                  // Trophy icon in soft circle
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: primary.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.emoji_events,
+                      size: 40,
+                      color: primary,
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Earn badges for completing activities',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Level Up Your Pup',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    'Keep engaging with the Bark community!',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      'Earn badges for completing activities and engaging with the Sniff Around community!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
             
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             
             // Achievements grid
             Padding(
@@ -76,9 +94,9 @@ class AchievementsScreen extends StatelessWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 0.8,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+                  childAspectRatio: 0.85,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
                 ),
                 itemCount: SampleData.achievements.length,
                 itemBuilder: (context, index) {
@@ -88,7 +106,7 @@ class AchievementsScreen extends StatelessWidget {
               ),
             ),
             
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
           ],
         ),
       ),
@@ -97,72 +115,79 @@ class AchievementsScreen extends StatelessWidget {
 
   Widget _buildAchievementCard(BuildContext context, Achievement achievement) {
     final isEarned = achievement.isEarned;
+    final primary = Theme.of(context).colorScheme.primary;
     
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+    // Colors based on earned status
+    final Color cardBgColor;
+    final Color iconBgColor;
+    final Color iconColor;
+    
+    if (isEarned) {
+      // Subtle green for earned
+      cardBgColor = const Color(0xFFF0FFF4); // Very subtle mint green
+      iconBgColor = const Color(0xFFD1FAE5); // Soft green
+      iconColor = const Color(0xFF059669); // Green-600
+    } else {
+      cardBgColor = Colors.white;
+      iconBgColor = Colors.grey.shade100;
+      iconColor = Colors.grey.shade400;
+    }
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBgColor,
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isEarned 
-            ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
-            : Theme.of(context).colorScheme.outline.withOpacity(0.2),
-          width: isEarned ? 2 : 1,
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Container(
+      child: Padding(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: isEarned 
-            ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.1)
-            : Theme.of(context).colorScheme.surface,
-        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Icon
+            // Icon in soft circle
             Container(
-              width: 60,
-              height: 60,
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
-                color: isEarned 
-                  ? const Color(0xFF4CAF50) // Bright green for earned
-                  : Theme.of(context).colorScheme.outline.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(30),
+                color: iconBgColor,
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
                 _getAchievementIcon(achievement.iconName),
-                size: 30,
-                color: isEarned 
-                  ? Theme.of(context).colorScheme.onPrimary
-                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                size: 28,
+                color: iconColor,
               ),
             ),
             
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             
             // Title
             Text(
               achievement.title,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: isEarned 
-                  ? Theme.of(context).colorScheme.onSurface
-                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                fontSize: 14,
+                color: isEarned ? Colors.black87 : Colors.grey[600],
               ),
             ),
             
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             
             // Description
             Text(
               achievement.description,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: isEarned 
-                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.8)
-                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[500],
+                height: 1.3,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -170,57 +195,51 @@ class AchievementsScreen extends StatelessWidget {
             
             const SizedBox(height: 12),
             
-            // Status
+            // Status indicator
             if (isEarned) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50), // Bright green for earned
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      size: 16,
-                      color: Theme.of(context).colorScheme.onPrimary,
+              // Earned badge
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.check_circle, size: 14, color: Colors.green[400]),
+                  const SizedBox(width: 4),
+                  Text(
+                    achievement.earnedDate != null 
+                      ? 'Earned ${_formatTimeAgo(achievement.earnedDate!)}'
+                      : 'Earned',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.green[400],
+                      fontWeight: FontWeight.w500,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Earned',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              // Progress bar for in-progress achievements
+              Column(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: _getMockProgress(achievement),
+                      backgroundColor: Colors.grey[200],
+                      valueColor: AlwaysStoppedAnimation<Color>(primary),
+                      minHeight: 4,
                     ),
-                  ],
-                ),
-              ),
-              if (achievement.earnedDate != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _formatEarnedDate(achievement.earnedDate!),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                    fontSize: 10,
                   ),
-                ),
-              ],
-            ] else
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Not earned',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  const SizedBox(height: 6),
+                  Text(
+                    _getMockProgressText(achievement),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: primary,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
+                ],
               ),
+            ],
           ],
         ),
       ),
@@ -237,21 +256,60 @@ class AchievementsScreen extends StatelessWidget {
         return Icons.group;
       case 'star':
         return Icons.star;
+      case 'calendar':
+        return Icons.calendar_today;
+      case 'trophy':
+        return Icons.emoji_events;
+      case 'camera':
+        return Icons.camera_alt;
+      case 'explore':
+        return Icons.explore;
       default:
         return Icons.emoji_events;
     }
   }
 
-  String _formatEarnedDate(DateTime date) {
+  String _formatTimeAgo(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
     
     if (difference.inDays > 0) {
-      return 'Earned ${difference.inDays}d ago';
+      return '${difference.inDays}d ago';
     } else if (difference.inHours > 0) {
-      return 'Earned ${difference.inHours}h ago';
+      return '${difference.inHours}h ago';
     } else {
-      return 'Earned recently';
+      return 'just now';
+    }
+  }
+  
+  // Mock progress for demo - would come from real data
+  double _getMockProgress(Achievement achievement) {
+    switch (achievement.iconName) {
+      case 'group':
+        return 0.6; // 3/5 friends
+      case 'star':
+        return 0.42; // 42/100 likes
+      case 'camera':
+        return 0.4; // 2/5 photos
+      case 'explore':
+        return 0.6; // 3/5 parks
+      default:
+        return 0.3;
+    }
+  }
+  
+  String _getMockProgressText(Achievement achievement) {
+    switch (achievement.iconName) {
+      case 'group':
+        return '3/5 Friends';
+      case 'star':
+        return '42/100 Likes';
+      case 'camera':
+        return '2/5 Photos';
+      case 'explore':
+        return '3/5 Parks';
+      default:
+        return 'In Progress';
     }
   }
 }

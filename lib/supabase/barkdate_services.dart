@@ -1020,19 +1020,20 @@ class BarkDateSocialService {
     final myDogId = userDogs.first['id'];
     
     // Get friend dog IDs from dog_friendships where status = 'accepted'
+    // Columns are: dog_id and friend_dog_id (not dog1_id/dog2_id)
     final friendships = await SupabaseConfig.client
         .from('dog_friendships')
-        .select('dog1_id, dog2_id')
+        .select('dog_id, friend_dog_id')
         .eq('status', 'accepted')
-        .or('dog1_id.eq.$myDogId,dog2_id.eq.$myDogId');
+        .or('dog_id.eq.$myDogId,friend_dog_id.eq.$myDogId');
     
     // Extract friend dog IDs
     final friendDogIds = <String>{};
     for (final f in friendships) {
-      if (f['dog1_id'] == myDogId) {
-        friendDogIds.add(f['dog2_id']);
+      if (f['dog_id'] == myDogId) {
+        friendDogIds.add(f['friend_dog_id']);
       } else {
-        friendDogIds.add(f['dog1_id']);
+        friendDogIds.add(f['dog_id']);
       }
     }
     

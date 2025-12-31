@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:barkdate/widgets/dog_loading_widget.dart';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
 import 'package:barkdate/data/sample_data.dart';
@@ -73,70 +74,280 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text(
+          'Sniff Around',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.add, color: Colors.grey[800], size: 26),
+            onPressed: _showCreatePostDialog,
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Filter chips row
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFilterChip('For You', 0),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Following', 1),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Puppies', 2),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Adventures', 3),
+                ],
+              ),
+            ),
+          ),
+          
+          // Grid content
+          Expanded(
+            child: _isLoading
+                ? const Center(child: DogLoadingWidget(message: 'Sniffing for posts...'))
+                : RefreshIndicator(
+                    onRefresh: _loadFeed,
+                    child: _posts.isEmpty
+                        ? _buildEmptyState()
+                        : _buildPinterestGrid(),
+                  ),
+          ),
+        ],
+      ),
+      // Floating Paw FAB
+      floatingActionButton: _PawFloatingButton(
+        onPhotoPressed: () => _showCreatePostDialog(photoMode: true),
+        onTextPressed: () => _showCreatePostDialog(photoMode: false),
+      ),
+    );
+  }
+  
+  Widget _buildFilterChip(String label, int index) {
+    final isSelected = _selectedTab == index;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _selectedTab = index);
+        _loadFeed();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey[700],
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+  
+  /// Pinterest-style staggered grid
+  Widget _buildPinterestGrid() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth > 600 ? 3 : 2;
+        final spacing = 12.0;
+        final itemWidth = (constraints.maxWidth - (spacing * (crossAxisCount + 1))) / crossAxisCount;
+        
+        // Split posts into columns
+        List<List<Post>> columns = List.generate(crossAxisCount, (_) => []);
+        for (int i = 0; i < _posts.length; i++) {
+          columns[i % crossAxisCount].add(_posts[i]);
+        }
+        
+        return SingleChildScrollView(
+          padding: EdgeInsets.all(spacing),
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: columns.map((columnPosts) {
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: spacing / 2),
+                  child: Column(
+                    children: columnPosts.map((post) => 
+                      _buildGridPostCard(post, itemWidth)
+                    ).toList(),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+  
+  /// Modern grid card for Pinterest layout
+  Widget _buildGridPostCard(Post post, double width) {
+    // Vary heights for Pinterest effect
+    final hasImage = post.imageUrl != null && post.imageUrl!.isNotEmpty;
+    
+    return GestureDetector(
+      onTap: () => _openExpandedPost(post),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('🐕', style: TextStyle(fontSize: 24)),
-            const SizedBox(width: 8),
-            Text(
-              'Sniff Around',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
+            // Image
+            if (hasImage)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: Image.network(
+                  post.imageUrl!,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 150,
+                    color: Colors.grey[200],
+                    child: Icon(Icons.image, size: 40, color: Colors.grey[400]),
+                  ),
+                ),
+              ),
+            
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Dog avatar + name
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Colors.grey[200],
+                        backgroundImage: post.userPhoto.isNotEmpty && !post.userPhoto.contains('placeholder')
+                            ? NetworkImage(post.userPhoto)
+                            : null,
+                        child: post.userPhoto.isEmpty || post.userPhoto.contains('placeholder')
+                            ? Icon(Icons.pets, size: 14, color: Colors.grey[500])
+                            : null,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          post.dogName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  // Caption
+                  if (post.content.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      post.content,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 13,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                  
+                  // Stats row
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(Icons.pets, size: 14, color: Colors.orange[400]),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${post.likes}',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(Icons.chat_bubble_outline, size: 14, color: Colors.grey[400]),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${post.comments}',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
+                      const Spacer(),
+                      Text(
+                        _formatTimeAgo(post.timestamp),
+                        style: TextStyle(color: Colors.grey[400], fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
         ),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
-          onPressed: () => context.pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.add,
-              size: 28,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
-            ),
-            onPressed: _showCreatePostDialog,
-            tooltip: 'Create Post',
-          ),
-          const SizedBox(width: 8),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Theme.of(context).colorScheme.onPrimaryContainer,
-          unselectedLabelColor: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.5),
-          indicatorColor: Theme.of(context).colorScheme.primary,
-          tabs: const [
-            Tab(text: 'For You'),
-            Tab(text: 'Following'),
-          ],
-        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadFeed,
-              child: _posts.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                      itemCount: _posts.length,
-                      itemBuilder: (context, index) {
-                        final post = _posts[index];
-                        // Rebuild each post card to update timestamps
-                        return _buildPostCard(context, post);
-                      },
-                    ),
-            ),
     );
+  }
+  
+  /// Open expanded view of a post
+  void _openExpandedPost(Post post) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _ExpandedPostWithComments(
+        post: post,
+        currentUserId: _currentUserId,
+        likedPostIds: _likedPostIds,
+        onLikeToggle: () => _toggleLike(post),
+      ),
+    );
+  }
+  
+  String _formatTimeAgo(DateTime dateTime) {
+    final diff = DateTime.now().difference(dateTime);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 7) return '${diff.inDays}d';
+    return '${(diff.inDays / 7).floor()}w';
   }
 
   Widget _buildPostCard(BuildContext context, Post post) {
@@ -535,7 +746,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
     );
   }
 
-  void _showCreatePostDialog() {
+  void _showCreatePostDialog({bool? photoMode}) {
     Navigator.of(context).push(
       PageRouteBuilder(
         opaque: false, // Make the route transparent
@@ -1440,6 +1651,555 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Expandable Paw Floating Action Button
+class _PawFloatingButton extends StatefulWidget {
+  final VoidCallback onPhotoPressed;
+  final VoidCallback onTextPressed;
+  
+  const _PawFloatingButton({
+    required this.onPhotoPressed,
+    required this.onTextPressed,
+  });
+
+  @override
+  State<_PawFloatingButton> createState() => _PawFloatingButtonState();
+}
+
+class _PawFloatingButtonState extends State<_PawFloatingButton> with SingleTickerProviderStateMixin {
+  bool _isExpanded = false;
+  late AnimationController _animationController;
+  late Animation<double> _expandAnimation;
+  
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _expandAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    );
+  }
+  
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+  
+  void _toggle() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+      if (_isExpanded) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        // Expanded options
+        ScaleTransition(
+          scale: _expandAnimation,
+          alignment: Alignment.bottomRight,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Photo option
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: const Text('Photo', style: TextStyle(fontWeight: FontWeight.w500)),
+                    ),
+                    const SizedBox(width: 8),
+                    FloatingActionButton.small(
+                      heroTag: 'photo_fab',
+                      backgroundColor: Colors.orange[400],
+                      onPressed: () {
+                        _toggle();
+                        widget.onPhotoPressed();
+                      },
+                      child: const Icon(Icons.camera_alt, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+              // Text option
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: const Text('Text', style: TextStyle(fontWeight: FontWeight.w500)),
+                    ),
+                    const SizedBox(width: 8),
+                    FloatingActionButton.small(
+                      heroTag: 'text_fab',
+                      backgroundColor: Colors.orange[300],
+                      onPressed: () {
+                        _toggle();
+                        widget.onTextPressed();
+                      },
+                      child: const Icon(Icons.edit, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Main Paw FAB
+        FloatingActionButton(
+          heroTag: 'paw_fab',
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          onPressed: _toggle,
+          child: AnimatedRotation(
+            turns: _isExpanded ? 0.125 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: const Icon(Icons.pets, color: Colors.white, size: 28),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Expanded post view with inline comments
+class _ExpandedPostWithComments extends StatefulWidget {
+  final Post post;
+  final String? currentUserId;
+  final Set<String> likedPostIds;
+  final VoidCallback onLikeToggle;
+  
+  const _ExpandedPostWithComments({
+    required this.post,
+    this.currentUserId,
+    required this.likedPostIds,
+    required this.onLikeToggle,
+  });
+
+  @override
+  State<_ExpandedPostWithComments> createState() => _ExpandedPostWithCommentsState();
+}
+
+class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
+  final TextEditingController _commentController = TextEditingController();
+  List<Map<String, dynamic>> _comments = [];
+  bool _isLoading = true;
+  bool _isPostingComment = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadComments();
+  }
+  
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+  
+  Future<void> _loadComments() async {
+    try {
+      final comments = await BarkDateSocialService.getPostComments(widget.post.id);
+      if (mounted) {
+        setState(() {
+          _comments = comments;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+  
+  Future<void> _postComment() async {
+    final text = _commentController.text.trim();
+    if (text.isEmpty || _isPostingComment) return;
+    
+    setState(() => _isPostingComment = true);
+    
+    try {
+      final userId = widget.currentUserId;
+      if (userId == null) throw Exception('Not logged in');
+      await BarkDateSocialService.addComment(
+        postId: widget.post.id,
+        userId: userId,
+        content: text,
+      );
+      _commentController.clear();
+      await _loadComments();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error posting comment: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isPostingComment = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final post = widget.post;
+    final isLiked = widget.likedPostIds.contains(post.id);
+    
+    return GestureDetector(
+      onTap: () => Navigator.pop(context), // Tap outside to dismiss
+      child: Container(
+        color: Colors.transparent, // Catch taps on transparent area
+        child: GestureDetector(
+          onTap: () {}, // Prevent taps on content from dismissing
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.95,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            builder: (context, scrollController) => Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  // Handle - make it tappable to dismiss too
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+            
+            // Scrollable content
+            Expanded(
+              child: SingleChildScrollView(
+                controller: scrollController,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Post header
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 22,
+                            backgroundColor: Colors.grey[200],
+                            backgroundImage: post.userPhoto.isNotEmpty
+                                ? NetworkImage(post.userPhoto)
+                                : null,
+                            child: post.userPhoto.isEmpty
+                                ? Icon(Icons.pets, color: Colors.grey[500])
+                                : null,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  post.dogName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                Text(
+                                  'with ${post.userName}',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.close, color: Colors.grey[600]),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    // Post image
+                    if (post.imageUrl != null && post.imageUrl!.isNotEmpty)
+                      Image.network(
+                        post.imageUrl!,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          height: 200,
+                          color: Colors.grey[200],
+                          child: Icon(Icons.image, size: 48, color: Colors.grey[400]),
+                        ),
+                      ),
+                    
+                    // Action buttons with paw icon
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          // Paw like button
+                          GestureDetector(
+                            onTap: widget.onLikeToggle,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.pets,
+                                  size: 24,
+                                  color: isLiked ? Colors.orange : Colors.grey[600],
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${post.likes}',
+                                  style: TextStyle(
+                                    color: isLiked ? Colors.orange : Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          // Comment count
+                          Row(
+                            children: [
+                              Icon(Icons.chat_bubble_outline, size: 22, color: Colors.grey[600]),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${_comments.length}',
+                                style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                          const Spacer(),
+                          Icon(Icons.share_outlined, size: 22, color: Colors.grey[600]),
+                        ],
+                      ),
+                    ),
+                    
+                    // Caption
+                    if (post.content.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: RichText(
+                          text: TextSpan(
+                            style: TextStyle(color: Colors.grey[800], fontSize: 14, height: 1.4),
+                            children: [
+                              TextSpan(
+                                text: '${post.dogName} ',
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              TextSpan(text: post.content),
+                            ],
+                          ),
+                        ),
+                      ),
+                    
+                    const Divider(height: 32),
+                    
+                    // Comments section
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Comments',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // Comments list
+                    if (_isLoading)
+                      const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Center(child: DogLoadingWidget(message: 'Loading comments...')),
+                      )
+                    else if (_comments.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Center(
+                          child: Text(
+                            'No comments yet. Be the first!',
+                            style: TextStyle(color: Colors.grey[500]),
+                          ),
+                        ),
+                      )
+                    else
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _comments.length,
+                        itemBuilder: (context, index) {
+                          final comment = _comments[index];
+                          return _buildCommentTile(comment);
+                        },
+                      ),
+                    
+                    const SizedBox(height: 80), // Space for input
+                  ],
+                ),
+              ),
+            ),
+            
+            // Comment input
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: Colors.grey.shade200)),
+              ),
+              child: SafeArea(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _commentController,
+                        decoration: InputDecoration(
+                          hintText: 'Add a comment...',
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: _isPostingComment ? null : _postComment,
+                      icon: _isPostingComment
+                          ? const SizedBox(
+                              width: 20, height: 20,
+                              child: DogCircularProgress(size: 20, strokeWidth: 2),
+                            )
+                          : Icon(Icons.send, color: Theme.of(context).colorScheme.primary),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildCommentTile(Map<String, dynamic> comment) {
+    // Extract dog data from nested object
+    final dogData = comment['dog'] as Map<String, dynamic>?;
+    final userData = comment['user'] as Map<String, dynamic>?;
+    final dogName = dogData?['name'] as String? ?? userData?['name'] as String? ?? 'Unknown';
+    final text = comment['text'] as String? ?? comment['content'] as String? ?? '';
+    final createdAt = comment['created_at'] as String?;
+    final dogPhoto = dogData?['main_photo_url'] as String? ?? userData?['avatar_url'] as String?;
+    
+    String timeAgo = '';
+    if (createdAt != null) {
+      final dt = DateTime.tryParse(createdAt);
+      if (dt != null) {
+        final diff = DateTime.now().difference(dt);
+        if (diff.inMinutes < 60) timeAgo = '${diff.inMinutes}m';
+        else if (diff.inHours < 24) timeAgo = '${diff.inHours}h';
+        else timeAgo = '${diff.inDays}d';
+      }
+    }
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: Colors.grey[200],
+            backgroundImage: dogPhoto != null ? NetworkImage(dogPhoto) : null,
+            child: dogPhoto == null ? Icon(Icons.pets, size: 14, color: Colors.grey[500]) : null,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    style: TextStyle(color: Colors.grey[800], fontSize: 14),
+                    children: [
+                      TextSpan(
+                        text: '$dogName ',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      TextSpan(text: text),
+                    ],
+                  ),
+                ),
+                if (timeAgo.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      timeAgo,
+                      style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -299,7 +299,7 @@ class ProfileScreen extends ConsumerWidget {
                       context,
                       icon: Icons.emoji_events_outlined,
                       title: 'Achievements',
-                      onTap: () => context.go('/profile/achievements'),
+                      onTap: () => context.push('/achievements'),
                     ),
                     _buildMenuItem(
                       context,

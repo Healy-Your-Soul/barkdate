@@ -3,6 +3,8 @@ import 'package:barkdate/features/feed/domain/repositories/dog_repository.dart';
 import 'package:barkdate/features/feed/data/repositories/dog_repository_impl.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/features/auth/presentation/providers/auth_provider.dart';
+import 'package:barkdate/services/dog_friendship_service.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
 
 final dogRepositoryProvider = Provider<DogRepository>((ref) {
   return DogRepositoryImpl();
@@ -17,6 +19,7 @@ class FeedFilter {
   final List<String> sizes;
   final List<String> genders;
   final List<String> breeds;
+  final bool showPackOnly; // Filter to show only pack members (accepted friends)
 
   FeedFilter({
     this.maxDistance = 50.0,
@@ -25,7 +28,28 @@ class FeedFilter {
     this.sizes = const [],
     this.genders = const [],
     this.breeds = const [],
+    this.showPackOnly = false, // Default to showing all dogs
   });
+  
+  FeedFilter copyWith({
+    double? maxDistance,
+    int? minAge,
+    int? maxAge,
+    List<String>? sizes,
+    List<String>? genders,
+    List<String>? breeds,
+    bool? showPackOnly,
+  }) {
+    return FeedFilter(
+      maxDistance: maxDistance ?? this.maxDistance,
+      minAge: minAge ?? this.minAge,
+      maxAge: maxAge ?? this.maxAge,
+      sizes: sizes ?? this.sizes,
+      genders: genders ?? this.genders,
+      breeds: breeds ?? this.breeds,
+      showPackOnly: showPackOnly ?? this.showPackOnly,
+    );
+  }
 }
 
 final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
@@ -34,6 +58,27 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
   final filter = ref.watch(feedFilterProvider);
 
   if (user == null) return [];
+
+  // Get current user's dog for friendship checks
+  final myDogs = await BarkDateUserService.getUserDogs(user.id);
+  final myDogId = myDogs.isNotEmpty ? myDogs.first['id'] as String? : null;
+  
+  // Get friend dog IDs if filtering by pack
+  Set<String> friendDogIds = {};
+  if (filter.showPackOnly && myDogId != null) {
+    final friends = await DogFriendshipService.getFriends(myDogId);
+    for (final f in friends) {
+      // Friend could be either dog_id or friend_dog_id depending on who initiated
+      final dogData = f['dog'] as Map<String, dynamic>?;
+      final friendDogData = f['friend_dog'] as Map<String, dynamic>?;
+      if (dogData != null && dogData['id'] != myDogId) {
+        friendDogIds.add(dogData['id'] as String);
+      }
+      if (friendDogData != null && friendDogData['id'] != myDogId) {
+        friendDogIds.add(friendDogData['id'] as String);
+      }
+    }
+  }
 
   // Fetch dogs
   final dogs = await repository.getNearbyDogs(
@@ -44,6 +89,9 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
 
   // Apply memory filters (until DB supports them fully)
   return dogs.where((dog) {
+    // Pack filter
+    if (filter.showPackOnly && !friendDogIds.contains(dog.id)) return false;
+    
     if (dog.distanceKm > filter.maxDistance) return false;
     if (dog.age < filter.minAge || dog.age > filter.maxAge) return false;
     if (filter.sizes.isNotEmpty && !filter.sizes.contains(dog.size)) return false;

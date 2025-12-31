@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:barkdate/widgets/dog_loading_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barkdate/features/feed/presentation/providers/feed_provider.dart';
@@ -74,93 +75,14 @@ class FeedFeatureScreen extends ConsumerWidget {
                 ),
               ),
 
-              // 1.5 Find Your Pack Search Bar
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                  child: _buildPackSearchBar(context),
-                ),
-              ),
-
-            // 2. Upcoming Playdates Section
-            SliverToBoxAdapter(
-              child: _buildSectionHeader(context, "Upcoming Playdates", () {
-                context.go('/playdates');
-              }),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 156,
-                child: playdatesAsync.when(
-                  data: (playdates) {
-                    if (playdates.isEmpty) {
-                      return _buildEmptyHorizontalState(
-                        context,
-                        "No playdates yet",
-                        Icons.calendar_today,
-                      );
-                    }
-                    return ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      clipBehavior: Clip.none,
-                      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 16),
-                      itemCount: playdates.length,
-                      itemBuilder: (context, index) {
-                        final playdate = playdates[index];
-                        return _buildPlaydateCard(context, playdate);
-                      },
-                    );
-                  },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (_, __) => const SizedBox.shrink(),
-                ),
-              ),
-            ),
-
-            // 3. Suggested Events Section
-            SliverToBoxAdapter(
-              child: _buildSectionHeader(context, "Suggested Events", () {
-                context.go('/events');
-              }),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 156,
-                child: eventsAsync.when(
-                  data: (events) {
-                    if (events.isEmpty) {
-                      return _buildEmptyHorizontalState(
-                        context,
-                        "No events nearby",
-                        Icons.event,
-                      );
-                    }
-                    return ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      clipBehavior: Clip.none,
-                      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 16),
-                      itemCount: events.length,
-                      itemBuilder: (context, index) {
-                        final event = events[index];
-                        return _buildEventCard(context, event);
-                      },
-                    );
-                  },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (_, __) => const SizedBox.shrink(),
-                ),
-              ),
-            ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
-
-            // 4. Nearby Dogs Header with Toggle
+            // 2. Nearby Dogs Section with integrated search
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const SizedBox(height: AppSpacing.lg),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -179,6 +101,9 @@ class FeedFeatureScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
+                    // Integrated search bar
+                    _buildPackSearchBar(context),
+                    const SizedBox(height: AppSpacing.md),
                     // Friends / All Toggle
                     _NearbyDogsToggle(),
                   ],
@@ -186,20 +111,29 @@ class FeedFeatureScreen extends ConsumerWidget {
               ),
             ),
 
-            // 4. Nearby Dogs List
+            // Nearby Dogs List
             nearbyDogsAsync.when(
               data: (dogs) {
+                final filter = ref.watch(feedFilterProvider);
+                final isPackMode = filter.showPackOnly;
+                
                 if (dogs.isEmpty) {
                   return SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.all(32.0),
                       child: CuteEmptyState(
-                        icon: Icons.location_off,
-                        title: 'No Dogs Nearby',
-                        message: 'We couldn\'t find any dogs in your area. Try adjusting your filters or check back later!',
-                        actionLabel: 'Adjust Filters',
+                        icon: isPackMode ? Icons.group_off : Icons.location_off,
+                        title: isPackMode ? 'No Friends Nearby' : 'No Dogs Nearby',
+                        message: isPackMode 
+                            ? 'None of your pack members are nearby right now. Find new friends!'
+                            : 'We couldn\'t find any dogs in your area. Try adjusting your filters or check back later!',
+                        actionLabel: isPackMode ? 'Find Your Pack' : 'Adjust Filters',
                         onAction: () {
-                          // TODO: Open filters
+                          if (isPackMode) {
+                            _showPackSearchSheet(context);
+                          } else {
+                            showFeedFilterSheet(context);
+                          }
                         },
                       ),
                     ),
@@ -242,7 +176,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                 child: Center(
                   child: Padding(
                     padding: EdgeInsets.all(32.0),
-                    child: CircularProgressIndicator(),
+                    child: DogCircularProgress(size: 30),
                   ),
                 ),
               ),
@@ -255,6 +189,78 @@ class FeedFeatureScreen extends ConsumerWidget {
                 ),
               ),
               ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
+
+            // 3. Upcoming Playdates Section (MOVED DOWN)
+            SliverToBoxAdapter(
+              child: _buildSectionHeader(context, "Upcoming Playdates", () {
+                context.go('/playdates');
+              }),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 156,
+                child: playdatesAsync.when(
+                  data: (playdates) {
+                    if (playdates.isEmpty) {
+                      return _buildEmptyHorizontalState(
+                        context,
+                        "No playdates yet",
+                        Icons.calendar_today,
+                      );
+                    }
+                    return ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      clipBehavior: Clip.none,
+                      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 16),
+                      itemCount: playdates.length,
+                      itemBuilder: (context, index) {
+                        final playdate = playdates[index];
+                        return _buildPlaydateCard(context, playdate);
+                      },
+                    );
+                  },
+                  loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: DogCircularProgress())),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
+              ),
+            ),
+
+            // 4. Suggested Events Section
+            SliverToBoxAdapter(
+              child: _buildSectionHeader(context, "Suggested Events", () {
+                context.go('/events');
+              }),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 156,
+                child: eventsAsync.when(
+                  data: (events) {
+                    if (events.isEmpty) {
+                      return _buildEmptyHorizontalState(
+                        context,
+                        "No events nearby",
+                        Icons.event,
+                      );
+                    }
+                    return ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      clipBehavior: Clip.none,
+                      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 16),
+                      itemCount: events.length,
+                      itemBuilder: (context, index) {
+                        final event = events[index];
+                        return _buildEventCard(context, event);
+                      },
+                    );
+                  },
+                  loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: DogCircularProgress())),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
+              ),
+            ),
             
             // 5. Sniff Around (Social Feed Preview)
             const SliverToBoxAdapter(child: SizedBox(height: 32)), // Wider gap
@@ -600,7 +606,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      const Text('🐕', style: TextStyle(fontSize: 24)),
+                      const AnimatedPawIcon(size: 28),
                       const SizedBox(width: 8),
                       Text('Sniff Around', style: AppTypography.h2()),
                     ],
@@ -678,7 +684,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () => context.push('/social-feed?tab=0'), // For You tab
-                      icon: const Text('🦴', style: TextStyle(fontSize: 16)),
+                      icon: Icon(Icons.pets, size: 18, color: Theme.of(context).colorScheme.primary),
                       label: const Text('Browse Feed'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -715,16 +721,12 @@ class FeedFeatureScreen extends ConsumerWidget {
 }
 
 /// Toggle between Friends and All Dogs in Nearby section
-class _NearbyDogsToggle extends StatefulWidget {
+class _NearbyDogsToggle extends ConsumerWidget {
   @override
-  State<_NearbyDogsToggle> createState() => _NearbyDogsToggleState();
-}
-
-class _NearbyDogsToggleState extends State<_NearbyDogsToggle> {
-  int _selectedIndex = 1; // 0 = Friends, 1 = All (default to All)
-  
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filter = ref.watch(feedFilterProvider);
+    final isPackSelected = filter.showPackOnly;
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[100],
@@ -733,18 +735,20 @@ class _NearbyDogsToggleState extends State<_NearbyDogsToggle> {
       padding: const EdgeInsets.all(4),
       child: Row(
         children: [
-          _buildToggleButton(0, 'My Pack', Icons.group),
-          _buildToggleButton(1, 'All Dogs', Icons.pets),
+          _buildToggleButton(context, ref, true, 'My Pack', Icons.group, isPackSelected),
+          _buildToggleButton(context, ref, false, 'All Dogs', Icons.pets, !isPackSelected),
         ],
       ),
     );
   }
   
-  Widget _buildToggleButton(int index, String label, IconData icon) {
-    final isSelected = _selectedIndex == index;
+  Widget _buildToggleButton(BuildContext context, WidgetRef ref, bool packFilter, String label, IconData icon, bool isSelected) {
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _selectedIndex = index),
+        onTap: () {
+          ref.read(feedFilterProvider.notifier).state = 
+            ref.read(feedFilterProvider).copyWith(showPackOnly: packFilter);
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),

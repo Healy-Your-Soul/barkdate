@@ -815,9 +815,17 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dog Friendly Map Assistant'),
+        title: const Text('Dog Friendly Map'),
         centerTitle: true,
         elevation: 0,
+        actions: [
+          // QR Scan button
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner),
+            tooltip: 'Scan QR Code',
+            onPressed: () => context.push('/qr-scan'),
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -1004,19 +1012,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
               top: 8,
               child: _buildCheckInStatusButton(),
             ),
-
-          // Scan QR Button
-          Positioned(
-            right: 16,
-            top: 8,
-            child: FloatingActionButton.small(
-              heroTag: 'scan_qr_fab',
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
-              child: const Icon(Icons.qr_code_scanner),
-              onPressed: () => context.push('/qr-scan'),
-            ),
-          ),
 
           // Dog mini card popup when a live dog marker is tapped
           if (_selectedLiveDog != null)

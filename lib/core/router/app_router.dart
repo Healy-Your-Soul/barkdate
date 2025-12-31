@@ -135,10 +135,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) => const SocialFeedScreen(),
                   ),
                   GoRoute(
-                    path: 'achievements',
-                    builder: (context, state) => const AchievementsScreen(),
-                  ),
-                  GoRoute(
                     path: 'premium',
                     builder: (context, state) => const PremiumScreen(),
                   ),
@@ -147,6 +143,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      // Achievements - standalone route (opens full-screen, doesn't persist in tab)
+      GoRoute(
+        path: '/achievements',
+        builder: (context, state) => const AchievementsScreen(),
       ),
       GoRoute(
         path: '/dog-details',
