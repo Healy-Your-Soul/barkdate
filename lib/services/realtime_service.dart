@@ -21,12 +21,14 @@ class RealtimeService {
   final _likeController = StreamController<LikeEvent>.broadcast();
   final _commentController = StreamController<CommentEvent>.broadcast();
   final _notificationController = StreamController<NotificationEvent>.broadcast();
+  final _friendRequestController = StreamController<FriendRequestEvent>.broadcast();
   
   // Public streams
   Stream<AchievementEvent> get achievementStream => _achievementController.stream;
   Stream<LikeEvent> get likeStream => _likeController.stream;
   Stream<CommentEvent> get commentStream => _commentController.stream;
   Stream<NotificationEvent> get notificationStream => _notificationController.stream;
+  Stream<FriendRequestEvent> get friendRequestStream => _friendRequestController.stream;
   
   /// Initialize real-time subscriptions for a user
   Future<void> initialize(String userId) async {
@@ -237,6 +239,7 @@ class RealtimeService {
     _likeController.close();
     _commentController.close();
     _notificationController.close();
+    _friendRequestController.close();
     
     debugPrint('🔌 Real-time service disposed');
   }
@@ -298,5 +301,21 @@ class NotificationEvent {
     required this.body,
     required this.type,
     required this.createdAt,
+  });
+}
+
+class FriendRequestEvent {
+  final String requestId;
+  final String requesterDogId;
+  final String requesterDogName;
+  final String? requesterDogPhoto;
+  final bool isNew; // true = new request, false = request accepted/declined
+  
+  FriendRequestEvent({
+    required this.requestId,
+    required this.requesterDogId,
+    required this.requesterDogName,
+    this.requesterDogPhoto,
+    required this.isNew,
   });
 }

@@ -13,6 +13,7 @@ import 'package:barkdate/design_system/app_spacing.dart';
 import 'package:intl/intl.dart';
 import 'package:barkdate/models/event.dart';
 import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
 
 class FeedFeatureScreen extends ConsumerWidget {
   const FeedFeatureScreen({super.key});
@@ -109,6 +110,65 @@ class FeedFeatureScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+            ),
+
+            // Pending Friend Requests (only show in My Pack mode)
+            Consumer(
+              builder: (context, ref, _) {
+                final filter = ref.watch(feedFilterProvider);
+                if (!filter.showPackOnly) return const SliverToBoxAdapter(child: SizedBox.shrink());
+                
+                final pendingAsync = ref.watch(pendingFriendRequestsProvider);
+                
+                return pendingAsync.when(
+                  data: (requests) {
+                    if (requests.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+                    
+                    return SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: AppSpacing.md),
+                            Row(
+                              children: [
+                                Icon(Icons.pets, size: 20, color: Colors.orange[700]),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Pack Requests',
+                                  style: AppTypography.h3().copyWith(color: Colors.orange[700]),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange[100],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${requests.length}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange[800],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            ...requests.map((request) => _buildFriendRequestCard(context, ref, request)),
+                            const SizedBox(height: AppSpacing.md),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                  loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+                  error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+                );
+              },
             ),
 
             // Nearby Dogs List
@@ -520,6 +580,106 @@ class FeedFeatureScreen extends ConsumerWidget {
         return Theme.of(context).colorScheme.primary;
     }
   }
+
+  Widget _buildFriendRequestCard(BuildContext context, WidgetRef ref, Map<String, dynamic> request) {
+    final requester = request['requester'] as Map<String, dynamic>?;
+    final dogName = requester?['name'] ?? 'Unknown Dog';
+    final dogBreed = requester?['breed'] ?? '';
+    final dogPhoto = requester?['main_photo_url'] as String?;
+    final ownerData = requester?['user'] as Map<String, dynamic>?;
+    final ownerName = ownerData?['name'] ?? 'Unknown';
+    final requestId = request['id'] as String;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange[200]!),
+      ),
+      child: Row(
+        children: [
+          // Dog photo
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: Colors.orange[100],
+            backgroundImage: dogPhoto != null ? NetworkImage(dogPhoto) : null,
+            child: dogPhoto == null
+                ? Icon(Icons.pets, color: Colors.orange[700], size: 20)
+                : null,
+          ),
+          const SizedBox(width: 12),
+          // Dog info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  dogName,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                Text(
+                  '$dogBreed • $ownerName\'s pup',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+          // Accept/Decline buttons
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Decline
+              IconButton(
+                onPressed: () async {
+                  final success = await BarkDateFriendService.declineFriendRequest(requestId);
+                  if (success) {
+                    ref.invalidate(pendingFriendRequestsProvider);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Request declined'), backgroundColor: Colors.grey),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.close, color: Colors.red),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.red[50],
+                  padding: const EdgeInsets.all(8),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Accept
+              IconButton(
+                onPressed: () async {
+                  final success = await BarkDateFriendService.acceptFriendRequest(requestId);
+                  if (success) {
+                    ref.invalidate(pendingFriendRequestsProvider);
+                    ref.invalidate(nearbyDogsProvider);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('$dogName joined your pack! 🎉'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.check, color: Colors.green),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.green[50],
+                  padding: const EdgeInsets.all(8),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEventCard(BuildContext context, dynamic event) {
     // Assuming event is an Event object or Map
     final title = event is Map ? event['title'] : event.title;

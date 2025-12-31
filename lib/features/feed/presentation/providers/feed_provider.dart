@@ -100,3 +100,8 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
     return true;
   }).toList();
 });
+
+/// Provider for pending friend requests (dogs who want to join your pack)
+final pendingFriendRequestsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  return await BarkDateFriendService.getPendingFriendRequests();
+});

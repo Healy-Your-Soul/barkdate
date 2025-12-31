@@ -1053,6 +1053,120 @@ class BarkDateSocialService {
   }
 }
 
+/// Friend request service for managing dog friendships
+class BarkDateFriendService {
+  /// Get pending friend requests for the current user's dogs
+  static Future<List<Map<String, dynamic>>> getPendingFriendRequests() async {
+    final userId = SupabaseConfig.auth.currentUser?.id;
+    if (userId == null) return [];
+    
+    // Get user's dogs
+    final userDogs = await SupabaseConfig.client
+        .from('dogs')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('is_active', true);
+    
+    if (userDogs.isEmpty) return [];
+    
+    final myDogIds = (userDogs as List).map((d) => d['id'] as String).toList();
+    
+    // Get pending requests where my dog is the friend_dog_id (someone sent ME a request)
+    final requests = await SupabaseConfig.client
+        .from('dog_friendships')
+        .select('''
+          id,
+          dog_id,
+          friend_dog_id,
+          status,
+          created_at,
+          requester:dogs!dog_id(id, name, breed, main_photo_url, user:users(id, name, avatar_url))
+        ''')
+        .inFilter('friend_dog_id', myDogIds)
+        .eq('status', 'pending')
+        .order('created_at', ascending: false);
+    
+    return List<Map<String, dynamic>>.from(requests);
+  }
+  
+  /// Accept a friend request
+  static Future<bool> acceptFriendRequest(String requestId) async {
+    try {
+      await SupabaseConfig.client
+          .from('dog_friendships')
+          .update({'status': 'accepted'})
+          .eq('id', requestId);
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error accepting friend request: $e');
+      return false;
+    }
+  }
+  
+  /// Decline a friend request
+  static Future<bool> declineFriendRequest(String requestId) async {
+    try {
+      await SupabaseConfig.client
+          .from('dog_friendships')
+          .delete()
+          .eq('id', requestId);
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error declining friend request: $e');
+      return false;
+    }
+  }
+  
+  /// Send a friend request (bark at a dog)
+  static Future<bool> sendFriendRequest({
+    required String myDogId,
+    required String targetDogId,
+  }) async {
+    try {
+      // Check if request already exists
+      final existing = await SupabaseConfig.client
+          .from('dog_friendships')
+          .select('id')
+          .or('and(dog_id.eq.$myDogId,friend_dog_id.eq.$targetDogId),and(dog_id.eq.$targetDogId,friend_dog_id.eq.$myDogId)')
+          .maybeSingle();
+      
+      if (existing != null) {
+        debugPrint('⚠️ Friend request already exists');
+        return false;
+      }
+      
+      await SupabaseConfig.client.from('dog_friendships').insert({
+        'dog_id': myDogId,
+        'friend_dog_id': targetDogId,
+        'status': 'pending',
+      });
+      
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error sending friend request: $e');
+      return false;
+    }
+  }
+  
+  /// Check if two dogs are friends
+  static Future<String?> getFriendshipStatus({
+    required String myDogId,
+    required String targetDogId,
+  }) async {
+    try {
+      final result = await SupabaseConfig.client
+          .from('dog_friendships')
+          .select('status')
+          .or('and(dog_id.eq.$myDogId,friend_dog_id.eq.$targetDogId),and(dog_id.eq.$targetDogId,friend_dog_id.eq.$myDogId)')
+          .maybeSingle();
+      
+      return result?['status'] as String?;
+    } catch (e) {
+      return null;
+    }
+  }
+}
+
 class BarkDateNotificationService {
   /// Create notification
   static Future<void> createNotification({
