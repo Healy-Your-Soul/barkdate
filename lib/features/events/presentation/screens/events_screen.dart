@@ -47,12 +47,31 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                         onPressed: () {
                           showModalBottomSheet(
                             context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.white,
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width,
+                            ),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                            ),
                             builder: (context) => Container(
-                              padding: const EdgeInsets.all(24),
+                              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  Center(
+                                    child: Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade300,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
                                   const Text('Filter Events', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                                   const SizedBox(height: 16),
                                   Wrap(
