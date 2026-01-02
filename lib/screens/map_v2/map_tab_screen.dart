@@ -1584,7 +1584,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                   ),
                 ),
                 
-                const SizedBox(width: 6),
+                const SizedBox(width: 16), // 10px more to the right
                 
                 // Check In button
                 _isUserCheckedInAtSelectedPlace
