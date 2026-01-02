@@ -377,50 +377,56 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     
     debugPrint('🗺️ _updateMarkers called: ${_places.length} places, ${_liveUserMarkers.length} live users');
 
-    // Add place markers
-    for (final place in _places) {
-      // Apply search query filter
-      if (filters.searchQuery.isNotEmpty &&
-          !place.name.toLowerCase().contains(filters.searchQuery.toLowerCase())) {
-        continue;
+    // Add place markers - BUT skip if Events filter is selected (only show our internal events)
+    final isEventsOnlyFilter = filters.category == 'events';
+    
+    if (!isEventsOnlyFilter) {
+      for (final place in _places) {
+        // Apply search query filter
+        if (filters.searchQuery.isNotEmpty &&
+            !place.name.toLowerCase().contains(filters.searchQuery.toLowerCase())) {
+          continue;
+        }
+
+        // Apply open now filter
+        if (filters.openNow && !place.isOpen) {
+          continue;
+        }
+        
+        // Note: Category filtering is now done at the Google API level (primaryTypes)
+        // so no client-side category filtering needed here
+
+        // Get check-in count for this place
+        final dogCount = _checkInCounts[place.placeId] ?? 0;
+
+        // Generate custom marker based on category (no count badge on marker)
+        final categoryName = place.category.name;
+        final icon = await DogMarkerGenerator.createPlaceMarker(
+          category: categoryName,
+          size: 40,
+        );
+
+        newMarkers.add(Marker(
+          markerId: MarkerId('place_${place.placeId}'),
+          position: LatLng(place.latitude, place.longitude),
+          infoWindow: InfoWindow.noText,
+          icon: icon,
+          onTap: () {
+            // Open place sheet directly in expanded state
+            setState(() {
+              _selectedPlace = place;
+              _placeSheetState = PlaceSheetState.expanded;
+              _checkUserCheckInStatus(place.placeId);
+            });
+          },
+        ));
       }
-
-      // Apply open now filter
-      if (filters.openNow && !place.isOpen) {
-        continue;
-      }
-      
-      // Note: Category filtering is now done at the Google API level (primaryTypes)
-      // so no client-side category filtering needed here
-
-      // Get check-in count for this place
-      final dogCount = _checkInCounts[place.placeId] ?? 0;
-
-      // Generate custom marker based on category (no count badge on marker)
-      final categoryName = place.category.name;
-      final icon = await DogMarkerGenerator.createPlaceMarker(
-        category: categoryName,
-        size: 40,
-      );
-
-      newMarkers.add(Marker(
-        markerId: MarkerId('place_${place.placeId}'),
-        position: LatLng(place.latitude, place.longitude),
-        infoWindow: InfoWindow.noText,
-        icon: icon,
-        onTap: () {
-          // Open place sheet directly in expanded state
-          setState(() {
-            _selectedPlace = place;
-            _placeSheetState = PlaceSheetState.expanded;
-            _checkUserCheckInStatus(place.placeId);
-          });
-        },
-      ));
     }
 
-    // Add event markers if enabled
-    if (filters.showEvents) {
+
+    // Add event markers (internal app events only)
+    // Show when: Events filter selected OR showEvents toggle is on
+    if (isEventsOnlyFilter || filters.showEvents) {
       for (final event in _events) {
         if (event.latitude == null || event.longitude == null) continue;
 
@@ -1528,31 +1534,35 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                         place.name,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
-                          fontSize: 16,
+                          fontSize: 15,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
-                      Row(
+                      const SizedBox(height: 4),
+                      // Make this Row wrap if needed
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           // Dog Friendly badge
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.green.shade50,
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(4),
                               border: Border.all(color: Colors.green.shade200),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.pets, size: 12, color: Colors.green.shade700),
-                                const SizedBox(width: 4),
+                                Icon(Icons.pets, size: 10, color: Colors.green.shade700),
+                                const SizedBox(width: 3),
                                 Text(
                                   'Dog Friendly',
                                   style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w500,
                                     color: Colors.green.shade700,
                                   ),
@@ -1560,23 +1570,21 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                               ],
                             ),
                           ),
-                          if (distanceText.isNotEmpty) ...[
-                            const SizedBox(width: 8),
+                          if (distanceText.isNotEmpty)
                             Text(
                               distanceText,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 11,
                                 color: Colors.grey.shade600,
                               ),
                             ),
-                          ],
                         ],
                       ),
                     ],
                   ),
                 ),
                 
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 
                 // Check In button
                 _isUserCheckedInAtSelectedPlace
