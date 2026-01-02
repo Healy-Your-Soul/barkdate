@@ -37,6 +37,9 @@ class MapTabScreenV2 extends ConsumerStatefulWidget {
   ConsumerState<MapTabScreenV2> createState() => _MapTabScreenV2State();
 }
 
+/// State for the place details sheet
+enum PlaceSheetState { closed, peek, expanded }
+
 class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   GoogleMapController? _mapController;
   Position? _userPosition;
@@ -57,6 +60,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   
   // Selected place for in-stack sheet (not modal)
   PlaceResult? _selectedPlace;
+  PlaceSheetState _placeSheetState = PlaceSheetState.closed; // NEW: Track sheet state
+  bool _isUserCheckedInAtSelectedPlace = false; // NEW: Track if user is checked in here
   
   // Selected live dog for mini popup (Phase 5)
   Map<String, dynamic>? _selectedLiveDog;
@@ -401,8 +406,12 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         infoWindow: InfoWindow.noText,
         icon: icon,
         onTap: () {
-          // Open place sheet directly
-          setState(() => _selectedPlace = place);
+          // Open place sheet directly in expanded state
+          setState(() {
+            _selectedPlace = place;
+            _placeSheetState = PlaceSheetState.expanded;
+            _checkUserCheckInStatus(place.placeId);
+          });
         },
       ));
     }
@@ -673,7 +682,11 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     ).firstOrNull;
     
     if (matchingPlace != null) {
-      setState(() => _selectedPlace = matchingPlace);
+      setState(() {
+        _selectedPlace = matchingPlace;
+        _placeSheetState = PlaceSheetState.expanded;
+        _isUserCheckedInAtSelectedPlace = true; // They're viewing their check-in
+      });
     } else {
       // Create a minimal PlaceResult for the checked-in location
       final minimalPlace = PlaceResult(
@@ -688,7 +701,35 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         category: PlaceCategory.other,
         isOpen: true,
       );
-      setState(() => _selectedPlace = minimalPlace);
+      setState(() {
+        _selectedPlace = minimalPlace;
+        _placeSheetState = PlaceSheetState.expanded;
+        _isUserCheckedInAtSelectedPlace = true;
+      });
+    }
+  }
+  
+  /// Check if user is currently checked in at a specific place
+  void _checkUserCheckInStatus(String placeId) {
+    _isUserCheckedInAtSelectedPlace = 
+        _currentUserCheckIn != null && 
+        _currentUserCheckIn!.parkId == placeId;
+  }
+  
+  /// Get icon for place type
+  IconData _getPlaceTypeIcon(PlaceCategory category) {
+    switch (category) {
+      case PlaceCategory.park:
+        return Icons.park;
+      case PlaceCategory.restaurant:
+        return Icons.local_cafe; // Restaurants/cafes
+      case PlaceCategory.petStore:
+        return Icons.storefront;
+      case PlaceCategory.veterinary:
+        return Icons.medical_services;
+      case PlaceCategory.other:
+      default:
+        return Icons.place;
     }
   }
   
@@ -861,6 +902,26 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             onMapCreated: _onMapCreated,
             onCameraMove: _onCameraMove,
             onCameraIdle: _onCameraIdle,
+            // NEW: Handle map tap to collapse sheet to peek view
+            onTap: (LatLng position) {
+              if (_placeSheetState == PlaceSheetState.expanded) {
+                // Collapse to peek view instead of closing
+                setState(() => _placeSheetState = PlaceSheetState.peek);
+              } else if (_placeSheetState == PlaceSheetState.peek) {
+                // Second tap on map = close completely
+                setState(() {
+                  _placeSheetState = PlaceSheetState.closed;
+                  _selectedPlace = null;
+                });
+              }
+              // Also clear any mini popups
+              if (_tappedPlaceMarker != null) {
+                setState(() => _tappedPlaceMarker = null);
+              }
+              if (_selectedLiveDog != null) {
+                setState(() => _selectedLiveDog = null);
+              }
+            },
               initialCameraPosition: CameraPosition(
                 target: viewport.center,
                 zoom: viewport.zoom,
@@ -1095,10 +1156,14 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                 child: PlaceMiniCard(
                   place: _tappedPlaceMarker!,
                   onTap: () {
-                    // Open full place sheet
+                    // Open full place sheet in expanded state
                     setState(() {
                       _selectedPlace = _tappedPlaceMarker;
+                      _placeSheetState = PlaceSheetState.expanded;
                       _tappedPlaceMarker = null;
+                      if (_tappedPlaceMarker != null) {
+                        _checkUserCheckInStatus(_tappedPlaceMarker!.placeId);
+                      }
                     });
                   },
                   onClose: () => setState(() => _tappedPlaceMarker = null),
@@ -1115,8 +1180,34 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
               child: const GeminiAssistantSheet(),
             ),
 
-          // In-stack Place Details Sheet (NOT modal - gives us gesture control)
-          if (_selectedPlace != null)
+          // Place Sheet - PEEK VIEW (compact bar at bottom)
+          if (_selectedPlace != null && _placeSheetState == PlaceSheetState.peek)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: PointerInterceptor(
+                child: GestureDetector(
+                  onTap: () => setState(() => _placeSheetState = PlaceSheetState.expanded),
+                  onVerticalDragEnd: (details) {
+                    if (details.primaryVelocity! < -200) {
+                      // Swipe up = expand
+                      setState(() => _placeSheetState = PlaceSheetState.expanded);
+                    } else if (details.primaryVelocity! > 200) {
+                      // Swipe down = close
+                      setState(() {
+                        _placeSheetState = PlaceSheetState.closed;
+                        _selectedPlace = null;
+                      });
+                    }
+                  },
+                  child: _buildPeekView(_selectedPlace!),
+                ),
+              ),
+            ),
+
+          // Place Sheet - EXPANDED VIEW (full details)
+          if (_selectedPlace != null && _placeSheetState == PlaceSheetState.expanded)
             Positioned(
               left: 0,
               right: 0,
@@ -1173,8 +1264,167 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     return PlaceSheetContent(
       place: place,
       scrollController: scrollController,
-      onClose: () => setState(() => _selectedPlace = null),
-      onCheckInChanged: () => _loadUserCheckIn(), // Refresh check-in state
+      onClose: () => setState(() {
+        _selectedPlace = null;
+        _placeSheetState = PlaceSheetState.closed;
+      }),
+      onCheckInChanged: () {
+        _loadUserCheckIn();
+        if (_selectedPlace != null) {
+          _checkUserCheckInStatus(_selectedPlace!.placeId);
+        }
+      },
+    );
+  }
+  
+  /// Build the compact PEEK VIEW for collapsed place sheet
+  Widget _buildPeekView(PlaceResult place) {
+    // Calculate distance text
+    String distanceText = '';
+    if (_userPosition != null) {
+      final distance = Geolocator.distanceBetween(
+        _userPosition!.latitude,
+        _userPosition!.longitude,
+        place.latitude,
+        place.longitude,
+      );
+      if (distance < 1000) {
+        distanceText = '${distance.toInt()} m away';
+      } else {
+        distanceText = '${(distance / 1000).toStringAsFixed(1)} km away';
+      }
+    }
+    
+    return Container(
+      height: 80,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // Place type icon
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                _getPlaceTypeIcon(place.category),
+                color: Theme.of(context).colorScheme.primary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            
+            // Place info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    place.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      // Dog Friendly badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.green.shade200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.pets, size: 12, color: Colors.green.shade700),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Dog Friendly',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.green.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (distanceText.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          distanceText,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(width: 8),
+            
+            // Check In button
+            _isUserCheckedInAtSelectedPlace
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.green.shade300),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle, size: 16, color: Colors.green.shade700),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Checked In',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : FilledButton.tonal(
+                    onPressed: () {
+                      // Expand and let the full sheet handle check-in
+                      setState(() => _placeSheetState = PlaceSheetState.expanded);
+                    },
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    child: const Text('Check In'),
+                  ),
+          ],
+        ),
+      ),
     );
   }
 }
