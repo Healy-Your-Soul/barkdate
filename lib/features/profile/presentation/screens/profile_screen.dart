@@ -11,6 +11,7 @@ import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/dog_sharing_service.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
+import 'package:barkdate/screens/help_screen.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -306,8 +307,9 @@ class ProfileScreen extends ConsumerWidget {
                       icon: Icons.help_outline,
                       title: 'Get help',
                       onTap: () {
-                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Help Center coming soon!')),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const HelpScreen()),
                         );
                       },
                     ),
