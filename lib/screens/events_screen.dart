@@ -514,6 +514,9 @@ class _EventsScreenState extends State<EventsScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width, // Full width on web
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
