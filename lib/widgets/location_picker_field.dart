@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:barkdate/services/places_service.dart';
+import 'package:barkdate/services/places_service.dart'; // Includes PlacesSessionTokenManager
 
 /// A text field with Google Places autocomplete for selecting locations
 class LocationPickerField extends StatefulWidget {
@@ -168,6 +168,10 @@ class _LocationPickerFieldState extends State<LocationPickerField> {
     widget.controller.text = suggestion.structuredFormatting.mainText;
     setState(() => _selectedPlace = suggestion);
     widget.onPlaceSelected?.call(suggestion);
+    
+    // COST OPTIMIZATION: Reset session token after selection
+    // This ends the current billing session so next search starts fresh
+    PlacesSessionTokenManager.resetToken();
   }
 
   @override

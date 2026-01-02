@@ -48,6 +48,7 @@ dependencies:
   mobile_scanner: ^7.1.4
   # Lottie animations
   lottie: ^3.1.0
+  uuid: ^4.5.2
 
 dev_dependencies:
   flutter_test:

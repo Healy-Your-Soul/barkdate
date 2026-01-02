@@ -161,6 +161,9 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
     _searchController.text = suggestion.structuredFormatting.mainText;
     setState(() => _suggestions = []);
 
+    // COST OPTIMIZATION: Reset session token after selection
+    PlacesSessionTokenManager.resetToken();
+
     try {
       final details = await PlacesService.getPlaceDetailsByPlaceId(suggestion.placeId);
       if (details != null) {

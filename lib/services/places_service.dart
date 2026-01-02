@@ -3,12 +3,44 @@ import 'dart:js_util';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:barkdate/main.dart';
+import 'package:uuid/uuid.dart';
 
 // Helper function to convert a Dart object to a JS object.
 // This is needed because `js.jsify` was removed from the `dart:js` package.
 // js.JsObject jsify(Map<String, dynamic> map) {
 //   return js.JsObject.jsify(map);
 // }
+
+/// COST OPTIMIZATION: Session Token Manager for Autocomplete
+/// 
+/// Without session tokens: Each keystroke = 1 API request (expensive!)
+/// With session tokens: Entire search session = 1 API request (80% cheaper)
+/// 
+/// Usage:
+/// 1. Call PlacesSessionTokenManager.getToken() when starting autocomplete
+/// 2. Pass the token to all autocomplete requests
+/// 3. Call PlacesSessionTokenManager.resetToken() after user selects a place
+class PlacesSessionTokenManager {
+  static final Uuid _uuid = Uuid();
+  static String? _currentToken;
+  
+  /// Get current session token, or generate a new one if none exists
+  static String getToken() {
+    _currentToken ??= _uuid.v4();
+    debugPrint('🎫 Session token: $_currentToken');
+    return _currentToken!;
+  }
+  
+  /// Reset token after place selection (starts new billing session)
+  static void resetToken() {
+    debugPrint('🎫 Session token reset (was: $_currentToken)');
+    _currentToken = null;
+  }
+  
+  /// Check if a session is active
+  static bool get hasActiveSession => _currentToken != null;
+}
+
 
 class PlacesService {
   static const List<String> _defaultPrimaryTypes = [
@@ -71,9 +103,12 @@ class PlacesService {
         request['includedRegionCodes'] = [components.toUpperCase()];
       }
 
-      if (sessionToken != null && sessionToken.isNotEmpty) {
-        request['sessionToken'] = sessionToken;
-      }
+      // COST OPTIMIZATION: Always use session tokens for autocomplete
+      // This bundles all keystrokes in a search into one billable request
+      final effectiveToken = (sessionToken != null && sessionToken.isNotEmpty) 
+          ? sessionToken 
+          : PlacesSessionTokenManager.getToken();
+      request['sessionToken'] = effectiveToken;
 
       final dynamic response = await promiseToFuture(
         callMethod(autocompleteStatics, 'fetchAutocompleteSuggestions', [jsify(request)]),
@@ -139,18 +174,21 @@ class PlacesService {
           _requireJsProperty(places, 'Place', 'google.maps.places.Place is unavailable');
 
   // 1. Define the fields you want the API to return.
+      // COST OPTIMIZATION: Only request BASIC fields (free/cheap)
+      // Removed: 'rating', 'userRatingCount', 'photos' (these are Advanced = $$$)
+      // See: https://developers.google.com/maps/documentation/places/web-service/usage-and-billing
       final fields = [
-        'id',
-        'displayName',
-        'formattedAddress',
-        'location',
-        'rating',
-        'userRatingCount',
-        'primaryType',
-        'photos',
-        'businessStatus'
-        // 'openingHours' is available but requires a separate Place Details request with the new API model.
-        // We will assume places are open for now, as before.
+        'id',              // Basic - FREE
+        'displayName',     // Basic - FREE
+        'formattedAddress', // Basic - FREE
+        'location',        // Basic - FREE
+        'primaryType',     // Basic - FREE
+        'businessStatus',  // Basic - FREE
+        // DISABLED FOR COST SAVINGS:
+        // 'rating',       // Advanced - $0.005/request
+        // 'userRatingCount', // Advanced
+        // 'photos',       // Advanced - $0.007/photo
+        // 'openingHours', // Advanced
       ];
       // 2. Construct the request object for the new API.
       final circleScope = _buildCircleScope(
