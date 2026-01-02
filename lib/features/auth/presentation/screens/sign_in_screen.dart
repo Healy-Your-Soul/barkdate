@@ -85,7 +85,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       // For mobile, we'd need deep link configuration
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: kIsWeb ? null : 'io.supabase.barkdate://login-callback/',
+        redirectTo: kIsWeb ? null : 'io.supabase.bark://login-callback/',
       );
       
       // Note: On web, this will redirect to Google's consent page

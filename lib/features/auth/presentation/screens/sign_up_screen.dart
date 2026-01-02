@@ -72,7 +72,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     try {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: kIsWeb ? null : 'io.supabase.barkdate://login-callback/',
+        redirectTo: kIsWeb ? null : 'io.supabase.bark://login-callback/',
       );
       // On web, this redirects to Google. On return, SupabaseAuthWrapper handles the session.
     } catch (e) {
