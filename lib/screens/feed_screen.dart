@@ -25,6 +25,7 @@ import 'package:barkdate/widgets/app_section_header.dart';
 import 'package:barkdate/design_system/app_responsive.dart';
 import 'package:barkdate/design_system/app_spacing.dart';
 import 'package:barkdate/design_system/app_typography.dart';
+import 'package:barkdate/widgets/dog_loading_widget.dart';
 // Events feature
 import 'package:barkdate/services/event_service.dart';
 import 'package:barkdate/models/event.dart';
@@ -1584,7 +1585,7 @@ class _FeedScreenState extends State<FeedScreen> {
     if (_isLoadingMoreDogs) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: DogCircularProgress()),
       );
     }
 
@@ -1623,7 +1624,7 @@ class _FeedScreenState extends State<FeedScreen> {
     if (isLoading) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 12),
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: DogCircularProgress()),
       );
     }
 

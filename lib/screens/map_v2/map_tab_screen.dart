@@ -1296,7 +1296,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     }
     
     return Container(
-      height: 80,
+      height: 100, // Increased from 80 to cover bottom tabs
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
@@ -1309,8 +1309,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.fromLTRB(16, 8, 8, 16),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Place type icon
             Container(
@@ -1422,6 +1423,24 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                     ),
                     child: const Text('Check In'),
                   ),
+            
+            // X Close button
+            const SizedBox(width: 4),
+            IconButton(
+              onPressed: () {
+                setState(() {
+                  _placeSheetState = PlaceSheetState.closed;
+                  _selectedPlace = null;
+                });
+              },
+              icon: const Icon(Icons.close),
+              iconSize: 20,
+              padding: const EdgeInsets.all(4),
+              constraints: const BoxConstraints(),
+              style: IconButton.styleFrom(
+                foregroundColor: Colors.grey.shade600,
+              ),
+            ),
           ],
         ),
       ),
