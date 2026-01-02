@@ -513,7 +513,9 @@ class _EventsScreenState extends State<EventsScreen>
     AppBottomSheet.show(
       context: context,
       title: 'Filter Events',
+      height: 280, // Smaller height since fewer options
       child: AppBottomSheetScrollable(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), // Edge-to-edge
         children: [
           Text(
             'Category',
@@ -524,6 +526,7 @@ class _EventsScreenState extends State<EventsScreen>
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
+            runSpacing: 8,
             children: _categories.map((category) {
               final isSelected = _selectedCategory == category;
               return FilterChip(
@@ -538,7 +541,7 @@ class _EventsScreenState extends State<EventsScreen>
             }).toList(),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
           Row(
             children: [

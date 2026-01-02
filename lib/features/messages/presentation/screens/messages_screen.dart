@@ -43,7 +43,9 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                   IconButton(
                     icon: const Icon(Icons.search),
                     onPressed: () {
-                      // TODO: Search messages
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Search coming soon!')),
+                      );
                     },
                   ),
                 ],
@@ -75,9 +77,9 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                           icon: Icons.chat_bubble_outline,
                           title: 'No messages yet',
                           message: 'Start matching with other dogs to get the conversation started!',
-                          actionLabel: 'Find Matches',
+                          actionLabel: 'Find Friends',
                           onAction: () {
-                            context.go('/home');
+                            context.go('/feed');
                           },
                         ),
                       ),
