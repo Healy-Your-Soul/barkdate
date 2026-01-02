@@ -749,6 +749,23 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     }
   }
   
+  /// Get color for place type
+  Color _getPlaceTypeColor(PlaceCategory category) {
+    switch (category) {
+      case PlaceCategory.park:
+        return Colors.green;
+      case PlaceCategory.restaurant:
+        return Colors.orange;
+      case PlaceCategory.petStore:
+        return Colors.blue;
+      case PlaceCategory.veterinary:
+        return Colors.red;
+      case PlaceCategory.other:
+      default:
+        return Colors.grey;
+    }
+  }
+  
   /// Build check-in status banner for bottom panel
   Widget _buildCheckInBanner() {
     if (_currentUserCheckIn == null) return const SizedBox.shrink();
@@ -1508,17 +1525,17 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Place type icon
+                // Place type icon with category color
                 Container(
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
+                    color: _getPlaceTypeColor(place.category).withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     _getPlaceTypeIcon(place.category),
-                    color: Theme.of(context).colorScheme.primary,
+                    color: _getPlaceTypeColor(place.category),
                     size: 24,
                   ),
                 ),
