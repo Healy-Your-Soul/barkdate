@@ -43,8 +43,56 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                   IconButton(
                     icon: const Icon(Icons.search),
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Search coming soon!')),
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.white,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                        ),
+                        builder: (context) => Padding(
+                          padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).viewInsets.bottom + 16),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade300,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              TextField(
+                                autofocus: true,
+                                decoration: InputDecoration(
+                                  hintText: 'Search messages...',
+                                  prefixIcon: const Icon(Icons.search),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade100,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                                onSubmitted: (value) {
+                                  Navigator.pop(context);
+                                  if (value.isNotEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Searching for "$value"...')),
+                                    );
+                                  }
+                                },
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Search your conversations',
+                                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -79,7 +127,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                           message: 'Start matching with other dogs to get the conversation started!',
                           actionLabel: 'Find Friends',
                           onAction: () {
-                            context.go('/feed');
+                            context.go('/home');
                           },
                         ),
                       ),

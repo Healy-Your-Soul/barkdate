@@ -510,63 +510,80 @@ class _EventsScreenState extends State<EventsScreen>
   }
 
   void _showFilterSheet() {
-    AppBottomSheet.show(
+    showModalBottomSheet(
       context: context,
-      title: 'Filter Events',
-      height: 280, // Smaller height since fewer options
-      child: AppBottomSheetScrollable(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), // Edge-to-edge
-        children: [
-          Text(
-            'Category',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _categories.map((category) {
-              final isSelected = _selectedCategory == category;
-              return FilterChip(
-                label: Text(category),
-                selected: isSelected,
-                onSelected: (selected) {
-                  setState(() {
-                    _selectedCategory = selected ? category : null;
-                  });
-                },
-              );
-            }).toList(),
-          ),
-
-          const SizedBox(height: 24),
-
-          Row(
-            children: [
-              Expanded(
-                child: AppButton(
-                  text: 'Clear',
-                  type: AppButtonType.outline,
-                  onPressed: () {
+            const SizedBox(height: 16),
+            // Title
+            Text(
+              'Filter Events',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Filter chips
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _categories.map((category) {
+                final isSelected = _selectedCategory == category;
+                return FilterChip(
+                  label: Text(category),
+                  selected: isSelected,
+                  onSelected: (selected) {
                     setState(() {
-                      _selectedCategory = null;
+                      _selectedCategory = selected ? category : null;
                     });
-                    Navigator.pop(context);
                   },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+            // Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      setState(() => _selectedCategory = null);
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Clear'),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: AppButton(
-                  text: 'Apply',
-                  onPressed: () => Navigator.pop(context),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Apply'),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
