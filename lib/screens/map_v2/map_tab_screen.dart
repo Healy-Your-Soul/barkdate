@@ -69,6 +69,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   // Selected place for mini popup (tapped marker - shows compact card first)
   PlaceResult? _tappedPlaceMarker;
   
+  // Selected event for peek/expanded sheet
+  Event? _selectedEvent;
+  
   // Current user's check-in status (for top-left floating button)
   CheckIn? _currentUserCheckIn;
   String? _userDogPhotoUrl; // Photo for check-in marker
@@ -430,7 +433,12 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           ),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
           onTap: () {
-            ref.read(mapSelectionProvider.notifier).selectEvent(event);
+            // Open event in peek view (same pattern as places)
+            setState(() {
+              _selectedEvent = event;
+              _placeSheetState = PlaceSheetState.expanded;
+              _selectedPlace = null; // Clear any selected place
+            });
           },
         ));
       }
@@ -581,6 +589,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           _buildFilterChip('Parks', 'park', filters.category == 'park', Icons.park, Colors.green),
           const SizedBox(width: 8),
           _buildFilterChip('Cafes', 'cafe', filters.category == 'cafe', Icons.local_cafe, Colors.orange),
+          const SizedBox(width: 8),
+          _buildFilterChip('Events', 'events', filters.category == 'events', Icons.event, Colors.purple),
           const SizedBox(width: 8),
           _buildFilterChip('Stores', 'store', filters.category == 'store', Icons.store, Colors.blue),
         ],
@@ -1254,6 +1264,181 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                 ),
               ),
             ),
+
+          // Event Sheet - PEEK VIEW (compact bar with event info)
+          if (_selectedEvent != null && _placeSheetState == PlaceSheetState.peek)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: PointerInterceptor(
+                child: GestureDetector(
+                  onTap: () => setState(() => _placeSheetState = PlaceSheetState.expanded),
+                  onVerticalDragEnd: (details) {
+                    if (details.primaryVelocity! < -200) {
+                      setState(() => _placeSheetState = PlaceSheetState.expanded);
+                    } else if (details.primaryVelocity! > 200) {
+                      setState(() {
+                        _placeSheetState = PlaceSheetState.closed;
+                        _selectedEvent = null;
+                      });
+                    }
+                  },
+                  child: _buildEventPeekView(_selectedEvent!),
+                ),
+              ),
+            ),
+
+          // Event Sheet - EXPANDED VIEW (full details)
+          if (_selectedEvent != null && _placeSheetState == PlaceSheetState.expanded)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: PointerInterceptor(
+                child: Container(
+                  height: MediaQuery.of(context).size.height * 0.45,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // Handle + Close button
+                      Stack(
+                        children: [
+                          Center(
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 12),
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _placeSheetState = PlaceSheetState.closed;
+                                  _selectedEvent = null;
+                                });
+                              },
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.close, size: 18, color: Colors.grey.shade600),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Event Content
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Event title
+                              Text(
+                                _selectedEvent!.title,
+                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              // Date & Time
+                              Row(
+                                children: [
+                                  Icon(Icons.calendar_today, size: 18, color: Colors.purple.shade600),
+                                  const SizedBox(width: 8),
+                                  Text(_selectedEvent!.formattedDate),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              // Location
+                              Row(
+                                children: [
+                                  Icon(Icons.location_on, size: 18, color: Colors.purple.shade600),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Text(_selectedEvent!.location)),
+                                ],
+                              ),
+                              if (_selectedEvent!.description != null && _selectedEvent!.description!.isNotEmpty) ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  _selectedEvent!.description!,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
+                              const SizedBox(height: 20),
+                              // Action buttons
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () {
+                                        // Navigate to event details screen
+                                        Navigator.pushNamed(context, '/events');
+                                        setState(() {
+                                          _placeSheetState = PlaceSheetState.closed;
+                                          _selectedEvent = null;
+                                        });
+                                      },
+                                      icon: const Icon(Icons.info_outline),
+                                      label: const Text('View Event'),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: FilledButton.icon(
+                                      onPressed: () {
+                                        // Join event action
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Joined "${_selectedEvent!.title}"! 🎉'),
+                                            backgroundColor: Colors.purple,
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Join'),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: Colors.purple,
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -1295,155 +1480,306 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       }
     }
     
-    return Container(
-      height: 100, // Increased from 80 to cover bottom tabs
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 12,
-            offset: const Offset(0, -4),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Main content container
+        Container(
+          height: 100,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 12,
+                offset: const Offset(0, -4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 8, 16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Place type icon
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                _getPlaceTypeIcon(place.category),
-                color: Theme.of(context).colorScheme.primary,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            
-            // Place info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    place.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 60, 16), // Right padding for X button area
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Place type icon
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 2),
-                  Row(
+                  child: Icon(
+                    _getPlaceTypeIcon(place.category),
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                
+                // Place info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Dog Friendly badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      Text(
+                        place.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          // Dog Friendly badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.green.shade200),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.pets, size: 12, color: Colors.green.shade700),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Dog Friendly',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.green.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (distanceText.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              distanceText,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(width: 8),
+                
+                // Check In button
+                _isUserCheckedInAtSelectedPlace
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.green.shade200),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.green.shade300),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.pets, size: 12, color: Colors.green.shade700),
+                            Icon(Icons.check_circle, size: 16, color: Colors.green.shade700),
                             const SizedBox(width: 4),
                             Text(
-                              'Dog Friendly',
+                              'Checked In',
                               style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                                 color: Colors.green.shade700,
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      if (distanceText.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          distanceText,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
+                      )
+                    : FilledButton.tonal(
+                        onPressed: () {
+                          setState(() => _placeSheetState = PlaceSheetState.expanded);
+                        },
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
-                      ],
+                        child: const Text('Check In'),
+                      ),
+              ],
+            ),
+          ),
+        ),
+        
+        // X Close button in top-right corner
+        Positioned(
+          top: 8,
+          right: 8,
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _placeSheetState = PlaceSheetState.closed;
+                _selectedPlace = null;
+              });
+            },
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.close,
+                size: 16,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  /// Build the compact PEEK VIEW for collapsed event sheet
+  Widget _buildEventPeekView(Event event) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Main content container
+        Container(
+          height: 100,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 12,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 60, 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Event icon
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.purple.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.event,
+                    color: Colors.purple.shade700,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                
+                // Event info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        event.title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          // Date badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.purple.shade200),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.schedule, size: 12, color: Colors.purple.shade700),
+                                const SizedBox(width: 4),
+                                Text(
+                                  event.formattedDate,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.purple.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(width: 8),
-            
-            // Check In button
-            _isUserCheckedInAtSelectedPlace
-                ? Container(
+                ),
+                
+                const SizedBox(width: 8),
+                
+                // Quick Join button
+                FilledButton.tonal(
+                  onPressed: () {
+                    setState(() => _placeSheetState = PlaceSheetState.expanded);
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.purple.shade100,
+                    foregroundColor: Colors.purple.shade700,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.green.shade300),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.check_circle, size: 16, color: Colors.green.shade700),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Checked In',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.green.shade700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : FilledButton.tonal(
-                    onPressed: () {
-                      // Expand and let the full sheet handle check-in
-                      setState(() => _placeSheetState = PlaceSheetState.expanded);
-                    },
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    child: const Text('Check In'),
                   ),
-            
-            // X Close button
-            const SizedBox(width: 4),
-            IconButton(
-              onPressed: () {
-                setState(() {
-                  _placeSheetState = PlaceSheetState.closed;
-                  _selectedPlace = null;
-                });
-              },
-              icon: const Icon(Icons.close),
-              iconSize: 20,
-              padding: const EdgeInsets.all(4),
-              constraints: const BoxConstraints(),
-              style: IconButton.styleFrom(
-                foregroundColor: Colors.grey.shade600,
+                  child: const Text('View'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        // X Close button in top-right corner
+        Positioned(
+          top: 8,
+          right: 8,
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _placeSheetState = PlaceSheetState.closed;
+                _selectedEvent = null;
+              });
+            },
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.close,
+                size: 16,
+                color: Colors.grey.shade600,
               ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
