@@ -1,15 +1,28 @@
 import 'dart:async';
-import 'dart:js_util';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:barkdate/main.dart';
 import 'package:uuid/uuid.dart';
 
-// Helper function to convert a Dart object to a JS object.
-// This is needed because `js.jsify` was removed from the `dart:js` package.
-// js.JsObject jsify(Map<String, dynamic> map) {
-//   return js.JsObject.jsify(map);
-// }
+// Conditional import for web-only JS interop
+// On native platforms, these functions will throw if called
+import 'places_service_stub.dart'
+    if (dart.library.html) 'dart:js_util' as js_util;
+
+// Import globalThis from stub (for native) or js_interop (for web)
+import 'places_service_stub.dart'
+    if (dart.library.html) 'places_service_web.dart' as js_globals;
+
+// Re-export the JS util functions with platform checks
+dynamic getProperty(Object o, Object name) => js_util.getProperty(o, name);
+bool hasProperty(Object o, Object name) => js_util.hasProperty(o, name);
+dynamic callMethod(Object o, String method, List<Object?> args) => js_util.callMethod(o, method, args);
+T callConstructor<T>(Object constr, List<Object?>? arguments) => js_util.callConstructor(constr, arguments);
+dynamic jsify(Object? dartObject) => js_util.jsify(dartObject);
+Future<T> promiseToFuture<T>(Object jsPromise) => js_util.promiseToFuture(jsPromise);
+
+// Get globalThis (only works on web)
+Object get globalThis => js_globals.globalThis;
 
 /// COST OPTIMIZATION: Session Token Manager for Autocomplete
 /// 
