@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:barkdate/main.dart';
 import 'package:uuid/uuid.dart';
+import 'package:http/http.dart' as http;
 
 // Conditional import for web-only JS interop
 // On native platforms, these functions will throw if called
@@ -159,9 +161,16 @@ class PlacesService {
     List<String>? primaryTypes, // Optional: filter by specific types (e.g., just parks)
     String? pageToken, // Note: pageToken is not directly supported in the new API in the same way
   }) async {
+    // On native platforms, use HTTP API
     if (!kIsWeb) {
-      debugPrint('❌ Places search only supported on web platform');
-      return PlaceSearchResult(places: [], nextPageToken: null);
+      return _searchDogFriendlyPlacesHttp(
+        latitude: latitude,
+        longitude: longitude,
+        radius: radius,
+        keyword: keyword,
+        primaryTypes: primaryTypes,
+        pageToken: pageToken,
+      );
     }
 
     try {
@@ -426,9 +435,14 @@ class PlacesService {
     required double longitude,
     int radius = 5000,
   }) async {
+    // On native platforms, use HTTP API
     if (!kIsWeb) {
-      debugPrint('❌ Places search only supported on web platform');
-      return PlaceSearchResult(places: [], nextPageToken: null);
+      return _searchPlacesByTextHttp(
+        textQuery: textQuery,
+        latitude: latitude,
+        longitude: longitude,
+        radius: radius,
+      );
     }
 
     try {
@@ -950,6 +964,242 @@ static Object _buildCircleScope({
       throw StateError(errorMessage);
     }
     return value;
+  }
+
+  // =========================================================================
+  // NATIVE HTTP API IMPLEMENTATION (Android/iOS)
+  // =========================================================================
+  
+  /// HTTP-based Places Nearby Search for native platforms
+  static Future<PlaceSearchResult> _searchDogFriendlyPlacesHttp({
+    required double latitude,
+    required double longitude,
+    int radius = 5000,
+    String? keyword,
+    List<String>? primaryTypes,
+    String? pageToken,
+  }) async {
+    const apiKey = 'AIzaSyAbZGdAyEUXEkN-1CtVvPCWIsxkAY8_4ss';
+    
+    debugPrint('🔍 [HTTP] Places search: lat=$latitude, lng=$longitude, radius=$radius');
+    
+    try {
+      // Build the request body for Places API (new)
+      // Using the Nearby Search (New) API: https://developers.google.com/maps/documentation/places/web-service/nearby-search
+      final includedTypes = primaryTypes ?? ['park', 'dog_park', 'cafe', 'pet_store', 'veterinary_care'];
+      
+      final requestBody = {
+        'includedTypes': includedTypes,
+        'maxResultCount': 20,
+        'locationRestriction': {
+          'circle': {
+            'center': {
+              'latitude': latitude,
+              'longitude': longitude,
+            },
+            'radius': radius.toDouble(),
+          },
+        },
+      };
+      
+      final response = await http.post(
+        Uri.parse('https://places.googleapis.com/v1/places:searchNearby'),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.businessStatus',
+        },
+        body: jsonEncode(requestBody),
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode != 200) {
+        debugPrint('❌ [HTTP] Places API error: ${response.statusCode} - ${response.body}');
+        return PlaceSearchResult(places: [], nextPageToken: null);
+      }
+      
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final placesJson = data['places'] as List<dynamic>? ?? [];
+      
+      debugPrint('✅ [HTTP] Found ${placesJson.length} places');
+      
+      final List<PlaceResult> places = [];
+      
+      for (final placeJson in placesJson) {
+        try {
+          final placeMap = placeJson as Map<String, dynamic>;
+          final location = placeMap['location'] as Map<String, dynamic>?;
+          
+          if (location == null) continue;
+          
+          final placeLat = (location['latitude'] as num?)?.toDouble() ?? 0;
+          final placeLng = (location['longitude'] as num?)?.toDouble() ?? 0;
+          
+          // Calculate distance
+          final distanceMeters = Geolocator.distanceBetween(
+            latitude, longitude, placeLat, placeLng,
+          );
+          
+          // Determine category from primaryType
+          final primaryType = placeMap['primaryType'] as String? ?? '';
+          final category = _categoryFromType(primaryType);
+          
+          // Get display name
+          final displayName = placeMap['displayName'] as Map<String, dynamic>?;
+          final name = displayName?['text'] as String? ?? 'Unknown Place';
+          
+          places.add(PlaceResult(
+            placeId: placeMap['id'] as String? ?? '',
+            name: name,
+            address: placeMap['formattedAddress'] as String? ?? '',
+            latitude: placeLat,
+            longitude: placeLng,
+            rating: 0, // Not requested to save costs
+            userRatingsTotal: 0, // Not requested to save costs
+            isOpen: placeMap['businessStatus'] == 'OPERATIONAL',
+            category: category,
+            distance: distanceMeters,
+            photoReference: null, // Not requested to save costs
+          ));
+        } catch (e) {
+          debugPrint('⚠️ [HTTP] Error parsing place: $e');
+        }
+      }
+      
+      // Sort by distance
+      places.sort((a, b) => a.distance.compareTo(b.distance));
+      
+      return PlaceSearchResult(
+        places: places,
+        nextPageToken: null, // New API doesn't use page tokens the same way
+      );
+      
+    } catch (e, stack) {
+      debugPrint('❌ [HTTP] Places search error: $e');
+      debugPrint(stack.toString());
+      return PlaceSearchResult(places: [], nextPageToken: null);
+    }
+  }
+  
+  /// Map Google Place type to PlaceCategory
+  static PlaceCategory _categoryFromType(String type) {
+    switch (type.toLowerCase()) {
+      case 'park':
+      case 'dog_park':
+      case 'national_park':
+      case 'state_park':
+      case 'playground':
+        return PlaceCategory.park;
+      case 'pet_store':
+      case 'pet_supply_store':
+        return PlaceCategory.petStore;
+      case 'veterinary_care':
+      case 'veterinarian':
+        return PlaceCategory.veterinary;
+      case 'cafe':
+      case 'coffee_shop':
+      case 'restaurant':
+      case 'bar':
+        return PlaceCategory.restaurant;
+      default:
+        return PlaceCategory.other;
+    }
+  }
+  
+  /// HTTP-based Text Search for native platforms
+  static Future<PlaceSearchResult> _searchPlacesByTextHttp({
+    required String textQuery,
+    required double latitude,
+    required double longitude,
+    int radius = 5000,
+  }) async {
+    const apiKey = 'AIzaSyAbZGdAyEUXEkN-1CtVvPCWIsxkAY8_4ss';
+    
+    debugPrint('🔍 [HTTP] Text search: "$textQuery" near lat=$latitude, lng=$longitude');
+    
+    try {
+      final requestBody = {
+        'textQuery': textQuery,
+        'maxResultCount': 20,
+        'locationBias': {
+          'circle': {
+            'center': {
+              'latitude': latitude,
+              'longitude': longitude,
+            },
+            'radius': radius.toDouble(),
+          },
+        },
+      };
+      
+      final response = await http.post(
+        Uri.parse('https://places.googleapis.com/v1/places:searchText'),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.businessStatus',
+        },
+        body: jsonEncode(requestBody),
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode != 200) {
+        debugPrint('❌ [HTTP] Text search error: ${response.statusCode} - ${response.body}');
+        return PlaceSearchResult(places: [], nextPageToken: null);
+      }
+      
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final placesJson = data['places'] as List<dynamic>? ?? [];
+      
+      debugPrint('✅ [HTTP] Text search found ${placesJson.length} places');
+      
+      final List<PlaceResult> places = [];
+      
+      for (final placeJson in placesJson) {
+        try {
+          final placeMap = placeJson as Map<String, dynamic>;
+          final location = placeMap['location'] as Map<String, dynamic>?;
+          
+          if (location == null) continue;
+          
+          final placeLat = (location['latitude'] as num?)?.toDouble() ?? 0;
+          final placeLng = (location['longitude'] as num?)?.toDouble() ?? 0;
+          
+          final distanceMeters = Geolocator.distanceBetween(
+            latitude, longitude, placeLat, placeLng,
+          );
+          
+          final primaryType = placeMap['primaryType'] as String? ?? '';
+          final category = _categoryFromType(primaryType);
+          
+          final displayName = placeMap['displayName'] as Map<String, dynamic>?;
+          final name = displayName?['text'] as String? ?? 'Unknown Place';
+          
+          places.add(PlaceResult(
+            placeId: placeMap['id'] as String? ?? '',
+            name: name,
+            address: placeMap['formattedAddress'] as String? ?? '',
+            latitude: placeLat,
+            longitude: placeLng,
+            rating: 0,
+            userRatingsTotal: 0,
+            isOpen: placeMap['businessStatus'] == 'OPERATIONAL',
+            category: category,
+            distance: distanceMeters,
+            photoReference: null,
+          ));
+        } catch (e) {
+          debugPrint('⚠️ [HTTP] Error parsing place: $e');
+        }
+      }
+      
+      places.sort((a, b) => a.distance.compareTo(b.distance));
+      
+      return PlaceSearchResult(places: places, nextPageToken: null);
+      
+    } catch (e, stack) {
+      debugPrint('❌ [HTTP] Text search error: $e');
+      debugPrint(stack.toString());
+      return PlaceSearchResult(places: [], nextPageToken: null);
+    }
   }
 }
 

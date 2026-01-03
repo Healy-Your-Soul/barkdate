@@ -7,6 +7,7 @@ import 'package:barkdate/screens/onboarding/welcome_screen.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/preload_service.dart';
+import 'package:barkdate/widgets/dog_loading_widget.dart';
 
 enum ProfileStatus {
   complete,
@@ -47,7 +48,10 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(
-              child: CircularProgressIndicator(),
+              child: DogLoadingWidget(
+                size: 150,
+                message: 'Connecting...',
+              ),
             ),
           );
         }
@@ -62,7 +66,10 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
               if (profileSnapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
                   body: Center(
-                    child: CircularProgressIndicator(),
+                    child: DogLoadingWidget(
+                      size: 150,
+                      message: 'Getting your profile...',
+                    ),
                   ),
                 );
               }
@@ -77,13 +84,9 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
                       if (cacheSnapshot.connectionState == ConnectionState.waiting) {
                         return const Scaffold(
                           body: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                CircularProgressIndicator(),
-                                SizedBox(height: 16),
-                                Text('Loading your feed...'),
-                              ],
+                            child: DogLoadingWidget(
+                              size: 150,
+                              message: 'Loading your feed...',
                             ),
                           ),
                         );
@@ -97,7 +100,10 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
                       });
                       return const Scaffold(
                         body: Center(
-                          child: CircularProgressIndicator(),
+                          child: DogLoadingWidget(
+                            size: 150,
+                            message: 'Almost there...',
+                          ),
                         ),
                       );
                     },

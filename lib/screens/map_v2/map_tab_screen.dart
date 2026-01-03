@@ -393,8 +393,20 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           continue;
         }
         
-        // Note: Category filtering is now done at the Google API level (primaryTypes)
-        // so no client-side category filtering needed here
+        // Apply category filter (client-side to ensure strict matching)
+        // Google API returns broader results, so we filter here
+        if (filters.category != 'all') {
+          final categoryMatches = switch (filters.category) {
+            'park' => place.category == PlaceCategory.park,
+            'cafe' => place.category == PlaceCategory.restaurant,
+            'store' => place.category == PlaceCategory.petStore,
+            'veterinary' => place.category == PlaceCategory.veterinary,
+            _ => true, // Show all for unknown category
+          };
+          if (!categoryMatches) {
+            continue;
+          }
+        }
 
         // Get check-in count for this place
         final dogCount = _checkInCounts[place.placeId] ?? 0;
@@ -870,6 +882,24 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     }
   }
 
+  void _zoomIn() async {
+    if (_mapController != null) {
+      final currentZoom = await _mapController!.getZoomLevel();
+      _mapController!.animateCamera(
+        CameraUpdate.zoomTo((currentZoom + 1).clamp(1, 20)),
+      );
+    }
+  }
+
+  void _zoomOut() async {
+    if (_mapController != null) {
+      final currentZoom = await _mapController!.getZoomLevel();
+      _mapController!.animateCamera(
+        CameraUpdate.zoomTo((currentZoom - 1).clamp(1, 20)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewport = ref.watch(mapViewportProvider);
@@ -1059,7 +1089,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           // Search bar + Target button (above filters, same line)
           Positioned(
             // Move higher when check-in banner is shown to avoid covering filters
-            bottom: _currentUserCheckIn != null ? 150 : 110,
+            // Added extra padding for mobile tab bar
+            bottom: _currentUserCheckIn != null ? 180 : 140,
             left: 16,
             right: 16,
             child: Row(
@@ -1090,6 +1121,51 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                   ),
                 ),
               ],
+            ),
+          ),
+
+          // Zoom controls - RIGHT SIDE (above target button)
+          Positioned(
+            // Position above the search bar row (higher than target button)
+            bottom: _currentUserCheckIn != null ? 250 : 210,
+            right: 16,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: _zoomIn,
+                    icon: Icon(
+                      Icons.add,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                    tooltip: 'Zoom In',
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    padding: EdgeInsets.zero,
+                  ),
+                  Container(
+                    height: 1,
+                    width: 20,
+                    color: Colors.grey[400],
+                  ),
+                  IconButton(
+                    onPressed: _zoomOut,
+                    icon: Icon(
+                      Icons.remove,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                    tooltip: 'Zoom Out',
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    padding: EdgeInsets.zero,
+                  ),
+                ],
+              ),
             ),
           ),
 

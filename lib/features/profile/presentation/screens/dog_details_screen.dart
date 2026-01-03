@@ -5,6 +5,7 @@ import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/design_system/app_spacing.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
+import 'package:barkdate/services/conversation_service.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/notification_manager.dart';
@@ -191,10 +192,52 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
     }
   }
 
-  void _onMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Chat feature coming soon!')),
-    );
+  Future<void> _onMessage() async {
+    final currentUser = SupabaseConfig.auth.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to send messages')),
+      );
+      return;
+    }
+
+    // Don't allow messaging yourself
+    if (currentUser.id == widget.dog.ownerId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This is your dog!')),
+      );
+      return;
+    }
+
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Opening chat...'), duration: Duration(seconds: 1)),
+      );
+
+      // Get or create conversation
+      final conversationId = await ConversationService.getOrCreateConversation(
+        user1Id: currentUser.id,
+        user2Id: widget.dog.ownerId,
+      );
+
+      if (mounted) {
+        // Navigate to chat screen
+        context.push('/chat', extra: {
+          'matchId': conversationId, // ChatScreen uses matchId
+          'recipientId': widget.dog.ownerId,
+          'recipientName': widget.dog.ownerName,
+          'recipientAvatarUrl': widget.dog.ownerAvatarUrl,
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error starting conversation: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not start conversation: $e')),
+        );
+      }
+    }
   }
 
   void _onSuggestPlaydate() {
@@ -353,7 +396,10 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
                           children: [
                             CircleAvatar(
                               radius: 24,
-                              backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=${widget.dog.ownerId}'),
+                              backgroundImage: widget.dog.ownerAvatarUrl != null && 
+                                               widget.dog.ownerAvatarUrl!.isNotEmpty
+                                  ? NetworkImage(widget.dog.ownerAvatarUrl!)
+                                  : NetworkImage('https://i.pravatar.cc/150?u=${widget.dog.ownerId}'),
                             ),
                             const SizedBox(width: 16),
                             Column(
@@ -439,7 +485,7 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
                                 child: OutlinedButton.icon(
                                   onPressed: _onBarkPoke,
                                   icon: const Icon(Icons.pets, color: Colors.orange),
-                                  label: const Text('Bark 👋'),
+                                  label: const Text('Bark 🐾'),
                                   style: OutlinedButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(vertical: 14),
                                     side: BorderSide(color: Colors.orange.withOpacity(0.5)),

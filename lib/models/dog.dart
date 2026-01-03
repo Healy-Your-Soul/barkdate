@@ -9,6 +9,7 @@ class Dog {
   final List<String> photos;
   final String ownerId;
   final String ownerName;
+  final String? ownerAvatarUrl;
   final double distanceKm;
   final bool isMatched;
 
@@ -23,6 +24,7 @@ class Dog {
     required this.photos,
     required this.ownerId,
     required this.ownerName,
+    this.ownerAvatarUrl,
     required this.distanceKm,
     this.isMatched = false,
   });
@@ -38,6 +40,7 @@ class Dog {
     List<String>? photos,
     String? ownerId,
     String? ownerName,
+    String? ownerAvatarUrl,
     double? distanceKm,
     bool? isMatched,
   }) => Dog(
@@ -51,6 +54,7 @@ class Dog {
     photos: photos ?? this.photos,
     ownerId: ownerId ?? this.ownerId,
     ownerName: ownerName ?? this.ownerName,
+    ownerAvatarUrl: ownerAvatarUrl ?? this.ownerAvatarUrl,
     distanceKm: distanceKm ?? this.distanceKm,
     isMatched: isMatched ?? this.isMatched,
   );
@@ -78,6 +82,7 @@ class Dog {
       photos: photoList,
       ownerId: json['owner_id'] ?? '',
       ownerName: json['owner_name'] ?? '',
+      ownerAvatarUrl: json['owner_avatar_url'] ?? json['owner']?['avatar_url'],
       distanceKm: json['distance_km']?.toDouble() ?? 0.0,
       isMatched: json['is_matched'] ?? false,
     );
@@ -95,6 +100,7 @@ class Dog {
       'photos': photos,
       'owner_id': ownerId,
       'owner_name': ownerName,
+      'owner_avatar_url': ownerAvatarUrl,
       'distance_km': distanceKm,
       'is_matched': isMatched,
     };
