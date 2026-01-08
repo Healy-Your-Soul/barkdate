@@ -111,12 +111,9 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
                 
                 case ProfileStatus.needsDogProfile:
                   // User exists but needs dog profile
-                  return CreateProfileScreen(
-                    userId: session.user.id,
-                    userName: session.user.userMetadata?['full_name'] ?? session.user.email?.split('@')[0],
-                    userEmail: session.user.email,
-                    editMode: EditMode.createProfile,
-                  );
+                  // Show onboarding screens first for new users (Google sign-in skips to here)
+                  // WelcomeScreen will then navigate to CreateProfileScreen
+                  return const WelcomeScreen();
                 
                 case ProfileStatus.needsFullSetup:
                 default:

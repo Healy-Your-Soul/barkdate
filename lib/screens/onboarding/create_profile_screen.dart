@@ -46,6 +46,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   final _ownerBioController = TextEditingController();
   final _ownerLocationController = TextEditingController();
   // Removed old File-based ownerPhoto; using SelectedImage below
+  String? _relationshipStatus;
   
   // Dog info controllers
   final _dogNameController = TextEditingController();
@@ -136,6 +137,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         _ownerNameController.text = userProfile['name'] ?? '';
         _ownerBioController.text = userProfile['bio'] ?? '';
         _ownerLocationController.text = userProfile['location'] ?? '';
+        if (userProfile['relationship_status'] != null) {
+          _relationshipStatus = userProfile['relationship_status'];
+        }
         
         // Load existing owner avatar
         if (userProfile['avatar_url'] != null && userProfile['avatar_url'].toString().isNotEmpty) {
@@ -364,6 +368,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         'bio': _ownerBioController.text.trim(),
         'location': _ownerLocationController.text.trim(),
         'avatar_url': avatarUrl,
+        'relationship_status': _relationshipStatus,
       });
 
       // Success! Profile created with dog-first approach ✅
@@ -495,6 +500,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         'bio': _ownerBioController.text.trim(),
         'location': _ownerLocationController.text.trim(),
         'avatar_url': avatarUrl,
+        'relationship_status': _relationshipStatus,
       });
 
       if (mounted) {
@@ -716,8 +722,10 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   }
 
   Widget _buildOwnerInfoStep() {
+    // Add keyboard padding so fields stay visible when keyboard opens
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + keyboardHeight + 100),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -830,14 +838,43 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               debugPrint('📍 Location selected: ${place.structuredFormatting.mainText}');
             },
           ),
+          const SizedBox(height: 24),
+
+          // Relationship Status Dropdown
+          DropdownButtonFormField<String>(
+            value: _relationshipStatus,
+            decoration: InputDecoration(
+              labelText: 'Human Connection Status',
+              helperText: 'Optional: Let others know your vibe',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              prefixIcon: const Icon(Icons.favorite_outline),
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.surface,
+            ),
+            items: const [
+              DropdownMenuItem(value: 'Walk Buddy', child: Text('🚶 Walk Buddy')),
+              DropdownMenuItem(value: 'Playdates only', child: Text('🎾 Playdates only')),
+              DropdownMenuItem(value: 'Coffee & Chaos', child: Text('☕ Coffee & Chaos')),
+              DropdownMenuItem(value: 'Single & Dog-Loving', child: Text('🦴 Single & Dog-Loving')),
+              DropdownMenuItem(value: 'Ask my dog', child: Text('🐾 Ask my dog')),
+              DropdownMenuItem(value: 'Just here for the dogs', child: Text('🔒 Just here for the dogs')),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _relationshipStatus = value;
+              });
+            },
+          ),
         ],
       ),
     );
   }
 
   Widget _buildDogInfoStep() {
+    // Add keyboard padding so fields stay visible when keyboard opens
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + keyboardHeight + 100),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1385,10 +1422,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         child: Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: _buildDogInfoStep(),
-              ),
+              // Form step's own SingleChildScrollView handles scrolling with keyboard padding
+              child: _buildDogInfoStep(),
             ),
             Container(
               padding: const EdgeInsets.all(24),
@@ -1541,10 +1576,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         child: Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: isDogEdit ? _buildDogInfoStep() : _buildOwnerInfoStep(),
-              ),
+              // Form step's own SingleChildScrollView handles scrolling with keyboard padding
+              child: isDogEdit ? _buildDogInfoStep() : _buildOwnerInfoStep(),
             ),
             Container(
               padding: const EdgeInsets.all(24),

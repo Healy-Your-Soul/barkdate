@@ -500,7 +500,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             snippet: _currentUserCheckIn!.parkName,
           ),
           icon: icon,
-          zIndex: 10, // Show on top
+          zIndex: 100, // Show on top of all other markers
         ));
       }
     }
@@ -1584,7 +1584,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       children: [
         // Main content container
         Container(
-          height: 100,
+          height: 110, // Increased from 100 to fix overflow
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),

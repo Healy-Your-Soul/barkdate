@@ -291,24 +291,21 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
+                // Remember me and Forgot Password on separate rows to prevent overflow
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: _rememberMe,
-                          onChanged: (value) {
-                            setState(() => _rememberMe = value ?? false);
-                          },
-                          activeColor: Theme.of(context).colorScheme.primary,
-                        ),
-                        Text(
-                          'Remember me',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
+                    Checkbox(
+                      value: _rememberMe,
+                      onChanged: (value) {
+                        setState(() => _rememberMe = value ?? false);
+                      },
+                      activeColor: Theme.of(context).colorScheme.primary,
                     ),
+                    Text(
+                      'Remember me',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const Spacer(),
                     TextButton(
                       onPressed: () {
                         // context.push('/auth/forgot-password');

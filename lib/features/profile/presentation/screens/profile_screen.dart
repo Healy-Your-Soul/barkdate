@@ -144,8 +144,11 @@ class ProfileScreen extends ConsumerWidget {
                                         style: AppTypography.h3().copyWith(fontSize: 18),
                                       ),
                                       Text(
-                                        'Human',
-                                        style: AppTypography.bodySmall().copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                                        profile['relationship_status'] ?? 'Human',
+                                        style: AppTypography.bodySmall().copyWith(
+                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
                                     ],
                                   ),

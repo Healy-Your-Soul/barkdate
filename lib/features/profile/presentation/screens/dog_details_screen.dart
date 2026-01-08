@@ -27,6 +27,7 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
   String? _friendshipStatus; // null, 'pending', 'accepted', 'declined'
   String? _friendshipId;
   String? _myDogId;
+  Map<String, dynamic>? _ownerProfile;
 
   @override
   void initState() {
@@ -59,6 +60,14 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
         _friendshipStatus = friendship?['status'];
         _friendshipId = friendship?['id'];
         _isBarked = _friendshipStatus != null;
+      });
+    }
+
+    // Load owner profile to get relationship status
+    final ownerProfile = await BarkDateUserService.getUserProfile(widget.dog.ownerId);
+    if (mounted && ownerProfile != null) {
+      setState(() {
+        _ownerProfile = ownerProfile;
       });
     }
   }
@@ -406,6 +415,23 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('My human ${widget.dog.ownerName}', style: AppTypography.h3().copyWith(fontSize: 16)),
+                                if (_ownerProfile != null && _ownerProfile!['relationship_status'] != null)
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.2)),
+                                    ),
+                                    child: Text(
+                                      _ownerProfile!['relationship_status'],
+                                      style: AppTypography.labelSmall().copyWith(
+                                        color: Theme.of(context).colorScheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
                                 Text('${widget.dog.age} years barking together', style: AppTypography.bodySmall().copyWith(color: Colors.grey[600])),
                               ],
                             ),
