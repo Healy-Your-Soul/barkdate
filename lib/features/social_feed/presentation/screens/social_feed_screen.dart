@@ -253,30 +253,33 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Dog avatar + name
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 14,
-                        backgroundColor: Colors.grey[200],
-                        backgroundImage: post.userPhoto.isNotEmpty && !post.userPhoto.contains('placeholder')
-                            ? NetworkImage(post.userPhoto)
-                            : null,
-                        child: post.userPhoto.isEmpty || post.userPhoto.contains('placeholder')
-                            ? Icon(Icons.pets, size: 14, color: Colors.grey[500])
-                            : null,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          post.dogName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                  GestureDetector(
+                    onTap: post.dogId != null ? () => _navigateToDogProfile(post.dogId!) : null,
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundColor: Colors.grey[200],
+                          backgroundImage: post.userPhoto.isNotEmpty && !post.userPhoto.contains('placeholder')
+                              ? NetworkImage(post.userPhoto)
+                              : null,
+                          child: post.userPhoto.isEmpty || post.userPhoto.contains('placeholder')
+                              ? Icon(Icons.pets, size: 14, color: Colors.grey[500])
+                              : null,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            post.dogName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   
                   // Caption
@@ -1878,6 +1881,30 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
     }
   }
 
+  /// Navigate to dog profile
+  Future<void> _navigateToDogProfile(String dogId) async {
+    try {
+      // Fetch dog data and navigate
+      final dogData = await SupabaseConfig.client
+          .from('dogs')
+          .select('*, user:users(name, avatar_url)')
+          .eq('id', dogId)
+          .single();
+      
+      if (mounted) {
+        final dog = Dog.fromJson(dogData);
+        context.push('/dog/${dog.id}', extra: dog);
+      }
+    } catch (e) {
+      debugPrint('Error navigating to dog profile: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load dog profile')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final post = widget.post;
@@ -1921,43 +1948,48 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Post header
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 22,
-                            backgroundColor: Colors.grey[200],
-                            backgroundImage: post.userPhoto.isNotEmpty
-                                ? NetworkImage(post.userPhoto)
-                                : null,
-                            child: post.userPhoto.isEmpty
-                                ? Icon(Icons.pets, color: Colors.grey[500])
-                                : null,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  post.dogName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 16,
+                      // Post header
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            GestureDetector(
+                              onTap: post.dogId != null ? () => _navigateToDogProfile(post.dogId!) : null,
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 22,
+                                    backgroundColor: Colors.grey[200],
+                                    backgroundImage: post.userPhoto.isNotEmpty
+                                        ? NetworkImage(post.userPhoto)
+                                        : null,
+                                    child: post.userPhoto.isEmpty
+                                        ? Icon(Icons.pets, color: Colors.grey[500])
+                                        : null,
                                   ),
-                                ),
-                                Text(
-                                  'with ${post.userName}',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 13,
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        post.dogName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      Text(
+                                        'with ${post.userName}',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
                           IconButton(
                             icon: Icon(Icons.close, color: Colors.grey[600]),
                             onPressed: () => Navigator.pop(context),
@@ -2147,6 +2179,7 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
     final text = comment['text'] as String? ?? comment['content'] as String? ?? '';
     final createdAt = comment['created_at'] as String?;
     final dogPhoto = dogData?['main_photo_url'] as String? ?? userData?['avatar_url'] as String?;
+    final dogId = dogData?['id'] as String?; // Extract dog ID
     
     String timeAgo = '';
     if (createdAt != null) {
@@ -2164,27 +2197,33 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: Colors.grey[200],
-            backgroundImage: dogPhoto != null ? NetworkImage(dogPhoto) : null,
-            child: dogPhoto == null ? Icon(Icons.pets, size: 14, color: Colors.grey[500]) : null,
+          GestureDetector(
+            onTap: dogId != null ? () => _navigateToDogProfile(dogId) : null,
+            child: CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.grey[200],
+              backgroundImage: dogPhoto != null ? NetworkImage(dogPhoto) : null,
+              child: dogPhoto == null ? Icon(Icons.pets, size: 14, color: Colors.grey[500]) : null,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                RichText(
-                  text: TextSpan(
-                    style: TextStyle(color: Colors.grey[800], fontSize: 14),
-                    children: [
-                      TextSpan(
-                        text: '$dogName ',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      TextSpan(text: text),
-                    ],
+                GestureDetector(
+                  onTap: dogId != null ? () => _navigateToDogProfile(dogId) : null,
+                  child: RichText(
+                    text: TextSpan(
+                      style: TextStyle(color: Colors.grey[800], fontSize: 14),
+                      children: [
+                        TextSpan(
+                          text: '$dogName ',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        TextSpan(text: text),
+                      ],
+                    ),
                   ),
                 ),
                 if (timeAgo.isNotEmpty)

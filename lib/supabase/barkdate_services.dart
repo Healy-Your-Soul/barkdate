@@ -818,7 +818,7 @@ class BarkDateSocialService {
         .select('''
           *,
           user:users(name, avatar_url),
-          dog:dogs(name, breed, main_photo_url)
+          dog:dogs(id, name, breed, main_photo_url)
         ''')
         .eq('is_public', true)
         .order('created_at', ascending: false)
@@ -881,7 +881,7 @@ class BarkDateSocialService {
       if (userId != null) {
         final dogs = await SupabaseConfig.client
             .from('dogs')
-            .select('name, main_photo_url')
+            .select('id, name, main_photo_url')
             .eq('user_id', userId)
             .limit(1);
         

@@ -14,6 +14,10 @@ import 'package:intl/intl.dart';
 import 'package:barkdate/models/event.dart';
 import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
+import 'dart:async';
+import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/services/dog_friendship_service.dart';
+import 'package:barkdate/models/dog.dart';
 
 class FeedFeatureScreen extends ConsumerWidget {
   const FeedFeatureScreen({super.key});
@@ -967,14 +971,18 @@ class _NearbyDogsToggle extends ConsumerWidget {
 }
 
 /// Search modal with filter tabs (All, Friends, Nearby, New)
-class _PackSearchModal extends StatefulWidget {
+class _PackSearchModal extends ConsumerStatefulWidget {
   @override
-  State<_PackSearchModal> createState() => _PackSearchModalState();
+  ConsumerState<_PackSearchModal> createState() => _PackSearchModalState();
 }
 
-class _PackSearchModalState extends State<_PackSearchModal> with SingleTickerProviderStateMixin {
+class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
+  Timer? _debounceTimer;
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _isLoading = false;
+  String? _currentUserId;
   
   final List<Map<String, dynamic>> _tabs = [
     {'label': 'All', 'icon': Icons.pets},
@@ -987,13 +995,120 @@ class _PackSearchModalState extends State<_PackSearchModal> with SingleTickerPro
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController.addListener(_onTabChanged);
+    _currentUserId = SupabaseConfig.auth.currentUser?.id;
+    
+    // Initial search if desired, or just wait for input
+  }
+
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) return;
+    // Re-run search with new category
+    if (_searchController.text.isNotEmpty) {
+      _performSearch(_searchController.text);
+    } else {
+      setState(() {
+        _searchResults = [];
+      });
+    }
   }
   
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _searchController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _performSearch(String query) async {
+    if (query.isEmpty) {
+      if (mounted) setState(() => _searchResults = []);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    
+    // Cancel previous debounce if called directly (though usually called via debounce)
+    
+    try {
+      final categoryIndex = _tabController.index;
+      List<Map<String, dynamic>> results = [];
+      
+      switch (categoryIndex) {
+        case 0: // All Dogs
+          final response = await SupabaseConfig.client
+              .from('dogs')
+              .select('*, users:user_id(name, avatar_url)')
+              .ilike('name', '%$query%')
+              .order('name')
+              .limit(20);
+          results = List<Map<String, dynamic>>.from(response);
+          break;
+          
+        case 1: // Friends
+             // Get user's first dog to find friends
+            final userDogs = await BarkDateUserService.getUserDogs(_currentUserId ?? '');
+            if (userDogs.isEmpty) break;
+            
+            final myDogId = userDogs.first['id'];
+            final friends = await DogFriendshipService.getFriends(myDogId);
+            
+            // Filter locally
+            results = friends.where((f) {
+              final friendDog = f['friend_dog']['id'] == myDogId ? f['dog'] : f['friend_dog'];
+              final name = friendDog['name'].toString().toLowerCase();
+              return name.contains(query.toLowerCase());
+            }).map((f) {
+               // Normalize to dog object structure
+               return f['friend_dog']['id'] == myDogId ? f['dog'] : f['friend_dog'];
+            }).cast<Map<String, dynamic>>().toList();
+          break;
+          
+        case 2: // Nearby
+          // Search nearby then filter locally
+          final nearby = await BarkDateMatchService.getNearbyDogs(
+             _currentUserId ?? '',
+             limit: 50,
+             radiusKm: 50, // Wider search for explicit nearby search
+          );
+          results = nearby.where((dog) {
+            final name = dog['name'].toString().toLowerCase();
+            return name.contains(query.toLowerCase());
+          }).toList();
+          break;
+          
+        case 3: // New
+           final response = await SupabaseConfig.client
+              .from('dogs')
+              .select('*, users:user_id(name, avatar_url)')
+              .order('created_at', ascending: false)
+              .ilike('name', '%$query%')
+              .limit(20);
+          results = List<Map<String, dynamic>>.from(response);
+          break;
+      }
+      
+      if (mounted) {
+        setState(() {
+          _searchResults = results;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error searching dogs: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _onSearchChanged(String value) {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _performSearch(value);
+    });
   }
 
   @override
@@ -1034,10 +1149,7 @@ class _PackSearchModalState extends State<_PackSearchModal> with SingleTickerPro
                 ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              onChanged: (value) {
-                // TODO: Trigger search
-                setState(() {});
-              },
+              onChanged: _onSearchChanged,
             ),
           ),
           const SizedBox(height: 12),
@@ -1112,20 +1224,66 @@ class _PackSearchModalState extends State<_PackSearchModal> with SingleTickerPro
     }
     
     // TODO: Implement actual search results
-    return ListView(
+    if (_isLoading) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const DogLoadingWidget(size: 80),
+            const SizedBox(height: 16),
+            Text(
+              'Fetching pups...',
+              style: AppTypography.bodyMedium().copyWith(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    if (_searchResults.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+             Icon(Icons.search_off, size: 48, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            Text(
+              'No dogs found for "$query"',
+              style: AppTypography.bodyMedium().copyWith(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
       controller: controller,
       padding: const EdgeInsets.all(16),
-      children: [
-        Text('Results for "$query" in $category', style: AppTypography.labelMedium()),
-        const SizedBox(height: 16),
-        // Placeholder for search results
-        Center(
-          child: Text(
-            'Searching...',
-            style: AppTypography.bodyMedium().copyWith(color: Colors.grey),
+      itemCount: _searchResults.length + 1, // +1 for header
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Text('Found ${_searchResults.length} matches', style: AppTypography.labelMedium()),
+          );
+        }
+        
+        final dog = _searchResults[index - 1];
+        // Ensure photos list is valid for DogCard
+        if (dog['photos'] == null && dog['main_photo_url'] != null) {
+          dog['photos'] = [dog['main_photo_url']];
+        }
+        
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: DogCard(
+            dog: Dog.fromJson(dog),
+            onTap: () => context.push('/dog-details', extra: Dog.fromJson(dog)),
+            onBarkPressed: () {}, // Optional inside search
+            onPlaydatePressed: () => context.push('/create-playdate', extra: Dog.fromJson(dog)),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
