@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/features/profile/presentation/screens/dog_details_screen.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -148,6 +149,55 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/achievements',
         builder: (context, state) => const AchievementsScreen(),
+      ),
+      GoRoute(
+        path: '/dog/:id',
+        builder: (context, state) {
+          final dog = state.extra as Dog?;
+          final dogId = state.pathParameters['id'];
+
+          if (dog != null) {
+            return DogDetailsScreen(dog: dog);
+          }
+
+          if (dogId == null) {
+            return const Scaffold(
+              body: Center(child: Text('Dog not found')),
+            );
+          }
+
+          // Fallback fetch for deep links / refresh
+          return Scaffold(
+            body: FutureBuilder<Map<String, dynamic>>(
+              future: SupabaseConfig.client
+                  .from('dogs')
+                  .select('*, users:user_id(*)') // Fetch owner data too
+                  .eq('id', dogId)
+                  .single(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                
+                if (snapshot.hasError || !snapshot.hasData) {
+                  return const Center(child: Text('Error loading dog profile')); 
+                }
+
+                // Parse the dog data
+                // Note: The 'users' join returns a standard map structure that Dog.fromJson handles
+                try {
+                  final dogData = snapshot.data!;
+                  // Ensure we map the joined user data correctly for Dog.fromJson if needed
+                  // But Dog.fromJson checks 'users' key already.
+                  final fetchedDog = Dog.fromJson(dogData);
+                  return DogDetailsScreen(dog: fetchedDog);
+                } catch (e) {
+                  return Center(child: Text('Error parsing dog data: $e'));
+                }
+              },
+            ),
+          );
+        },
       ),
       GoRoute(
         path: '/dog-details',
