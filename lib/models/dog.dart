@@ -59,17 +59,25 @@ class Dog {
     isMatched: isMatched ?? this.isMatched,
   );
 
-  factory Dog.fromJson(Map<String, dynamic> json) {
+    factory Dog.fromJson(Map<String, dynamic> json) {
     // Handle photos mapping from various possible backend formats
     List<String> photoList = [];
     if (json['photos'] != null) {
       photoList = List<String>.from(json['photos']);
+    } else if (json['photo_urls'] != null) {
+      photoList = List<String>.from(json['photo_urls']);
     } else if (json['main_photo_url'] != null) {
       photoList.add(json['main_photo_url']);
       if (json['extra_photo_urls'] != null) {
         photoList.addAll(List<String>.from(json['extra_photo_urls']));
       }
     }
+
+    // Handle owner data from various formats (RPC vs direct query)
+    final ownerData = json['owner'] ?? json['users'];
+    final ownerId = json['owner_id'] ?? json['user_id'] ?? ownerData?['id'] ?? '';
+    final ownerName = json['owner_name'] ?? ownerData?['name'] ?? 'Unknown';
+    final ownerAvatar = json['owner_avatar_url'] ?? ownerData?['avatar_url'];
 
     return Dog(
       id: json['id'] ?? '',
@@ -80,9 +88,9 @@ class Dog {
       gender: json['gender'] ?? '',
       bio: json['bio'] ?? '',
       photos: photoList,
-      ownerId: json['owner_id'] ?? '',
-      ownerName: json['owner_name'] ?? '',
-      ownerAvatarUrl: json['owner_avatar_url'] ?? json['owner']?['avatar_url'],
+      ownerId: ownerId,
+      ownerName: ownerName,
+      ownerAvatarUrl: ownerAvatar,
       distanceKm: json['distance_km']?.toDouble() ?? 0.0,
       isMatched: json['is_matched'] ?? false,
     );

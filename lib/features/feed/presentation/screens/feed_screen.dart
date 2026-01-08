@@ -1083,8 +1083,8 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
            final response = await SupabaseConfig.client
               .from('dogs')
               .select('*, users:user_id(name, avatar_url)')
-              .order('created_at', ascending: false)
               .ilike('name', '%$query%')
+              .order('created_at', ascending: false)
               .limit(20);
           results = List<Map<String, dynamic>>.from(response);
           break;
