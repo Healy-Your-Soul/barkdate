@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Dreamflow</string>
+	<string>Bark!</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -26,6 +26,14 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>BarkDate needs camera access to take photos of your dog.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>BarkDate needs your location to find dogs and parks near you, even in the background.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>BarkDate needs your location to find dogs and parks near you.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>BarkDate needs photo library access to select photos of your dog.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -45,13 +53,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>BarkDate needs your location to find dogs and parks near you.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>BarkDate needs your location to find dogs and parks near you, even in the background.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>BarkDate needs camera access to take photos of your dog.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>BarkDate needs photo library access to select photos of your dog.</string>
 </dict>
 </plist>
