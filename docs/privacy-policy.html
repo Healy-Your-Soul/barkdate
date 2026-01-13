@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,85 +13,269 @@
             padding: 40px 20px;
             line-height: 1.6;
             color: #333;
+            background: #fafafa;
         }
-        h1 { color: #F8B363; }
-        h2 { color: #555; margin-top: 30px; }
-        .last-updated { color: #888; font-size: 14px; }
-        a { color: #F8B363; }
+
+        h1 {
+            color: #F8B363;
+        }
+
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            border-bottom: 2px solid #F8B363;
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            color: #666;
+        }
+
+        .last-updated {
+            color: #888;
+            font-size: 14px;
+        }
+
+        a {
+            color: #F8B363;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background: #F8B363;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
     </style>
 </head>
+
 <body>
     <h1>🐕 Bark! Privacy Policy</h1>
     <p class="last-updated">Last Updated: January 13, 2026</p>
 
     <h2>Introduction</h2>
-    <p>Welcome to Bark! ("we," "our," or "us"). We are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, and protect your data when you use our mobile application.</p>
+    <p>Welcome to Bark! ("we," "our," or "us"). We are committed to protecting your privacy and being transparent about
+        how we collect and use your data. This Privacy Policy explains our data practices when you use our mobile
+        application.</p>
 
-    <h2>Information We Collect</h2>
-    <h3>Information You Provide</h3>
+    <h2>Data We Collect</h2>
+    <p>We collect the following types of data:</p>
+
+    <h3>Contact Information</h3>
+    <table>
+        <tr>
+            <th>Data Type</th>
+            <th>Purpose</th>
+            <th>Linked to You?</th>
+        </tr>
+        <tr>
+            <td><strong>Name</strong></td>
+            <td>Product Personalization, App Functionality</td>
+            <td>Yes</td>
+        </tr>
+        <tr>
+            <td><strong>Email Address</strong></td>
+            <td>App Functionality (authentication)</td>
+            <td>Yes</td>
+        </tr>
+    </table>
+
+    <h3>Location</h3>
+    <table>
+        <tr>
+            <th>Data Type</th>
+            <th>Purpose</th>
+            <th>Linked to You?</th>
+        </tr>
+        <tr>
+            <td><strong>Precise Location</strong></td>
+            <td>App Functionality, Product Personalization, Analytics, Developer Marketing, Third-Party Advertising</td>
+            <td>No</td>
+        </tr>
+    </table>
+    <p>Your location is used to find nearby dogs, parks, and dog-friendly places. You can disable location access in
+        your device settings at any time.</p>
+
+    <h3>User Content</h3>
+    <table>
+        <tr>
+            <th>Data Type</th>
+            <th>Purpose</th>
+            <th>Linked to You?</th>
+        </tr>
+        <tr>
+            <td><strong>Photos or Videos</strong></td>
+            <td>Product Personalization, App Functionality</td>
+            <td>No</td>
+        </tr>
+        <tr>
+            <td><strong>Customer Support</strong></td>
+            <td>App Functionality</td>
+            <td>No</td>
+        </tr>
+    </table>
+
+    <h3>Identifiers</h3>
+    <table>
+        <tr>
+            <th>Data Type</th>
+            <th>Purpose</th>
+            <th>Linked to You?</th>
+        </tr>
+        <tr>
+            <td><strong>User ID</strong></td>
+            <td>App Functionality, Analytics</td>
+            <td>Yes</td>
+        </tr>
+        <tr>
+            <td><strong>Device ID</strong></td>
+            <td>App Functionality, Analytics</td>
+            <td>No</td>
+        </tr>
+    </table>
+
+    <h3>Usage Data</h3>
+    <table>
+        <tr>
+            <th>Data Type</th>
+            <th>Purpose</th>
+            <th>Linked to You?</th>
+        </tr>
+        <tr>
+            <td><strong>Product Interaction</strong></td>
+            <td>Analytics</td>
+            <td>No</td>
+        </tr>
+        <tr>
+            <td><strong>Advertising Data</strong></td>
+            <td>Developer Advertising/Marketing, Third-Party Advertising</td>
+            <td>No</td>
+        </tr>
+        <tr>
+            <td><strong>Other Usage Data</strong></td>
+            <td>Analytics</td>
+            <td>No</td>
+        </tr>
+    </table>
+
+    <h3>Diagnostics</h3>
+    <table>
+        <tr>
+            <th>Data Type</th>
+            <th>Purpose</th>
+            <th>Linked to You?</th>
+        </tr>
+        <tr>
+            <td><strong>Crash Data</strong></td>
+            <td>App Functionality, Analytics</td>
+            <td>No</td>
+        </tr>
+        <tr>
+            <td><strong>Performance Data</strong></td>
+            <td>App Functionality, Analytics</td>
+            <td>No</td>
+        </tr>
+    </table>
+
+    <h2>How We Use Your Data</h2>
     <ul>
-        <li><strong>Account Information:</strong> Name, email address, and profile photo</li>
-        <li><strong>Dog Profile:</strong> Your dog's name, breed, age, photos, and bio</li>
-        <li><strong>Location Data:</strong> Your location to find nearby dogs and parks (only when you grant permission)</li>
-        <li><strong>Messages:</strong> Communications with other users</li>
-        <li><strong>Photos:</strong> Images you upload of your dog</li>
+        <li><strong>App Functionality:</strong> To authenticate you, enable features, prevent fraud, implement security
+            measures, ensure server uptime, minimize app crashes, improve performance, and provide customer support.
+        </li>
+        <li><strong>Product Personalization:</strong> To customize what you see, such as nearby dogs, recommended
+            playdates, and dog-friendly places.</li>
+        <li><strong>Analytics:</strong> To understand how users interact with our app, measure effectiveness of
+            features, and improve our service.</li>
+        <li><strong>Developer's Advertising or Marketing:</strong> To send you relevant promotional content about our
+            services.</li>
+        <li><strong>Third-Party Advertising:</strong> We may share anonymized location and advertising data with
+            advertising partners.</li>
     </ul>
 
-    <h3>Information Collected Automatically</h3>
+    <h2>Data Linked to Your Identity</h2>
+    <div class="highlight">
+        <p>The following data is linked to your identity:</p>
+        <ul>
+            <li>Name</li>
+            <li>Email Address</li>
+            <li>User ID</li>
+        </ul>
+    </div>
+
+    <h2>Data Not Linked to Your Identity</h2>
+    <p>The following data is collected but NOT linked to your identity:</p>
     <ul>
-        <li>Device information (model, operating system)</li>
-        <li>App usage data (features used, time spent)</li>
-        <li>Crash reports and diagnostics</li>
+        <li>Location</li>
+        <li>Photos or Videos</li>
+        <li>Customer Support data</li>
+        <li>Device ID</li>
+        <li>Usage Data (Product Interaction, Advertising Data, Other Usage Data)</li>
+        <li>Diagnostics (Crash Data, Performance Data)</li>
     </ul>
 
-    <h2>How We Use Your Information</h2>
+    <h2>Third-Party Services</h2>
+    <p>We use the following third-party services that may collect data:</p>
     <ul>
-        <li>To provide and improve our services</li>
-        <li>To connect you with other dog owners nearby</li>
-        <li>To facilitate playdates and events</li>
-        <li>To send notifications about messages and friend requests</li>
-        <li>To ensure the safety and security of our community</li>
+        <li><strong>Supabase:</strong> For authentication and data storage</li>
+        <li><strong>Firebase:</strong> For push notifications, crash reporting, and analytics</li>
+        <li><strong>Google Maps:</strong> For location services and maps</li>
     </ul>
 
-    <h2>Data Sharing</h2>
-    <p>We do not sell your personal information. We may share data with:</p>
-    <ul>
-        <li><strong>Other Users:</strong> Your public profile (dog info, photos) is visible to other users</li>
-        <li><strong>Service Providers:</strong> Third parties that help us operate our app (hosting, analytics)</li>
-        <li><strong>Legal Requirements:</strong> When required by law or to protect our rights</li>
-    </ul>
-
-    <h2>Data Storage & Security</h2>
-    <p>Your data is stored securely using industry-standard encryption. We use Supabase and Firebase for data storage and authentication, which comply with modern security standards.</p>
+    <h2>Data Security</h2>
+    <p>We implement industry-standard security measures including encryption in transit (HTTPS/TLS) and at rest. Your
+        data is stored securely on our service providers' infrastructure.</p>
 
     <h2>Your Rights</h2>
     <p>You have the right to:</p>
     <ul>
         <li>Access your personal data</li>
         <li>Correct inaccurate data</li>
-        <li>Delete your account and data</li>
+        <li>Delete your account and associated data</li>
         <li>Opt out of marketing communications</li>
+        <li>Disable location tracking in device settings</li>
         <li>Request a copy of your data</li>
     </ul>
 
-    <h2>Location Data</h2>
-    <p>We only access your location when you explicitly grant permission. You can disable location access in your device settings at any time. Location is used to:</p>
-    <ul>
-        <li>Find dogs and dog-friendly places near you</li>
-        <li>Show your approximate location to potential playdate matches</li>
-    </ul>
+    <h2>Data Retention</h2>
+    <p>We retain your data for as long as your account is active. If you delete your account, we will delete your
+        personal data within 30 days, except where we are required to retain it for legal purposes.</p>
 
     <h2>Children's Privacy</h2>
-    <p>Bark! is not intended for children under 13. We do not knowingly collect information from children under 13.</p>
+    <p>Bark! is not intended for children under 13. We do not knowingly collect information from children under 13. If
+        you believe we have collected data from a child under 13, please contact us immediately.</p>
 
     <h2>Changes to This Policy</h2>
-    <p>We may update this Privacy Policy from time to time. We will notify you of any significant changes through the app or via email.</p>
+    <p>We may update this Privacy Policy from time to time. We will notify you of significant changes through the app or
+        via email. Your continued use of the app after changes constitutes acceptance of the updated policy.</p>
 
     <h2>Contact Us</h2>
-    <p>If you have questions about this Privacy Policy, please contact us at:</p>
+    <p>If you have questions about this Privacy Policy or your data, please contact us:</p>
     <p>Email: <a href="mailto:privacy@barkdateapp.com">privacy@barkdateapp.com</a></p>
 
     <hr style="margin-top: 40px;">
     <p style="font-size: 14px; color: #888;">© 2026 Bark! App. All rights reserved.</p>
 </body>
+
 </html>
