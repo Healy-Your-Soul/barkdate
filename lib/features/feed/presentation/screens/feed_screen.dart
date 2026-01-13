@@ -61,7 +61,18 @@ class FeedFeatureScreen extends ConsumerWidget {
                             onPressed: () => showFeedFilterSheet(context),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.notifications_none),
+                            icon: Consumer(
+                              builder: (context, ref, child) {
+                                final unreadAsync = ref.watch(unreadNotificationCountProvider);
+                                final unreadCount = unreadAsync.value ?? 0;
+                                
+                                return Badge(
+                                  isLabelVisible: unreadCount > 0,
+                                  label: Text('$unreadCount'),
+                                  child: const Icon(Icons.notifications_none),
+                                );
+                              },
+                            ),
                             onPressed: () => context.push('/notifications'),
                           ),
                         ],
@@ -394,7 +405,19 @@ class FeedFeatureScreen extends ConsumerWidget {
             context,
             icon: Icons.notifications_none_outlined,
             label: 'Alerts',
-            value: '2', // Mocked
+            value: null, // Value managed by child builder
+            valueBuilder: (context) => Consumer(
+              builder: (context, ref, _) {
+                 final unreadAsync = ref.watch(unreadNotificationCountProvider);
+                 final statsAsync = ref.watch(userStatsProvider);
+                 // Prefer stream, fallback to specific stats, fallback to 0
+                 final count = unreadAsync.value ?? statsAsync.value?['alerts'] ?? 0;
+                 return Text(
+                  count.toString(),
+                  style: AppTypography.h2().copyWith(fontSize: 24),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -405,14 +428,18 @@ class FeedFeatureScreen extends ConsumerWidget {
     BuildContext context, {
     required IconData icon,
     required String label,
-    required String value,
+    String? value,
+    WidgetBuilder? valueBuilder,
   }) {
     return Column(
       children: [
-        Text(
-          value,
-          style: AppTypography.h2().copyWith(fontSize: 24),
-        ),
+        if (valueBuilder != null)
+          valueBuilder(context)
+        else
+          Text(
+            value ?? '-',
+            style: AppTypography.h2().copyWith(fontSize: 24),
+          ),
         const SizedBox(height: 4),
         Row(
           children: [

@@ -9,17 +9,20 @@ import 'package:barkdate/services/conversation_service.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/notification_manager.dart';
+import 'package:barkdate/features/profile/presentation/providers/profile_provider.dart';
+import 'package:barkdate/features/feed/presentation/providers/feed_provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
-class DogDetailsScreen extends StatefulWidget {
+class DogDetailsScreen extends ConsumerStatefulWidget {
   final Dog dog;
 
   const DogDetailsScreen({super.key, required this.dog});
 
   @override
-  State<DogDetailsScreen> createState() => _DogDetailsScreenState();
+  ConsumerState<DogDetailsScreen> createState() => _DogDetailsScreenState();
 }
 
-class _DogDetailsScreenState extends State<DogDetailsScreen> {
+class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
   late PageController _pageController;
   int _currentPhotoIndex = 0;
   bool _isBarked = false;
@@ -28,6 +31,7 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
   String? _friendshipId;
   String? _myDogId;
   Map<String, dynamic>? _ownerProfile;
+  bool _ownerAvatarError = false;
 
   @override
   void initState() {
@@ -63,7 +67,7 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
       });
     }
 
-    // Load owner profile to get relationship status
+    // Load owner profile to get relationship status or better avatar
     final ownerProfile = await BarkDateUserService.getUserProfile(widget.dog.ownerId);
     if (mounted && ownerProfile != null) {
       setState(() {
@@ -107,6 +111,11 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
               behavior: SnackBarBehavior.floating,
             ),
           );
+          // Auto-refresh stats and lists
+          ref.invalidate(userStatsProvider);
+          ref.invalidate(nearbyDogsProvider);
+          // Also invalidate friend requests in case we are accepting
+          ref.invalidate(pendingFriendRequestsProvider);
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Already friends or error occurred')),
@@ -128,6 +137,10 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
               behavior: SnackBarBehavior.floating,
             ),
           );
+          // Auto-refresh stats and lists
+          ref.invalidate(userStatsProvider);
+          ref.invalidate(userDogsProvider); // In case friend list was cached there
+          ref.invalidate(nearbyDogsProvider);
         }
       }
     } catch (e) {
@@ -190,6 +203,8 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
             backgroundColor: Colors.orange,
           ),
         );
+        // Refresh stats (Barks count might increment if we count sent barks, but mainly for hygiene)
+        ref.invalidate(userStatsProvider);
       }
     } catch (e) {
       debugPrint('Error sending bark poke: $e');
@@ -256,6 +271,10 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final photos = widget.dog.photos.isNotEmpty ? widget.dog.photos : ['https://via.placeholder.com/400'];
+
+    // Determine owner avatar URL
+    // Use profile override if available, otherwise dog's owner info
+    final ownerAvatarUrl = _ownerProfile?['avatar_url'] ?? widget.dog.ownerAvatarUrl;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -405,10 +424,24 @@ class _DogDetailsScreenState extends State<DogDetailsScreen> {
                           children: [
                             CircleAvatar(
                               radius: 24,
-                              backgroundImage: widget.dog.ownerAvatarUrl != null && 
-                                               widget.dog.ownerAvatarUrl!.isNotEmpty
-                                  ? NetworkImage(widget.dog.ownerAvatarUrl!)
+                              backgroundColor: Colors.grey[200],
+                              // Use CachedNetworkImageProvider for better error handling
+                              backgroundImage: (!_ownerAvatarError && ownerAvatarUrl != null && ownerAvatarUrl.toString().isNotEmpty)
+                                  ? CachedNetworkImageProvider(
+                                      ownerAvatarUrl,
+                                      errorListener: (e) {
+                                        if (mounted && !_ownerAvatarError) {
+                                          setState(() => _ownerAvatarError = true);
+                                          debugPrint('Error loading owner avatar: $e');
+                                        }
+                                      },
+                                    )
                                   : NetworkImage('https://i.pravatar.cc/150?u=${widget.dog.ownerId}'),
+                              onBackgroundImageError: (exception, stackTrace) {
+                                if (mounted && !_ownerAvatarError) {
+                                  setState(() => _ownerAvatarError = true);
+                                }
+                              },
                             ),
                             const SizedBox(width: 16),
                             Column(

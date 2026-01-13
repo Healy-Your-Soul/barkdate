@@ -5,9 +5,41 @@ import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/features/auth/presentation/providers/auth_provider.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
+import 'package:barkdate/supabase/notification_service.dart';
+import 'package:barkdate/supabase/supabase_config.dart';
 
 final dogRepositoryProvider = Provider<DogRepository>((ref) {
   return DogRepositoryImpl();
+});
+
+/// Real-time unread notification count
+final unreadNotificationCountProvider = StreamProvider<int>((ref) {
+  final user = SupabaseConfig.auth.currentUser;
+  if (user == null) return Stream.value(0);
+  
+  return NotificationService.streamUserNotifications(user.id)
+      .map((notifications) => notifications.where((n) => n['is_read'] == false).length);
+});
+
+/// Real-time pending friend requests (for the primary dog)
+final pendingFriendRequestsProvider = StreamProvider<List<Map<String, dynamic>>>((ref) async* {
+  final user = SupabaseConfig.auth.currentUser;
+  if (user == null) {
+    yield [];
+    return;
+  }
+  
+  // Get user's dogs to know which dog ID to listen for
+  // We'll use the first dog as primary for now
+  final dogs = await BarkDateUserService.getUserDogs(user.id);
+  if (dogs.isEmpty) {
+    yield [];
+    return;
+  }
+  
+  final primaryDogId = dogs.first['id'];
+  
+  yield* DogFriendshipService.streamPendingBarksReceived(primaryDogId);
 });
 
 final feedFilterProvider = StateProvider<FeedFilter>((ref) => FeedFilter());
@@ -101,7 +133,4 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
   }).toList();
 });
 
-/// Provider for pending friend requests (dogs who want to join your pack)
-final pendingFriendRequestsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-  return await BarkDateFriendService.getPendingFriendRequests();
-});
+

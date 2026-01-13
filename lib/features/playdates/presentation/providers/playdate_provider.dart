@@ -24,11 +24,10 @@ final userPlaydatesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) a
 });
 
 // Messages
-final conversationsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  final repository = ref.watch(messageRepositoryProvider);
+final conversationsProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   final user = SupabaseConfig.auth.currentUser;
-  if (user == null) return [];
-  return await repository.getConversations(user.id);
+  if (user == null) return Stream.value([]);
+  return BarkDateMessageService.streamConversations(user.id);
 });
 
 final mutualMatchesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {

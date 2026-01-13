@@ -4,23 +4,14 @@ import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
-/// Provider for notifications
-final notificationsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-  final user = SupabaseConfig.auth.currentUser;
-  if (user == null) return [];
+import 'package:barkdate/supabase/notification_service.dart';
 
-  try {
-    final data = await SupabaseConfig.client
-        .from('notifications')
-        .select()
-        .eq('user_id', user.id)
-        .order('created_at', ascending: false)
-        .limit(50);
-    return List<Map<String, dynamic>>.from(data);
-  } catch (e) {
-    debugPrint('Error fetching notifications: $e');
-    return [];
-  }
+/// Provider for notifications
+final notificationsProvider = StreamProvider.autoDispose<List<Map<String, dynamic>>>((ref) {
+  final user = SupabaseConfig.auth.currentUser;
+  if (user == null) return Stream.value([]);
+  
+  return NotificationService.streamUserNotifications(user.id);
 });
 
 class NotificationsScreen extends ConsumerWidget {

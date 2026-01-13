@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/notification_manager.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Service for managing dog friendships (barks)
 /// A "bark" is a friend request between dogs
@@ -142,6 +144,47 @@ class DogFriendshipService {
       debugPrint('Error getting pending barks: $e');
       return [];
     }
+  }
+
+  /// Stream pending bark requests for a dog (real-time)
+  static Stream<List<Map<String, dynamic>>> streamPendingBarksReceived(String dogId) {
+    final controller = StreamController<List<Map<String, dynamic>>>.broadcast();
+
+    // Initial fetch
+    getPendingBarksReceived(dogId).then((barks) {
+      if (!controller.isClosed) controller.add(barks);
+    });
+
+    final channel = _supabase
+        .channel('public:dog_friendships_pending_$dogId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'dog_friendships',
+          callback: (payload) {
+            final newRecord = payload.newRecord;
+            final oldRecord = payload.oldRecord;
+            
+            // Refetch if this change involves our dog as the friend (receiver)
+            bool isRelevant = false;
+            
+            if (newRecord.isNotEmpty && newRecord['friend_dog_id'] == dogId) isRelevant = true;
+            if (oldRecord.isNotEmpty && oldRecord['friend_dog_id'] == dogId) isRelevant = true;
+            
+            if (isRelevant) {
+               getPendingBarksReceived(dogId).then((barks) {
+                 if (!controller.isClosed) controller.add(barks);
+               });
+            }
+          },
+        )
+        .subscribe();
+
+    controller.onCancel = () {
+      _supabase.removeChannel(channel);
+    };
+
+    return controller.stream;
   }
 
   /// Get pending bark requests sent by a dog

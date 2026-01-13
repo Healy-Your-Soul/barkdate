@@ -726,6 +726,59 @@ class BarkDateMessageService {
     
     return conversations.values.toList();
   }
+  /// Stream recent conversations (real-time)
+  static Stream<List<Map<String, dynamic>>> streamConversations(String userId) {
+    // Create a broadcast stream controller
+    final controller = StreamController<List<Map<String, dynamic>>>.broadcast();
+    
+    // Initial fetch
+    getConversations(userId).then((conversations) {
+      if (!controller.isClosed) {
+        controller.add(conversations);
+      }
+    });
+
+    // Subscribe to all message changes
+    // Ideally we would filter by user_id here but Supabase Realtime row-level filtering
+    // depends on RLS policies. We'll listen to public 'messages' and filter carefully.
+    final channel = SupabaseConfig.client
+        .channel('public:messages_conversations_$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'messages',
+          callback: (payload) {
+            final newRecord = payload.newRecord;
+            final oldRecord = payload.oldRecord;
+            
+            // Check if modification involves the user
+            bool involvesUser = false;
+            if (newRecord.isNotEmpty) {
+               if (newRecord['sender_id'] == userId || newRecord['receiver_id'] == userId) involvesUser = true;
+            }
+            // For deletes, we might only have oldRecord
+            if (!involvesUser && oldRecord.isNotEmpty) {
+               if (oldRecord['sender_id'] == userId || oldRecord['receiver_id'] == userId) involvesUser = true;
+            }
+
+            if (involvesUser) {
+              // Refresh conversations
+              getConversations(userId).then((conversations) {
+                if (!controller.isClosed) {
+                  controller.add(conversations);
+                }
+              });
+            }
+          },
+        )
+        .subscribe();
+
+    controller.onCancel = () {
+      SupabaseConfig.client.removeChannel(channel);
+    };
+
+    return controller.stream;
+  }
 }
 
 class BarkDatePlaydateService {

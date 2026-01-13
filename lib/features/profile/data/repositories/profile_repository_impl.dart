@@ -2,6 +2,7 @@ import 'package:barkdate/features/profile/domain/repositories/profile_repository
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:flutter/material.dart';
 
 class ProfileRepositoryImpl implements ProfileRepository {
   @override
@@ -19,18 +20,28 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
   @override
   Future<Map<String, int>> getUserStats(String userId) async {
-    // TODO: Implement actual stats fetching from services
-    // For now, returning mock/placeholder stats or basic counts if available
-    // We could add a method to BarkDateUserService to fetch these aggregated stats
-    
-    // Example:
-    // final friendsCount = await BarkDateSocialService.getFriendsCount(userId);
-    // final playdatesCount = await BarkDatePlaydateService.getPlaydatesCount(userId);
-    
+    try {
+      final response = await SupabaseConfig.client.rpc('get_dashboard_stats', params: {
+        'p_user_id': userId,
+      });
+      
+      if (response != null) {
+        return {
+          'friends': response['barks'] as int? ?? 0,
+          'playdates': response['playdates'] as int? ?? 0,
+          'barks': response['barks'] as int? ?? 0, // Barks usually means friends/connections
+          'alerts': response['alerts'] as int? ?? 0,
+        };
+      }
+    } catch (e) {
+      debugPrint('Error fetching user stats: $e');
+    }
+
     return {
       'friends': 0,
       'playdates': 0,
       'barks': 0,
+      'alerts': 0,
     };
   }
 
