@@ -275,6 +275,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
     // Determine owner avatar URL
     // Use profile override if available, otherwise dog's owner info
     final ownerAvatarUrl = _ownerProfile?['avatar_url'] ?? widget.dog.ownerAvatarUrl;
+    final ownerName = _ownerProfile?['name'] ?? widget.dog.ownerName;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -447,7 +448,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('My human ${widget.dog.ownerName}', style: AppTypography.h3().copyWith(fontSize: 16)),
+                                Text('My human $ownerName', style: AppTypography.h3().copyWith(fontSize: 16)),
                                 if (_ownerProfile != null && _ownerProfile!['relationship_status'] != null)
                                   Container(
                                     margin: const EdgeInsets.only(top: 4),
