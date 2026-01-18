@@ -1008,7 +1008,9 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounceTimer;
   List<Map<String, dynamic>> _searchResults = [];
+  List<Map<String, dynamic>> _defaultContent = []; // Auto-loaded content for each tab
   bool _isLoading = false;
+  bool _isLoadingDefault = false;
   String? _currentUserId;
   
   final List<Map<String, dynamic>> _tabs = [
@@ -1025,18 +1027,87 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
     _tabController.addListener(_onTabChanged);
     _currentUserId = SupabaseConfig.auth.currentUser?.id;
     
-    // Initial search if desired, or just wait for input
+    // Auto-load content for the initial tab
+    _loadDefaultContent();
   }
 
   void _onTabChanged() {
     if (_tabController.indexIsChanging) return;
-    // Re-run search with new category
+    // Re-run search with new category OR load default content
     if (_searchController.text.isNotEmpty) {
       _performSearch(_searchController.text);
     } else {
-      setState(() {
-        _searchResults = [];
-      });
+      _loadDefaultContent();
+    }
+  }
+
+  /// Load default content for the current tab (no search required)
+  Future<void> _loadDefaultContent() async {
+    if (_currentUserId == null) return;
+    
+    setState(() => _isLoadingDefault = true);
+    
+    try {
+      final categoryIndex = _tabController.index;
+      List<Map<String, dynamic>> results = [];
+      
+      switch (categoryIndex) {
+        case 0: // All Dogs - show recent/popular dogs
+          final response = await SupabaseConfig.client
+              .from('dogs')
+              .select('*, users:user_id(name, avatar_url)')
+              .neq('user_id', _currentUserId!) // Exclude own dogs
+              .order('created_at', ascending: false)
+              .limit(20);
+          results = List<Map<String, dynamic>>.from(response);
+          break;
+          
+        case 1: // Friends - show ALL friends without search
+          final userDogs = await BarkDateUserService.getUserDogs(_currentUserId!);
+          if (userDogs.isNotEmpty) {
+            final myDogId = userDogs.first['id'];
+            final friends = await DogFriendshipService.getFriends(myDogId);
+            
+            // Map to dog objects
+            results = friends.map((f) {
+              return f['friend_dog']['id'] == myDogId 
+                  ? f['dog'] as Map<String, dynamic>
+                  : f['friend_dog'] as Map<String, dynamic>;
+            }).toList();
+          }
+          break;
+          
+        case 2: // Nearby - show nearby dogs
+          final nearby = await BarkDateMatchService.getNearbyDogs(
+            _currentUserId!,
+            limit: 20,
+            radiusKm: 25,
+          );
+          results = nearby;
+          break;
+          
+        case 3: // New - show newest dogs
+          final response = await SupabaseConfig.client
+              .from('dogs')
+              .select('*, users:user_id(name, avatar_url)')
+              .neq('user_id', _currentUserId!)
+              .order('created_at', ascending: false)
+              .limit(20);
+          results = List<Map<String, dynamic>>.from(response);
+          break;
+      }
+      
+      if (mounted) {
+        setState(() {
+          _defaultContent = results;
+          _isLoadingDefault = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading default content: $e');
+      if (mounted) {
+        setState(() => _isLoadingDefault = false);
+      }
     }
   }
   
@@ -1140,23 +1211,26 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.9,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) => Column(
-        children: [
-          // Handle
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(2),
+    return GestureDetector(
+      // Dismiss keyboard when tapping outside text field
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            // Handle
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
           const SizedBox(height: 8),
           
           // Search field
@@ -1221,32 +1295,98 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
           ),
         ],
       ),
+      ),
     );
   }
   
   Widget _buildSearchResults(ScrollController controller, String category) {
     final query = _searchController.text;
     
+    // Show default content when no search query
     if (query.isEmpty) {
-      return ListView(
+      // Show loading state for default content
+      if (_isLoadingDefault) {
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const DogLoadingWidget(size: 80),
+              const SizedBox(height: 16),
+              Text(
+                'Loading $category...',
+                style: AppTypography.bodyMedium().copyWith(color: Colors.grey),
+              ),
+            ],
+          ),
+        );
+      }
+      
+      // Show empty state if no default content
+      if (_defaultContent.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.pets, size: 48, color: Colors.grey[300]),
+              const SizedBox(height: 12),
+              Text(
+                category == 'Friends' 
+                    ? 'No friends yet. Bark at some dogs!' 
+                    : 'No $category found',
+                style: AppTypography.bodyMedium().copyWith(color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        );
+      }
+      
+      // Show default content list
+      return ListView.builder(
         controller: controller,
         padding: const EdgeInsets.all(16),
-        children: [
-          Text('Recent $category', style: AppTypography.labelMedium()),
-          const SizedBox(height: 24),
-          Center(
-            child: Column(
-              children: [
-                Icon(Icons.pets, size: 48, color: Colors.grey[300]),
-                const SizedBox(height: 12),
-                Text(
-                  'Start typing to search $category...',
-                  style: AppTypography.bodyMedium().copyWith(color: Colors.grey),
-                ),
-              ],
+        itemCount: _defaultContent.length + 1, // +1 for header
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Text('$category (${_defaultContent.length})', style: AppTypography.labelMedium()),
+            );
+          }
+          
+          final dog = _defaultContent[index - 1];
+          // Ensure photos list is valid for DogCard
+          if (dog['photos'] == null && dog['main_photo_url'] != null) {
+            dog['photos'] = [dog['main_photo_url']];
+          }
+          
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: DogCard(
+              dog: Dog.fromJson(dog),
+              onTap: () => context.push('/dog-details', extra: Dog.fromJson(dog)),
+              onBarkPressed: () async {
+                final currentUser = SupabaseConfig.auth.currentUser;
+                if (currentUser == null) return;
+                try {
+                  final userDogs = await BarkDateUserService.getUserDogs(currentUser.id);
+                  if (userDogs.isEmpty) return;
+                  final myDogId = userDogs.first['id'];
+                  final targetDog = Dog.fromJson(dog);
+                  await DogFriendshipService.sendBark(fromDogId: myDogId, toDogId: targetDog.id);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Barked at ${targetDog.name}! 🐕'), backgroundColor: Colors.green),
+                    );
+                  }
+                } catch (e) {
+                  debugPrint('Error: $e');
+                }
+              },
+              onPlaydatePressed: () => context.push('/create-playdate', extra: Dog.fromJson(dog)),
             ),
-          ),
-        ],
+          );
+        },
       );
     }
     
