@@ -165,7 +165,12 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
     // If I am the sender, show receiver. If I am receiver, show sender.
     final otherUser = (senderId == currentUserId) ? receiver : sender;
     
-    final name = otherUser?['name'] ?? 'Unknown User';
+    final userName = otherUser?['name'] ?? 'Unknown User';
+    final dogName = conversation['other_user_dog_name'];
+    // Format as "Username (DogName's human)" if dog name is available
+    final displayName = dogName != null 
+        ? "$userName ($dogName's human)" 
+        : userName;
     final avatarUrl = otherUser?['avatar_url'];
     final content = conversation['content'] ?? '';
     final createdAt = DateTime.parse(conversation['created_at']);
@@ -181,14 +186,12 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
          final targetId = (senderId == currentUserId) ? conversation['receiver_id'] : conversation['sender_id'];
 
          if (matchId != null && targetId != null) {
-         if (matchId != null && targetId != null) {
            context.push('/chat', extra: {
              'matchId': matchId,
              'recipientId': targetId,
-             'recipientName': name,
+             'recipientName': displayName,
              'recipientAvatarUrl': avatarUrl,
            });
-         }
          }
       },
       child: Row(
@@ -208,12 +211,15 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                    Flexible(
+                      child: Text(
+                        displayName,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                       ),
                     ),
                     Text(

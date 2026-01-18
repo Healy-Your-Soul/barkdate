@@ -709,8 +709,8 @@ class BarkDateMessageService {
         .from('messages')
         .select('''
           *,
-          sender:users!messages_sender_id_fkey(name, avatar_url),
-          receiver:users!messages_receiver_id_fkey(name, avatar_url)
+          sender:users!messages_sender_id_fkey(id, name, avatar_url),
+          receiver:users!messages_receiver_id_fkey(id, name, avatar_url)
         ''')
         .or('sender_id.eq.$userId,receiver_id.eq.$userId')
         .order('created_at', ascending: false);
@@ -724,7 +724,35 @@ class BarkDateMessageService {
       }
     }
     
-    return conversations.values.toList();
+    // Now fetch dog names for each conversation participant
+    final conversationsList = conversations.values.toList();
+    for (int i = 0; i < conversationsList.length; i++) {
+      final conv = conversationsList[i];
+      final senderId = conv['sender_id'];
+      final receiverId = conv['receiver_id'];
+      
+      // Get the other user's ID (not our user)
+      final otherUserId = senderId == userId ? receiverId : senderId;
+      
+      // Fetch dog for the other user
+      try {
+        final dogData = await SupabaseConfig.client
+            .from('dogs')
+            .select('name')
+            .eq('user_id', otherUserId)
+            .limit(1)
+            .maybeSingle();
+        
+        if (dogData != null) {
+          // Add dog name to the conversation data
+          conv['other_user_dog_name'] = dogData['name'];
+        }
+      } catch (e) {
+        // Ignore errors fetching dog data
+      }
+    }
+    
+    return conversationsList;
   }
   /// Stream recent conversations (real-time)
   static Stream<List<Map<String, dynamic>>> streamConversations(String userId) {

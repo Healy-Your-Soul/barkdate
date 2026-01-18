@@ -1306,7 +1306,52 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
           child: DogCard(
             dog: Dog.fromJson(dog),
             onTap: () => context.push('/dog-details', extra: Dog.fromJson(dog)),
-            onBarkPressed: () {}, // Optional inside search
+            onBarkPressed: () async {
+              // Implement actual bark functionality
+              final currentUser = SupabaseConfig.auth.currentUser;
+              if (currentUser == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please sign in to bark')),
+                );
+                return;
+              }
+              
+              try {
+                final userDogs = await BarkDateUserService.getUserDogs(currentUser.id);
+                if (userDogs.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please add a dog profile first')),
+                  );
+                  return;
+                }
+                
+                final myDogId = userDogs.first['id'];
+                final targetDog = Dog.fromJson(dog);
+                
+                final success = await DogFriendshipService.sendBark(
+                  fromDogId: myDogId,
+                  toDogId: targetDog.id,
+                );
+                
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success 
+                        ? 'Woof! Barked at ${targetDog.name}! 🐕' 
+                        : 'Already barked at ${targetDog.name}'),
+                      backgroundColor: success ? Colors.green : Colors.orange,
+                    ),
+                  );
+                }
+              } catch (e) {
+                debugPrint('Error sending bark: $e');
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Failed to send bark')),
+                  );
+                }
+              }
+            },
             onPlaydatePressed: () => context.push('/create-playdate', extra: Dog.fromJson(dog)),
           ),
         );

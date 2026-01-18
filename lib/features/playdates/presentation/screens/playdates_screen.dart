@@ -60,12 +60,15 @@ class _PlaydatesScreenState extends ConsumerState<PlaydatesScreen> {
             Expanded(
               child: playdatesAsync.when(
                 data: (playdates) {
-                  // Filter logic
+                  // Filter logic - exclude cancelled from All by default
                   final filteredPlaydates = playdates.where((playdate) {
-                    if (_selectedFilter == 'All') return true;
                     final status = (playdate['status'] as String?)?.toLowerCase() ?? 'pending';
+                    // Always hide cancelled unless explicitly showing Past
+                    if (status == 'cancelled') return false;
+                    if (_selectedFilter == 'All') return true;
                     if (_selectedFilter == 'Pending') return status == 'pending';
                     if (_selectedFilter == 'Upcoming') return status == 'confirmed';
+                    if (_selectedFilter == 'Past') return status == 'completed';
                     return true;
                   }).toList();
 

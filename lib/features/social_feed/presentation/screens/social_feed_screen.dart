@@ -1293,9 +1293,13 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                 ),
                 child: Column(
                   children: [
+                    // Safe area padding for status bar when modal is near top
+                    SizedBox(height: MediaQuery.of(context).viewPadding.top > 0 
+                        ? MediaQuery.of(context).viewPadding.top * 0.5 
+                        : 0),
                     // Header with Cancel, Create Post, and Post button
                     Container(
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
                       child: Row(
                         children: [
                           // Cancel button on left
