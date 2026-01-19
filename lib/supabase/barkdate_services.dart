@@ -819,7 +819,7 @@ class BarkDatePlaydateService {
     return result.first;
   }
 
-  /// Get user's playdates
+  /// Get user's playdates (excludes cancelled)
   static Future<List<Map<String, dynamic>>> getUserPlaydates(String userId) async {
     return await SupabaseConfig.client
         .from('playdates')
@@ -829,6 +829,7 @@ class BarkDatePlaydateService {
           participant:users!playdates_participant_id_fkey(name, avatar_url)
         ''')
         .or('organizer_id.eq.$userId,participant_id.eq.$userId')
+        .neq('status', 'cancelled')
         .order('scheduled_at', ascending: false);
   }
 

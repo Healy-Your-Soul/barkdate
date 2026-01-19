@@ -18,6 +18,7 @@ import 'dart:async';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/models/dog.dart';
+import 'package:barkdate/supabase/bark_playdate_services.dart' hide DogFriendshipService;
 
 class FeedFeatureScreen extends ConsumerWidget {
   const FeedFeatureScreen({super.key});
@@ -562,6 +563,14 @@ class FeedFeatureScreen extends ConsumerWidget {
     final date = DateTime.tryParse(playdate['date_time'] ?? playdate['scheduled_at'] ?? '') ?? DateTime.now();
     final formattedDate = DateFormat('MMM d, h:mm a').format(date);
     final playdateId = playdate['id'] as String?;
+    final status = playdate['status'] as String?;
+    final currentUserId = SupabaseConfig.auth.currentUser?.id;
+    final participantId = playdate['participant_id'] as String?;
+    
+    // Show action buttons if pending and user is the invitee (not organizer)
+    final showActionButtons = status?.toLowerCase() == 'pending' && 
+        currentUserId != null && 
+        participantId == currentUserId;
     
     return GestureDetector(
       onTap: () {
@@ -594,30 +603,125 @@ class FeedFeatureScreen extends ConsumerWidget {
               children: [
                 const Icon(Icons.calendar_today, size: 16, color: Color(0xFF4CAF50)),
                 const SizedBox(width: 8),
-                Text(
-                  formattedDate,
-                  style: AppTypography.bodySmall().copyWith(fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Text(
+                    formattedDate,
+                    style: AppTypography.bodySmall().copyWith(fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
-            const Spacer(),
+            const SizedBox(height: 8),
             Text(
               playdate['location'] ?? 'Unknown Location',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.bodyMedium(),
             ),
-            const SizedBox(height: 4),
-            Text(
-              playdate['status'] ?? 'pending',
-              style: AppTypography.bodySmall().copyWith(
-                color: _getStatusColor(context, playdate['status']),
+            const Spacer(),
+            if (showActionButtons) ...[
+              // Accept/Decline buttons for pending invites
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 28,
+                      child: OutlinedButton(
+                        onPressed: () => _respondToPlaydate(context, playdateId!, false),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text('Decline', style: TextStyle(fontSize: 11)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: SizedBox(
+                      height: 28,
+                      child: ElevatedButton(
+                        onPressed: () => _respondToPlaydate(context, playdateId!, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4CAF50),
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.zero,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text('Accept', style: TextStyle(fontSize: 11)),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
+            ] else ...[
+              Text(
+                status ?? 'pending',
+                style: AppTypography.bodySmall().copyWith(
+                  color: _getStatusColor(context, status),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _respondToPlaydate(BuildContext context, String playdateId, bool accept) async {
+    try {
+      final currentUserId = SupabaseConfig.auth.currentUser?.id;
+      if (currentUserId == null) return;
+
+      // First, find the playdate_request for this playdate where user is the invitee
+      final requests = await SupabaseConfig.client
+          .from('playdate_requests')
+          .select('id')
+          .eq('playdate_id', playdateId)
+          .eq('invitee_id', currentUserId)
+          .eq('status', 'pending');
+
+      if (requests.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No pending request found'), backgroundColor: Colors.orange),
+          );
+        }
+        return;
+      }
+
+      final requestId = requests.first['id'] as String;
+      final response = accept ? 'accepted' : 'declined';
+      
+      final success = await PlaydateRequestService.respondToPlaydateRequest(
+        requestId: requestId,
+        userId: currentUserId,
+        response: response,
+      );
+      
+      if (context.mounted && success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(accept ? '✅ Playdate accepted!' : '❌ Playdate declined'),
+            backgroundColor: accept ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
   
   Color _getStatusColor(BuildContext context, String? status) {
