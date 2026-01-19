@@ -20,6 +20,7 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
   bool _showSuggestChanges = false;
   late Map<String, dynamic> _playdate;
   List<Map<String, dynamic>> _invitedDogs = []; // Invited dogs with status
+  Map<String, dynamic>? _organizerDog; // Organizer's dog
   
   // Controllers for suggesting changes
   final _locationController = TextEditingController();
@@ -38,29 +39,58 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
       _suggestedDateTime = DateTime.tryParse(scheduledAtStr);
     }
     
-    // Fetch invited dogs with their status
-    _fetchInvitedDogs();
+    // Fetch dogs with their status
+    _fetchPlaydateDogs();
   }
   
-  Future<void> _fetchInvitedDogs() async {
+  Future<void> _fetchPlaydateDogs() async {
     final playdateId = _playdate['playdate_id'] ?? _playdate['id'];
     if (playdateId == null) return;
     
     try {
-      // Fetch from playdate_requests to get invited dogs and their statuses
+      // Fetch invited dogs from playdate_requests
       final requests = await SupabaseConfig.client
           .from('playdate_requests')
-          .select('*, invitee_dog:dogs!playdate_requests_invitee_dog_id_fkey(id, name, main_photo_url)')
+          .select('*, invitee_dog:dogs!playdate_requests_invitee_dog_id_fkey(id, name, main_photo_url), requester_dog:dogs!playdate_requests_requester_dog_id_fkey(id, name, main_photo_url)')
           .eq('playdate_id', playdateId);
+      
+      // Fetch organizer's dog from playdate_participants
+      final participants = await SupabaseConfig.client
+          .from('playdate_participants')
+          .select('*, dog:dogs(id, name, main_photo_url)')
+          .eq('playdate_id', playdateId)
+          .eq('is_organizer', true)
+          .limit(1);
       
       if (mounted) {
         setState(() {
           _invitedDogs = List<Map<String, dynamic>>.from(requests);
+          if (participants.isNotEmpty) {
+            _organizerDog = participants[0]['dog'] as Map<String, dynamic>?;
+          }
+          // Fallback: get requester dog from first request
+          if (_organizerDog == null && requests.isNotEmpty) {
+            _organizerDog = requests[0]['requester_dog'] as Map<String, dynamic>?;
+          }
         });
       }
     } catch (e) {
-      debugPrint('Error fetching invited dogs: $e');
+      debugPrint('Error fetching playdate dogs: $e');
     }
+  }
+  
+  List<Widget> _buildOrganizerDogCards() {
+    if (_organizerDog == null) return [];
+    
+    final dogName = _organizerDog!['name'] ?? 'Organizer';
+    final dogPhoto = _organizerDog!['main_photo_url'] as String?;
+    
+    return [
+      Padding(
+        padding: const EdgeInsets.only(right: 16),
+        child: _buildDogStatusCard(dogName, dogPhoto, 'confirmed', isOrganizer: true),
+      ),
+    ];
   }
 
   @override
@@ -301,29 +331,28 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Status Banner
+            // Subtle Status Chip (inline instead of big banner)
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: _getStatusColor(_status).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _getStatusColor(_status).withOpacity(0.3)),
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: Column(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     _getStatusIcon(_status),
                     color: _getStatusColor(_status),
-                    size: 32,
+                    size: 16,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(width: 8),
                   Text(
                     _getStatusDisplayName(_status),
                     style: TextStyle(
                       color: _getStatusColor(_status),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
                     ),
                   ),
                 ],
@@ -342,44 +371,39 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
             const Divider(),
             const SizedBox(height: 16),
 
-            // Invited Dogs with Status Indicators
+            // Dogs Section with better layout
             Text(
-              'Invited Dogs',
+              'Dogs',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
             
-            // Show organizer info first
-            if (organizer != null)
-              _buildParticipantRow(context, 'Organizer', organizer),
-            const SizedBox(height: 16),
-            
-            // Show invited dogs with status badges
-            if (_invitedDogs.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    'Loading invited dogs...',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ),
-              )
-            else
-              Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                children: _invitedDogs.map((request) {
-                  final dog = request['invitee_dog'] as Map<String, dynamic>?;
-                  final status = (request['status'] as String? ?? 'pending').toLowerCase();
-                  final dogName = dog?['name'] ?? 'Unknown';
-                  final dogPhoto = dog?['main_photo_url'] as String?;
+            // All dogs in a nice horizontal scroll
+            SizedBox(
+              height: 120,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  // Organizer's dog first (from participants with is_organizer = true)
+                  ..._buildOrganizerDogCards(),
                   
-                  return _buildDogStatusCard(dogName, dogPhoto, status);
-                }).toList(),
+                  // Then invited dogs
+                  ..._invitedDogs.map((request) {
+                    final dog = request['invitee_dog'] as Map<String, dynamic>?;
+                    final status = (request['status'] as String? ?? 'pending').toLowerCase();
+                    final dogName = dog?['name'] ?? 'Unknown';
+                    final dogPhoto = dog?['main_photo_url'] as String?;
+                    
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: _buildDogStatusCard(dogName, dogPhoto, status, isOrganizer: false),
+                    );
+                  }).toList(),
+                ],
               ),
+            ),
 
             // Action Buttons for Pending Playdates
             if (_isPending) ...[
@@ -675,25 +699,31 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
     }
   }
 
-  Widget _buildDogStatusCard(String dogName, String? photoUrl, String status) {
+  Widget _buildDogStatusCard(String dogName, String? photoUrl, String status, {bool isOrganizer = false}) {
     // Determine status color and icon
     Color statusColor;
     IconData statusIcon;
     
-    switch (status) {
-      case 'accepted':
-      case 'confirmed':
-        statusColor = Colors.green;
-        statusIcon = Icons.check;
-        break;
-      case 'declined':
-      case 'cancelled':
-        statusColor = Colors.red;
-        statusIcon = Icons.close;
-        break;
-      default: // pending
-        statusColor = Colors.orange;
-        statusIcon = Icons.help_outline;
+    if (isOrganizer) {
+      // Organizer gets a special crown badge
+      statusColor = Colors.amber;
+      statusIcon = Icons.star;
+    } else {
+      switch (status) {
+        case 'accepted':
+        case 'confirmed':
+          statusColor = Colors.green;
+          statusIcon = Icons.check;
+          break;
+        case 'declined':
+        case 'cancelled':
+          statusColor = Colors.red;
+          statusIcon = Icons.close;
+          break;
+        default: // pending
+          statusColor = Colors.orange;
+          statusIcon = Icons.help_outline;
+      }
     }
 
     return Column(
@@ -709,6 +739,7 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.grey[200],
+                border: isOrganizer ? Border.all(color: Colors.amber, width: 3) : null,
                 image: photoUrl != null
                     ? DecorationImage(
                         image: NetworkImage(photoUrl),
@@ -742,18 +773,32 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        // Dog Name
+        // Dog Name and Role
         SizedBox(
-          width: 72,
-          child: Text(
-            dogName,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+          width: 80,
+          child: Column(
+            children: [
+              Text(
+                dogName,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (isOrganizer)
+                Text(
+                  'Organizer',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.amber[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+            ],
           ),
         ),
       ],

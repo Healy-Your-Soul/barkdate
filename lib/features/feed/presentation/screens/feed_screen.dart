@@ -572,29 +572,26 @@ class FeedFeatureScreen extends ConsumerWidget {
         currentUserId != null && 
         organizerId != currentUserId;
     
-    // Get participant dogs (from playdate_participants if available)
-    // Fallback to organizer/participant user avatars if no dog data
+    // Get dog photos for display - prioritize invited dogs from requests
+    final requests = playdate['requests'] as List<dynamic>? ?? [];
     final participants = playdate['participants'] as List<dynamic>? ?? [];
     final avatarPhotos = <String>[];
     
-    // First try to get dog photos from participants
-    for (final p in participants) {
-      final dog = p['dog'] as Map<String, dynamic>?;
-      if (dog != null && dog['main_photo_url'] != null) {
-        avatarPhotos.add(dog['main_photo_url'] as String);
+    // First: get invited dogs from playdate_requests (these are the actual invited dogs)
+    for (final req in requests) {
+      final inviteeDog = req['invitee_dog'] as Map<String, dynamic>?;
+      if (inviteeDog != null && inviteeDog['main_photo_url'] != null) {
+        avatarPhotos.add(inviteeDog['main_photo_url'] as String);
       }
     }
     
-    // Fallback: use user avatars if no dog photos
+    // Second: get dog photos from playdate_participants 
     if (avatarPhotos.isEmpty) {
-      final organizer = playdate['organizer'] as Map<String, dynamic>?;
-      final participant = playdate['participant'] as Map<String, dynamic>?;
-      
-      if (organizer != null && organizer['avatar_url'] != null) {
-        avatarPhotos.add(organizer['avatar_url'] as String);
-      }
-      if (participant != null && participant['avatar_url'] != null) {
-        avatarPhotos.add(participant['avatar_url'] as String);
+      for (final p in participants) {
+        final dog = p['dog'] as Map<String, dynamic>?;
+        if (dog != null && dog['main_photo_url'] != null) {
+          avatarPhotos.add(dog['main_photo_url'] as String);
+        }
       }
     }
     

@@ -825,14 +825,21 @@ class BarkDatePlaydateService {
         .from('playdates')
         .select('''
           *,
-          organizer:users!playdates_organizer_id_fkey(name, avatar_url),
-          participant:users!playdates_participant_id_fkey(name, avatar_url),
+          organizer:users!playdates_organizer_id_fkey(id, name, avatar_url),
+          participant:users!playdates_participant_id_fkey(id, name, avatar_url),
           participants:playdate_participants(
             id,
             user_id,
             dog_id,
             is_organizer,
+            status,
             dog:dogs(id, name, main_photo_url)
+          ),
+          requests:playdate_requests(
+            id,
+            status,
+            invitee_dog:dogs!playdate_requests_invitee_dog_id_fkey(id, name, main_photo_url),
+            requester_dog:dogs!playdate_requests_requester_dog_id_fkey(id, name, main_photo_url)
           )
         ''')
         .or('organizer_id.eq.$userId,participant_id.eq.$userId')
