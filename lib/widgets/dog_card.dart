@@ -377,7 +377,7 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
               ),
             ),
             child: Text(
-              'Add Pack',
+              'Add to Pack',
               style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 fontSize: 10,
