@@ -262,7 +262,7 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Bark button with animation
+        // Bark button with animation and ink splash
         AnimatedBuilder(
           animation: _barkScaleAnimation,
           builder: (context, child) => Transform.scale(
@@ -270,38 +270,24 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
             child: SizedBox(
               width: 80,
               height: 32,
-              child: ElevatedButton(
-                onPressed: _hasBarked ? null : _handleBarkPressed,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _hasBarked 
-                      ? const Color(0xFFE89E5F) // Orange when barked
-                      : const Color(0xFF4CAF50), // Green normally
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  disabledBackgroundColor: const Color(0xFFE89E5F),
-                  disabledForegroundColor: Colors.white,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_hasBarked) ...[
-                      const Text('🐾', style: TextStyle(fontSize: 10)),
-                      const SizedBox(width: 2),
-                    ],
-                    Text(
+              child: Material(
+                color: const Color(0xFF4CAF50), // Always green
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  onTap: _hasBarked ? null : _handleBarkPressed,
+                  borderRadius: BorderRadius.circular(16),
+                  splashColor: Colors.white.withOpacity(0.4),
+                  highlightColor: Colors.white.withOpacity(0.2),
+                  child: Center(
+                    child: Text(
                       _hasBarked ? 'Barked!' : 'Bark',
                       style: theme.textTheme.labelSmall?.copyWith(
                         fontWeight: FontWeight.w600,
-                        fontSize: _hasBarked ? 9 : 11,
+                        fontSize: 11,
                         color: Colors.white,
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

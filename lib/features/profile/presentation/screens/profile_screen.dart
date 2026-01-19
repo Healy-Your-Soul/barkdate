@@ -537,10 +537,15 @@ class ProfileScreen extends ConsumerWidget {
                 icon: const Icon(Icons.more_vert, size: 24, color: Colors.grey),
                 onSelected: (value) async {
                   if (value == 'edit') {
-                    context.push('/create-profile', extra: {
+                    final result = await context.push<bool>('/create-profile', extra: {
                       'editMode': EditMode.editDog,
                       'dogId': dog.id,
                     });
+                    // Refresh dog list when returning from edit
+                    if (result == true) {
+                      ref.invalidate(userDogsProvider);
+                      ref.invalidate(userProfileProvider);
+                    }
                   } else if (value == 'delete') {
                     // Show confirmation dialog
                     final confirm = await showDialog<bool>(

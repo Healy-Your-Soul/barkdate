@@ -409,7 +409,7 @@ class FeedFeatureScreen extends ConsumerWidget {
             icon: Icons.notifications_none_outlined,
             label: 'Alerts',
             value: null, // Value managed by child builder
-            onTap: () => context.go('/notifications'),
+            onTap: () => context.push('/notifications'),
             valueBuilder: (context) => Consumer(
               builder: (context, ref, _) {
                  final unreadAsync = ref.watch(unreadNotificationCountProvider);
