@@ -2,6 +2,7 @@ import 'package:barkdate/features/playdates/presentation/screens/map_picker_scre
 import 'package:barkdate/features/playdates/presentation/widgets/dog_search_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/widgets/location_picker_field.dart';
@@ -245,6 +246,9 @@ class _CreatePlaydateScreenState extends ConsumerState<CreatePlaydateScreen> {
             backgroundColor: Colors.green,
           ),
         );
+        // Refresh the playdates list in feed
+        ref.invalidate(userPlaydatesProvider);
+        
         context.pop();
       }
     } catch (e) {

@@ -19,6 +19,7 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
   bool _isLoading = false;
   bool _showSuggestChanges = false;
   late Map<String, dynamic> _playdate;
+  List<Map<String, dynamic>> _invitedDogs = []; // Invited dogs with status
   
   // Controllers for suggesting changes
   final _locationController = TextEditingController();
@@ -35,6 +36,30 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
     final scheduledAtStr = _playdate['scheduled_at'] ?? _playdate['date_time'];
     if (scheduledAtStr != null) {
       _suggestedDateTime = DateTime.tryParse(scheduledAtStr);
+    }
+    
+    // Fetch invited dogs with their status
+    _fetchInvitedDogs();
+  }
+  
+  Future<void> _fetchInvitedDogs() async {
+    final playdateId = _playdate['playdate_id'] ?? _playdate['id'];
+    if (playdateId == null) return;
+    
+    try {
+      // Fetch from playdate_requests to get invited dogs and their statuses
+      final requests = await SupabaseConfig.client
+          .from('playdate_requests')
+          .select('*, invitee_dog:dogs!playdate_requests_invitee_dog_id_fkey(id, name, main_photo_url)')
+          .eq('playdate_id', playdateId);
+      
+      if (mounted) {
+        setState(() {
+          _invitedDogs = List<Map<String, dynamic>>.from(requests);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching invited dogs: $e');
     }
   }
 
@@ -317,19 +342,44 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
             const Divider(),
             const SizedBox(height: 16),
 
-            // Participants
+            // Invited Dogs with Status Indicators
             Text(
-              'Participants',
+              'Invited Dogs',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
+            
+            // Show organizer info first
             if (organizer != null)
               _buildParticipantRow(context, 'Organizer', organizer),
             const SizedBox(height: 16),
-            if (participant != null)
-              _buildParticipantRow(context, 'Participant', participant),
+            
+            // Show invited dogs with status badges
+            if (_invitedDogs.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Loading invited dogs...',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+              )
+            else
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: _invitedDogs.map((request) {
+                  final dog = request['invitee_dog'] as Map<String, dynamic>?;
+                  final status = (request['status'] as String? ?? 'pending').toLowerCase();
+                  final dogName = dog?['name'] ?? 'Unknown';
+                  final dogPhoto = dog?['main_photo_url'] as String?;
+                  
+                  return _buildDogStatusCard(dogName, dogPhoto, status);
+                }).toList(),
+              ),
 
             // Action Buttons for Pending Playdates
             if (_isPending) ...[
@@ -623,5 +673,90 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
       default:
         return Icons.help;
     }
+  }
+
+  Widget _buildDogStatusCard(String dogName, String? photoUrl, String status) {
+    // Determine status color and icon
+    Color statusColor;
+    IconData statusIcon;
+    
+    switch (status) {
+      case 'accepted':
+      case 'confirmed':
+        statusColor = Colors.green;
+        statusIcon = Icons.check;
+        break;
+      case 'declined':
+      case 'cancelled':
+        statusColor = Colors.red;
+        statusIcon = Icons.close;
+        break;
+      default: // pending
+        statusColor = Colors.orange;
+        statusIcon = Icons.help_outline;
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Dog Avatar with Status Badge
+        Stack(
+          children: [
+            // Dog Photo
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.grey[200],
+                image: photoUrl != null
+                    ? DecorationImage(
+                        image: NetworkImage(photoUrl),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: photoUrl == null
+                  ? const Icon(Icons.pets, size: 32, color: Colors.grey)
+                  : null,
+            ),
+            // Status Badge
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: statusColor,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: Icon(
+                  statusIcon,
+                  size: 14,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Dog Name
+        SizedBox(
+          width: 72,
+          child: Text(
+            dogName,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
