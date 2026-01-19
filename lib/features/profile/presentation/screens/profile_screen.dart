@@ -12,6 +12,7 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/dog_sharing_service.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/screens/help_screen.dart';
+import 'package:barkdate/services/dog_friendship_service.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -703,12 +704,19 @@ class ProfileScreen extends ConsumerWidget {
                   const Divider(height: 1),
                   const SizedBox(height: 24),
                   
-                  // 3. Stats Row
+                  // 3. Stats Row with dynamic pack count
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _buildAirbnbStat('6', 'Playdates'),
-                      _buildAirbnbStat('2', 'Barks'), // Pack friends count
+                      // Dogs in Pack - fetches friend count dynamically
+                      FutureBuilder<List<Map<String, dynamic>>>(
+                        future: DogFriendshipService.getFriends(dog.id),
+                        builder: (context, snapshot) {
+                          final count = snapshot.data?.length ?? 0;
+                          return _buildAirbnbStat('$count', 'Pack');
+                        },
+                      ),
                       _buildAirbnbStat('${dog.age}', 'Years'),
                     ],
                   ),
