@@ -629,93 +629,135 @@ class FeedFeatureScreen extends ConsumerWidget {
   Widget _buildFriendRequestCard(BuildContext context, WidgetRef ref, Map<String, dynamic> request) {
     final requester = request['requester'] as Map<String, dynamic>?;
     final dogName = requester?['name'] ?? 'Unknown Dog';
-    final dogBreed = requester?['breed'] ?? '';
     final dogPhoto = requester?['main_photo_url'] as String?;
     final ownerData = requester?['user'] as Map<String, dynamic>?;
     final ownerName = ownerData?['name'] ?? 'Unknown';
+    final ownerAvatar = ownerData?['avatar_url'] as String?;
     final requestId = request['id'] as String;
     
     return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.orange[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange[200]!),
-      ),
-      child: Row(
-        children: [
-          // Dog photo
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: Colors.orange[100],
-            backgroundImage: dogPhoto != null ? NetworkImage(dogPhoto) : null,
-            child: dogPhoto == null
-                ? Icon(Icons.pets, color: Colors.orange[700], size: 20)
-                : null,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-          const SizedBox(width: 12),
-          // Dog info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      child: Column(
+        children: [
+          // Stacked avatars (dog large + human small overlapping)
+          SizedBox(
+            width: 72,
+            height: 72,
+            child: Stack(
+              clipBehavior: Clip.none,
               children: [
-                Text(
-                  dogName,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                // Main dog photo (large)
+                CircleAvatar(
+                  radius: 32,
+                  backgroundColor: Colors.grey[200],
+                  backgroundImage: dogPhoto != null ? NetworkImage(dogPhoto) : null,
+                  child: dogPhoto == null
+                      ? Icon(Icons.pets, color: Colors.grey[400], size: 28)
+                      : null,
                 ),
-                Text(
-                  '$dogBreed • $ownerName\'s pup',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                // Owner avatar (small, overlapping bottom-right)
+                Positioned(
+                  bottom: 0,
+                  right: -4,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: CircleAvatar(
+                      radius: 14,
+                      backgroundColor: Colors.grey[300],
+                      backgroundImage: ownerAvatar != null ? NetworkImage(ownerAvatar) : null,
+                      child: ownerAvatar == null
+                          ? Icon(Icons.person, color: Colors.grey[500], size: 14)
+                          : null,
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          // Accept/Decline buttons
+          const SizedBox(height: 12),
+          // Text: "DogName & OwnerName want to join your pack"
+          RichText(
+            textAlign: TextAlign.center,
+            text: TextSpan(
+              style: TextStyle(fontSize: 15, color: Colors.grey[800]),
+              children: [
+                TextSpan(
+                  text: '$dogName & $ownerName',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+                const TextSpan(text: ' want to join your pack'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Full-width buttons: Ignore (gray) | Accept (orange)
           Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              // Decline
-              IconButton(
-                onPressed: () async {
-                  final success = await BarkDateFriendService.declineFriendRequest(requestId);
-                  if (success) {
-                    ref.invalidate(pendingFriendRequestsProvider);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Request declined'), backgroundColor: Colors.grey),
-                      );
+              // Ignore button
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () async {
+                    final success = await BarkDateFriendService.declineFriendRequest(requestId);
+                    if (success) {
+                      ref.invalidate(pendingFriendRequestsProvider);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Request declined'), backgroundColor: Colors.grey),
+                        );
+                      }
                     }
-                  }
-                },
-                icon: const Icon(Icons.close, color: Colors.red),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.red[50],
-                  padding: const EdgeInsets.all(8),
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.grey[600],
+                    side: BorderSide(color: Colors.grey[300]!),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Ignore', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
-              const SizedBox(width: 8),
-              // Accept
-              IconButton(
-                onPressed: () async {
-                  final success = await BarkDateFriendService.acceptFriendRequest(requestId);
-                  if (success) {
-                    ref.invalidate(pendingFriendRequestsProvider);
-                    ref.invalidate(nearbyDogsProvider);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('$dogName joined your pack! 🎉'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
+              const SizedBox(width: 12),
+              // Accept button
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final success = await BarkDateFriendService.acceptFriendRequest(requestId);
+                    if (success) {
+                      ref.invalidate(pendingFriendRequestsProvider);
+                      ref.invalidate(nearbyDogsProvider);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('$dogName joined your pack! 🎉'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
                     }
-                  }
-                },
-                icon: const Icon(Icons.check, color: Colors.green),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.green[50],
-                  padding: const EdgeInsets.all(8),
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFCF5EE), // Light orange/peach
+                    foregroundColor: Colors.orange[800],
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Accept', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

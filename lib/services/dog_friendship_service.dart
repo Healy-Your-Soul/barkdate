@@ -131,11 +131,12 @@ class DogFriendshipService {
   }
 
   /// Get pending bark requests for a dog (received requests)
+  /// Returns the requesting dog's info including their owner's name and avatar
   static Future<List<Map<String, dynamic>>> getPendingBarksReceived(String dogId) async {
     try {
       final result = await _supabase
           .from('dog_friendships')
-          .select('*, dog:dogs!dog_friendships_dog_id_fkey(id, name, breed, main_photo_url, user_id)')
+          .select('*, requester:dogs!dog_friendships_dog_id_fkey(id, name, breed, main_photo_url, user_id, user:users!dogs_user_id_fkey(id, name, avatar_url))')
           .eq('friend_dog_id', dogId)
           .eq('status', statusPending);
 

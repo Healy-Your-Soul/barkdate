@@ -11,6 +11,8 @@ class DogCard extends StatefulWidget {
   final VoidCallback? onPlaydatePressed;
   final VoidCallback? onOpenProfile;
   final VoidCallback? onTap;
+  final bool isFriend; // Whether this dog is already in the user's pack
+  final VoidCallback? onAddToPackPressed; // For non-friends: send bark/friend request
 
   const DogCard({
     super.key,
@@ -19,6 +21,8 @@ class DogCard extends StatefulWidget {
     this.onPlaydatePressed,
     this.onOpenProfile,
     this.onTap,
+    this.isFriend = true, // Default to true for backwards compatibility
+    this.onAddToPackPressed,
   });
 
   @override
@@ -208,6 +212,155 @@ class _DogCardState extends State<DogCard> {
     }
   }
 
+  /// Buttons for friends: Bark + Play
+  Widget _buildFriendButtons(ThemeData theme) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Bark button
+        SizedBox(
+          width: 80,
+          height: 32,
+          child: ElevatedButton(
+            onPressed: widget.onBarkPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4CAF50), // Bright green
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: Text(
+              'Bark',
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        // Playdate button with state
+        SizedBox(
+          width: 80,
+          height: 32,
+          child: _playdateStatus == 'confirmed'
+              ? OutlinedButton(
+                  onPressed: _showPlaydatePopup,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.green,
+                    side: const BorderSide(color: Colors.green, width: 1),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle, size: 12, color: Colors.green),
+                      const SizedBox(width: 2),
+                      Text('EDIT', style: theme.textTheme.labelSmall?.copyWith(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.green)),
+                    ],
+                  ),
+                )
+              : _playdateStatus == 'pending'
+                  ? OutlinedButton(
+                      onPressed: widget.onPlaydatePressed,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.orange,
+                        side: const BorderSide(color: Colors.orange, width: 1),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.hourglass_empty, size: 12, color: Colors.orange),
+                          const SizedBox(width: 2),
+                          Text('Sent', style: theme.textTheme.labelSmall?.copyWith(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.orange)),
+                        ],
+                      ),
+                    )
+                  : OutlinedButton(
+                      onPressed: widget.onPlaydatePressed,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF4CAF50),
+                        side: const BorderSide(color: Color(0xFF4CAF50), width: 1),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.calendar_today, size: 12, color: Color(0xFF4CAF50)),
+                          const SizedBox(width: 2),
+                          Text('Play', style: theme.textTheme.labelSmall?.copyWith(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF4CAF50))),
+                        ],
+                      ),
+                    ),
+        ),
+      ],
+    );
+  }
+
+  /// Buttons for non-friends: Add to Pack + View Profile
+  Widget _buildNonFriendButtons(ThemeData theme) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Add to Pack button (sends friend request)
+        SizedBox(
+          width: 80,
+          height: 32,
+          child: ElevatedButton(
+            onPressed: widget.onAddToPackPressed ?? widget.onBarkPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE89E5F), // Orange brand color
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: Text(
+              'Add Pack',
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                fontSize: 10,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        // View Profile button
+        SizedBox(
+          width: 80,
+          height: 32,
+          child: OutlinedButton(
+            onPressed: widget.onTap ?? widget.onOpenProfile,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.grey[700],
+              side: BorderSide(color: Colors.grey[400]!, width: 1),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: Text(
+              'Profile',
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -300,147 +453,12 @@ class _DogCardState extends State<DogCard> {
                 ),
               ),
             ),
-            // Action buttons (Bark and Playdate)
+            // Action buttons - conditional based on friendship status
             SizedBox(
               width: 85,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Bark button
-                  SizedBox(
-                    width: 80,
-                    height: 32,
-                    child: ElevatedButton(
-                      onPressed: widget.onBarkPressed,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4CAF50), // Bright green
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: Text(
-                        'Bark',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 4),
-                  
-                  // Playdate button with state
-                  SizedBox(
-                    width: 80,
-                    height: 32,
-                    child: _playdateStatus == 'confirmed'
-                        ? OutlinedButton(
-                            onPressed: _showPlaydatePopup,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.green,
-                              side: const BorderSide(
-                                color: Colors.green,
-                                width: 1,
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.check_circle,
-                                  size: 12,
-                                  color: Colors.green,
-                                ),
-                                const SizedBox(width: 2),
-                                Text(
-                                  'EDIT',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : _playdateStatus == 'pending'
-                            ? OutlinedButton(
-                                onPressed: widget.onPlaydatePressed,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.orange,
-                                  side: const BorderSide(
-                                    color: Colors.orange,
-                                    width: 1,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.hourglass_empty,
-                                      size: 12,
-                                      color: Colors.orange,
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      'Sent',
-                                      style: theme.textTheme.labelSmall?.copyWith(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.orange,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : OutlinedButton(
-                                onPressed: widget.onPlaydatePressed,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF4CAF50),
-                                  side: const BorderSide(
-                                    color: Color(0xFF4CAF50),
-                                    width: 1,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.calendar_today,
-                                      size: 12,
-                                      color: Color(0xFF4CAF50),
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      'Play',
-                                      style: theme.textTheme.labelSmall?.copyWith(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF4CAF50),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                  ),
-                ],
-              ),
+              child: widget.isFriend
+                  ? _buildFriendButtons(theme)
+                  : _buildNonFriendButtons(theme),
             ),
           ],
         ),
