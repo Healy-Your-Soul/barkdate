@@ -54,8 +54,8 @@ $$;
 -- =====================================================
 -- 2. FIX: search_dogs_for_playdate function
 -- =====================================================
--- Original error: column d.owner_id does not exist
--- Fix: Changed owner_id → user_id throughout the function
+-- Original error: relation "friendships" does not exist
+-- Fix: Changed to use dog_friendships table with dog_id/friend_dog_id columns
 
 CREATE OR REPLACE FUNCTION search_dogs_for_playdate(
   search_query text,
@@ -73,26 +73,34 @@ RETURNS TABLE (
 ) LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
   RETURN QUERY
-  WITH friend_dogs AS (
-    -- Dogs belonging to friends
+  WITH user_dog_ids AS (
+    -- Get all dog IDs belonging to the current user
+    SELECT d.id as dog_id FROM dogs d WHERE d.user_id = search_dogs_for_playdate.user_id
+  ),
+  friend_dog_ids AS (
+    -- Get friend dogs through dog_friendships table
+    SELECT 
+      CASE 
+        WHEN df.dog_id IN (SELECT udid.dog_id FROM user_dog_ids udid) THEN df.friend_dog_id
+        ELSE df.dog_id
+      END as friend_dog_id
+    FROM dog_friendships df
+    WHERE (df.dog_id IN (SELECT udid.dog_id FROM user_dog_ids udid) OR df.friend_dog_id IN (SELECT udid.dog_id FROM user_dog_ids udid))
+    AND df.status = 'accepted'
+  ),
+  friend_dogs AS (
+    -- Dogs that are friends with user's dogs
     SELECT 
       d.id, d.name, d.breed, d.main_photo_url as avatar_url, 
       true as is_friend, d.user_id as owner_id, u.name as owner_name
     FROM dogs d
     JOIN users u ON d.user_id = u.id
-    WHERE d.user_id IN (
-      SELECT CASE 
-        WHEN requester_id = search_dogs_for_playdate.user_id THEN receiver_id 
-        ELSE requester_id 
-      END
-      FROM friendships 
-      WHERE (requester_id = search_dogs_for_playdate.user_id OR receiver_id = search_dogs_for_playdate.user_id) 
-      AND status = 'accepted'
-    )
+    WHERE d.id IN (SELECT fd.friend_dog_id FROM friend_dog_ids fd)
+    AND d.user_id != search_dogs_for_playdate.user_id -- Exclude own dogs
     AND (search_query IS NULL OR d.name ILIKE '%' || search_query || '%')
   ),
   public_dogs AS (
-    -- Other public dogs
+    -- Other public dogs (not friends)
     SELECT 
       d.id, d.name, d.breed, d.main_photo_url as avatar_url, 
       false as is_friend, d.user_id as owner_id, u.name as owner_name
