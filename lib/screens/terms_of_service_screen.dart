@@ -112,7 +112,7 @@ class TermsOfServiceScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             content,
-            style: AppTypography.body().copyWith(
+            style: AppTypography.bodyMedium().copyWith(
               height: 1.6,
               color: Colors.grey[800],
             ),
