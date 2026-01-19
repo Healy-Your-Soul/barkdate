@@ -29,14 +29,59 @@ class DogCard extends StatefulWidget {
   State<DogCard> createState() => _DogCardState();
 }
 
-class _DogCardState extends State<DogCard> {
+class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
   String _playdateStatus = 'none'; // 'none', 'pending', 'confirmed'
   Map<String, dynamic>? _currentPlaydate; // Store current playdate data when confirmed
+  
+  // Bark button animation
+  late AnimationController _barkAnimationController;
+  late Animation<double> _barkScaleAnimation;
+  bool _hasBarked = false;
+  Timer? _barkResetTimer;
   
   @override
   void initState() {
     super.initState();
     _checkPlaydateStatus();
+    
+    // Initialize bark animation
+    _barkAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _barkScaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.3), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.3, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(
+      parent: _barkAnimationController,
+      curve: Curves.easeInOut,
+    ));
+  }
+  
+  @override
+  void dispose() {
+    _barkAnimationController.dispose();
+    _barkResetTimer?.cancel();
+    super.dispose();
+  }
+  
+  void _handleBarkPressed() {
+    // Trigger animation
+    _barkAnimationController.forward(from: 0);
+    
+    // Set barked state
+    setState(() => _hasBarked = true);
+    
+    // Call original callback
+    widget.onBarkPressed();
+    
+    // Reset after 3 seconds
+    _barkResetTimer?.cancel();
+    _barkResetTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() => _hasBarked = false);
+      }
+    });
   }
 
   Future<void> _checkPlaydateStatus() async {
@@ -217,26 +262,47 @@ class _DogCardState extends State<DogCard> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Bark button
-        SizedBox(
-          width: 80,
-          height: 32,
-          child: ElevatedButton(
-            onPressed: widget.onBarkPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4CAF50), // Bright green
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            child: Text(
-              'Bark',
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+        // Bark button with animation
+        AnimatedBuilder(
+          animation: _barkScaleAnimation,
+          builder: (context, child) => Transform.scale(
+            scale: _barkScaleAnimation.value,
+            child: SizedBox(
+              width: 80,
+              height: 32,
+              child: ElevatedButton(
+                onPressed: _hasBarked ? null : _handleBarkPressed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _hasBarked 
+                      ? const Color(0xFFE89E5F) // Orange when barked
+                      : const Color(0xFF4CAF50), // Green normally
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  disabledBackgroundColor: const Color(0xFFE89E5F),
+                  disabledForegroundColor: Colors.white,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_hasBarked) ...[
+                      const Text('🐾', style: TextStyle(fontSize: 10)),
+                      const SizedBox(width: 2),
+                    ],
+                    Text(
+                      _hasBarked ? 'Barked!' : 'Bark',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: _hasBarked ? 9 : 11,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
