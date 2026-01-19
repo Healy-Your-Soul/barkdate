@@ -638,7 +638,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                 height: 28,
                 child: Row(
                   children: [
-                    ...dogPhotos.take(3).asMap().entries.map((entry) {
+                    ...dogPhotos.take(3).toList().asMap().entries.map((entry) {
                       final index = entry.key;
                       final photoUrl = entry.value;
                       return Align(
