@@ -9,6 +9,7 @@ import 'package:barkdate/services/settings_service.dart';
 import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 import 'package:barkdate/services/cache_service.dart';
 import 'package:barkdate/widgets/location_settings_widget.dart';
+import 'package:barkdate/screens/terms_of_service_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -458,9 +459,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'Terms of Service',
               subtitle: 'Read our terms of service',
               onTap: () {
-                // TODO: Show terms of service
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Terms of Service - Coming soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TermsOfServiceScreen()),
                 );
               },
             ),

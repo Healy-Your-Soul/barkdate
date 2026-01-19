@@ -225,6 +225,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                         ),
                         child: DogCard(
                           dog: dog,
+                          isFriend: isPackMode,
                           onTap: () {
                             context.push('/dog-details', extra: dog);
                           },
@@ -394,18 +395,21 @@ class FeedFeatureScreen extends ConsumerWidget {
             icon: Icons.calendar_today_outlined,
             label: 'Playdates',
             value: playdatesAsync.value?.length.toString() ?? '-',
+            onTap: () => context.go('/playdates'),
           ),
           _buildDashboardItem(
             context,
             icon: Icons.pets_outlined,
             label: 'Barks',
             value: statsAsync.value?['barks'].toString() ?? '-',
+            onTap: () => context.go('/messages'), // Navigate to messages/friends
           ),
           _buildDashboardItem(
             context,
             icon: Icons.notifications_none_outlined,
             label: 'Alerts',
             value: null, // Value managed by child builder
+            onTap: () => context.go('/notifications'),
             valueBuilder: (context) => Consumer(
               builder: (context, ref, _) {
                  final unreadAsync = ref.watch(unreadNotificationCountProvider);
@@ -430,28 +434,33 @@ class FeedFeatureScreen extends ConsumerWidget {
     required String label,
     String? value,
     WidgetBuilder? valueBuilder,
+    VoidCallback? onTap,
   }) {
-    return Column(
-      children: [
-        if (valueBuilder != null)
-          valueBuilder(context)
-        else
-          Text(
-            value ?? '-',
-            style: AppTypography.h2().copyWith(fontSize: 24),
-          ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Icon(icon, size: 14, color: Colors.grey[600]),
-            const SizedBox(width: 4),
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        children: [
+          if (valueBuilder != null)
+            valueBuilder(context)
+          else
             Text(
-              label,
-              style: AppTypography.bodySmall().copyWith(color: Colors.grey[600]),
+              value ?? '-',
+              style: AppTypography.h2().copyWith(fontSize: 24),
             ),
-          ],
-        ),
-      ],
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(icon, size: 14, color: Colors.grey[600]),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: AppTypography.bodySmall().copyWith(color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -1406,6 +1415,7 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
             padding: const EdgeInsets.only(bottom: 16),
             child: DogCard(
               dog: Dog.fromJson(dog),
+              isFriend: false,
               onTap: () => context.push('/dog-details', extra: Dog.fromJson(dog)),
               onBarkPressed: () async {
                 final currentUser = SupabaseConfig.auth.currentUser;
@@ -1487,6 +1497,7 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
           padding: const EdgeInsets.only(bottom: 16),
           child: DogCard(
             dog: Dog.fromJson(dog),
+            isFriend: false,
             onTap: () => context.push('/dog-details', extra: Dog.fromJson(dog)),
             onBarkPressed: () async {
               // Implement actual bark functionality

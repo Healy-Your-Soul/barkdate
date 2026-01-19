@@ -1255,6 +1255,7 @@ class PlaydateQueryService {
         return {
           'upcoming': [],
           'past': [],
+          'cancelled': [],
         };
       }
       final playdateIdClause = _buildInClause(playdateIds);
@@ -1288,17 +1289,36 @@ class PlaydateQueryService {
           ''')
           .filter('id', 'in', playdateIdClause)
           .lt('scheduled_at', nowIso)
+          .neq('status', 'cancelled')
           .order('scheduled_at', ascending: false)
           .range(pastOffset, pastOffset + pastLimit - 1);
 
-      final results = await Future.wait([upcomingFuture, pastFuture]);
+      // Query for cancelled playdates
+      final cancelledFuture = SupabaseConfig.client
+          .from('playdates')
+          .select('''
+            *,
+            organizer:users!organizer_id (
+              id,
+              name,
+              avatar_url
+            )
+          ''')
+          .filter('id', 'in', playdateIdClause)
+          .eq('status', 'cancelled')
+          .order('updated_at', ascending: false)
+          .limit(50);
+
+      final results = await Future.wait([upcomingFuture, pastFuture, cancelledFuture]);
       final upcoming = (results[0] as List).cast<dynamic>();
       final past = (results[1] as List).cast<dynamic>();
+      final cancelled = (results[2] as List).cast<dynamic>();
 
       // 3. Load participants for all fetched playdates in batched queries
       final allFetchedIds = [
         ...upcoming.map((p) => p['id']?.toString()).whereType<String>(),
         ...past.map((p) => p['id']?.toString()).whereType<String>(),
+        ...cancelled.map((p) => p['id']?.toString()).whereType<String>(),
       ];
 
       Map<String, List<Map<String, dynamic>>> participantsByPlaydate = {};
@@ -1383,12 +1403,14 @@ class PlaydateQueryService {
       return {
         'upcoming': attach(upcoming),
         'past': attach(past),
+        'cancelled': attach(cancelled),
       };
     } catch (e) {
       debugPrint('Error aggregating playdates: $e');
       return {
         'upcoming': [],
         'past': [],
+        'cancelled': [],
       };
     }
   }

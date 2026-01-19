@@ -46,9 +46,23 @@ class ProfileScreen extends ConsumerWidget {
                           IconButton(
                             icon: const Icon(Icons.share_outlined),
                             onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Share Profile feature coming soon!')),
-                              );
+                              final dogs = userDogsAsync.valueOrNull;
+                              if (dogs != null && dogs.isNotEmpty) {
+                                final dog = dogs.first;
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (context) => ShareDogSheet(
+                                    dogId: dog.id,
+                                    dogName: dog.name,
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Add a dog first to share!')),
+                                );
+                              }
                             },
                           ),
                         ],
@@ -689,7 +703,7 @@ class ProfileScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _buildAirbnbStat('6', 'Playdates'),
-                      _buildAirbnbStat('2', 'Reviews'), // Placeholder for reviews
+                      _buildAirbnbStat('2', 'Barks'), // Pack friends count
                       _buildAirbnbStat('${dog.age}', 'Years'),
                     ],
                   ),
