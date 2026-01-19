@@ -1,7 +1,7 @@
 name: barkdate
 description: "BarkDate is a delightful social app that helps dog owners easily connect, schedule playdates, and share their furry friends' joyful adventures in a vibrant, community-focused space."
 publish_to: "none"
-version: 1.0.4+5
+version: 1.0.5+6
 
 environment:
   sdk: ^3.6.0
