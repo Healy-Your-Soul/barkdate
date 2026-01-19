@@ -705,8 +705,8 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
     IconData statusIcon;
     
     if (isOrganizer) {
-      // Organizer gets a special crown badge
-      statusColor = Colors.amber;
+      // Organizer gets a special star badge - green since they're confirmed
+      statusColor = Colors.green;
       statusIcon = Icons.star;
     } else {
       switch (status) {
@@ -739,7 +739,7 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.grey[200],
-                border: isOrganizer ? Border.all(color: Colors.amber, width: 3) : null,
+                border: isOrganizer ? Border.all(color: Colors.green, width: 3) : null,
                 image: photoUrl != null
                     ? DecorationImage(
                         image: NetworkImage(photoUrl),
@@ -794,7 +794,7 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 10,
-                    color: Colors.amber[700],
+                    color: Colors.green[700],
                     fontWeight: FontWeight.w500,
                   ),
                 ),
