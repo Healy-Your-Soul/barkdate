@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/notification_service.dart';
+import 'package:barkdate/services/conversation_service.dart';
 
 /// Enhanced services for bark notifications and playdate management
 /// Part of the BarkDate sprint to implement social interaction features
@@ -309,6 +310,14 @@ class PlaydateRequestService {
           'scheduled_at': scheduledAt.toIso8601String(),
         },
       );
+
+      // Create playdate conversation for the participants
+      await ConversationService.getOrCreatePlaydateConversation(
+        playdateId: playdateId,
+        participantUserIds: [organizerId, inviteeId],
+        groupName: title,
+      );
+      debugPrint('Created playdate conversation for chat');
 
       debugPrint('Playdate request created successfully!');
       return playdateId;
