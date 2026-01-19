@@ -308,7 +308,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                       itemCount: playdates.length,
                       itemBuilder: (context, index) {
                         final playdate = playdates[index];
-                        return _buildPlaydateCard(context, playdate);
+                        return _buildPlaydateCard(context, ref, playdate);
                       },
                     );
                   },
@@ -559,18 +559,28 @@ class FeedFeatureScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPlaydateCard(BuildContext context, Map<String, dynamic> playdate) {
+  Widget _buildPlaydateCard(BuildContext context, WidgetRef ref, Map<String, dynamic> playdate) {
     final date = DateTime.tryParse(playdate['date_time'] ?? playdate['scheduled_at'] ?? '') ?? DateTime.now();
     final formattedDate = DateFormat('MMM d, h:mm a').format(date);
     final playdateId = playdate['id'] as String?;
     final status = playdate['status'] as String?;
     final currentUserId = SupabaseConfig.auth.currentUser?.id;
-    final participantId = playdate['participant_id'] as String?;
+    final organizerId = playdate['organizer_id'] as String?;
     
-    // Show action buttons if pending and user is the invitee (not organizer)
+    // Show action buttons if pending and user is NOT the organizer
     final showActionButtons = status?.toLowerCase() == 'pending' && 
         currentUserId != null && 
-        participantId == currentUserId;
+        organizerId != currentUserId;
+    
+    // Get participant dogs (from playdate_participants if available)
+    final participants = playdate['participants'] as List<dynamic>? ?? [];
+    final dogPhotos = <String>[];
+    for (final p in participants) {
+      final dog = p['dog'] as Map<String, dynamic>?;
+      if (dog != null && dog['main_photo_url'] != null) {
+        dogPhotos.add(dog['main_photo_url'] as String);
+      }
+    }
     
     return GestureDetector(
       onTap: () {
@@ -599,6 +609,7 @@ class FeedFeatureScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Date row
             Row(
               children: [
                 const Icon(Icons.calendar_today, size: 16, color: Color(0xFF4CAF50)),
@@ -613,12 +624,61 @@ class FeedFeatureScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 8),
+            // Location
             Text(
               playdate['location'] ?? 'Unknown Location',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.bodyMedium(),
             ),
+            const SizedBox(height: 8),
+            // Dog avatar circles
+            if (dogPhotos.isNotEmpty)
+              SizedBox(
+                height: 28,
+                child: Row(
+                  children: [
+                    ...dogPhotos.take(3).asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final photoUrl = entry.value;
+                      return Align(
+                        widthFactor: index == 0 ? 1.0 : 0.7,
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            image: DecorationImage(
+                              image: NetworkImage(photoUrl),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    if (dogPhotos.length > 3)
+                      Align(
+                        widthFactor: 0.7,
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.grey.shade300,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '+${dogPhotos.length - 3}',
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             const Spacer(),
             if (showActionButtons) ...[
               // Accept/Decline buttons for pending invites
@@ -628,7 +688,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                     child: SizedBox(
                       height: 28,
                       child: OutlinedButton(
-                        onPressed: () => _respondToPlaydate(context, playdateId!, false),
+                        onPressed: () => _respondToPlaydate(context, ref, playdateId!, false),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.red,
                           side: const BorderSide(color: Colors.red),
@@ -646,7 +706,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                     child: SizedBox(
                       height: 28,
                       child: ElevatedButton(
-                        onPressed: () => _respondToPlaydate(context, playdateId!, true),
+                        onPressed: () => _respondToPlaydate(context, ref, playdateId!, true),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4CAF50),
                           foregroundColor: Colors.white,
@@ -676,7 +736,7 @@ class FeedFeatureScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _respondToPlaydate(BuildContext context, String playdateId, bool accept) async {
+  Future<void> _respondToPlaydate(BuildContext context, WidgetRef ref, String playdateId, bool accept) async {
     try {
       final currentUserId = SupabaseConfig.auth.currentUser?.id;
       if (currentUserId == null) return;
@@ -708,6 +768,9 @@ class FeedFeatureScreen extends ConsumerWidget {
       );
       
       if (context.mounted && success) {
+        // Refresh the playdates list
+        ref.invalidate(userPlaydatesProvider);
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(accept ? '✅ Playdate accepted!' : '❌ Playdate declined'),
