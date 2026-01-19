@@ -24,6 +24,12 @@ class DogFriendshipService {
       final currentUserId = SupabaseConfig.auth.currentUser?.id;
       if (currentUserId == null) return false;
 
+      // Prevent self-friend requests
+      if (fromDogId == toDogId) {
+        debugPrint('Cannot send bark to yourself');
+        return false;
+      }
+
       // Check if friendship already exists
       final existing = await _supabase
           .from('dog_friendships')

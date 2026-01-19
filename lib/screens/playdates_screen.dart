@@ -1248,15 +1248,44 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
 
   Future<void> _cancelPlaydate(Map<String, dynamic> playdate) async {
     try {
-      // TODO: Implement cancel playdate logic
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Playdate cancelled')),
+      final currentUser = SupabaseConfig.auth.currentUser;
+      if (currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Not logged in')),
+        );
+        return;
+      }
+
+      final success = await PlaydateManagementService.cancelPlaydate(
+        playdateId: playdate['id'],
+        cancelledByUserId: currentUser.id,
       );
-      _loadPlaydates();
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Playdate cancelled successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Auto-refresh the list to remove cancelled playdate
+          await _loadPlaydates();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to cancel playdate'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error cancelling playdate: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error cancelling playdate: $e')),
+        );
+      }
     }
   }
 }
