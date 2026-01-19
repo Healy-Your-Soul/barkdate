@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/playdate_service.dart';
 import 'package:barkdate/models/playdate.dart';
+import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 
-class PlaydateDetailsScreen extends StatefulWidget {
+class PlaydateDetailsScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> playdate;
 
   const PlaydateDetailsScreen({super.key, required this.playdate});
 
   @override
-  State<PlaydateDetailsScreen> createState() => _PlaydateDetailsScreenState();
+  ConsumerState<PlaydateDetailsScreen> createState() => _PlaydateDetailsScreenState();
 }
 
-class _PlaydateDetailsScreenState extends State<PlaydateDetailsScreen> {
+class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
   bool _isLoading = false;
   bool _showSuggestChanges = false;
   late Map<String, dynamic> _playdate;
@@ -110,6 +112,9 @@ class _PlaydateDetailsScreenState extends State<PlaydateDetailsScreen> {
       );
 
       if (success && mounted) {
+        // Refresh the playdates list in feed
+        ref.invalidate(userPlaydatesProvider);
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(accept ? 'Playdate accepted! 🎉' : 'Playdate declined'),
@@ -215,6 +220,9 @@ class _PlaydateDetailsScreenState extends State<PlaydateDetailsScreen> {
       );
 
       if (success && mounted) {
+        // Refresh the playdates list in feed
+        ref.invalidate(userPlaydatesProvider);
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Playdate cancelled'),

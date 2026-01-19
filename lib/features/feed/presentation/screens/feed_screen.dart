@@ -573,12 +573,28 @@ class FeedFeatureScreen extends ConsumerWidget {
         organizerId != currentUserId;
     
     // Get participant dogs (from playdate_participants if available)
+    // Fallback to organizer/participant user avatars if no dog data
     final participants = playdate['participants'] as List<dynamic>? ?? [];
-    final dogPhotos = <String>[];
+    final avatarPhotos = <String>[];
+    
+    // First try to get dog photos from participants
     for (final p in participants) {
       final dog = p['dog'] as Map<String, dynamic>?;
       if (dog != null && dog['main_photo_url'] != null) {
-        dogPhotos.add(dog['main_photo_url'] as String);
+        avatarPhotos.add(dog['main_photo_url'] as String);
+      }
+    }
+    
+    // Fallback: use user avatars if no dog photos
+    if (avatarPhotos.isEmpty) {
+      final organizer = playdate['organizer'] as Map<String, dynamic>?;
+      final participant = playdate['participant'] as Map<String, dynamic>?;
+      
+      if (organizer != null && organizer['avatar_url'] != null) {
+        avatarPhotos.add(organizer['avatar_url'] as String);
+      }
+      if (participant != null && participant['avatar_url'] != null) {
+        avatarPhotos.add(participant['avatar_url'] as String);
       }
     }
     
@@ -633,12 +649,12 @@ class FeedFeatureScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             // Dog avatar circles
-            if (dogPhotos.isNotEmpty)
+            if (avatarPhotos.isNotEmpty)
               SizedBox(
                 height: 28,
                 child: Row(
                   children: [
-                    ...dogPhotos.take(3).toList().asMap().entries.map((entry) {
+                    ...avatarPhotos.take(3).toList().asMap().entries.map((entry) {
                       final index = entry.key;
                       final photoUrl = entry.value;
                       return Align(
@@ -657,7 +673,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                         ),
                       );
                     }),
-                    if (dogPhotos.length > 3)
+                    if (avatarPhotos.length > 3)
                       Align(
                         widthFactor: 0.7,
                         child: Container(
@@ -670,7 +686,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                           ),
                           child: Center(
                             child: Text(
-                              '+${dogPhotos.length - 3}',
+                              '+${avatarPhotos.length - 3}',
                               style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                             ),
                           ),
