@@ -13,6 +13,7 @@ import 'package:barkdate/services/dog_sharing_service.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/screens/help_screen.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
+import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -584,7 +585,33 @@ class ProfileScreen extends ConsumerWidget {
                             .update({'is_active': false})
                             .eq('id', dogId);
                         
-                        debugPrint('✅ Dog deleted from database');
+                        debugPrint('✅ Dog marked as inactive');
+                        
+                        // Clean up related records that reference this dog
+                        try {
+                          // Remove from playdate_participants
+                          await SupabaseConfig.client
+                              .from('playdate_participants')
+                              .delete()
+                              .eq('dog_id', dogId);
+                          debugPrint('✅ Removed dog from playdate_participants');
+                          
+                          // Remove from playdate_requests (where this dog was invited)
+                          await SupabaseConfig.client
+                              .from('playdate_requests')
+                              .delete()
+                              .eq('invitee_dog_id', dogId);
+                          debugPrint('✅ Removed dog from playdate_requests (invitee)');
+                          
+                          // Also clean up requester_dog_id if exists
+                          await SupabaseConfig.client
+                              .from('playdate_requests')
+                              .delete()
+                              .eq('requester_dog_id', dogId);
+                          debugPrint('✅ Removed dog from playdate_requests (requester)');
+                        } catch (cleanupError) {
+                          debugPrint('⚠️ Cleanup warning: $cleanupError');
+                        }
                         
                         // Clear cache and refresh
                         final userId = SupabaseConfig.auth.currentUser?.id;
@@ -595,6 +622,7 @@ class ProfileScreen extends ConsumerWidget {
                         ref.invalidate(userProfileProvider);
                         ref.invalidate(userStatsProvider);
                         ref.invalidate(profileRepositoryProvider);
+                        ref.invalidate(userPlaydatesProvider); // Also refresh playdates
                         
                         debugPrint('✅ Cache cleared and providers invalidated');
                         
