@@ -10,6 +10,7 @@ import 'package:barkdate/widgets/location_settings_widget.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
+import 'package:barkdate/screens/terms_of_service_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -293,8 +294,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'Terms of Service',
               subtitle: 'Read our terms of service',
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Terms of Service - Coming soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TermsOfServiceScreen()),
                 );
               },
             ),
