@@ -165,14 +165,14 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
     setState(() => _isSearching = true);
     
     try {
-      final results = await PlacesService.searchDogFriendlyPlaces(
+      final result = await PlacesService.searchDogFriendlyPlaces(
         latitude: _currentLocation!.latitude,
         longitude: _currentLocation!.longitude,
         keyword: query,
       );
       
       setState(() {
-        _searchResults = results;
+        _searchResults = result.places;
         _showingSearchResults = true;
       });
       _updateMarkers();
