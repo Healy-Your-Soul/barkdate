@@ -269,7 +269,9 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       body: Stack(
         children: [
           GoogleMap(
@@ -473,6 +475,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
             ),
         ],
       ),
+      ), // Close GestureDetector
     );
   }
 }

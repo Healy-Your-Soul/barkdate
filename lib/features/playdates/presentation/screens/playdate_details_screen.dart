@@ -319,7 +319,9 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
     final organizer = _playdate['organizer'] as Map<String, dynamic>?;
     final participant = _playdate['participant'] as Map<String, dynamic>?;
 
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Playdate Details'),
         centerTitle: true,
@@ -576,6 +578,7 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
           ],
         ),
       ),
+      ), // Close GestureDetector
     );
   }
 
