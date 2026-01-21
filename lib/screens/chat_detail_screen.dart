@@ -160,8 +160,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        appBar: AppBar(
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back,
@@ -288,6 +290,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
