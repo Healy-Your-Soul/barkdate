@@ -231,7 +231,9 @@ class _PlaydateRequestModalState extends State<PlaydateRequestModal> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
         constraints: const BoxConstraints(maxHeight: 600, maxWidth: 400),
@@ -526,6 +528,7 @@ class _PlaydateRequestModalState extends State<PlaydateRequestModal> {
           ],
         ),
       ),
+      ), // Close GestureDetector
     );
   }
 }
