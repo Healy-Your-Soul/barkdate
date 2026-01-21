@@ -82,6 +82,18 @@ class _BarkDateAppState extends ConsumerState<BarkDateApp> {
       themeMode: ThemeMode.light,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      // Limit font scaling to prevent layout breaking with accessibility large fonts
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        // Clamp text scale between 0.8x and 1.3x for consistent layout
+        final clampedScale = mediaQuery.textScaler.scale(1.0).clamp(0.8, 1.3);
+        return MediaQuery(
+          data: mediaQuery.copyWith(
+            textScaler: TextScaler.linear(clampedScale),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

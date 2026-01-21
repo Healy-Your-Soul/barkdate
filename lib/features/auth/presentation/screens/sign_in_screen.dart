@@ -26,11 +26,48 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _isAppleLoading = false;
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  
+  // Auth state subscription for OAuth redirect handling
+  late final dynamic _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen for auth state changes (important for OAuth redirects)
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+      if (data.event == AuthChangeEvent.signedIn && data.session?.user != null && mounted) {
+        debugPrint('✅ OAuth sign-in detected via auth state change');
+        
+        // Pre-warm feed caches
+        await PreloadService.warmFeedCaches(data.session!.user.id);
+        
+        // Check if user has completed onboarding (has dog profile)
+        if (mounted) {
+          final dogs = await Supabase.instance.client
+              .from('dogs')
+              .select('id')
+              .eq('user_id', data.session!.user.id)
+              .limit(1);
+          
+          if (mounted) {
+            if (dogs.isEmpty) {
+              // New user - go to onboarding
+              context.go('/onboarding');
+            } else {
+              // Existing user - go to home
+              context.go('/home');
+            }
+          }
+        }
+      }
+    });
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _authSubscription.cancel();
     super.dispose();
   }
 

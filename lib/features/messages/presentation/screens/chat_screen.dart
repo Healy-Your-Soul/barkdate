@@ -42,74 +42,93 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final messagesAsync = ref.watch(messagesStreamProvider(widget.matchId));
     final currentUser = SupabaseConfig.auth.currentUser;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundImage: widget.recipientAvatarUrl != null
+                    ? NetworkImage(widget.recipientAvatarUrl!)
+                    : null,
+                child: widget.recipientAvatarUrl == null
+                    ? const Icon(Icons.person)
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  widget.recipientName,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ),
+            ],
+          ),
+        ),
+        body: Column(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundImage: widget.recipientAvatarUrl != null
-                  ? NetworkImage(widget.recipientAvatarUrl!)
-                  : null,
-              child: widget.recipientAvatarUrl == null
-                  ? const Icon(Icons.person)
-                  : null,
-            ),
-            const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                widget.recipientName,
-                style: const TextStyle(fontSize: 16),
+              child: messagesAsync.when(
+                data: (messagesData) {
+                  // Convert Map to Message objects if needed, or use Map directly
+                  // The repository returns List<Map<String, dynamic>>
+                  // Let's map them to Message objects for easier handling
+                  final messages = messagesData.map((data) {
+                    return Message(
+                      id: data['id'] as String,
+                      senderId: data['sender_id'] as String,
+                      receiverId: data['receiver_id'] as String,
+                      text: data['content'] as String,
+                      timestamp: DateTime.parse(data['created_at'] as String),
+                      isRead: data['is_read'] ?? false,
+                    );
+                  }).toList();
+
+                  if (messages.isEmpty) {
+                    return const Center(
+                      child: Text('Say hello! 👋'),
+                    );
+                  }
+
+                  // Auto-scroll to bottom after messages load
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _scrollToBottom();
+                  });
+
+                  return ListView.builder(
+                    controller: _scrollController,
+                    reverse: false, // Messages are usually ordered by created_at ascending
+                    padding: const EdgeInsets.all(16),
+                    itemCount: messages.length,
+                    itemBuilder: (context, index) {
+                      final message = messages[index];
+                      final isMe = message.senderId == currentUser?.id;
+                      return _buildMessageBubble(context, message, isMe);
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(child: Text('Error: $error')),
               ),
             ),
+            _buildMessageInput(currentUser?.id),
           ],
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: messagesAsync.when(
-              data: (messagesData) {
-                // Convert Map to Message objects if needed, or use Map directly
-                // The repository returns List<Map<String, dynamic>>
-                // Let's map them to Message objects for easier handling
-                final messages = messagesData.map((data) {
-                  return Message(
-                    id: data['id'] as String,
-                    senderId: data['sender_id'] as String,
-                    receiverId: data['receiver_id'] as String,
-                    text: data['content'] as String,
-                    timestamp: DateTime.parse(data['created_at'] as String),
-                    isRead: data['is_read'] ?? false,
-                  );
-                }).toList();
-
-                if (messages.isEmpty) {
-                  return const Center(
-                    child: Text('Say hello! 👋'),
-                  );
-                }
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  reverse: false, // Messages are usually ordered by created_at ascending
-                  padding: const EdgeInsets.all(16),
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final message = messages[index];
-                    final isMe = message.senderId == currentUser?.id;
-                    return _buildMessageBubble(context, message, isMe);
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text('Error: $error')),
-            ),
-          ),
-          _buildMessageInput(currentUser?.id),
-        ],
-      ),
     );
+  }
+
+  /// Scroll to the bottom of the chat
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   Widget _buildMessageBubble(BuildContext context, Message message, bool isMe) {
@@ -218,7 +237,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         content: text,
       );
       _messageController.clear();
-      // Real-time stream handles message updates automatically
+      // Scroll to bottom after sending
+      _scrollToBottom();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

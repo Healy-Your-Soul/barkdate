@@ -39,7 +39,7 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
       SnackBar(
         content: Text(
           _isBarked 
-            ? 'You barked at ${widget.dog.name}! 🐕' 
+            ? 'Barked! ${widget.dog.ownerName} will be notified.' 
             : 'Bark removed',
         ),
         backgroundColor: _isBarked 

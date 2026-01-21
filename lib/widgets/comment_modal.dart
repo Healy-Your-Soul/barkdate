@@ -424,8 +424,16 @@ class _CommentModalState extends State<CommentModal> {
   }
 
   Widget _buildCommentInput() {
+    // Get keyboard height for padding
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: 16 + keyboardHeight, // Add keyboard height as bottom padding
+      ),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         border: Border(
@@ -436,6 +444,7 @@ class _CommentModalState extends State<CommentModal> {
         ),
       ),
       child: SafeArea(
+        top: false, // Don't add extra padding at top
         child: Row(
           children: [
             FutureBuilder<List<Map<String, dynamic>>>(

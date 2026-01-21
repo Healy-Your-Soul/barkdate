@@ -68,14 +68,16 @@ class _DogFriendSelectorDialogState extends State<DogFriendSelectorDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Dialog( 
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: SizedBox(
-        width: 400,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Dialog( 
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: SizedBox(
+          width: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Column(
@@ -196,6 +198,7 @@ class _DogFriendSelectorDialogState extends State<DogFriendSelectorDialog> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
