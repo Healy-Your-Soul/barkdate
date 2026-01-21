@@ -123,7 +123,9 @@ class _DogSearchSheetState extends State<DogSearchSheet> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Container(
       height: MediaQuery.of(context).size.height * 0.85,
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -219,6 +221,7 @@ class _DogSearchSheetState extends State<DogSearchSheet> with SingleTickerProvid
           ),
         ],
       ),
+      ), // Close GestureDetector
     );
   }
 

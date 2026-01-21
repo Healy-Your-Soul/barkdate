@@ -33,7 +33,9 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   Widget build(BuildContext context) {
     final conversationsAsync = ref.watch(conversationsProvider);
 
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
@@ -151,6 +153,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
           ],
         ),
       ),
+      ), // Close GestureDetector
     );
   }
 
