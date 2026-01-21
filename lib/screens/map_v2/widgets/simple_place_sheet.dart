@@ -379,7 +379,9 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
 
     // Container with scrollable content
     // Gesture absorption is handled at the parent level in map_tab_screen.dart
-    return Container(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Container(
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -777,6 +779,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             const SizedBox(height: 20),
         ],
       ),
+      ), // Close GestureDetector
     );
   }
 

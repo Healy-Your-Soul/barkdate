@@ -562,7 +562,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   }
 
   Widget _buildTwoStepScreen() {
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -718,6 +720,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           ],
         ),
       ),
+      ), // Close GestureDetector
     );
   }
 
@@ -1404,7 +1407,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
   /// Build screen for adding a NEW dog (not editing existing)
   Widget _buildAddNewDogScreen() {
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -1461,6 +1466,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           ],
         ),
       ),
+      ), // Close GestureDetector
     );
   }
 
@@ -1558,7 +1564,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
   /// Build single-screen edit UI (dog or owner only)
   Widget _buildSingleEditScreen({required bool isDogEdit}) {
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -1617,6 +1625,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           ],
         ),
       ),
+      ), // Close GestureDetector
     );
   }
 

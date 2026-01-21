@@ -113,7 +113,9 @@ class _PlaydateResponseBottomSheetState extends State<PlaydateResponseBottomShee
     final playdate = widget.playdateRequest['playdate'];
     final requester = widget.playdateRequest['requester'];
     
-    return SlideTransition(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: SlideTransition(
       position: _slideAnimation,
       child: Container(
         constraints: BoxConstraints(
@@ -278,6 +280,7 @@ class _PlaydateResponseBottomSheetState extends State<PlaydateResponseBottomShee
           ],
         ),
       ),
+      ), // Close GestureDetector
     );
   }
 
