@@ -123,7 +123,9 @@ class _HelpScreenState extends State<HelpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       appBar: AppBar(
         title: Text(
           'Help',
@@ -198,6 +200,7 @@ class _HelpScreenState extends State<HelpScreen> {
           ),
         ],
       ),
+      ), // Close GestureDetector
     );
   }
   
