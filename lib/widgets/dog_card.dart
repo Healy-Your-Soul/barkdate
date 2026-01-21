@@ -3,6 +3,7 @@ import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/theme.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/playdate_action_popup.dart';
+import 'package:barkdate/widgets/content_options_menu.dart';
 import 'dart:async';
 
 class DogCard extends StatefulWidget {
@@ -511,6 +512,13 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
               child: widget.isFriend
                   ? _buildFriendButtons(theme)
                   : _buildNonFriendButtons(theme),
+            ),
+            // Subtle options menu (Report/Block)
+            ContentOptionsMenu(
+              contentType: 'dog_profile',
+              contentId: dog.id ?? '',
+              ownerId: dog.ownerId,
+              ownerName: dog.ownerName,
             ),
           ],
         ),

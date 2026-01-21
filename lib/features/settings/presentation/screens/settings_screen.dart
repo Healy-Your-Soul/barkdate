@@ -11,6 +11,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/screens/terms_of_service_screen.dart';
+import 'package:barkdate/features/settings/presentation/screens/blocked_users_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -257,6 +258,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }
                 },
               ),
+            ),
+            
+            const Divider(height: 48),
+            
+            // Privacy & Safety Section
+            _buildSectionHeader(context, 'Privacy & Safety'),
+            _buildSettingsItem(
+              context,
+              icon: Icons.block_outlined,
+              title: 'Blocked Users',
+              subtitle: 'Manage blocked accounts',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const BlockedUsersScreen()),
+                );
+              },
             ),
             
             const Divider(height: 48),
