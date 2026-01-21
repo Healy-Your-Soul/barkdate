@@ -337,7 +337,9 @@ class _AdminScreenState extends State<AdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Park Administration'),
         backgroundColor: Theme.of(context).primaryColor,
@@ -695,6 +697,7 @@ class _AdminScreenState extends State<AdminScreen> {
           ),
         ],
       ),
+      ), // Close GestureDetector
     );
   }
 }

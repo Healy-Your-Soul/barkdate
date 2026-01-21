@@ -185,7 +185,9 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -197,6 +199,7 @@ class _AuthScreenState extends State<AuthScreen> {
           },
         ),
       ),
+      ), // Close GestureDetector
     );
   }
 
