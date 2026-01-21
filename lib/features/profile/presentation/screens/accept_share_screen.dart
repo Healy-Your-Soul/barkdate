@@ -91,7 +91,9 @@ class _AcceptShareScreenState extends ConsumerState<AcceptShareScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Connect to Dog'),
       ),
@@ -162,6 +164,7 @@ class _AcceptShareScreenState extends ConsumerState<AcceptShareScreen> {
           ],
         ),
       ),
+      ), // Close GestureDetector
     );
   }
 }

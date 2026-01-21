@@ -217,7 +217,9 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Select Event Location'),
         actions: [
@@ -376,6 +378,7 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
           ),
         ],
       ),
+      ), // Close GestureDetector
     );
   }
 }

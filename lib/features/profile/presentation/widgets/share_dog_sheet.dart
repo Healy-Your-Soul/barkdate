@@ -68,7 +68,9 @@ class _ShareDogSheetState extends ConsumerState<ShareDogSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
-    return Container(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
@@ -228,6 +230,7 @@ class _ShareDogSheetState extends ConsumerState<ShareDogSheet> {
           const SizedBox(height: 24),
         ],
       ),
+      ), // Close GestureDetector
     );
   }
 
