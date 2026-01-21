@@ -12,6 +12,7 @@ class Dog {
   final String? ownerAvatarUrl;
   final double distanceKm;
   final bool isMatched;
+  final bool? isFriend; // Tracks if this dog is in user's pack
 
   const Dog({
     required this.id,
@@ -27,6 +28,7 @@ class Dog {
     this.ownerAvatarUrl,
     required this.distanceKm,
     this.isMatched = false,
+    this.isFriend,
   });
 
   Dog copyWith({
@@ -43,6 +45,7 @@ class Dog {
     String? ownerAvatarUrl,
     double? distanceKm,
     bool? isMatched,
+    bool? isFriend,
   }) => Dog(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -57,6 +60,7 @@ class Dog {
     ownerAvatarUrl: ownerAvatarUrl ?? this.ownerAvatarUrl,
     distanceKm: distanceKm ?? this.distanceKm,
     isMatched: isMatched ?? this.isMatched,
+    isFriend: isFriend ?? this.isFriend,
   );
 
     factory Dog.fromJson(Map<String, dynamic> json) {
@@ -93,6 +97,7 @@ class Dog {
       ownerAvatarUrl: ownerAvatar,
       distanceKm: json['distance_km']?.toDouble() ?? 0.0,
       isMatched: json['is_matched'] ?? false,
+      isFriend: json['is_friend'],
     );
   }
 
@@ -111,6 +116,7 @@ class Dog {
       'owner_avatar_url': ownerAvatarUrl,
       'distance_km': distanceKm,
       'is_matched': isMatched,
+      'is_friend': isFriend,
     };
   }
 }

@@ -226,14 +226,16 @@ class FeedFeatureScreen extends ConsumerWidget {
                         ),
                         child: DogCard(
                           dog: dog,
-                          isFriend: isPackMode,
+                          // Use actual friendship status if available, otherwise use tab mode
+                          // This ensures friends show "In Pack" even in "All Dogs" tab
+                          isFriend: dog.isFriend ?? isPackMode,
                           onTap: () {
                             context.push('/dog-details', extra: dog);
                           },
                           onBarkPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('You barked at ${dog.name}! 🐕'),
+                                content: Text('Barked! ${dog.ownerName} will be notified.'),
                                 backgroundColor: Theme.of(context).colorScheme.primary,
                                 behavior: SnackBarBehavior.floating,
                               ),
