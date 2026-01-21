@@ -15,7 +15,7 @@
 -- Replace 'YOUR_USER_UUID_HERE' with the actual UUID from step 6 above
 DO $$
 DECLARE
-  demo_user_id UUID := 'YOUR_USER_UUID_HERE'; -- REPLACE THIS after creating user in dashboard
+  demo_user_id UUID := '1c38db8d-8ce5-4fdf-b30f-3e37b50ce34c'; -- REPLACE THIS after creating user in dashboard
   demo_dog_id UUID := gen_random_uuid();
 BEGIN
   -- Create user profile in public.users table

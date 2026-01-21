@@ -1,6 +1,8 @@
 import Flutter
 import UIKit
 import GoogleMaps
+import Firebase
+import FirebaseMessaging
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -8,10 +10,42 @@ import GoogleMaps
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // Initialize Firebase
+    FirebaseApp.configure()
+    
     // Initialize Google Maps
     GMSServices.provideAPIKey("AIzaSyAbZGdAyEUXEkN-1CtVvPCWIsxkAY8_4ss")
     
+    // Register for push notifications
+    UNUserNotificationCenter.current().delegate = self
+    
+    let authOptions: UNAuthorizationOptions = [.alert, .badge, .sound]
+    UNUserNotificationCenter.current().requestAuthorization(
+      options: authOptions,
+      completionHandler: { _, _ in }
+    )
+    
+    application.registerForRemoteNotifications()
+    
+    // Set Firebase Messaging delegate
+    Messaging.messaging().delegate = self
+    
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+  
+  // Handle APNs token registration
+  override func application(_ application: UIApplication,
+                            didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    Messaging.messaging().apnsToken = deviceToken
+    super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
+  }
+}
+
+// MARK: - MessagingDelegate
+extension AppDelegate: MessagingDelegate {
+  func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+    print("Firebase FCM Token: \(fcmToken ?? "nil")")
+    // Token is handled by Flutter side via FirebaseMessagingService
   }
 }
