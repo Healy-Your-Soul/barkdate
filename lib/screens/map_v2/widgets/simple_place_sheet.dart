@@ -65,6 +65,16 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     _loadCheckInState();
     _loadAmenities();
   }
+  
+  @override
+  void didUpdateWidget(PlaceSheetContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reload check-in state when viewing a different place
+    if (widget.place.placeId != oldWidget.place.placeId) {
+      _loadCheckInState();
+      _loadAmenities();
+    }
+  }
 
 
 
@@ -134,9 +144,8 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
         }
       }
       
-      // Refresh dog count
-      final count = await CheckInService.getParkDogCount(widget.place.placeId);
-      if (mounted) setState(() => _dogCount = count);
+      // Refresh dog count AND dog avatars list
+      await _loadCheckInState();
       
       // Notify parent of check-in change
       widget.onCheckInChanged?.call();
