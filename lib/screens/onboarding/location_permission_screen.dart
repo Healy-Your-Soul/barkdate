@@ -27,6 +27,7 @@ class LocationPermissionScreen extends StatelessWidget {
           userName: user.userMetadata?['name'],
           userEmail: user.email,
           locationEnabled: locationEnabled,
+          editMode: EditMode.createProfile, // Use createProfile mode to navigate to /home after
         ),
       ),
     );

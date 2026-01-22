@@ -46,7 +46,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
       // User is authenticated, go to location permission first
-      Navigator.push(
+      // Use pushReplacement so welcome screen is removed from stack
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => const LocationPermissionScreen(),
