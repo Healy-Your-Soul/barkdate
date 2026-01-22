@@ -545,7 +545,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                                 child: OutlinedButton.icon(
                                   onPressed: _onBarkPoke,
                                   icon: const Icon(Icons.pets, color: Colors.orange),
-                                  label: const Text('Bark 🐾'),
+                                  label: const Text('Bark'),
                                   style: OutlinedButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(vertical: 14),
                                     side: BorderSide(color: Colors.orange.withOpacity(0.5)),
