@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/screens/auth/sign_in_screen.dart';
+import 'package:barkdate/services/location_service.dart';
 
 class LocationPermissionScreen extends StatelessWidget {
   const LocationPermissionScreen({super.key});
@@ -32,9 +33,60 @@ class LocationPermissionScreen extends StatelessWidget {
   }
 
   Future<void> _requestLocationPermission(BuildContext context) async {
-    // TODO: Implement actual location permission request
-    // For now, just navigate to the next screen with location enabled
-    await _navigateNext(context, locationEnabled: true);
+    final user = SupabaseConfig.auth.currentUser;
+    if (user == null) {
+      await _navigateNext(context, locationEnabled: false);
+      return;
+    }
+
+    // Request permission
+    final granted = await LocationService.requestPermission();
+    
+    if (granted) {
+      // Sync location to database
+      final synced = await LocationService.syncLocation(user.id);
+      if (synced) {
+        // Show success feedback
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location enabled! You can now find nearby dogs.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+      await _navigateNext(context, locationEnabled: synced);
+    } else {
+      // Permission denied - show dialog
+      if (context.mounted) {
+        final openSettings = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Location Permission'),
+            content: const Text(
+              'Location access is needed to find dogs near you. '
+              'Would you like to enable it in settings?'
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Skip'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Open Settings'),
+              ),
+            ],
+          ),
+        );
+        
+        if (openSettings == true) {
+          await LocationService.openAppSettings();
+        }
+        await _navigateNext(context, locationEnabled: false);
+      }
+    }
   }
 
   void _skipLocationPermission(BuildContext context) {
