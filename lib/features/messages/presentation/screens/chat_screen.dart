@@ -6,6 +6,8 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/app_button.dart';
 import 'package:barkdate/design_system/app_styles.dart';
 
+import 'package:intl/intl.dart' as intl;
+
 class ChatScreen extends ConsumerStatefulWidget {
   final String matchId;
   final String recipientId;
@@ -28,9 +30,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSending = false;
+  bool _isInputRtl = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _messageController.addListener(_checkInputDirection);
+  }
+
+  void _checkInputDirection() {
+    final text = _messageController.text;
+    final isRtl = intl.Bidi.detectRtlDirectionality(text);
+    if (isRtl != _isInputRtl) {
+      setState(() {
+        _isInputRtl = isRtl;
+      });
+    }
+  }
 
   @override
   void dispose() {
+    _messageController.removeListener(_checkInputDirection);
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -132,6 +152,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildMessageBubble(BuildContext context, Message message, bool isMe) {
+    final isRtl = intl.Bidi.detectRtlDirectionality(message.text);
+    
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -164,6 +186,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
               child: Text(
                 message.text,
+                textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
                 style: TextStyle(
                   color: isMe
                       ? Theme.of(context).colorScheme.onPrimary
@@ -194,6 +217,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           Expanded(
             child: TextField(
               controller: _messageController,
+              textDirection: _isInputRtl ? TextDirection.rtl : TextDirection.ltr,
               decoration: InputDecoration(
                 hintText: 'Message...',
                 border: OutlineInputBorder(

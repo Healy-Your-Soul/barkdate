@@ -12,6 +12,7 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/comment_modal.dart';
 import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
 import 'package:barkdate/features/playdates/presentation/widgets/dog_search_sheet.dart';
+import 'package:barkdate/services/notification_manager.dart';
 
 
 class SocialFeedScreen extends StatefulWidget {
@@ -829,6 +830,9 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
 
       // Save tags if any
       if (taggedDogs.isNotEmpty && dogId != null) {
+        // Fetch tagging dog name for notification
+        final taggerDogName = userDogs.first['name'] ?? 'A friend';
+        
         for (final taggedDog in taggedDogs) {
           try {
             await SupabaseConfig.client.from('post_tags').insert({
@@ -837,8 +841,19 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
               'tagged_dog_id': taggedDog.id,
               'is_collaborator': false,
             });
+            
+            // Send notification to tagged dog's owner
+            // We need the owner ID. If it's not in the Dog object, we might miss it.
+            // Dog search usually includes ownerId.
+            if (taggedDog.ownerId.isNotEmpty && taggedDog.ownerId != userId) {
+               await NotificationManager.sendPostTagNotification(
+                 receiverUserId: taggedDog.ownerId,
+                 taggerDogName: taggerDogName,
+                 postId: postId,
+               );
+            }
           } catch (e) {
-            debugPrint('Error tagging dog ${taggedDog.name}: $e');
+            debugPrint('Error tagging/notifying dog ${taggedDog.name}: $e');
             // Continue with other tags even if one fails
           }
         }

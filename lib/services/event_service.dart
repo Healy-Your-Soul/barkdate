@@ -2,6 +2,7 @@ import 'package:barkdate/models/event.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:flutter/material.dart';
+import 'package:barkdate/services/notification_manager.dart';
 
 class EventService {
   /// Get all upcoming events with optional filtering
@@ -260,6 +261,7 @@ class EventService {
       final user = SupabaseConfig.auth.currentUser;
       if (user == null) throw Exception('User not authenticated');
 
+      // Create invitations
       final invitations = dogIds.map((dogId) {
         return {
           'event_id': eventId,
@@ -272,6 +274,41 @@ class EventService {
       await SupabaseConfig.client
           .from('event_invitations')
           .upsert(invitations, onConflict: 'event_id,dog_id');
+
+      // Send notifications
+      // 1. Get event details for title
+      final eventData = await SupabaseConfig.client
+          .from('events')
+          .select('title')
+          .eq('id', eventId)
+          .single();
+      final eventTitle = eventData['title'] as String;
+
+      // 2. Get inviter name (user's name)
+      final userData = await SupabaseConfig.client
+          .from('users')
+          .select('name')
+          .eq('id', user.id)
+          .single();
+      final inviterName = userData['name'] as String;
+
+      // 3. Get dogs' owners to notify
+      final dogsData = await SupabaseConfig.client
+          .from('dogs')
+          .select('id, user_id')
+          .filter('id', 'in', dogIds);
+      
+      for (final dog in dogsData) {
+        final ownerId = dog['user_id'] as String;
+        if (ownerId != user.id) {
+          await NotificationManager.sendEventInviteNotification(
+            receiverUserId: ownerId,
+            inviterName: inviterName,
+            eventId: eventId,
+            eventTitle: eventTitle,
+          );
+        }
+      }
 
       return true;
     } catch (e) {

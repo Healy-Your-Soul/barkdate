@@ -274,7 +274,25 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
 
     // Determine owner avatar URL
     // Use profile override if available, otherwise dog's owner info
-    final ownerAvatarUrl = _ownerProfile?['avatar_url'] ?? widget.dog.ownerAvatarUrl;
+    var ownerAvatarUrl = _ownerProfile?['avatar_url'] ?? widget.dog.ownerAvatarUrl;
+    
+    // Resolve storage path if needed (if it doesn't start with http)
+    if (ownerAvatarUrl != null && 
+        ownerAvatarUrl.toString().isNotEmpty && 
+        !ownerAvatarUrl.toString().startsWith('http')) {
+      // Assuming it's in 'user-avatars' bucket if it's a relative path
+      // Try to construct public URL - this is a best-guess if we have just a filename/path
+      try {
+        final path = ownerAvatarUrl.toString();
+        // If it looks like a path (fast check)
+        ownerAvatarUrl = SupabaseConfig.client.storage
+            .from('user-avatars') // Standard bucket name
+            .getPublicUrl(path);
+      } catch (e) {
+        debugPrint('Error resolving avatar URL: $e');
+      }
+    }
+    
     final ownerName = _ownerProfile?['name'] ?? widget.dog.ownerName;
 
     return Scaffold(

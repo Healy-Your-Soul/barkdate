@@ -95,12 +95,55 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
   final myDogs = await BarkDateUserService.getUserDogs(user.id);
   final myDogId = myDogs.isNotEmpty ? myDogs.first['id'] as String? : null;
   
-  // Get friend dog IDs if filtering by pack
+  // If showing pack only, fetch friends directly (bypassing nearby pagination limits)
+  if (filter.showPackOnly) {
+    if (myDogId == null) return [];
+    
+    final friends = await DogFriendshipService.getFriends(myDogId);
+    
+    return friends.map((f) {
+      // Determine which dog object is the friend
+      final friendDogMap = f['friend_dog']['id'] == myDogId 
+          ? f['dog'] as Map<String, dynamic>
+          : f['friend_dog'] as Map<String, dynamic>;
+          
+      // Ensure photos is list
+      final photosRaw = friendDogMap['photo_urls'] ?? friendDogMap['photos'] ?? [];
+      final photos = (photosRaw as List).map((e) => e.toString()).toList();
+      if (photos.isEmpty && friendDogMap['main_photo_url'] != null) {
+        photos.add(friendDogMap['main_photo_url']);
+      }
+      
+      // Map to Dog object
+      return Dog(
+        id: friendDogMap['id'] ?? '',
+        name: friendDogMap['name'] ?? 'Unknown',
+        breed: friendDogMap['breed'] ?? 'Unknown',
+        age: (friendDogMap['age'] as num?)?.toInt() ?? 0,
+        size: friendDogMap['size'] ?? 'medium',
+        gender: friendDogMap['gender'] ?? 'unknown',
+        bio: friendDogMap['bio'] ?? '',
+        photos: photos,
+        ownerId: friendDogMap['user_id'] ?? '', // RPC returns user_id
+        ownerName: 'Friend', // We might need to fetch this if missing
+        distanceKm: 0.0, // Friends don't need distance in this view
+        isFriend: true,
+      );
+    }).toList();
+  }
+
+  // Normal mode: Fetch nearby dogs
+  final dogs = await repository.getNearbyDogs(
+    userId: user.id,
+    limit: 20,
+    offset: 0,
+  );
+  
+  // Get friend IDs to mark them in the list
   Set<String> friendDogIds = {};
-  if (filter.showPackOnly && myDogId != null) {
+  if (myDogId != null) {
     final friends = await DogFriendshipService.getFriends(myDogId);
     for (final f in friends) {
-      // Friend could be either dog_id or friend_dog_id depending on who initiated
       final dogData = f['dog'] as Map<String, dynamic>?;
       final friendDogData = f['friend_dog'] as Map<String, dynamic>?;
       if (dogData != null && dogData['id'] != myDogId) {
@@ -112,24 +155,19 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
     }
   }
 
-  // Fetch dogs
-  final dogs = await repository.getNearbyDogs(
-    userId: user.id,
-    limit: 20,
-    offset: 0,
-  );
-
-  // Apply memory filters (until DB supports them fully)
+  // Apply memory filters and map isFriend status
   return dogs.where((dog) {
-    // Pack filter
-    if (filter.showPackOnly && !friendDogIds.contains(dog.id)) return false;
-    
     if (dog.distanceKm > filter.maxDistance) return false;
     if (dog.age < filter.minAge || dog.age > filter.maxAge) return false;
     if (filter.sizes.isNotEmpty && !filter.sizes.contains(dog.size)) return false;
     if (filter.genders.isNotEmpty && !filter.genders.contains(dog.gender)) return false;
     if (filter.breeds.isNotEmpty && !filter.breeds.contains(dog.breed)) return false;
     return true;
+  }).map((dog) {
+    // Return copy with updated friend status
+    return dog.copyWith(
+      isFriend: friendDogIds.contains(dog.id),
+    );
   }).toList();
 });
 

@@ -52,8 +52,28 @@ class DogFriendshipService {
 
       debugPrint('🐕 Bark sent from $fromDogId to $toDogId');
       
-      // TODO: Send notification to the other dog's owner
-      // Would need to get the owner's user_id from the dog profile
+      // Send notification to the other dog's owner
+      try {
+        final dogs = await _supabase
+            .from('dogs')
+            .select('id, name, user_id')
+            .filter('id', 'in', [fromDogId, toDogId]);
+            
+        final fromDog = dogs.firstWhere((d) => d['id'] == fromDogId, orElse: () => {'name': 'A dog'});
+        final toDog = dogs.firstWhere((d) => d['id'] == toDogId, orElse: () => {'user_id': '', 'name': 'your dog'});
+        
+        if (toDog['user_id'] != null && toDog['user_id'].toString().isNotEmpty) {
+          await NotificationManager.sendBarkNotification(
+            receiverUserId: toDog['user_id'],
+            senderDogName: fromDog['name'],
+            receiverDogName: toDog['name'],
+            senderUserId: currentUserId,
+          );
+        }
+      } catch (e) {
+        debugPrint('Error sending notification for bark: $e');
+        // Don't fail the operation just because notification failed
+      }
       
       return true;
     } catch (e) {

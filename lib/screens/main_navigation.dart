@@ -9,6 +9,7 @@ import 'package:barkdate/screens/messages_screen.dart';
 import 'package:barkdate/screens/profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
+import 'dart:async';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -26,6 +27,8 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
   String? _dogAvatarUrl;
+  int _unreadMessageCount = 0;
+  StreamSubscription? _messageSubscription;
   
   // Feature flag: set to true to use new map_v2, false for old map
   static const bool _useMapV2 = true;
@@ -53,7 +56,34 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   void initState() {
     super.initState();
-    // Don't load avatar eagerly - only load when Profile tab is accessed
+    _subscribeToUnreadMessages();
+  }
+
+  @override
+  void dispose() {
+    _messageSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _subscribeToUnreadMessages() {
+    final user = SupabaseConfig.auth.currentUser;
+    if (user == null) return;
+
+    // Subscribe to unread message count
+    _messageSubscription = SupabaseConfig.client
+        .from('messages')
+        .stream(primaryKey: ['id'])
+        .eq('receiver_id', user.id)
+        .listen((messages) {
+          if (!mounted) return;
+          // Count unread messages (handle null is_read as false/unread if desired, or true/read)
+          // Usually is_read is false by default. safely check booleans.
+          final unreadCount = messages.where((m) => m['is_read'] == false).length;
+          debugPrint('📫 Unread messages count: $unreadCount (total matched: ${messages.length})');
+          setState(() => _unreadMessageCount = unreadCount);
+        }, onError: (error) {
+          debugPrint('❌ Error subscribing to messages: $error');
+        });
   }
 
   Future<void> _loadDogAvatar() async {
@@ -113,8 +143,16 @@ class _MainNavigationState extends State<MainNavigation> {
             label: 'Events',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Symbols.chat_bubble, weight: 300),
-            activeIcon: Icon(Symbols.chat_bubble, weight: 500, fill: 1),
+            icon: Badge(
+              isLabelVisible: _unreadMessageCount > 0,
+              label: Text('$_unreadMessageCount'),
+              child: Icon(Symbols.chat_bubble, weight: 300),
+            ),
+            activeIcon: Badge(
+              isLabelVisible: _unreadMessageCount > 0,
+              label: Text('$_unreadMessageCount'),
+              child: Icon(Symbols.chat_bubble, weight: 500, fill: 1),
+            ),
             label: 'Messages',
           ),
           BottomNavigationBarItem(

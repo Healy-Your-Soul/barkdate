@@ -119,16 +119,41 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ],
           ),
           const SizedBox(width: 8),
-          // Mark all read button
-          TextButton(
-            onPressed: _markAllAsRead,
-            child: Text(
-              'Mark all read',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
+          // Actions menu (Mark all read, Clear all)
+          PopupMenuButton<String>(
+            icon: Icon(
+              Icons.more_vert,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
+            onSelected: (value) {
+              if (value == 'mark_all_read') {
+                _markAllAsRead();
+              } else if (value == 'clear_all') {
+                _clearAllNotifications();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'mark_all_read',
+                child: Row(
+                  children: [
+                    Icon(Icons.done_all),
+                    SizedBox(width: 8),
+                    Text('Mark All Read'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'clear_all',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_sweep, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Clear All', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -593,6 +618,66 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
     } catch (e) {
       debugPrint('Error marking all as read: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _clearAllNotifications() async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear All Notifications?'),
+        content: const Text('This will permanently delete all your notifications. This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final currentUser = SupabaseConfig.auth.currentUser;
+      if (currentUser != null) {
+        // Delete all notifications for this user
+        await SupabaseConfig.client
+            .from('notifications')
+            .delete()
+            .eq('user_id', currentUser.id);
+      }
+      
+      // Update local state
+      setState(() {
+        _notifications = [];
+        _notificationGroups = [];
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All notifications cleared'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error clearing notifications: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

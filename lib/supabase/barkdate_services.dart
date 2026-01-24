@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:barkdate/services/notification_manager.dart';
 
 /// BarkDate-specific Supabase service classes
 class BarkDateUserService {
@@ -635,6 +636,23 @@ class BarkDateMessageService {
     };
 
     final result = await SupabaseService.insert('messages', data);
+    
+    // Send push notification
+    try {
+      // Get sender name for notification
+      final senderProfile = await BarkDateUserService.getUserProfile(senderId);
+      final senderName = senderProfile?['name'] ?? 'Friend';
+      
+      await NotificationManager.sendMessageNotification(
+        receiverUserId: receiverId,
+        senderName: senderName,
+        messageContent: content,
+        matchId: matchId,
+      );
+    } catch (e) {
+      debugPrint('Error sending message notification: $e');
+    }
+
     return result.first;
   }
 

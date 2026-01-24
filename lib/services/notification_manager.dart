@@ -94,6 +94,39 @@ class NotificationManager {
         metadata: metadata,
       );
       
+      // Send push notification if requested
+      if (sendPush) {
+        try {
+          // Get user's FCM token from database
+          final userResponse = await SupabaseConfig.client
+              .from('users')
+              .select('fcm_token')
+              .eq('id', userId)
+              .maybeSingle();
+          
+          final fcmToken = userResponse?['fcm_token'] as String?;
+          
+          if (fcmToken != null && fcmToken.isNotEmpty) {
+            await FirebaseMessagingService.sendPushNotificationToUser(
+              userToken: fcmToken,
+              title: title,
+              body: body,
+              type: type,
+              data: {
+                'action_type': actionType,
+                'related_id': relatedId,
+                ...?metadata,
+              },
+            );
+            debugPrint('📱 Push notification sent to user $userId');
+          } else {
+            debugPrint('⚠️ No FCM token for user $userId, skipping push');
+          }
+        } catch (e) {
+          debugPrint('Failed to send push notification: $e');
+        }
+      }
+      
       // Play sound if requested
       if (playSound) {
         try {
@@ -213,6 +246,70 @@ class NotificationManager {
       relatedId: matchId,
       metadata: {
         'matched_dog_name': matchedDogName,
+      },
+    );
+  }
+
+  /// Send a chat message notification
+  static Future<void> sendMessageNotification({
+    required String receiverUserId,
+    required String senderName,
+    required String messageContent,
+    required String matchId,
+  }) async {
+    await sendNotification(
+      userId: receiverUserId,
+      title: '💬 New Message from $senderName',
+      body: messageContent, // The actual message content
+      type: NotificationType.message,
+      actionType: 'open_chat', // Navigation logic in FirebaseMessagingService handles this
+      relatedId: matchId,
+      metadata: {
+        'sender_name': senderName,
+        'message_content': messageContent,
+      },
+    );
+  }
+
+  /// Send a post tag notification (using social type)
+  static Future<void> sendPostTagNotification({
+    required String receiverUserId,
+    required String taggerDogName,
+    required String postId,
+  }) async {
+    await sendNotification(
+      userId: receiverUserId,
+      title: '🏷️ You were tagged!',
+      body: '$taggerDogName tagged you in a post.',
+      type: NotificationType.social,
+      actionType: 'open_post',
+      relatedId: postId,
+      metadata: {
+        'action': 'tagged you in',
+        'post_type': 'a post',
+        'from_dog_name': taggerDogName,
+      },
+    );
+  }
+
+  /// Send an event invite notification (using social type)
+  static Future<void> sendEventInviteNotification({
+    required String receiverUserId,
+    required String inviterName,
+    required String eventId,
+    required String eventTitle,
+  }) async {
+    await sendNotification(
+      userId: receiverUserId,
+      title: '📅 Event Invitation',
+      body: '$inviterName invited you to $eventTitle',
+      type: NotificationType.social,
+      actionType: 'open_event',
+      relatedId: eventId,
+      metadata: {
+        'action': 'invited you to',
+        'post_type': 'event: $eventTitle',
+        'inviter_name': inviterName,
       },
     );
   }

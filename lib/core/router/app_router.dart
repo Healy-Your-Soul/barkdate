@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/features/profile/presentation/screens/dog_details_screen.dart';
 import 'package:barkdate/models/dog.dart';
+import 'package:barkdate/models/event.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:barkdate/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:barkdate/features/auth/presentation/screens/sign_up_screen.dart';
@@ -19,7 +20,7 @@ import 'package:barkdate/features/profile/presentation/screens/profile_screen.da
 import 'package:barkdate/features/settings/presentation/screens/settings_screen.dart';
 import 'package:barkdate/features/social_feed/presentation/screens/social_feed_screen.dart';
 import 'package:barkdate/features/gamification/presentation/screens/achievements_screen.dart';
-import 'package:barkdate/features/premium/presentation/screens/premium_screen.dart';
+
 import 'package:barkdate/core/presentation/widgets/scaffold_with_nav_bar.dart';
 import 'package:barkdate/screens/onboarding/welcome_screen.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
@@ -135,10 +136,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'social-feed',
                     builder: (context, state) => const SocialFeedScreen(),
                   ),
-                  GoRoute(
-                    path: 'premium',
-                    builder: (context, state) => const PremiumScreen(),
-                  ),
+
                 ],
               ),
             ],
@@ -217,6 +215,45 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/create-event',
         builder: (context, state) {
           return const CreateEventScreen();
+        },
+      ),
+      GoRoute(
+        path: '/event/:id',
+        builder: (context, state) {
+          final eventId = state.pathParameters['id'];
+          if (eventId == null) return const Scaffold(body: Center(child: Text('Event not found')));
+
+          return Scaffold(
+            body: FutureBuilder<Map<String, dynamic>>(
+              future: SupabaseConfig.client
+                  .from('events')
+                  .select('*, users!organizer_id(name, avatar_url)')
+                  .eq('id', eventId)
+                  .single(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                
+                if (snapshot.hasError || !snapshot.hasData) {
+                  return const Center(child: Text('Error loading event')); 
+                }
+
+                try {
+                  final eventData = snapshot.data!;
+                  final userData = eventData['users'] as Map<String, dynamic>?;
+                  final event = Event.fromJson({
+                    ...eventData,
+                    'organizer_name': userData?['name'] ?? 'Unknown',
+                    'organizer_avatar_url': userData?['avatar_url'] ?? '',
+                  });
+                  return EventDetailsScreen(event: event);
+                } catch (e) {
+                  return Center(child: Text('Error parsing event: $e'));
+                }
+              },
+            ),
+          );
         },
       ),
       GoRoute(

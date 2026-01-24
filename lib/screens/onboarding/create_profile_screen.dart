@@ -293,6 +293,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   }
 
   Future<void> _createProfile() async {
+    // Dismiss keyboard
+    FocusScope.of(context).unfocus();
+
     setState(() => _isLoading = true);
     
     try {
@@ -463,6 +466,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
   /// Enter app with minimal setup (just user profile, no dog)
   Future<void> _enterAppWithMinimalSetup() async {
+    // Dismiss keyboard
+    FocusScope.of(context).unfocus();
+
     // Validate at least owner name
     if (_ownerNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -4,9 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:barkdate/features/profile/presentation/widgets/share_dog_sheet.dart';
 import 'package:barkdate/features/profile/presentation/providers/profile_provider.dart';
 import 'package:barkdate/design_system/app_typography.dart';
-import 'package:barkdate/design_system/app_spacing.dart';
-import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
-import 'package:barkdate/features/profile/domain/repositories/profile_repository.dart';
+
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/dog_sharing_service.dart';
@@ -243,58 +241,7 @@ class ProfileScreen extends ConsumerWidget {
 
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
-              // 4. "Become a Host" Banner (Add Dog / Premium)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                      border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.5)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Go Premium',
-                                style: AppTypography.h3().copyWith(fontSize: 16),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Unlock exclusive features and unlimited barks.',
-                                style: AppTypography.bodySmall().copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        // Small illustration or icon
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: Colors.amber.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.star_rounded, color: Colors.amber),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+
 
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
 

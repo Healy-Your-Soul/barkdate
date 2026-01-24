@@ -7,6 +7,8 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/models/notification.dart';
 import 'package:barkdate/services/in_app_notification_service.dart';
 import 'package:barkdate/services/notification_sound_service.dart';
+import 'package:barkdate/core/router/app_router.dart';
+import 'package:go_router/go_router.dart';
 
 /// Firebase Cloud Messaging service for BarkDate
 /// Handles push notifications, background messages, and FCM token management
@@ -402,29 +404,63 @@ class FirebaseMessagingService {
   
   /// Navigate to appropriate screen based on notification
   static Future<void> _navigateToScreen(NotificationType type, Map<String, dynamic> data) async {
-    // This will be implemented to navigate to appropriate screens
-    // based on the notification type and data
+    final context = rootNavigatorKey.currentContext;
+    if (context == null) return;
+
     switch (type) {
       case NotificationType.bark:
         // Navigate to dog profile
+        if (data['sender_dog_name'] != null) {
+          // Ideally we would navigate to the specific dog, but we might only have names
+          // Navigating to matches or feed is safer
+          GoRouter.of(context).push('/matches'); 
+        }
         break;
       case NotificationType.playdateRequest:
-        // Navigate to playdate response
+        // Navigate to playdate details
+        if (data['related_id'] != null) {
+           GoRouter.of(context).push('/playdate-details', extra: {'id': data['related_id']});
+        }
         break;
       case NotificationType.playdate:
         // Navigate to playdate details
+        if (data['related_id'] != null) {
+           GoRouter.of(context).push('/playdate-details', extra: {'id': data['related_id']});
+        }
         break;
       case NotificationType.message:
         // Navigate to chat
+        if (data['related_id'] != null) {
+          // related_id is match_id for messages
+          GoRouter.of(context).push('/chat', extra: {
+            'matchId': data['related_id'],
+            // We might need recipient info here, but ChatScreen usually fetches it if missing
+            // or we might need to pass partial data
+          });
+        }
         break;
       case NotificationType.match:
         // Navigate to match screen
+        GoRouter.of(context).push('/matches');
         break;
       case NotificationType.social:
-        // Navigate to social feed
+        // Navigate based on action type
+        final actionType = data['action_type'];
+        if (actionType == 'open_event') {
+          // Navigate to event details
+           if (data['related_id'] != null) {
+            GoRouter.of(context).push('/event/${data['related_id']}');
+           }
+        } else if (actionType == 'open_post') {
+             // Navigate to social feed
+             GoRouter.of(context).push('/social-feed');
+        } else {
+             GoRouter.of(context).push('/social-feed');
+        }
         break;
       default:
         // Navigate to notifications screen
+        GoRouter.of(context).push('/notifications');
         break;
     }
   }
