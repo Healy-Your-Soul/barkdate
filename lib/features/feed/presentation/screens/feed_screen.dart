@@ -215,56 +215,62 @@ class FeedFeatureScreen extends ConsumerWidget {
                     ),
                   );
                 }
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final dog = dogs[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: AppSpacing.xs,
-                        ),
-                        child: DogCard(
-                          dog: dog,
-                          // Use actual friendship status if available, otherwise use tab mode
-                          // This ensures friends show "In Pack" even in "All Dogs" tab
-                          isFriend: dog.isFriend ?? isPackMode,
-                          onTap: () {
-                            context.push('/dog-details', extra: dog);
-                          },
-                          onBarkPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Barked! ${dog.ownerName} will be notified.'),
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          },
-                          onPlaydatePressed: () {
-                            context.push('/create-playdate', extra: dog);
-                          },
-                        ),
-                      );
-                    },
-                    childCount: dogs.length,
+                
+                // Fixed height list for nested scrolling
+                return SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 400, // Fixed height window for the list
+                    child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      itemCount: dogs.length,
+                      itemBuilder: (context, index) {
+                        final dog = dogs[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: AppSpacing.xs,
+                          ),
+                          child: DogCard(
+                            dog: dog,
+                            // Use actual friendship status if available, otherwise use tab mode
+                            // This ensures friends show "In Pack" even in "All Dogs" tab
+                            isFriend: dog.isFriend ?? isPackMode,
+                            onTap: () {
+                              context.push('/dog-details', extra: dog);
+                            },
+                            onBarkPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Barked! ${dog.ownerName} will be notified.'),
+                                  backgroundColor: Theme.of(context).colorScheme.primary,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            },
+                            onPlaydatePressed: () {
+                              context.push('/create-playdate', extra: dog);
+                            },
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 );
               },
-              loading: () => SliverToBoxAdapter(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32.0),
+              loading: () => const SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 200,
+                  child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const DogLoadingWidget(size: 120),
-                        const SizedBox(height: 16),
+                        DogLoadingWidget(size: 80),
+                        SizedBox(height: 16),
                         Text(
                           'Sniffing out your pack...',
                           style: TextStyle(
                             fontSize: 16,
-                            color: Colors.grey[600],
+                            color: Colors.grey,
                             fontWeight: FontWeight.w500,
                           ),
                         ),

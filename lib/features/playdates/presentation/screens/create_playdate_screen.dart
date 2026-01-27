@@ -10,6 +10,7 @@ import 'package:barkdate/services/places_service.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/services/location_service.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -236,6 +237,24 @@ class _CreatePlaydateScreenState extends ConsumerState<CreatePlaydateScreen> {
           'status': 'pending',
           'message': _descriptionController.text.isNotEmpty ? _descriptionController.text : 'Let\'s play!',
         });
+        
+        // Send notification to invitee
+        final myDogName = myDogsRes[0]['name'] as String? ?? 'Your friend';
+        final playdateTitle = _titleController.text.isNotEmpty 
+            ? _titleController.text 
+            : 'Playdate with $myDogName';
+        await NotificationService.createAndShowNotification(
+          userId: dog.ownerId,
+          title: 'Playdate Invite! 🐕',
+          body: '$myDogName wants to play with ${dog.name} - $playdateTitle',
+          type: 'playdate_request',
+          relatedId: playdateId,
+          metadata: {
+            'playdate_id': playdateId,
+            'invitee_dog_id': dog.id,
+            'requester_dog_id': myDogId,
+          },
+        );
       }
 
       if (mounted) {

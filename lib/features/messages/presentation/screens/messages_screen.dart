@@ -119,13 +119,49 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
             Expanded(
               child: conversationsAsync.when(
                 data: (conversations) {
-                  if (conversations.isEmpty) {
+                  // Apply filters
+                  var filteredConversations = conversations.where((c) {
+                    // Apply category filter
+                    if (_selectedFilterIndex == 1) {
+                      // Playdates - filter by is_playdate or has playdate_id
+                      final isPlaydate = c['is_playdate'] == true || c['playdate_id'] != null;
+                      if (!isPlaydate) return false;
+                    } else if (_selectedFilterIndex == 2) {
+                      // General - exclude playdates
+                      final isPlaydate = c['is_playdate'] == true || c['playdate_id'] != null;
+                      if (isPlaydate) return false;
+                    }
+                    
+                    // Apply search filter
+                    if (_searchQuery.isNotEmpty) {
+                      final content = (c['content'] as String? ?? '').toLowerCase();
+                      final sender = c['sender'] as Map<String, dynamic>?;
+                      final receiver = c['receiver'] as Map<String, dynamic>?;
+                      final senderName = (sender?['name'] as String? ?? '').toLowerCase();
+                      final receiverName = (receiver?['name'] as String? ?? '').toLowerCase();
+                      final query = _searchQuery.toLowerCase();
+                      
+                      if (!content.contains(query) && 
+                          !senderName.contains(query) && 
+                          !receiverName.contains(query)) {
+                        return false;
+                      }
+                    }
+                    
+                    return true;
+                  }).toList();
+                  
+                  if (filteredConversations.isEmpty) {
                     return Center(
                       child: Padding(
                         padding: const EdgeInsets.all(32.0),
                         child: CuteEmptyState(
                           icon: Icons.chat_bubble_outline,
-                          title: 'No messages yet',
+                          title: _selectedFilterIndex == 0 
+                              ? 'No messages yet' 
+                              : _selectedFilterIndex == 1 
+                                  ? 'No playdate messages'
+                                  : 'No general messages',
                           message: 'Start matching with other dogs to get the conversation started!',
                           actionLabel: 'Find Friends',
                           onAction: () {
@@ -138,10 +174,10 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
 
                   return ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
-                    itemCount: conversations.length,
+                    itemCount: filteredConversations.length,
                     separatorBuilder: (context, index) => const Divider(height: 32, thickness: 0.5),
                     itemBuilder: (context, index) {
-                      final conversation = conversations[index];
+                      final conversation = filteredConversations[index];
                       return _buildConversationTile(context, conversation);
                     },
                   );

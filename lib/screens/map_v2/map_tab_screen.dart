@@ -75,6 +75,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   // Current user's check-in status (for top-left floating button)
   CheckIn? _currentUserCheckIn;
   String? _userDogPhotoUrl; // Photo for check-in marker
+  
+  // Other users' check-ins (for displaying on map)
+  final List<Map<String, dynamic>> _otherUsersCheckIns = [];
 
   @override
   void initState() {
@@ -225,6 +228,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       // Fetch check-in counts for the places
       await _refreshCheckInCounts();
       
+      // Fetch other users' check-ins for map display
+      await _refreshOtherUsersCheckIns();
+      
       // Fetch live users nearby
       await _refreshLiveUsers();
       
@@ -251,6 +257,26 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       }
     } catch (e) {
       debugPrint('❌ Error refreshing check-in counts: $e');
+    }
+  }
+
+  /// Refresh other users' check-ins to display on map
+  Future<void> _refreshOtherUsersCheckIns() async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      final checkIns = await CheckInService.getAllActiveCheckIns(excludeUserId: userId);
+      
+      debugPrint('📍 Other users check-ins found: ${checkIns.length}');
+      
+      if (mounted) {
+        setState(() {
+          _otherUsersCheckIns.clear();
+          _otherUsersCheckIns.addAll(checkIns);
+        });
+        _updateMarkers();
+      }
+    } catch (e) {
+      debugPrint('❌ Error refreshing other users check-ins: $e');
     }
   }
 
@@ -462,9 +488,70 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       }
     }
 
-    // PRIVACY: Live GPS markers removed from public view
-    // Users' real-time locations are never shown to others
-    // Only check-in locations (at parks) are displayed
+    // Add OTHER users' check-in markers (dogs at parks)
+    for (final checkIn in _otherUsersCheckIns) {
+      final latitude = checkIn['latitude'] as double?;
+      final longitude = checkIn['longitude'] as double?;
+      final checkedInAtStr = checkIn['checked_in_at'] as String?;
+      final dog = checkIn['dog'] as Map<String, dynamic>?;
+      final user = checkIn['user'] as Map<String, dynamic>?;
+      final parkName = checkIn['park_name'] as String? ?? 'Unknown Park';
+      
+      if (latitude == null || longitude == null) continue;
+      
+      // Calculate hours since check-in
+      double hoursAgo = 0;
+      if (checkedInAtStr != null) {
+        final checkedInAt = DateTime.tryParse(checkedInAtStr);
+        if (checkedInAt != null) {
+          hoursAgo = DateTime.now().difference(checkedInAt).inMinutes / 60.0;
+        }
+      }
+      
+      // Skip if older than 4 hours
+      if (hoursAgo >= 4) continue;
+      
+      // Traffic light system: Green <1h, Orange 1-2h, Red 2-3h
+      final borderColor = hoursAgo < 1 ? Colors.green 
+          : hoursAgo < 2 ? Colors.orange 
+          : hoursAgo < 3 ? Colors.red
+          : Colors.grey;
+      
+      final dogPhotoUrl = dog?['main_photo_url'] as String?;
+      final dogName = dog?['name'] as String? ?? 'Dog';
+      final userName = user?['name'] as String? ?? 'Someone';
+      
+      // Create dog photo marker with colored border
+      final icon = await DogMarkerGenerator.createDogMarker(
+        imageUrl: dogPhotoUrl,
+        borderColor: borderColor,
+        size: 42,
+        borderWidth: 3,
+      );
+      
+      final userId = checkIn['user_id'] as String?;
+      newMarkers.add(Marker(
+        markerId: MarkerId('checkin_$userId'),
+        position: LatLng(latitude, longitude),
+        infoWindow: InfoWindow(
+          title: '🐕 $dogName',
+          snippet: '$parkName • ${_formatTimeAgo(hoursAgo)}',
+        ),
+        icon: icon,
+        zIndex: 50, // Below current user's marker
+        onTap: () {
+          // Show dog mini card popup
+          setState(() => _selectedLiveDog = {
+            'user_id': userId,
+            'user_name': userName,
+            'dog_name': dogName,
+            'dog_photo_url': dogPhotoUrl,
+            'park_name': parkName,
+            'hours_ago': hoursAgo,
+          });
+        },
+      ));
+    }
 
     // Add checked-in user marker (dog photo at check-in location)
     if (_currentUserCheckIn != null && 

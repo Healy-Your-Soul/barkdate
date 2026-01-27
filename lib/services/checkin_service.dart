@@ -226,7 +226,47 @@ class CheckInService {
 
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
-      debugPrint('Error getting active check-ins at place: $e');
+      debugPrint('Error getting all active check-ins: $e');
+      return [];
+    }
+  }
+
+  /// Get ALL active check-ins globally with user/dog details (for map markers)
+  /// Excludes current user's check-in, auto-expires after 4 hours
+  static Future<List<Map<String, dynamic>>> getAllActiveCheckIns({String? excludeUserId}) async {
+    try {
+      // Calculate cutoff time (4 hours ago)
+      final cutoffTime = DateTime.now().subtract(const Duration(hours: 4)).toIso8601String();
+      
+      var query = SupabaseConfig.client
+          .from('checkins')
+          .select('''
+            *,
+            user:user_id (
+              id,
+              name,
+              avatar_url
+            ),
+            dog:dog_id (
+              id,
+              name,
+              breed,
+              main_photo_url
+            )
+          ''')
+          .eq('status', 'active')
+          .gte('checked_in_at', cutoffTime);
+      
+      // Exclude current user if specified
+      if (excludeUserId != null) {
+        query = query.neq('user_id', excludeUserId);
+      }
+      
+      final data = await query.order('checked_in_at', ascending: false);
+
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      debugPrint('Error getting all active check-ins: $e');
       return [];
     }
   }

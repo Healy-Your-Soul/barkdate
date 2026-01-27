@@ -119,6 +119,9 @@ class NotificationsScreen extends ConsumerWidget {
     final body = notification['body'] as String? ?? '';
     final isRead = notification['is_read'] as bool? ?? false;
     final createdAt = DateTime.tryParse(notification['created_at'] ?? '') ?? DateTime.now();
+    final notificationId = notification['id'] as String?;
+    final relatedId = notification['related_id'] as String?;
+    final metadata = notification['metadata'] as Map<String, dynamic>?;
 
     IconData icon;
     Color iconColor;
@@ -150,6 +153,46 @@ class NotificationsScreen extends ConsumerWidget {
     }
 
     return ListTile(
+      onTap: () async {
+        // 1. Mark as read
+        if (notificationId != null && !isRead) {
+          await NotificationService.markAsRead(notificationId);
+        }
+        
+        // 2. Route based on type
+        if (!context.mounted) return;
+        
+        switch (type) {
+          case 'playdate_request':
+          case 'playdate_confirmed':
+            // Navigate to playdates tab
+            Navigator.of(context).pushNamed('/playdates');
+            break;
+          case 'message':
+            // Navigate to messages or specific chat if we have conversation data
+            if (metadata != null && metadata['conversation_id'] != null) {
+              Navigator.of(context).pushNamed('/chat', arguments: {
+                'conversationId': metadata['conversation_id'],
+              });
+            } else {
+              Navigator.of(context).pushNamed('/messages');
+            }
+            break;
+          case 'bark':
+            // Navigate to dog profile if we have the dog ID
+            if (relatedId != null) {
+              Navigator.of(context).pushNamed('/dog/$relatedId');
+            }
+            break;
+          case 'event':
+            // Navigate to events
+            Navigator.of(context).pushNamed('/events');
+            break;
+          default:
+            // Just close and stay on notifications
+            break;
+        }
+      },
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
