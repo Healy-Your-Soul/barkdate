@@ -839,6 +839,27 @@ class BarkDatePlaydateService {
 
   /// Get user's playdates (excludes cancelled) with participant dogs for avatar display
   static Future<List<Map<String, dynamic>>> getUserPlaydates(String userId) async {
+    // 1. Get IDs of playdates where user is an invitee (pending request)
+    final pendingRequests = await SupabaseConfig.client
+        .from('playdate_requests')
+        .select('playdate_id')
+        .eq('invitee_id', userId)
+        .eq('status', 'pending');
+        
+    final pendingPlaydateIds = pendingRequests
+        .map((r) => r['playdate_id'] as String)
+        .toList();
+    
+    // 2. Build filter string
+    // Start with basic: organizer OR participant
+    String filter = 'organizer_id.eq.$userId,participant_id.eq.$userId';
+    
+    // Add pending playdates if any
+    if (pendingPlaydateIds.isNotEmpty) {
+      filter += ',id.in.(${pendingPlaydateIds.join(',')})';
+    }
+
+    // 3. Fetch playdates
     return await SupabaseConfig.client
         .from('playdates')
         .select('''
@@ -860,7 +881,7 @@ class BarkDatePlaydateService {
             requester_dog:dogs!playdate_requests_requester_dog_id_fkey(id, name, main_photo_url)
           )
         ''')
-        .or('organizer_id.eq.$userId,participant_id.eq.$userId')
+        .or(filter)
         .neq('status', 'cancelled')
         .order('scheduled_at', ascending: false);
   }
