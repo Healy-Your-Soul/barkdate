@@ -111,10 +111,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
     await _navigateNext();
   }
 
-  void _skipPermissions() {
-    // Navigate with limited features
-    _navigateNext();
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -231,24 +228,12 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
                     ),
                   ),
                   child: const Text(
-                    'Enable All & Continue',
+                    'Continue',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              
-              // Skip button
-              TextButton(
-                onPressed: _skipPermissions,
-                child: Text(
-                  'Maybe Later',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    fontSize: 16,
-                  ),
-                ),
-              ),
+
             ],
           ),
         ),
