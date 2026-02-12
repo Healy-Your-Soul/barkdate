@@ -991,6 +991,7 @@ static Object _buildCircleScope({
       final requestBody = {
         'includedTypes': includedTypes,
         'maxResultCount': 20,
+        'rankPreference': 'DISTANCE',
         'locationRestriction': {
           'circle': {
             'center': {
