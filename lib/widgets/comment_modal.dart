@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:barkdate/models/post.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/models/dog.dart'; // Import Dog model
+import 'package:go_router/go_router.dart'; // Import go_router
 
 /// Instagram-style comment modal with post image and real comment functionality
 class CommentModal extends StatefulWidget {
@@ -22,6 +25,7 @@ class _CommentModalState extends State<CommentModal> {
   bool _isLoading = true;
   bool _isPosting = false;
   String? _currentUserId;
+  StreamSubscription? _commentsSubscription;
 
   @override
   void initState() {
@@ -32,6 +36,7 @@ class _CommentModalState extends State<CommentModal> {
 
   @override
   void dispose() {
+    _commentsSubscription?.cancel();
     _commentController.dispose();
     super.dispose();
   }
@@ -57,23 +62,23 @@ class _CommentModalState extends State<CommentModal> {
   Future<void> _loadComments() async {
     setState(() => _isLoading = true);
     
-    try {
-      final comments = await BarkDateSocialService.getPostComments(widget.post.id);
-      if (mounted) {
-        setState(() {
-          _comments = comments;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading comments: $e');
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading comments: $e')),
-        );
-      }
-    }
+    _commentsSubscription?.cancel();
+    _commentsSubscription = BarkDateSocialService.streamComments(widget.post.id).listen(
+      (comments) {
+        if (mounted) {
+          setState(() {
+            _comments = comments;
+            _isLoading = false;
+          });
+        }
+      },
+      onError: (e) {
+        debugPrint('Error streaming comments: $e');
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      },
+    );
   }
 
   Future<void> _addComment() async {
@@ -89,7 +94,7 @@ class _CommentModalState extends State<CommentModal> {
       );
       
       _commentController.clear();
-      await _loadComments(); // Reload comments to show the new one
+      // await _loadComments(); // Requirement for real-time means we don't need manual reload
       
       if (mounted) {
         // Hide keyboard
@@ -105,6 +110,30 @@ class _CommentModalState extends State<CommentModal> {
     } finally {
       if (mounted) {
         setState(() => _isPosting = false);
+      }
+    }
+  }
+
+  /// Navigate to dog profile
+  Future<void> _navigateToDogProfile(String dogId) async {
+    try {
+      // Fetch dog data and navigate
+      final dogData = await SupabaseConfig.client
+          .from('dogs')
+          .select('*, user:users(name, avatar_url)')
+          .eq('id', dogId)
+          .single();
+      
+      if (mounted) {
+        final dog = Dog.fromJson(dogData);
+        context.push('/dog/${dog.id}', extra: dog);
+      }
+    } catch (e) {
+      debugPrint('Error navigating to dog profile: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load dog profile')),
+        );
       }
     }
   }
@@ -319,6 +348,9 @@ class _CommentModalState extends State<CommentModal> {
     final dogPhoto = dog['main_photo_url'] ?? '';
     final ownerFirstName = userName.split(' ').first; // Get first name only
     
+    // Attempt to get dog ID for navigation
+    final dogId = dog['id'] as String?;
+
     final displayName = '$dogName & $ownerFirstName';
     final profileImage = dogPhoto.isNotEmpty ? dogPhoto : userAvatar;
     
@@ -327,47 +359,53 @@ class _CommentModalState extends State<CommentModal> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundImage: profileImage.isNotEmpty && !profileImage.contains('placeholder')
-                ? NetworkImage(profileImage) 
-                : null,
-            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-            onBackgroundImageError: profileImage.isNotEmpty && !profileImage.contains('placeholder')
-                ? (exception, stackTrace) {
-                    debugPrint('Error loading comment profile image: $exception');
-                  }
-                : null,
-            child: profileImage.isEmpty || profileImage.contains('placeholder')
-                ? Icon(
-                    Icons.pets, // Use pet icon for dog-focused comments
-                    size: 18,
-                    color: Theme.of(context).colorScheme.primary,
-                  )
-                : null,
+          GestureDetector(
+            onTap: dogId != null ? () => _navigateToDogProfile(dogId) : null,
+            child: CircleAvatar(
+              radius: 18,
+              backgroundImage: profileImage.isNotEmpty && !profileImage.contains('placeholder')
+                  ? NetworkImage(profileImage) 
+                  : null,
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              onBackgroundImageError: profileImage.isNotEmpty && !profileImage.contains('placeholder')
+                  ? (exception, stackTrace) {
+                      debugPrint('Error loading comment profile image: $exception');
+                    }
+                  : null,
+              child: profileImage.isEmpty || profileImage.contains('placeholder')
+                  ? Icon(
+                      Icons.pets, // Use pet icon for dog-focused comments
+                      size: 18,
+                      color: Theme.of(context).colorScheme.primary,
+                    )
+                  : null,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: displayName,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
+                GestureDetector(
+                  onTap: dogId != null ? () => _navigateToDogProfile(dogId) : null,
+                  child: RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: displayName,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
-                      ),
-                      TextSpan(
-                        text: ' $content',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface,
+                        TextSpan(
+                          text: ' $content',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -386,8 +424,16 @@ class _CommentModalState extends State<CommentModal> {
   }
 
   Widget _buildCommentInput() {
+    // Get keyboard height for padding
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: 16 + keyboardHeight, // Add keyboard height as bottom padding
+      ),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         border: Border(
@@ -398,6 +444,7 @@ class _CommentModalState extends State<CommentModal> {
         ),
       ),
       child: SafeArea(
+        top: false, // Don't add extra padding at top
         child: Row(
           children: [
             FutureBuilder<List<Map<String, dynamic>>>(

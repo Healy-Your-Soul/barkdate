@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "350088513961",
+    "project_id": "co1l0uvij8nhdcps5tiyii9b2wp9hp",
+    "storage_bucket": "co1l0uvij8nhdcps5tiyii9b2wp9hp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:350088513961:android:cad71686fc78bd22c3dcb8",
+        "android_client_info": {
+          "package_name": "com.bark.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "350088513961-egccamr50hgp303g3t6i900n7djer4mt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2hJmMaaqOYg-JQH7Gu6f4kFM4rkWKrZo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "350088513961-egccamr50hgp303g3t6i900n7djer4mt.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

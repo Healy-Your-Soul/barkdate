@@ -1,18 +1,39 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:barkdate/design_system/app_theme.dart';
-import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
-import 'package:barkdate/screens/main_navigation.dart';
-import 'package:barkdate/screens/onboarding/welcome_screen.dart';
-import 'package:barkdate/screens/auth_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/settings_service.dart';
 import 'package:barkdate/services/notification_manager.dart';
 import 'package:barkdate/services/cache_service.dart';
 import 'package:barkdate/firebase_options.dart';
+import 'package:barkdate/utils/maps_js_bridge.dart';
+import 'package:barkdate/app.dart';
+
+/// A Completer that completes when the Google Maps API is ready.
+final mapsApiReadyCompleter = Completer<void>();
 
 void main() async {
+  if (kIsWeb) {
+    registerMapsApiReadyCallback(() {
+      if (!mapsApiReadyCompleter.isCompleted) {
+        mapsApiReadyCompleter.complete();
+      }
+    });
+
+    if (googleMapsApiLoadedFlag() && !mapsApiReadyCompleter.isCompleted) {
+      mapsApiReadyCompleter.complete();
+    }
+  }
+
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Configure Google Fonts to NOT check asset manifest (fixes web debug mode)
+  // This forces Google Fonts to always fetch from HTTP instead of looking for bundled assets
+  GoogleFonts.config.allowRuntimeFetching = true;
   
   // Initialize Firebase (for FCM, not auth)
   await Firebase.initializeApp(
@@ -31,31 +52,6 @@ void main() async {
   // Start cache cleanup (periodic cleanup every minute)
   CacheService().startPeriodicCleanup();
   
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: SettingsService(),
-      builder: (context, child) {
-        return MaterialApp(
-          title: 'BarkDate',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: SettingsService().themeMode, // Use settings service theme
-          home: const SupabaseAuthWrapper(), // Use Supabase Auth only
-          routes: {
-            '/auth': (context) => const AuthScreen(),
-            '/home': (context) => const MainNavigation(),
-            '/welcome': (context) => const WelcomeScreen(),
-          },
-        );
-      },
-    );
-  }
+  // Wrap app with Riverpod for map_v2 state management
+  runApp(const ProviderScope(child: BarkDateApp()));
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:barkdate/screens/auth/sign_up_screen.dart';
 import 'package:barkdate/screens/auth/forgot_password_screen.dart';
 import 'package:barkdate/screens/main_navigation.dart';
@@ -91,20 +92,12 @@ class _SignInScreenState extends State<SignInScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 40),
-                // Logo/Illustration
+                // Logo
                 Center(
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.pets,
-                      size: 60,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                  child: SvgPicture.asset(
+                    'assets/images/logo.svg',
+                    width: 160,
+                    height: 160,
                   ),
                 ),
                 const SizedBox(height: 32),

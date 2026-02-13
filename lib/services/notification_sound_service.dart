@@ -6,6 +6,7 @@ import 'package:barkdate/models/notification.dart';
 /// Provides different sound patterns for different notification types
 class NotificationSoundService {
   static const MethodChannel _channel = MethodChannel('notification_sounds');
+  static bool _isSupported = true;
   
   // Sound file paths (to be added to assets)
   static final Map<NotificationType, String> _soundPaths = {
@@ -31,8 +32,14 @@ class NotificationSoundService {
   
   /// Initialize the sound service
   static Future<void> initialize() async {
+    if (!_isSupported) return;
     try {
       await _channel.invokeMethod('initialize');
+    } on MissingPluginException {
+      _isSupported = false;
+      if (kDebugMode) {
+        print('NotificationSoundService: Native plugin not found. Falling back to simple sounds.');
+      }
     } catch (e) {
       if (kDebugMode) {
         print('Failed to initialize notification sound service: $e');
@@ -42,9 +49,18 @@ class NotificationSoundService {
   
   /// Play notification sound for the given notification type
   static Future<void> playNotificationSound(NotificationType type) async {
+    // If native plugin is not supported or failed previously, fallback immediately
+    if (!_isSupported) {
+       await SimpleSoundService.playSystemSound();
+       return;
+    }
+
     try {
       final soundPath = _soundPaths[type] ?? _soundPaths[NotificationType.system]!;
       await _channel.invokeMethod('playSound', {'path': soundPath});
+    } on MissingPluginException {
+      _isSupported = false;
+      await SimpleSoundService.playSystemSound();
     } catch (e) {
       if (kDebugMode) {
         print('Failed to play notification sound: $e');
@@ -56,6 +72,11 @@ class NotificationSoundService {
   
   /// Trigger haptic feedback for the given notification type
   static Future<void> triggerHapticFeedback(NotificationType type) async {
+    if (!_isSupported) {
+      await SimpleSoundService.playHapticForType(type);
+      return;
+    }
+
     try {
       final pattern = _hapticPatterns[type] ?? _hapticPatterns[NotificationType.system]!;
       
@@ -66,6 +87,9 @@ class NotificationSoundService {
         // Custom pattern (requires platform-specific implementation)
         await _channel.invokeMethod('vibratePattern', {'pattern': pattern});
       }
+    } on MissingPluginException {
+      _isSupported = false;
+      await SimpleSoundService.playHapticForType(type);
     } catch (e) {
       if (kDebugMode) {
         print('Failed to trigger haptic feedback: $e');
@@ -90,47 +114,40 @@ class NotificationSoundService {
   
   /// Check if sound is enabled in system settings
   static Future<bool> isSoundEnabled() async {
+    if (!_isSupported) return true;
     try {
       return await _channel.invokeMethod('isSoundEnabled') ?? true;
     } catch (e) {
-      if (kDebugMode) {
-        print('Failed to check sound settings: $e');
-      }
       return true;
     }
   }
   
   /// Check if vibration is enabled in system settings
   static Future<bool> isVibrationEnabled() async {
+    if (!_isSupported) return true;
     try {
       return await _channel.invokeMethod('isVibrationEnabled') ?? true;
     } catch (e) {
-      if (kDebugMode) {
-        print('Failed to check vibration settings: $e');
-      }
       return true;
     }
   }
   
   /// Set notification volume (0.0 to 1.0)
   static Future<void> setNotificationVolume(double volume) async {
+    if (!_isSupported) return;
     try {
       await _channel.invokeMethod('setVolume', {'volume': volume.clamp(0.0, 1.0)});
     } catch (e) {
-      if (kDebugMode) {
-        print('Failed to set notification volume: $e');
-      }
+      // ignore
     }
   }
   
   /// Get current notification volume
   static Future<double> getNotificationVolume() async {
+    if (!_isSupported) return 0.7;
     try {
       return await _channel.invokeMethod('getVolume') ?? 0.7;
     } catch (e) {
-      if (kDebugMode) {
-        print('Failed to get notification volume: $e');
-      }
       return 0.7;
     }
   }

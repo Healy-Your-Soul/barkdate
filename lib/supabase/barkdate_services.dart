@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:barkdate/services/notification_manager.dart';
 
 /// BarkDate-specific Supabase service classes
 class BarkDateUserService {
@@ -510,8 +513,20 @@ class BarkDateMatchService {
         },
       );
 
-      if (response == null) {
-        return [];
+      if (response == null || (response as List).isEmpty) {
+        debugPrint('⚠️ RPC get_nearby_dogs returned empty/null. Falling back to direct query.');
+        // Fallback: Get all active dogs (excluding own)
+        final fallbackDogs = await SupabaseConfig.client
+            .from('dogs')
+            .select('''
+              *,
+              users:user_id(id, name, avatar_url)
+            ''')
+            .neq('user_id', userId)
+            .eq('is_active', true)
+            .range(offset, offset + limit - 1);
+            
+        return List<Map<String, dynamic>>.from(fallbackDogs);
       }
 
       final dogs = List<Map<String, dynamic>>.from(
@@ -522,7 +537,23 @@ class BarkDateMatchService {
       return dogs;
     } catch (e) {
       debugPrint('❌ Error fetching nearby dogs: $e');
-      return [];
+      // Fallback on error too
+       try {
+        final fallbackDogs = await SupabaseConfig.client
+            .from('dogs')
+            .select('''
+              *,
+              users:user_id(id, name, avatar_url)
+            ''')
+            .neq('user_id', userId)
+            .eq('is_active', true)
+            .range(offset, offset + limit - 1);
+            
+        return List<Map<String, dynamic>>.from(fallbackDogs);
+       } catch (fallbackError) {
+         debugPrint('❌ Fallback query also failed: $fallbackError');
+         return [];
+       }
     }
   }
 
@@ -605,6 +636,23 @@ class BarkDateMessageService {
     };
 
     final result = await SupabaseService.insert('messages', data);
+    
+    // Send push notification
+    try {
+      // Get sender name for notification
+      final senderProfile = await BarkDateUserService.getUserProfile(senderId);
+      final senderName = senderProfile?['name'] ?? 'Friend';
+      
+      await NotificationManager.sendMessageNotification(
+        receiverUserId: receiverId,
+        senderName: senderName,
+        messageContent: content,
+        matchId: matchId,
+      );
+    } catch (e) {
+      debugPrint('Error sending message notification: $e');
+    }
+
     return result.first;
   }
 
@@ -614,10 +662,54 @@ class BarkDateMessageService {
         .from('messages')
         .select('''
           *,
-          sender:users(name, avatar_url)
+          sender:users!messages_sender_id_fkey(name, avatar_url)
         ''')
         .eq('match_id', matchId)
         .order('created_at', ascending: true);
+  }
+
+  /// Stream messages for a match (real-time)
+  /// Returns a stream that updates when new messages are inserted
+  static Stream<List<Map<String, dynamic>>> streamMessages(String matchId) {
+    // Create a broadcast stream controller to emit initial data + realtime updates
+    final controller = StreamController<List<Map<String, dynamic>>>.broadcast();
+    
+    // Fetch initial messages
+    getMessages(matchId).then((messages) {
+      if (!controller.isClosed) {
+        controller.add(messages);
+      }
+    });
+    
+    // Subscribe to realtime changes on messages table
+    // Using simpler subscription approach
+    final channel = SupabaseConfig.client
+        .channel('messages_$matchId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'messages',
+          callback: (payload) {
+            // Check if this message is for our match
+            final newRecord = payload.newRecord;
+            if (newRecord['match_id'] == matchId) {
+              // Fetch all messages to ensure we get full data with joins
+              getMessages(matchId).then((messages) {
+                if (!controller.isClosed) {
+                  controller.add(messages);
+                }
+              });
+            }
+          },
+        )
+        .subscribe();
+    
+    // Clean up when stream is cancelled
+    controller.onCancel = () {
+      SupabaseConfig.client.removeChannel(channel);
+    };
+    
+    return controller.stream;
   }
 
   /// Mark messages as read
@@ -635,8 +727,8 @@ class BarkDateMessageService {
         .from('messages')
         .select('''
           *,
-          sender:users(name, avatar_url),
-          receiver:users(name, avatar_url)
+          sender:users!messages_sender_id_fkey(id, name, avatar_url),
+          receiver:users!messages_receiver_id_fkey(id, name, avatar_url)
         ''')
         .or('sender_id.eq.$userId,receiver_id.eq.$userId')
         .order('created_at', ascending: false);
@@ -650,7 +742,88 @@ class BarkDateMessageService {
       }
     }
     
-    return conversations.values.toList();
+    // Now fetch dog names for each conversation participant
+    final conversationsList = conversations.values.toList();
+    for (int i = 0; i < conversationsList.length; i++) {
+      final conv = conversationsList[i];
+      final senderId = conv['sender_id'];
+      final receiverId = conv['receiver_id'];
+      
+      // Get the other user's ID (not our user)
+      final otherUserId = senderId == userId ? receiverId : senderId;
+      
+      // Fetch dog for the other user
+      try {
+        final dogData = await SupabaseConfig.client
+            .from('dogs')
+            .select('name')
+            .eq('user_id', otherUserId)
+            .limit(1)
+            .maybeSingle();
+        
+        if (dogData != null) {
+          // Add dog name to the conversation data
+          conv['other_user_dog_name'] = dogData['name'];
+        }
+      } catch (e) {
+        // Ignore errors fetching dog data
+      }
+    }
+    
+    return conversationsList;
+  }
+  /// Stream recent conversations (real-time)
+  static Stream<List<Map<String, dynamic>>> streamConversations(String userId) {
+    // Create a broadcast stream controller
+    final controller = StreamController<List<Map<String, dynamic>>>.broadcast();
+    
+    // Initial fetch
+    getConversations(userId).then((conversations) {
+      if (!controller.isClosed) {
+        controller.add(conversations);
+      }
+    });
+
+    // Subscribe to all message changes
+    // Ideally we would filter by user_id here but Supabase Realtime row-level filtering
+    // depends on RLS policies. We'll listen to public 'messages' and filter carefully.
+    final channel = SupabaseConfig.client
+        .channel('public:messages_conversations_$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'messages',
+          callback: (payload) {
+            final newRecord = payload.newRecord;
+            final oldRecord = payload.oldRecord;
+            
+            // Check if modification involves the user
+            bool involvesUser = false;
+            if (newRecord.isNotEmpty) {
+               if (newRecord['sender_id'] == userId || newRecord['receiver_id'] == userId) involvesUser = true;
+            }
+            // For deletes, we might only have oldRecord
+            if (!involvesUser && oldRecord.isNotEmpty) {
+               if (oldRecord['sender_id'] == userId || oldRecord['receiver_id'] == userId) involvesUser = true;
+            }
+
+            if (involvesUser) {
+              // Refresh conversations
+              getConversations(userId).then((conversations) {
+                if (!controller.isClosed) {
+                  controller.add(conversations);
+                }
+              });
+            }
+          },
+        )
+        .subscribe();
+
+    controller.onCancel = () {
+      SupabaseConfig.client.removeChannel(channel);
+    };
+
+    return controller.stream;
   }
 }
 
@@ -664,16 +837,52 @@ class BarkDatePlaydateService {
     return result.first;
   }
 
-  /// Get user's playdates
+  /// Get user's playdates (excludes cancelled) with participant dogs for avatar display
   static Future<List<Map<String, dynamic>>> getUserPlaydates(String userId) async {
+    // 1. Get IDs of playdates where user is an invitee (pending request)
+    final pendingRequests = await SupabaseConfig.client
+        .from('playdate_requests')
+        .select('playdate_id')
+        .eq('invitee_id', userId)
+        .eq('status', 'pending');
+        
+    final pendingPlaydateIds = pendingRequests
+        .map((r) => r['playdate_id'] as String)
+        .toList();
+    
+    // 2. Build filter string
+    // Start with basic: organizer OR participant
+    String filter = 'organizer_id.eq.$userId,participant_id.eq.$userId';
+    
+    // Add pending playdates if any
+    if (pendingPlaydateIds.isNotEmpty) {
+      filter += ',id.in.(${pendingPlaydateIds.join(',')})';
+    }
+
+    // 3. Fetch playdates
     return await SupabaseConfig.client
         .from('playdates')
         .select('''
           *,
-          organizer:users(name, avatar_url),
-          participant:users(name, avatar_url)
+          organizer:users!playdates_organizer_id_fkey(id, name, avatar_url),
+          participant:users!playdates_participant_id_fkey(id, name, avatar_url),
+          participants:playdate_participants(
+            id,
+            user_id,
+            dog_id,
+            is_organizer,
+            status,
+            dog:dogs(id, name, main_photo_url)
+          ),
+          requests:playdate_requests(
+            id,
+            status,
+            invitee_dog:dogs!playdate_requests_invitee_dog_id_fkey(id, name, main_photo_url),
+            requester_dog:dogs!playdate_requests_requester_dog_id_fkey(id, name, main_photo_url)
+          )
         ''')
-        .or('organizer_id.eq.$userId,participant_id.eq.$userId')
+        .or(filter)
+        .neq('status', 'cancelled')
         .order('scheduled_at', ascending: false);
   }
 
@@ -744,7 +953,7 @@ class BarkDateSocialService {
         .select('''
           *,
           user:users(name, avatar_url),
-          dog:dogs(name, breed, main_photo_url)
+          dog:dogs(id, name, breed, main_photo_url)
         ''')
         .eq('is_public', true)
         .order('created_at', ascending: false)
@@ -807,7 +1016,7 @@ class BarkDateSocialService {
       if (userId != null) {
         final dogs = await SupabaseConfig.client
             .from('dogs')
-            .select('name, main_photo_url')
+            .select('id, name, main_photo_url')
             .eq('user_id', userId)
             .limit(1);
         
@@ -818,6 +1027,42 @@ class BarkDateSocialService {
     }
     
     return comments;
+  }
+
+  /// Stream comments for a post
+  static Stream<List<Map<String, dynamic>>> streamComments(String postId) {
+    final controller = StreamController<List<Map<String, dynamic>>>.broadcast();
+    
+    // Initial fetch
+    getPostComments(postId).then((comments) {
+      if (!controller.isClosed) controller.add(comments);
+    });
+
+    final channel = SupabaseConfig.client
+        .channel('public:post_comments:$postId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'post_comments',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'post_id',
+            value: postId,
+          ),
+          callback: (payload) {
+            getPostComments(postId).then((comments) {
+              if (!controller.isClosed) controller.add(comments);
+            });
+          },
+        )
+        .subscribe();
+
+    controller.onCancel = () {
+      SupabaseConfig.client.removeChannel(channel);
+      controller.close();
+    };
+
+    return controller.stream;
   }
 
   /// Add comment to post
@@ -860,6 +1105,291 @@ class BarkDateSocialService {
       await SupabaseService.update('posts', {
         'comments_count': (currentPost['comments_count'] ?? 1) - 1,
       }, filters: {'id': postId});
+    }
+  }
+
+  /// Check if user has liked a specific post
+  static Future<bool> hasUserLikedPost(String postId, String userId) async {
+    final result = await SupabaseConfig.client
+        .from('post_likes')
+        .select('id')
+        .eq('post_id', postId)
+        .eq('user_id', userId)
+        .maybeSingle();
+    return result != null;
+  }
+
+  /// Get all post IDs that a user has liked (for batch checking)
+  static Future<Set<String>> getUserLikedPostIds(String userId) async {
+    final result = await SupabaseConfig.client
+        .from('post_likes')
+        .select('post_id')
+        .eq('user_id', userId);
+    
+    return result.map<String>((row) => row['post_id'] as String).toSet();
+  }
+
+  /// Delete a post
+  static Future<void> deletePost(String postId) async {
+    await SupabaseConfig.client
+        .from('posts')
+        .delete()
+        .eq('id', postId);
+  }
+
+  /// Get feed posts from dogs that are friends with user's dog
+  static Future<List<Map<String, dynamic>>> getFollowingFeedPosts({
+    required String userId,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    // First get user's dogs
+    final userDogs = await SupabaseConfig.client
+        .from('dogs')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('is_active', true);
+    
+    if (userDogs.isEmpty) return [];
+    
+    final myDogId = userDogs.first['id'];
+    
+    // Get friend dog IDs from dog_friendships where status = 'accepted'
+    // Columns are: dog_id and friend_dog_id (not dog1_id/dog2_id)
+    final friendships = await SupabaseConfig.client
+        .from('dog_friendships')
+        .select('dog_id, friend_dog_id')
+        .eq('status', 'accepted')
+        .or('dog_id.eq.$myDogId,friend_dog_id.eq.$myDogId');
+    
+    // Extract friend dog IDs
+    final friendDogIds = <String>{};
+    for (final f in friendships) {
+      if (f['dog_id'] == myDogId) {
+        friendDogIds.add(f['friend_dog_id']);
+      } else {
+        friendDogIds.add(f['dog_id']);
+      }
+    }
+    
+    if (friendDogIds.isEmpty) return [];
+    
+    // Get posts from friends' dogs
+    return await SupabaseConfig.client
+        .from('posts')
+        .select('''
+          *,
+          user:users(name, avatar_url),
+          dog:dogs(id, name, breed, main_photo_url)
+        ''')
+        .inFilter('dog_id', friendDogIds.toList())
+        .order('created_at', ascending: false)
+        .range(offset, offset + limit - 1);
+  }
+}
+
+/// Bark service for "poke" feature between dogs
+class BarkDateBarkService {
+  /// Send a bark to another dog (poke feature)
+  /// Returns: true if successful, false if rate limited or error
+  static Future<bool> sendBark({
+    required String fromDogId,
+    required String toDogId,
+  }) async {
+    try {
+      // Check if can bark (rate limit)
+      final canBarkResult = await canBark(fromDogId: fromDogId, toDogId: toDogId);
+      if (!canBarkResult) {
+        debugPrint('⚠️ Bark rate limited');
+        return false;
+      }
+      
+      await SupabaseConfig.client.from('barks').insert({
+        'from_dog_id': fromDogId,
+        'to_dog_id': toDogId,
+      });
+      
+      debugPrint('🐕 Bark sent successfully!');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error sending bark: $e');
+      return false;
+    }
+  }
+  
+  /// Check if a dog can bark at another (rate limit check)
+  /// Friends: unlimited, Non-friends: 3/day
+  static Future<bool> canBark({
+    required String fromDogId,
+    required String toDogId,
+  }) async {
+    try {
+      // Use RPC function if available, otherwise check manually
+      final result = await SupabaseConfig.client
+          .rpc('can_bark', params: {
+            'sender_dog_id': fromDogId,
+            'receiver_dog_id': toDogId,
+          });
+      
+      return result as bool? ?? false;
+    } catch (e) {
+      // Fallback: manual check if RPC not available
+      debugPrint('⚠️ can_bark RPC failed, checking manually: $e');
+      return await _manualCanBarkCheck(fromDogId, toDogId);
+    }
+  }
+  
+  static Future<bool> _manualCanBarkCheck(String fromDogId, String toDogId) async {
+    // Check if friends
+    final friendship = await SupabaseConfig.client
+        .from('dog_friendships')
+        .select('id')
+        .eq('status', 'accepted')
+        .or('and(dog_id.eq.$fromDogId,friend_dog_id.eq.$toDogId),and(dog_id.eq.$toDogId,friend_dog_id.eq.$fromDogId)')
+        .maybeSingle();
+    
+    if (friendship != null) return true; // Friends can bark unlimited
+    
+    // Count barks in last 24 hours
+    final yesterday = DateTime.now().subtract(const Duration(hours: 24));
+    final barks = await SupabaseConfig.client
+        .from('barks')
+        .select('id')
+        .eq('from_dog_id', fromDogId)
+        .eq('to_dog_id', toDogId)
+        .gte('created_at', yesterday.toIso8601String());
+    
+    return (barks as List).length < 3;
+  }
+  
+  /// Get count of barks received today
+  static Future<int> getBarkCountToday(String dogId) async {
+    try {
+      final today = DateTime.now().toUtc();
+      final startOfDay = DateTime.utc(today.year, today.month, today.day);
+      
+      final result = await SupabaseConfig.client
+          .from('barks')
+          .select('id')
+          .eq('to_dog_id', dogId)
+          .gte('created_at', startOfDay.toIso8601String());
+      
+      return (result as List).length;
+    } catch (e) {
+      return 0;
+    }
+  }
+}
+
+class BarkDateFriendService {
+  /// Get pending friend requests for the current user's dogs
+  static Future<List<Map<String, dynamic>>> getPendingFriendRequests() async {
+    final userId = SupabaseConfig.auth.currentUser?.id;
+    if (userId == null) return [];
+    
+    // Get user's dogs
+    final userDogs = await SupabaseConfig.client
+        .from('dogs')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('is_active', true);
+    
+    if (userDogs.isEmpty) return [];
+    
+    final myDogIds = (userDogs as List).map((d) => d['id'] as String).toList();
+    
+    // Get pending requests where my dog is the friend_dog_id (someone sent ME a request)
+    final requests = await SupabaseConfig.client
+        .from('dog_friendships')
+        .select('''
+          id,
+          dog_id,
+          friend_dog_id,
+          status,
+          created_at,
+          requester:dogs!dog_id(id, name, breed, main_photo_url, user:users(id, name, avatar_url))
+        ''')
+        .inFilter('friend_dog_id', myDogIds)
+        .eq('status', 'pending')
+        .order('created_at', ascending: false);
+    
+    return List<Map<String, dynamic>>.from(requests);
+  }
+  
+  /// Accept a friend request
+  static Future<bool> acceptFriendRequest(String requestId) async {
+    try {
+      await SupabaseConfig.client
+          .from('dog_friendships')
+          .update({'status': 'accepted'})
+          .eq('id', requestId);
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error accepting friend request: $e');
+      return false;
+    }
+  }
+  
+  /// Decline a friend request
+  static Future<bool> declineFriendRequest(String requestId) async {
+    try {
+      await SupabaseConfig.client
+          .from('dog_friendships')
+          .delete()
+          .eq('id', requestId);
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error declining friend request: $e');
+      return false;
+    }
+  }
+  
+  /// Send a friend request (bark at a dog)
+  static Future<bool> sendFriendRequest({
+    required String myDogId,
+    required String targetDogId,
+  }) async {
+    try {
+      // Check if request already exists
+      final existing = await SupabaseConfig.client
+          .from('dog_friendships')
+          .select('id')
+          .or('and(dog_id.eq.$myDogId,friend_dog_id.eq.$targetDogId),and(dog_id.eq.$targetDogId,friend_dog_id.eq.$myDogId)')
+          .maybeSingle();
+      
+      if (existing != null) {
+        debugPrint('⚠️ Friend request already exists');
+        return false;
+      }
+      
+      await SupabaseConfig.client.from('dog_friendships').insert({
+        'dog_id': myDogId,
+        'friend_dog_id': targetDogId,
+        'status': 'pending',
+      });
+      
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error sending friend request: $e');
+      return false;
+    }
+  }
+  
+  /// Check if two dogs are friends
+  static Future<String?> getFriendshipStatus({
+    required String myDogId,
+    required String targetDogId,
+  }) async {
+    try {
+      final result = await SupabaseConfig.client
+          .from('dog_friendships')
+          .select('status')
+          .or('and(dog_id.eq.$myDogId,friend_dog_id.eq.$targetDogId),and(dog_id.eq.$targetDogId,friend_dog_id.eq.$myDogId)')
+          .maybeSingle();
+      
+      return result?['status'] as String?;
+    } catch (e) {
+      return null;
     }
   }
 }

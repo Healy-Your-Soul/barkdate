@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:barkdate/screens/auth_screen.dart';
-import 'package:barkdate/screens/main_navigation.dart';
+import 'package:go_router/go_router.dart';
+import 'package:barkdate/features/auth/presentation/screens/sign_in_screen.dart';
+// import 'package:barkdate/screens/main_navigation.dart';
 import 'package:barkdate/screens/onboarding/welcome_screen.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/preload_service.dart';
+import 'package:barkdate/widgets/dog_loading_widget.dart';
 
 enum ProfileStatus {
   complete,
@@ -46,7 +48,10 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(
-              child: CircularProgressIndicator(),
+              child: DogLoadingWidget(
+                size: 150,
+                message: 'Connecting...',
+              ),
             ),
           );
         }
@@ -61,7 +66,10 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
               if (profileSnapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
                   body: Center(
-                    child: CircularProgressIndicator(),
+                    child: DogLoadingWidget(
+                      size: 150,
+                      message: 'Getting your profile...',
+                    ),
                   ),
                 );
               }
@@ -76,30 +84,36 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
                       if (cacheSnapshot.connectionState == ConnectionState.waiting) {
                         return const Scaffold(
                           body: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                CircularProgressIndicator(),
-                                SizedBox(height: 16),
-                                Text('Loading your feed...'),
-                              ],
+                            child: DogLoadingWidget(
+                              size: 150,
+                              message: 'Loading your feed...',
                             ),
                           ),
                         );
                       }
-                      debugPrint('✅ Cache warming completed - showing MainNavigation');
-                      return const MainNavigation();
+                      debugPrint('✅ Cache warming completed - redirecting to /home');
+                      // Use addPostFrameCallback to avoid navigation during build
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (context.mounted) {
+                          context.go('/home');
+                        }
+                      });
+                      return const Scaffold(
+                        body: Center(
+                          child: DogLoadingWidget(
+                            size: 150,
+                            message: 'Almost there...',
+                          ),
+                        ),
+                      );
                     },
                   );
                 
                 case ProfileStatus.needsDogProfile:
                   // User exists but needs dog profile
-                  return CreateProfileScreen(
-                    userId: session.user.id,
-                    userName: session.user.userMetadata?['full_name'] ?? session.user.email?.split('@')[0],
-                    userEmail: session.user.email,
-                    editMode: EditMode.createProfile,
-                  );
+                  // Show onboarding screens first for new users (Google sign-in skips to here)
+                  // WelcomeScreen will then navigate to CreateProfileScreen
+                  return const WelcomeScreen();
                 
                 case ProfileStatus.needsFullSetup:
                 default:
@@ -110,7 +124,7 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
           );
         } else {
           // User not signed in, show auth screen
-          return const AuthScreen();
+          return const SignInScreen();
         }
       },
     );

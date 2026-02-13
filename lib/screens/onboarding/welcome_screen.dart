@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:go_router/go_router.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
+import 'package:barkdate/screens/onboarding/location_permission_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -43,21 +45,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   void _navigateToNext() {
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
-      // User is authenticated, go to profile creation
+      // User is authenticated, go to location permission first
+      // Use pushReplacement so welcome screen is removed from stack
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => CreateProfileScreen(
-            userId: user.id,
-            userName: user.userMetadata?['full_name'] ?? user.email?.split('@')[0],
-            userEmail: user.email,
-            editMode: EditMode.createProfile,
-          ),
+          builder: (context) => const LocationPermissionScreen(),
         ),
       );
     } else {
       // Shouldn't happen, but fallback to auth screen
-      Navigator.pushReplacementNamed(context, '/auth');
+      context.go('/auth');
     }
   }
 
@@ -65,6 +63,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
+          onPressed: () => context.go('/auth'),
+          tooltip: 'Back to Sign In',
+        ),
+      ),
       body: SafeArea(
         child: Column(
           children: [

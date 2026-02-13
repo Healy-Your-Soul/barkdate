@@ -11,6 +11,7 @@ class FeaturedPark {
   final List<String>? photoUrls;
   final bool isActive;
   final DateTime? createdAt;
+  final String? qrCheckInCode; // Unique code for QR check-in validation
 
   FeaturedPark({
     required this.id,
@@ -25,6 +26,7 @@ class FeaturedPark {
     this.photoUrls,
     this.isActive = true,
     this.createdAt,
+    this.qrCheckInCode,
   });
 
   factory FeaturedPark.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class FeaturedPark {
       photoUrls: json['photo_urls'] != null ? List<String>.from(json['photo_urls']) : null,
       isActive: json['is_active'] ?? true,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+      qrCheckInCode: json['qr_check_in_code'],
     );
   }
 
@@ -58,6 +61,7 @@ class FeaturedPark {
       'photo_urls': photoUrls,
       'is_active': isActive,
       'created_at': createdAt?.toIso8601String(),
+      'qr_check_in_code': qrCheckInCode,
     };
   }
 }

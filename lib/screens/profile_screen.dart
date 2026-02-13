@@ -7,7 +7,7 @@ import 'package:barkdate/screens/settings_screen.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
-import 'package:barkdate/widgets/dog_share_dialog.dart';
+import 'package:barkdate/features/profile/presentation/widgets/share_dog_sheet.dart';
 import 'package:barkdate/widgets/app_card.dart';
 import 'package:barkdate/widgets/app_button.dart';
 
@@ -404,10 +404,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         if (_dogProfile != null) {
                           final dogId = _dogProfile!['id'];
                           final dogName = _dogProfile!['name'] ?? 'My Dog';
-                          await DogShareDialog.open(
-                            context,
-                            dogId: dogId,
-                            dogName: dogName,
+                          await showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => ShareDogSheet(
+                              dogId: dogId,
+                              dogName: dogName,
+                            ),
                           );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(

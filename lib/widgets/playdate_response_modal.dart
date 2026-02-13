@@ -145,7 +145,9 @@ class _PlaydateResponseModalState extends State<PlaydateResponseModal> {
     final playdate = widget.playdateRequest['playdate'] as Map<String, dynamic>?;
     final requester = widget.playdateRequest['requester'] as Map<String, dynamic>?;
     
-    return Dialog(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),
@@ -309,6 +311,7 @@ class _PlaydateResponseModalState extends State<PlaydateResponseModal> {
           ],
         ),
       ),
+      ), // Close GestureDetector
     );
   }
 

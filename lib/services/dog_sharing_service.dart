@@ -1,166 +1,184 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../supabase/supabase_config.dart';
-import '../models/dog.dart';
+import 'package:barkdate/supabase/supabase_config.dart';
+
+enum DogAccessLevel { view, edit, manage }
+enum DogShareMethod { link, qr, whatsapp }
+
+class DogShareResult {
+  final String shareCode;
+  final String shareUrl;
+  final String qrData;
+  
+  DogShareResult({required this.shareCode, required this.shareUrl, required this.qrData});
+}
+
+class DogShareAcceptResult {
+  final bool success;
+  final String message;
+  final String? dogId;
+  final DogAccessLevel? accessLevel;
+  
+  DogShareAcceptResult({
+    required this.success,
+    required this.message,
+    this.dogId,
+    this.accessLevel,
+  });
+}
+
+class DogShare {
+  final String id;
+  final String dogId;
+  final String ownerId;
+  final String? sharedWithUserId;
+  final String shareCode;
+  final DogAccessLevel accessLevel;
+  final DateTime? expiresAt;
+  final DateTime? acceptedAt;
+  final DateTime? revokedAt;
+  final String? sharedWithUserName;
+  final String? sharedWithUserAvatar;
+
+  DogShare({
+    required this.id,
+    required this.dogId,
+    required this.ownerId,
+    this.sharedWithUserId,
+    required this.shareCode,
+    required this.accessLevel,
+    this.expiresAt,
+    this.acceptedAt,
+    this.revokedAt,
+    this.sharedWithUserName,
+    this.sharedWithUserAvatar,
+  });
+
+  factory DogShare.fromJson(Map<String, dynamic> json) {
+    return DogShare(
+      id: json['id'],
+      dogId: json['dog_id'],
+      ownerId: json['owner_id'],
+      sharedWithUserId: json['shared_with_user_id'],
+      shareCode: json['share_code'],
+      accessLevel: DogAccessLevel.values.byName(json['access_level']),
+      expiresAt: json['expires_at'] != null ? DateTime.parse(json['expires_at']) : null,
+      acceptedAt: json['accepted_at'] != null ? DateTime.parse(json['accepted_at']) : null,
+      revokedAt: json['revoked_at'] != null ? DateTime.parse(json['revoked_at']) : null,
+      sharedWithUserName: json['users']?['name'],
+      sharedWithUserAvatar: json['users']?['avatar_url'],
+    );
+  }
+}
+
+class SharedDog {
+  final String dogId;
+  final String dogName;
+  final String dogBreed;
+  final String? dogPhotoUrl;
+  final DogAccessLevel accessLevel;
+  final String ownerName;
+  final DateTime? sharedAt;
+
+  SharedDog({
+    required this.dogId,
+    required this.dogName,
+    required this.dogBreed,
+    this.dogPhotoUrl,
+    required this.accessLevel,
+    required this.ownerName,
+    this.sharedAt,
+  });
+
+  factory SharedDog.fromJson(Map<String, dynamic> json) {
+    return SharedDog(
+      dogId: json['dog_id'],
+      dogName: json['dog_name'],
+      dogBreed: json['dog_breed'],
+      dogPhotoUrl: json['dog_photo_url'],
+      accessLevel: DogAccessLevel.values.byName(json['access_level']),
+      ownerName: json['owner_name'],
+      sharedAt: json['shared_at'] != null ? DateTime.parse(json['shared_at']) : null,
+    );
+  }
+}
 
 class DogSharingService {
-  static final _supabase = SupabaseConfig.client;
-
-  /// Generate a share link for a dog
-  static Future<String> generateShareLink(String dogId, String dogName, {String accessLevel = 'co_owner'}) async {
-    try {
-      // Create a sharing token
-      final response = await _supabase
-          .from('dog_share_links')
-          .insert({
-            'dog_id': dogId,
-            'dog_name_for_verification': dogName,
-            'created_by': _supabase.auth.currentUser?.id,
-            'expires_at': DateTime.now().add(const Duration(days: 7)).toIso8601String(),
-            'access_level': accessLevel,
-            'max_uses': 1,
-            'used_count': 0,
-            'is_active': true,
-          })
-          .select()
-          .single();
-
-      final token = response['share_token'];
-      
-      // Return the share URL
-      return 'https://barkdate.app/share/dog/$token?name=${Uri.encodeComponent(dogName)}';
-    } catch (e) {
-      throw Exception('Failed to generate share link: $e');
-    }
+  /// Create a new dog share
+  static Future<DogShareResult> createShare({
+    required String dogId,
+    required String ownerId,
+    required DogAccessLevel accessLevel,
+    String? pinCode,
+    DateTime? expiresAt,
+    DogShareMethod sharedVia = DogShareMethod.link,
+    String? notes,
+  }) async {
+    final response = await SupabaseConfig.client.rpc('create_dog_share', params: {
+      'p_dog_id': dogId,
+      'p_owner_id': ownerId,
+      'p_access_level': accessLevel.name,
+      'p_pin_code': pinCode,
+      'p_expires_at': expiresAt?.toIso8601String(),
+      'p_shared_via': sharedVia.name,
+      'p_notes': notes,
+    }).single();
+    
+    return DogShareResult(
+      shareCode: response['share_code'],
+      shareUrl: response['share_url'],
+      qrData: response['qr_data'],
+    );
   }
-
-  /// Share a dog with another user by user ID
-  static Future<void> shareDogWithUser(String dogId, String targetUserId, String accessLevel) async {
-    try {
-      await _supabase
-          .from('dog_owners')
-          .insert({
-            'dog_id': dogId,
-            'user_id': targetUserId,
-            'ownership_type': accessLevel, // 'co_owner', 'caregiver', 'dogwalker'
-            'permissions': _getPermissionsForAccessLevel(accessLevel),
-            'is_primary': false,
-            'added_by': _supabase.auth.currentUser?.id,
-          });
-    } catch (e) {
-      throw Exception('Failed to share dog: $e');
-    }
+  
+  /// Accept a dog share
+  static Future<DogShareAcceptResult> acceptShare({
+    required String shareCode,
+    required String userId,
+    String? pinCode,
+  }) async {
+    final response = await SupabaseConfig.client.rpc('accept_dog_share', params: {
+      'p_share_code': shareCode,
+      'p_user_id': userId,
+      'p_pin_code': pinCode,
+    }).single();
+    
+    return DogShareAcceptResult(
+      success: response['success'],
+      message: response['message'],
+      dogId: response['dog_id'],
+      accessLevel: response['access_level'] != null 
+        ? DogAccessLevel.values.byName(response['access_level'])
+        : null,
+    );
   }
-
-  /// Get permissions array for access level
-  static List<String> _getPermissionsForAccessLevel(String accessLevel) {
-    switch (accessLevel) {
-      case 'co_owner':
-        return ['view', 'edit', 'playdates', 'share'];
-      case 'caregiver':
-        return ['view', 'edit', 'playdates'];
-      case 'dogwalker':
-        return ['view', 'playdates'];
-      default:
-        return ['view'];
-    }
+  
+  /// Get all shares for a dog (owner view)
+  static Future<List<DogShare>> getDogShares(String dogId) async {
+    final response = await SupabaseConfig.client
+      .from('dog_shares')
+      .select('*, users!shared_with_user_id(name, avatar_url)')
+      .eq('dog_id', dogId)
+      .filter('revoked_at', 'is', null)
+      .order('created_at', ascending: false);
+    
+    return (response as List).map((e) => DogShare.fromJson(e)).toList();
   }
-
-  /// Redeem a share link
-  static Future<Dog?> redeemShareLink(String token, String dogName) async {
-    try {
-      // Validate token and get dog
-      final tokenResponse = await _supabase
-          .from('dog_share_links')
-          .select('dog_id, dog_name_for_verification, expires_at, access_level')
-          .eq('share_token', token)
-          .eq('dog_name_for_verification', dogName)
-          .eq('is_active', true)
-          .single();
-
-      // Check if token is expired
-      final expiresAt = DateTime.parse(tokenResponse['expires_at']);
-      if (expiresAt.isBefore(DateTime.now())) {
-        throw Exception('Share link has expired');
-      }
-
-      final dogId = tokenResponse['dog_id'];
-      final accessLevel = tokenResponse['access_level'];
-      
-      // Add user to dog_owners
-      await _supabase
-          .from('dog_owners')
-          .insert({
-            'dog_id': dogId,
-            'user_id': _supabase.auth.currentUser?.id,
-            'ownership_type': accessLevel,
-            'permissions': _getPermissionsForAccessLevel(accessLevel),
-            'is_primary': false,
-            'added_by': _supabase.auth.currentUser?.id,
-          });
-
-      // Update the share link usage
-      await _supabase
-          .from('dog_share_links')
-          .update({
-            'used_count': tokenResponse['used_count'] + 1,
-          })
-          .eq('share_token', token);
-
-      // Get the dog data
-      final dogResponse = await _supabase
-          .from('dogs')
-          .select()
-          .eq('id', dogId)
-          .single();
-
-      return Dog.fromJson(dogResponse);
-    } catch (e) {
-      throw Exception('Failed to redeem share link: $e');
-    }
+  
+  /// Get all dogs shared with user
+  static Future<List<SharedDog>> getSharedDogs(String userId) async {
+    final response = await SupabaseConfig.client
+      .rpc('get_shared_dogs', params: {'p_user_id': userId});
+    
+    return (response as List).map((e) => SharedDog.fromJson(e)).toList();
   }
-
-  /// Get all users who have access to a dog
-  static Future<List<Map<String, dynamic>>> getDogSharedUsers(String dogId) async {
-    try {
-      final response = await _supabase
-          .from('dog_owners')
-          .select('''
-            user_id,
-            ownership_type,
-            permissions,
-            is_primary,
-            added_at,
-            users:user_id(email, name, avatar_url)
-          ''')
-          .eq('dog_id', dogId)
-          .neq('user_id', _supabase.auth.currentUser?.id ?? ''); // Exclude current user
-
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      throw Exception('Failed to get shared users: $e');
-    }
-  }
-
-  /// Remove access for a user
-  static Future<void> removeUserAccess(String dogId, String userId) async {
-    try {
-      await _supabase
-          .from('dog_owners')
-          .delete()
-          .eq('dog_id', dogId)
-          .eq('user_id', userId);
-    } catch (e) {
-      throw Exception('Failed to remove access: $e');
-    }
-  }
-
-  /// Extract share token from URL (used by DogShareDialog)
-  String extractShareTokenFromUrl(String url) {
-    final uri = Uri.parse(url);
-    final pathSegments = uri.pathSegments;
-    if (pathSegments.length >= 3 && pathSegments[1] == 'dog') {
-      return pathSegments[2];
-    }
-    return '';
+  
+  /// Revoke a share
+  static Future<bool> revokeShare({
+    required String shareId,
+    required String ownerId,
+  }) async {
+    return await SupabaseConfig.client.rpc('revoke_dog_share', params: {
+      'p_share_id': shareId,
+      'p_owner_id': ownerId,
+    });
   }
 }

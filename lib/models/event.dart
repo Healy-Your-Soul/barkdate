@@ -16,12 +16,14 @@ class Event {
   final int currentParticipants;
   final List<String> targetAgeGroups; // 'puppy', 'adult', 'senior'
   final List<String> targetSizes; // 'small', 'medium', 'large'
-  final double? price; // null for free events
+  final String visibility; // 'public', 'friends', 'invite_only'
+  final double? price;
   final List<String> photoUrls;
   final bool requiresRegistration;
   final String status; // 'upcoming', 'ongoing', 'completed', 'cancelled'
   final DateTime createdAt;
   final DateTime updatedAt;
+  // final bool isPublic; // Deprecated, use generic visibility
 
   const Event({
     required this.id,
@@ -44,6 +46,7 @@ class Event {
     this.price,
     required this.photoUrls,
     required this.requiresRegistration,
+    this.visibility = 'public',
     required this.status,
     required this.createdAt,
     required this.updatedAt,
@@ -70,6 +73,7 @@ class Event {
     double? price,
     List<String>? photoUrls,
     bool? requiresRegistration,
+    String? visibility,
     String? status,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -94,6 +98,7 @@ class Event {
     price: price ?? this.price,
     photoUrls: photoUrls ?? this.photoUrls,
     requiresRegistration: requiresRegistration ?? this.requiresRegistration,
+    visibility: visibility ?? this.visibility,
     status: status ?? this.status,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -121,6 +126,7 @@ class Event {
       price: json['price'] as double?,
       photoUrls: List<String>.from(json['photo_urls'] ?? []),
       requiresRegistration: json['requires_registration'] as bool? ?? true,
+      visibility: json['visibility'] as String? ?? (json['is_public'] == true ? 'public' : 'invite_only'),
       status: json['status'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -149,6 +155,7 @@ class Event {
       'price': price,
       'photo_urls': photoUrls,
       'requires_registration': requiresRegistration,
+      'visibility': visibility,
       'status': status,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -156,6 +163,7 @@ class Event {
   }
 
   bool get isFree => price == null || price == 0;
+  bool get isPublic => visibility == 'public';
   bool get isFull => currentParticipants >= maxParticipants;
   bool get isUpcoming => status == 'upcoming';
   bool get isOngoing => status == 'ongoing';

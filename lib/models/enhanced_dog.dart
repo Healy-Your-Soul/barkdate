@@ -1,4 +1,6 @@
 // Enhanced Dog model with many-to-many ownership support
+import 'package:barkdate/models/dog.dart';
+
 class DogOwner {
   final String userId;
   final String userName;
@@ -91,7 +93,13 @@ class EnhancedDog {
   });
 
   // Primary owner (for backward compatibility)
-  DogOwner? get primaryOwner => owners.firstWhere((o) => o.isPrimary, orElse: () => owners.isNotEmpty ? owners.first : null);
+  DogOwner? get primaryOwner {
+    try {
+      return owners.firstWhere((o) => o.isPrimary);
+    } catch (_) {
+      return owners.isNotEmpty ? owners.first : null;
+    }
+  }
 
   // Ownership display for UI
   String get ownershipDisplay {
@@ -126,7 +134,9 @@ class EnhancedDog {
     }
 
     // Find primary owner for backward compatibility
-    final primaryOwner = ownersList.firstWhere((o) => o.isPrimary, orElse: () => ownersList.isNotEmpty ? ownersList.first : null);
+    final primaryOwner = ownersList.isNotEmpty 
+        ? ownersList.firstWhere((o) => o.isPrimary, orElse: () => ownersList.first)
+        : null;
 
     return EnhancedDog(
       id: json['id'] ?? '',
@@ -152,7 +162,9 @@ class EnhancedDog {
   }
 
   // Convert back to old Dog model for backward compatibility
-  Dog toOldModel() {
+  Dog? toOldModel() {
+    if (primaryOwnerId.isEmpty) return null;
+    
     return Dog(
       id: id,
       name: name,

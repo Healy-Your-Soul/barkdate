@@ -30,6 +30,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
   late TabController _tabController;
   List<Map<String, dynamic>> _upcomingPlaydates = [];
   List<Map<String, dynamic>> _pastPlaydates = [];
+  List<Map<String, dynamic>> _cancelledPlaydates = [];
   List<Map<String, dynamic>> _pendingRequests = []; // Incoming requests (where user is invitee)
   List<Map<String, dynamic>> _sentRequests = []; // Outgoing requests (where user is requester)
   bool _isLoading = true;
@@ -43,8 +44,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    if (widget.initialTabIndex != null && widget.initialTabIndex! >= 0 && widget.initialTabIndex! < 3) {
+    _tabController = TabController(length: 4, vsync: this);
+    if (widget.initialTabIndex != null && widget.initialTabIndex! >= 0 && widget.initialTabIndex! < 4) {
       _tabController.index = widget.initialTabIndex!;
     }
     _highlightId = widget.highlightPlaydateId;
@@ -86,7 +87,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
       final aggregated = await PlaydateQueryService.getUserPlaydatesAggregated(user.id);
       final upcoming = aggregated['upcoming'] ?? [];
       final past = aggregated['past'] ?? [];
-      debugPrint('=== FOUND ${upcoming.length} UPCOMING / ${past.length} PAST (AGGREGATED) ===');
+      final cancelled = aggregated['cancelled'] ?? [];
+      debugPrint('=== FOUND ${upcoming.length} UPCOMING / ${past.length} PAST / ${cancelled.length} CANCELLED (AGGREGATED) ===');
 
       // Cache the fresh data
       CacheService().cachePlaydateList(user.id, 'upcoming', upcoming);
@@ -105,6 +107,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
         setState(() {
           _upcomingPlaydates = List<Map<String, dynamic>>.from(upcoming);
           _pastPlaydates = List<Map<String, dynamic>>.from(past);
+          _cancelledPlaydates = List<Map<String, dynamic>>.from(cancelled);
           _pendingRequests = incomingRequests; // Incoming requests for response
           _sentRequests = sentRequests; // Sent requests for tracking
           _isLoading = false;
@@ -268,6 +271,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
             Tab(text: 'Requests ($totalRequests)'),
             Tab(text: 'Upcoming'),
             Tab(text: 'Past'),
+            Tab(text: 'Cancelled'),
           ],
         ),
       ),
@@ -277,6 +281,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
           _buildRequestsTab(),
           _buildUpcomingTab(),
           _buildPastTab(),
+          _buildCancelledTab(),
         ],
       ),
     );
@@ -925,6 +930,100 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     );
   }
 
+  Widget _buildCancelledTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_cancelledPlaydates.isEmpty) {
+      return AppEmptyState(
+        icon: Icons.cancel_outlined,
+        title: 'No cancelled playdates',
+        message: 'Cancelled playdates will appear here',
+        actionText: 'Refresh',
+        onAction: _loadPlaydates,
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadPlaydates,
+      child: ListView.builder(
+        padding: AppResponsive.screenPadding(context).copyWith(top: 12, bottom: 12),
+        itemCount: _cancelledPlaydates.length,
+        itemBuilder: (context, index) {
+          final playdate = _cancelledPlaydates[index];
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: AppCard(
+              padding: AppResponsive.cardPadding(context),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.cancel_outlined,
+                      size: AppResponsive.iconSize(context, 20),
+                      color: Colors.red[400],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          playdate['title'] ?? 'Playdate',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontSize: AppResponsive.fontSize(context, 16),
+                            decoration: TextDecoration.lineThrough,
+                            color: Colors.grey,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${playdate['location'] ?? 'No location'} • ${_formatDateTime(playdate['scheduled_at'])}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: AppResponsive.fontSize(context, 12),
+                            color: Colors.grey,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Cancelled',
+                      style: TextStyle(
+                        color: Colors.red[700],
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Future<void> _respondToRequest(Map<String, dynamic> request, String response) async {
     try {
       final requestId = request['id'] as String?;
@@ -1248,15 +1347,44 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
 
   Future<void> _cancelPlaydate(Map<String, dynamic> playdate) async {
     try {
-      // TODO: Implement cancel playdate logic
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Playdate cancelled')),
+      final currentUser = SupabaseConfig.auth.currentUser;
+      if (currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Not logged in')),
+        );
+        return;
+      }
+
+      final success = await PlaydateManagementService.cancelPlaydate(
+        playdateId: playdate['id'],
+        cancelledByUserId: currentUser.id,
       );
-      _loadPlaydates();
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Playdate cancelled successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Auto-refresh the list to remove cancelled playdate
+          await _loadPlaydates();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to cancel playdate'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error cancelling playdate: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error cancelling playdate: $e')),
+        );
+      }
     }
   }
 }

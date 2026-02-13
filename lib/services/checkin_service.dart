@@ -62,9 +62,16 @@ class CheckInService {
   static Future<bool> checkOut() async {
     try {
       final user = SupabaseConfig.auth.currentUser;
-      if (user == null) return false;
+      debugPrint('🚪 CheckInService.checkOut() called');
+      debugPrint('🚪 User: ${user?.id}');
+      if (user == null) {
+        debugPrint('🚪 No user logged in!');
+        return false;
+      }
 
       final now = DateTime.now();
+      debugPrint('🚪 Updating checkins with status=active for user ${user.id}');
+      
       final data = await SupabaseConfig.client
           .from('checkins')
           .update({
@@ -75,21 +82,28 @@ class CheckInService {
           .eq('status', 'active')
           .select();
 
+      debugPrint('🚪 Checkout result: ${data.length} rows updated');
+      debugPrint('🚪 Data: $data');
+      
       return data.isNotEmpty;
     } catch (e) {
-      debugPrint('Error checking out: $e');
+      debugPrint('❌ Error checking out: $e');
       return false;
     }
   }
 
-  /// Get user's active check-in
+  /// Get user's active check-in (auto-expires after 4 hours)
   static Future<CheckIn?> getActiveCheckIn(String userId) async {
     try {
+      // Check-ins older than 4 hours are considered expired
+      final cutoffTime = DateTime.now().subtract(const Duration(hours: 4)).toIso8601String();
+      
       final data = await SupabaseConfig.client
           .from('checkins')
           .select()
           .eq('user_id', userId)
           .eq('status', 'active')
+          .gte('checked_in_at', cutoffTime)  // Only within last 3 hours
           .order('checked_in_at', ascending: false)
           .limit(1);
 
@@ -152,6 +166,108 @@ class CheckInService {
     } catch (e) {
       debugPrint('Error getting all park dog counts: $e');
       return {};
+    }
+  }
+
+  /// Get dog counts for multiple specific places (optimized for map viewport)
+  static Future<Map<String, int>> getPlaceDogCounts(List<String> placeIds) async {
+    try {
+      if (placeIds.isEmpty) return {};
+
+      // Build OR filter for multiple place IDs
+      final orFilter = placeIds.map((id) => 'park_id.eq.$id').join(',');
+      
+      final data = await SupabaseConfig.client
+          .from('checkins')
+          .select('park_id')
+          .or(orFilter)
+          .eq('status', 'active');
+
+      final Map<String, int> counts = {};
+      for (final item in data) {
+        final parkId = item['park_id'] as String;
+        counts[parkId] = (counts[parkId] ?? 0) + 1;
+      }
+
+      return counts;
+    } catch (e) {
+      debugPrint('Error getting place dog counts: $e');
+      return {};
+    }
+  }
+
+  /// Get active check-ins with user details for a specific place
+  /// Auto-expires check-ins older than 3 hours
+  static Future<List<Map<String, dynamic>>> getActiveCheckInsAtPlace(String placeId) async {
+    try {
+      // Calculate cutoff time (3 hours ago)
+      final cutoffTime = DateTime.now().subtract(const Duration(hours: 3)).toIso8601String();
+      
+      final data = await SupabaseConfig.client
+          .from('checkins')
+          .select('''
+            *,
+            user:user_id (
+              id,
+              name,
+              avatar_url
+            ),
+            dog:dog_id (
+              id,
+              name,
+              breed,
+              main_photo_url
+            )
+          ''')
+          .eq('park_id', placeId)
+          .eq('status', 'active')
+          .gte('checked_in_at', cutoffTime) // Only check-ins from last 3 hours
+          .order('checked_in_at', ascending: false);
+
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      debugPrint('Error getting all active check-ins: $e');
+      return [];
+    }
+  }
+
+  /// Get ALL active check-ins globally with user/dog details (for map markers)
+  /// Excludes current user's check-in, auto-expires after 4 hours
+  static Future<List<Map<String, dynamic>>> getAllActiveCheckIns({String? excludeUserId}) async {
+    try {
+      // Calculate cutoff time (4 hours ago)
+      final cutoffTime = DateTime.now().subtract(const Duration(hours: 4)).toIso8601String();
+      
+      var query = SupabaseConfig.client
+          .from('checkins')
+          .select('''
+            *,
+            user:user_id (
+              id,
+              name,
+              avatar_url
+            ),
+            dog:dog_id (
+              id,
+              name,
+              breed,
+              main_photo_url
+            )
+          ''')
+          .eq('status', 'active')
+          .gte('checked_in_at', cutoffTime);
+      
+      // Exclude current user if specified
+      if (excludeUserId != null) {
+        query = query.neq('user_id', excludeUserId);
+      }
+      
+      final data = await query.order('checked_in_at', ascending: false);
+
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      debugPrint('Error getting all active check-ins: $e');
+      return [];
     }
   }
 

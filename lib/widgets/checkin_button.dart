@@ -328,15 +328,19 @@ class _CheckInStatusBannerState extends State<CheckInStatusBanner> {
 
     try {
       final checkIn = await CheckInService.getActiveCheckIn(user.id);
-      setState(() {
-        _activeCheckIn = checkIn;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _activeCheckIn = checkIn;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       debugPrint('Error loading active check-in: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

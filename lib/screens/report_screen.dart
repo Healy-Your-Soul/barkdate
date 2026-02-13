@@ -166,7 +166,9 @@ class _ReportScreenState extends State<ReportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       appBar: AppBar(
         title: Text(
           'Report or Block',
@@ -423,6 +425,7 @@ class _ReportScreenState extends State<ReportScreen> {
           ),
         ),
       ),
+      ), // Close GestureDetector
     );
   }
 

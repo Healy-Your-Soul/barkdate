@@ -86,8 +86,7 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
           final bytes = await xFile.readAsBytes();
           selectedImages.add(SelectedImage(
             bytes: bytes,
-            name: xFile.name,
-            path: xFile.path,
+            fileName: xFile.name,
           ));
         }
         setState(() {
@@ -115,8 +114,7 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
         final bytes = await photo.readAsBytes();
         final selectedImage = SelectedImage(
           bytes: bytes,
-          name: photo.name,
-          path: photo.path,
+          fileName: photo.name,
         );
         setState(() {
           _selectedImages.add(selectedImage);
@@ -141,7 +139,7 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
     
     for (final image in _selectedImages) {
       try {
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.fileName ?? 'image.jpg'}';
         final path = 'playdate-recaps/$fileName';
         
         await SupabaseConfig.client.storage

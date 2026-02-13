@@ -50,7 +50,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -69,6 +71,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           child: _emailSent ? _buildSuccessView() : _buildFormView(),
         ),
       ),
+      ), // Close GestureDetector
     );
   }
 

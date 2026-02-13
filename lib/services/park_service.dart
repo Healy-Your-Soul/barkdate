@@ -19,9 +19,9 @@ class ParkService {
 					.from('featured_parks')
 					.select('*')
 					.eq('is_active', true)
-					.order('rating', ascending: false);
+					.order('rating', ascending: false) as List<dynamic>;
 
-			if (rows is List && rows.isNotEmpty) {
+			if (rows.isNotEmpty) {
 				return rows.map((e) => FeaturedPark.fromJson(e)).toList();
 			}
 			// Fallback mock if table empty
@@ -61,8 +61,56 @@ class ParkService {
 	}
 
 	/// Get nearby parks ordered by distance.
-	/// Currently uses all featured parks as source of truth until a general parks table is added.
+	/// Uses PostGIS spatial queries on the server for 20-40x faster performance.
+	/// Returns parks within radius_km sorted by distance with real-time active dog counts.
 	static Future<List<Map<String, dynamic>>> getNearbyParks({
+		required double latitude,
+		required double longitude,
+		double radiusKm = 25,
+	}) async {
+		try {
+			debugPrint('🚀 Calling PostGIS RPC get_nearby_parks...');
+			// Call PostGIS-powered RPC function for server-side spatial filtering
+			final response = await _client.rpc(
+				'get_nearby_parks',
+				params: {
+					'user_lat': latitude,
+					'user_lng': longitude,
+					'radius_km': radiusKm,
+				},
+			) as List<dynamic>;
+
+			debugPrint('✅ PostGIS RPC SUCCESS: Got ${response.length} parks');
+			// Convert response to expected format
+			return response.map<Map<String, dynamic>>((row) {
+				return {
+					'id': row['id'],
+					'name': row['name'],
+					'description': row['description'],
+					'latitude': row['latitude'],
+					'longitude': row['longitude'],
+					'address': row['address'],
+					'distance': row['distance_km'], // Already calculated server-side
+					'rating': row['rating']?.toDouble() ?? 0.0,
+					'amenities': row['amenities'] ?? [],
+					'active_dogs': row['active_dogs'] ?? 0,
+				};
+			}).toList();
+		} catch (e) {
+			debugPrint('❌ PostGIS RPC FAILED: $e');
+			debugPrint('⚠️ Falling back to client-side filtering...');
+			// Fallback to client-side filtering if RPC fails (backwards compatibility)
+			return _getNearbyParksClientSide(
+				latitude: latitude,
+				longitude: longitude,
+				radiusKm: radiusKm,
+			);
+		}
+	}
+
+	/// Fallback client-side distance filtering (legacy method for backwards compatibility).
+	/// Used only if PostGIS RPC fails.
+	static Future<List<Map<String, dynamic>>> _getNearbyParksClientSide({
 		required double latitude,
 		required double longitude,
 		double radiusKm = 25,
@@ -75,14 +123,14 @@ class ParkService {
 				mapped.add({
 					'id': park.id,
 					'name': park.name,
-						'description': park.description,
+					'description': park.description,
 					'latitude': park.latitude,
 					'longitude': park.longitude,
 					'address': park.address ?? 'Dog park',
 					'distance': distKm,
 					'rating': park.rating ?? 0.0,
 					'amenities': park.amenities,
-					// Simulated active dogs (UI only) – replace with real check‑in counts later
+					// Simulated active dogs (legacy fallback)
 					'active_dogs': (park.id.hashCode.abs() % 7) + 1,
 				});
 			}

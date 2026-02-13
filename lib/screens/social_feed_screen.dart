@@ -38,7 +38,9 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       appBar: AppBar(
         title: Text(
           'Social Feed',
@@ -82,6 +84,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
                       },
                     ),
             ),
+      ), // Close GestureDetector
     );
   }
 
@@ -333,7 +336,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         pageBuilder: (context, animation, secondaryAnimation) => 
             _CreatePostScreen(
               onPost: _handleCreatePost,
-              isPosting: _isLoading,
+              isPosting: _isPosting,
             ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(0.0, 1.0);

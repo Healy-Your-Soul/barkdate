@@ -9,8 +9,10 @@ class Dog {
   final List<String> photos;
   final String ownerId;
   final String ownerName;
+  final String? ownerAvatarUrl;
   final double distanceKm;
   final bool isMatched;
+  final bool? isFriend; // Tracks if this dog is in user's pack
 
   const Dog({
     required this.id,
@@ -23,8 +25,10 @@ class Dog {
     required this.photos,
     required this.ownerId,
     required this.ownerName,
+    this.ownerAvatarUrl,
     required this.distanceKm,
     this.isMatched = false,
+    this.isFriend,
   });
 
   Dog copyWith({
@@ -38,8 +42,10 @@ class Dog {
     List<String>? photos,
     String? ownerId,
     String? ownerName,
+    String? ownerAvatarUrl,
     double? distanceKm,
     bool? isMatched,
+    bool? isFriend,
   }) => Dog(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -51,11 +57,32 @@ class Dog {
     photos: photos ?? this.photos,
     ownerId: ownerId ?? this.ownerId,
     ownerName: ownerName ?? this.ownerName,
+    ownerAvatarUrl: ownerAvatarUrl ?? this.ownerAvatarUrl,
     distanceKm: distanceKm ?? this.distanceKm,
     isMatched: isMatched ?? this.isMatched,
+    isFriend: isFriend ?? this.isFriend,
   );
 
-  factory Dog.fromJson(Map<String, dynamic> json) {
+    factory Dog.fromJson(Map<String, dynamic> json) {
+    // Handle photos mapping from various possible backend formats
+    List<String> photoList = [];
+    if (json['photos'] != null) {
+      photoList = List<String>.from(json['photos']);
+    } else if (json['photo_urls'] != null) {
+      photoList = List<String>.from(json['photo_urls']);
+    } else if (json['main_photo_url'] != null) {
+      photoList.add(json['main_photo_url']);
+      if (json['extra_photo_urls'] != null) {
+        photoList.addAll(List<String>.from(json['extra_photo_urls']));
+      }
+    }
+
+    // Handle owner data from various formats (RPC vs direct query)
+    final ownerData = json['owner'] ?? json['users'];
+    final ownerId = json['owner_id'] ?? json['user_id'] ?? ownerData?['id'] ?? '';
+    final ownerName = json['owner_name'] ?? ownerData?['name'] ?? 'Unknown';
+    final ownerAvatar = json['owner_avatar_url'] ?? ownerData?['avatar_url'];
+
     return Dog(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
@@ -64,11 +91,13 @@ class Dog {
       size: json['size'] ?? '',
       gender: json['gender'] ?? '',
       bio: json['bio'] ?? '',
-      photos: List<String>.from(json['photos'] ?? []),
-      ownerId: json['owner_id'] ?? '',
-      ownerName: json['owner_name'] ?? '',
+      photos: photoList,
+      ownerId: ownerId,
+      ownerName: ownerName,
+      ownerAvatarUrl: ownerAvatar,
       distanceKm: json['distance_km']?.toDouble() ?? 0.0,
       isMatched: json['is_matched'] ?? false,
+      isFriend: json['is_friend'],
     );
   }
 
@@ -84,8 +113,10 @@ class Dog {
       'photos': photos,
       'owner_id': ownerId,
       'owner_name': ownerName,
+      'owner_avatar_url': ownerAvatarUrl,
       'distance_km': distanceKm,
       'is_matched': isMatched,
+      'is_friend': isFriend,
     };
   }
 }

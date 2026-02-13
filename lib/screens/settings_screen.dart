@@ -8,6 +8,8 @@ import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/settings_service.dart';
 import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 import 'package:barkdate/services/cache_service.dart';
+import 'package:barkdate/widgets/location_settings_widget.dart';
+import 'package:barkdate/screens/terms_of_service_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -355,6 +357,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
             
             const SizedBox(height: 24),
             
+            // Location Section
+            _buildSectionHeader(context, 'Location'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: LocationSettingsWidget(
+                onLocationChanged: () {
+                  // Invalidate cache when location changes
+                  final userId = SupabaseConfig.auth.currentUser?.id;
+                  if (userId != null) {
+                    CacheService()
+                      ..invalidate('nearby_$userId')
+                      ..invalidateFeedSnapshot(userId);
+                  }
+                  
+                  // Show feedback
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Location settings updated. Pull to refresh your feed.'),
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
             // Support Section
             _buildSectionHeader(context, 'Support'),
             _buildSettingsItem(
@@ -428,9 +459,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'Terms of Service',
               subtitle: 'Read our terms of service',
               onTap: () {
-                // TODO: Show terms of service
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Terms of Service - Coming soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TermsOfServiceScreen()),
                 );
               },
             ),
