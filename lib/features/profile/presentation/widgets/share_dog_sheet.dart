@@ -163,7 +163,8 @@ class _ShareDogSheetState extends ConsumerState<ShareDogSheet> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  color: theme.colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                       color: theme.colorScheme.outline.withValues(alpha: 0.5)),
@@ -191,7 +192,8 @@ class _ShareDogSheetState extends ConsumerState<ShareDogSheet> {
                         color: theme.colorScheme.surface,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+                            color: theme.colorScheme.primary
+                                .withValues(alpha: 0.5)),
                       ),
                       child: Text(
                         _shareResult!.shareCode,

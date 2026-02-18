@@ -634,7 +634,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 14),
                                     side: BorderSide(
-                                        color: Colors.orange.withValues(alpha: 0.5)),
+                                        color: Colors.orange
+                                            .withValues(alpha: 0.5)),
                                   ),
                                 ),
                               ),

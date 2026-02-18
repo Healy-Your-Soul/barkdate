@@ -750,8 +750,9 @@ class _MapScreenState extends State<MapScreen> {
                               items: _radiusOptions.map((radius) {
                                 return DropdownMenuItem<int>(
                                   value: radius,
-                                  child: Text(
-                                      radius >= 1000 ? "${radius ~/ 1000}km" : "$radius m"),
+                                  child: Text(radius >= 1000
+                                      ? "${radius ~/ 1000}km"
+                                      : "$radius m"),
                                 );
                               }).toList(),
                               onChanged: (value) {

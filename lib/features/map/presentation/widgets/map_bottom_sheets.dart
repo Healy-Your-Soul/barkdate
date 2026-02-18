@@ -548,7 +548,8 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF4CAF50).withValues(alpha: 0.15),
+                            color:
+                                const Color(0xFF4CAF50).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(

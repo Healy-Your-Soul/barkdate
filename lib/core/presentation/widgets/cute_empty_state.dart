@@ -51,7 +51,10 @@ class CuteEmptyState extends StatelessWidget {
             Text(
               message,
               style: AppTypography.bodyMedium().copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),

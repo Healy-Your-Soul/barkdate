@@ -106,7 +106,8 @@ class _AddTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+          border: Border.all(
+              color: theme.colorScheme.outline.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(16),
           color: theme.colorScheme.surface,
         ),

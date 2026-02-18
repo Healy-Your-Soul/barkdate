@@ -436,8 +436,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             Icon(Icons.chevron_right,
-                color:
-                    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.4)),
           ],
         ),
       ),

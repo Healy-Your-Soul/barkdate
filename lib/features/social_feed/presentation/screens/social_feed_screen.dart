@@ -1596,7 +1596,8 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                                                               4),
                                                       decoration: BoxDecoration(
                                                         color: Colors.black
-                                                            .withValues(alpha: 0.5),
+                                                            .withValues(
+                                                                alpha: 0.5),
                                                         shape: BoxShape.circle,
                                                       ),
                                                       child: const Icon(
@@ -1728,7 +1729,10 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                   .withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                color: Theme.of(context)
+                    .colorScheme
+                    .outline
+                    .withValues(alpha: 0.2),
               ),
             ),
             child: Row(
@@ -1779,8 +1783,10 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                       .withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color:
-                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(

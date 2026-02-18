@@ -1,0 +1,113 @@
+Analyzing barkdate...                                           
+
+   info • Don't use 'BuildContext's across async gaps • lib/app.dart:39:13 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/app.dart:59:15 • use_build_context_synchronously
+warning • 'signInWithIdToken' is experimental and could be removed or changed at any time • lib/features/auth/presentation/screens/sign_in_screen.dart:166:60 • experimental_member_use
+warning • 'signInWithIdToken' is experimental and could be removed or changed at any time • lib/features/auth/presentation/screens/sign_up_screen.dart:111:60 • experimental_member_use
+   info • Don't use 'BuildContext's across async gaps • lib/features/feed/presentation/screens/feed_screen.dart:1839:40 • use_build_context_synchronously
+warning • The value of the local variable 'position' isn't used • lib/features/map/presentation/screens/map_screen.dart:83:11 • unused_local_variable
+warning • The value of 'refresh' should be used • lib/features/map/presentation/screens/map_screen.dart:291:25 • unused_result
+warning • The value of 'refresh' should be used • lib/features/map/presentation/screens/map_screen.dart:444:23 • unused_result
+warning • The value of the field '_isLoadingCheckIns' isn't used • lib/features/map/presentation/widgets/map_bottom_sheets.dart:75:8 • unused_field
+warning • The value of 'refresh' should be used • lib/features/map/presentation/widgets/map_bottom_sheets.dart:853:13 • unused_result
+warning • The value of 'refresh' should be used • lib/features/map/presentation/widgets/map_search_bar.dart:178:9 • unused_result
+warning • The value of 'refresh' should be used • lib/features/map/presentation/widgets/map_search_bar.dart:192:9 • unused_result
+warning • The value of the local variable 'isRead' isn't used • lib/features/messages/presentation/screens/messages_screen.dart:226:11 • unused_local_variable
+warning • The value of the local variable 'recipientId' isn't used • lib/features/messages/presentation/screens/messages_screen.dart:232:15 • unused_local_variable
+warning • The value of the field '_selectedPlace' isn't used • lib/features/playdates/presentation/screens/create_playdate_screen.dart:38:22 • unused_field
+warning • The value of the local variable 'organizer' isn't used • lib/features/playdates/presentation/screens/playdate_details_screen.dart:328:11 • unused_local_variable
+warning • The value of the local variable 'participant' isn't used • lib/features/playdates/presentation/screens/playdate_details_screen.dart:329:11 • unused_local_variable
+warning • The value of the local variable 'allDogs' isn't used • lib/features/playdates/presentation/widgets/dog_search_sheet.dart:63:13 • unused_local_variable
+warning • The value of the field '_isLoading' isn't used • lib/features/playdates/presentation/widgets/selection_place_sheet.dart:27:8 • unused_field
+warning • The value of the local variable 'theme' isn't used • lib/features/profile/presentation/screens/accept_share_screen.dart:92:11 • unused_local_variable
+warning • The value of the local variable 'userStatsAsync' isn't used • lib/features/profile/presentation/screens/profile_screen.dart:23:11 • unused_local_variable
+warning • The value of the field '_searchRadiusKm' isn't used • lib/features/settings/presentation/screens/settings_screen.dart:22:7 • unused_field
+warning • The value of the field '_isLoadingRadius' isn't used • lib/features/settings/presentation/screens/settings_screen.dart:23:8 • unused_field
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/features/settings/presentation/screens/settings_screen.dart:161:9 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/features/settings/presentation/screens/settings_screen.dart:164:33 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/features/settings/presentation/screens/settings_screen.dart:166:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/features/settings/presentation/screens/settings_screen.dart:211:21 • use_build_context_synchronously
+warning • The value of the field '_selectedImage' isn't used • lib/features/social_feed/presentation/screens/social_feed_screen.dart:35:18 • unused_field
+warning • The value of the field '_isPosting' isn't used • lib/features/social_feed/presentation/screens/social_feed_screen.dart:36:14 • unused_field
+warning • The declaration '_buildPostCard' isn't referenced • lib/features/social_feed/presentation/screens/social_feed_screen.dart:371:10 • unused_element
+warning • The declaration '_pickImage' isn't referenced • lib/features/social_feed/presentation/screens/social_feed_screen.dart:840:16 • unused_element
+   info • Don't use 'BuildContext's across async gaps • lib/features/social_feed/presentation/screens/social_feed_screen.dart:2054:28 • use_build_context_synchronously
+   info • Statements in an if should be enclosed in a block • lib/features/social_feed/presentation/screens/social_feed_screen.dart:2403:11 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/features/social_feed/presentation/screens/social_feed_screen.dart:2405:11 • curly_braces_in_flow_control_structures
+   info • Don't use 'BuildContext's across async gaps • lib/screens/auth/sign_in_screen.dart:52:13 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/auth/verify_email_screen.dart:80:15 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/auth/verify_email_screen.dart:86:15 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/auth/verify_email_screen.dart:114:17 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/auth/verify_email_screen.dart:119:17 • use_build_context_synchronously
+warning • The value of the field '_selectedPlaceName' isn't used • lib/screens/create_event_screen.dart:55:11 • unused_field
+warning • The left operand can't be null, so the right operand is never executed • lib/screens/dog_profile_detail.dart:56:50 • dead_null_aware_expression
+warning • The value of the field '_feedMeta' isn't used • lib/screens/feed_screen.dart:60:24 • unused_field
+   info • Don't use 'BuildContext's across async gaps • lib/screens/feed_screen.dart:1190:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/feed_screen.dart:1208:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/feed_screen.dart:1211:41 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/feed_screen.dart:1218:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/feed_screen.dart:1221:41 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/feed_screen.dart:1232:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/feed_screen.dart:1267:30 • use_build_context_synchronously
+warning • The declaration '_showCheckInOptions' isn't referenced • lib/screens/feed_screen.dart:1972:8 • unused_element
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/feed_screen.dart:1995:38 • use_build_context_synchronously
+warning • The value of the field '_mapReady' isn't used • lib/screens/map_location_picker_screen.dart:45:8 • unused_field
+warning • This default clause is covered by the previous cases • lib/screens/map_screen.dart:302:11 • unreachable_switch_default
+warning • The declaration '_generateSuggestions' isn't referenced • lib/screens/map_screen.dart:613:16 • unused_element
+   info • Don't use 'BuildContext's across async gaps • lib/screens/map_screen.dart:1151:28 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/map_screen.dart:1163:28 • use_build_context_synchronously
+warning • The value of the local variable 'dogName' isn't used • lib/screens/map_v2/map_tab_screen.dart:362:13 • unused_local_variable
+warning • The value of the local variable 'isFriend' isn't used • lib/screens/map_v2/map_tab_screen.dart:367:13 • unused_local_variable
+warning • The value of the local variable 'dogCount' isn't used • lib/screens/map_v2/map_tab_screen.dart:453:15 • unused_local_variable
+warning • The declaration '_getLiveUserMarkerHue' isn't referenced • lib/screens/map_v2/map_tab_screen.dart:624:10 • unused_element
+warning • The declaration '_getMarkerColor' isn't referenced • lib/screens/map_v2/map_tab_screen.dart:655:10 • unused_element
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/map_v2/map_tab_screen.dart:1355:48 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/map_v2/map_tab_screen.dart:1372:46 • use_build_context_synchronously
+warning • The value of the field '_isLoadingCheckIns' isn't used • lib/screens/map_v2/widgets/map_bottom_sheets.dart:79:8 • unused_field
+warning • The value of the field '_selectedDog' isn't used • lib/screens/map_v2/widgets/simple_place_sheet.dart:58:25 • unused_field
+   info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/screens/map_v2/widgets/simple_place_sheet.dart:270:27 • deprecated_member_use
+   info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/screens/map_v2/widgets/simple_place_sheet.dart:271:27 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps • lib/screens/map_v2/widgets/simple_place_sheet.dart:556:58 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/map_v2/widgets/simple_place_sheet.dart:574:56 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/map_v2/widgets/simple_place_sheet.dart:584:51 • use_build_context_synchronously
+warning • The value of the local variable 'dogData' isn't used • lib/screens/onboarding/create_profile_screen.dart:354:13 • unused_local_variable
+   info • Don't use 'BuildContext's across async gaps • lib/screens/onboarding/create_profile_screen.dart:1763:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/onboarding/create_profile_screen.dart:1867:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/onboarding/location_permission_screen.dart:97:30 • use_build_context_synchronously
+warning • The declaration '_buildBenefitItem' isn't referenced • lib/screens/onboarding/location_permission_screen.dart:322:10 • unused_element
+warning • The value of the field '_uploadedImageUrls' isn't used • lib/screens/playdate_recap_screen.dart:35:22 • unused_field
+   info • Don't use 'BuildContext's across async gaps • lib/screens/playdate_recap_screen.dart:95:28 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/playdate_recap_screen.dart:122:28 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/playdate_recap_screen.dart:205:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/playdate_recap_screen.dart:214:25 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/playdates_screen.dart:1357:34 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/playdates_screen.dart:1359:44 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/playdates_screen.dart:1368:44 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/playdates_screen_new.dart:539:7 • use_build_context_synchronously
+warning • The value of the local variable 'borderWidthSize' isn't used • lib/screens/qr_scan_screen.dart:208:11 • unused_local_variable
+warning • The value of the local variable 'height' isn't used • lib/screens/qr_scan_screen.dart:209:11 • unused_local_variable
+warning • The value of the local variable 'borderOffset' isn't used • lib/screens/qr_scan_screen.dart:210:11 • unused_local_variable
+warning • The value of the local variable 'boxPaint' isn't used • lib/screens/qr_scan_screen.dart:222:11 • unused_local_variable
+   info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/screens/report_screen.dart:491:9 • deprecated_member_use
+   info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/screens/report_screen.dart:492:9 • deprecated_member_use
+warning • The value of the field '_searchRadiusKm' isn't used • lib/screens/settings_screen.dart:21:7 • unused_field
+warning • The value of the field '_isLoadingRadius' isn't used • lib/screens/settings_screen.dart:22:8 • unused_field
+warning • The declaration '_updateSearchRadius' isn't referenced • lib/screens/settings_screen.dart:52:16 • unused_element
+   info • Don't use 'BuildContext's across async gaps • lib/screens/settings_screen.dart:103:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/settings_screen.dart:109:40 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/settings_screen.dart:216:24 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/settings_screen.dart:225:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/settings_screen.dart:283:23 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/settings_screen.dart:320:23 • use_build_context_synchronously
+warning • The declaration '_pickImage' isn't referenced • lib/screens/social_feed_screen.dart:384:16 • unused_element
+warning • The declaration '_createPost' isn't referenced • lib/screens/social_feed_screen.dart:450:16 • unused_element
+warning • The declaration '_compressBytes' isn't referenced • lib/services/photo_upload_service.dart:600:19 • unused_element
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/widgets/checkin_button.dart:402:38 • use_build_context_synchronously
+warning • The value of the local variable 'isDark' isn't used • lib/widgets/dog_card.dart:444:11 • unused_local_variable
+warning • The value of the local variable 'preview' isn't used • lib/widgets/dog_profile_sheet.dart:94:25 • unused_local_variable
+warning • The value of the local variable 'theme' isn't used • lib/widgets/notification_tile.dart:225:11 • unused_local_variable
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/widgets/playdate_action_button.dart:393:46 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/widgets/playdate_request_modal.dart:207:25 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/widgets/playdate_request_modal.dart:208:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/widgets/playdate_request_modal.dart:212:41 • use_build_context_synchronously
+

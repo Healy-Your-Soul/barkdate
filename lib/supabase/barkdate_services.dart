@@ -88,7 +88,7 @@ class BarkDateUserService {
                   .from(bucket)
                   .remove(['$userId/${file.name}']);
               debugPrint('Deleted file: $bucket/$userId/${file.name}');
-                        }
+            }
           }
         } catch (e) {
           debugPrint('Error cleaning bucket $bucket: $e');
@@ -547,8 +547,7 @@ class BarkDateMatchService {
       }
 
       final dogs = List<Map<String, dynamic>>.from(
-        (response)
-            .map((item) => Map<String, dynamic>.from(item as Map)),
+        (response).map((item) => Map<String, dynamic>.from(item as Map)),
       );
 
       debugPrint('✅ Nearby dogs fetched: ${dogs.length}');

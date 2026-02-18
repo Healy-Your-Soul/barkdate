@@ -422,7 +422,8 @@ class FeedFeatureScreen extends ConsumerWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
+            color:
+                Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -598,12 +599,18 @@ class FeedFeatureScreen extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.4)),
           const SizedBox(height: 8),
           Text(
             message,
             style: AppTypography.bodySmall().copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -1152,8 +1159,10 @@ class FeedFeatureScreen extends ConsumerWidget {
               Text(
                 'See what the pack is up to',
                 style: AppTypography.bodyMedium().copyWith(
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(height: 16),

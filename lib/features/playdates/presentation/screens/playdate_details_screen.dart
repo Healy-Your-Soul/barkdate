@@ -637,7 +637,10 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
             Text(
               label,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
                 fontSize: 12,
               ),
             ),

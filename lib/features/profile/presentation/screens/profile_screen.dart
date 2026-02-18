@@ -358,7 +358,8 @@ class ProfileScreen extends ConsumerWidget {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -812,7 +813,10 @@ class ProfileScreen extends ConsumerWidget {
       child: Container(
         width: isLarge ? 160 : 120,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          color: Theme.of(context)
+              .colorScheme
+              .surfaceContainerHighest
+              .withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Theme.of(context).colorScheme.outline),
         ),
@@ -821,8 +825,10 @@ class ProfileScreen extends ConsumerWidget {
           children: [
             Icon(Icons.add_circle_outline,
                 size: isLarge ? 40 : 32,
-                color:
-                    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.4)),
             const SizedBox(height: 8),
             Text(
               'Add Dog',

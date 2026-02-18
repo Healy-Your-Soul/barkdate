@@ -630,7 +630,9 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.98),
+            color: Theme.of(context)
+                .scaffoldBackgroundColor
+                .withValues(alpha: 0.98),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             boxShadow: [
               BoxShadow(
@@ -648,7 +650,10 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
