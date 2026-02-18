@@ -79,7 +79,7 @@ class InAppNotificationService {
       }
     });
 
-    print('Showing notification: ${notification.title}');
+    debugPrint('Showing notification: ${notification.title}');
   }
 
   static void _dismissOverlay() {

@@ -11,17 +11,13 @@ import 'package:barkdate/widgets/app_bottom_sheet.dart';
 import 'package:barkdate/widgets/app_section_header.dart';
 import 'package:barkdate/widgets/app_empty_state.dart';
 import 'package:barkdate/design_system/app_responsive.dart';
-import 'package:barkdate/design_system/app_spacing.dart';
-import 'package:barkdate/design_system/app_typography.dart';
-import 'package:barkdate/design_system/app_styles.dart';
 
 class PlaydatesScreen extends StatefulWidget {
   final int? initialTabIndex; // 0=Requests, 1=Upcoming, 2=Past
   final String? highlightPlaydateId;
 
   const PlaydatesScreen(
-      {Key? key, this.initialTabIndex, this.highlightPlaydateId})
-      : super(key: key);
+      {super.key, this.initialTabIndex, this.highlightPlaydateId});
 
   @override
   State<PlaydatesScreen> createState() => _PlaydatesScreenState();

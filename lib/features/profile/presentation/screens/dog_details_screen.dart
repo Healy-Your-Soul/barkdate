@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/design_system/app_typography.dart';
-import 'package:barkdate/design_system/app_spacing.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/services/conversation_service.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
@@ -386,7 +385,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.7),
+                              color: Colors.black.withValues(alpha: 0.7),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -438,7 +437,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                                 color: Theme.of(context)
                                     .colorScheme
                                     .primaryContainer
-                                    .withOpacity(0.3),
+                                    .withValues(alpha: 0.3),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
@@ -513,13 +512,13 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                                       color: Theme.of(context)
                                           .colorScheme
                                           .primary
-                                          .withOpacity(0.1),
+                                          .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                           color: Theme.of(context)
                                               .colorScheme
                                               .primary
-                                              .withOpacity(0.2)),
+                                              .withValues(alpha: 0.2)),
                                     ),
                                     child: Text(
                                       _ownerProfile!['relationship_status'],
@@ -635,7 +634,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 14),
                                     side: BorderSide(
-                                        color: Colors.orange.withOpacity(0.5)),
+                                        color: Colors.orange.withValues(alpha: 0.5)),
                                   ),
                                 ),
                               ),

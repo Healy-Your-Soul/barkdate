@@ -9,7 +9,6 @@ import 'package:barkdate/features/map/presentation/widgets/map_bottom_sheets.dar
 import 'package:barkdate/services/places_service.dart';
 import 'package:barkdate/services/checkin_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/widgets/checkin_button.dart';
 import 'package:barkdate/widgets/live_location_toggle.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
@@ -145,12 +144,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           // This is a bit loose, but okay for now.
           // Better: 'park' -> PlaceCategory.park
           if (filters.category == 'park' &&
-              place.category != PlaceCategory.park) continue;
+              place.category != PlaceCategory.park) {
+            continue;
+          }
           if (filters.category == 'cafe' &&
-              place.category != PlaceCategory.restaurant)
+              place.category != PlaceCategory.restaurant) {
             continue; // Assuming cafe is restaurant
+          }
           if (filters.category == 'store' &&
-              place.category != PlaceCategory.petStore) continue;
+              place.category != PlaceCategory.petStore) {
+            continue;
+          }
         }
       }
 
@@ -354,7 +358,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                               top: Radius.circular(20)),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha: 0.1),
                               blurRadius: 10,
                               offset: const Offset(0, -2),
                             ),
@@ -490,7 +494,7 @@ class _AnimatedAiButtonState extends State<AnimatedAiButton>
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF6366F1).withOpacity(0.3),
+                color: const Color(0xFF6366F1).withValues(alpha: 0.3),
                 blurRadius: 8,
                 spreadRadius: 0,
               ),
@@ -540,7 +544,7 @@ class _AnimatedAiButtonState extends State<AnimatedAiButton>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(
@@ -621,7 +625,7 @@ class _FloatingCheckInIndicatorState extends State<FloatingCheckInIndicator> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF4CAF50).withOpacity(0.3),
+                color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
                 blurRadius: 6,
                 spreadRadius: 0,
               ),

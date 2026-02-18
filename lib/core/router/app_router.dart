@@ -221,8 +221,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/event/:id',
         builder: (context, state) {
           final eventId = state.pathParameters['id'];
-          if (eventId == null)
+          if (eventId == null) {
             return const Scaffold(body: Center(child: Text('Event not found')));
+          }
 
           return Scaffold(
             body: FutureBuilder<Map<String, dynamic>>(

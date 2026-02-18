@@ -4,11 +4,11 @@ class SimplePlaydatesScreen extends StatelessWidget {
   final int? initialTabIndex;
   final String? highlightPlaydateId;
 
-  SimplePlaydatesScreen({
-    Key? key,
+  const SimplePlaydatesScreen({
+    super.key,
     this.initialTabIndex,
     this.highlightPlaydateId,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

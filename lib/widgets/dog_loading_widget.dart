@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:visibility_detector/visibility_detector.dart';
-import 'dart:math' as math;
 
 /// A cute dog-themed loading widget using Lottie animations
 class DogLoadingWidget extends StatelessWidget {
@@ -67,7 +66,7 @@ class DogLoadingWidget extends StatelessWidget {
       child: Icon(
         Icons.pets,
         size: size * 0.6,
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
       ),
       onEnd: () {
         // This will cause a rebuild with the animation continuing
@@ -260,7 +259,7 @@ class DogCircularProgress extends StatelessWidget {
           Icon(
             Icons.pets,
             size: size * 0.4,
-            color: progressColor.withOpacity(0.6),
+            color: progressColor.withValues(alpha: 0.6),
           ),
         ],
       ),

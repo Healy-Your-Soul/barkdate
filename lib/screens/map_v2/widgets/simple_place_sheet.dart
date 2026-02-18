@@ -463,7 +463,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: _getCrowdednessColor(_dogCount).withOpacity(0.1),
+                    color: _getCrowdednessColor(_dogCount).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: _getCrowdednessColor(_dogCount)),
                   ),
@@ -681,7 +681,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color:
-                    _getCategoryColor(widget.place.category).withOpacity(0.1),
+                    _getCategoryColor(widget.place.category).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(

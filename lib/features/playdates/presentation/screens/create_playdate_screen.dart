@@ -8,7 +8,6 @@ import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/widgets/location_picker_field.dart';
 import 'package:barkdate/services/places_service.dart';
 import 'package:intl/intl.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/services/location_service.dart';
@@ -39,7 +38,7 @@ class _CreatePlaydateScreenState extends ConsumerState<CreatePlaydateScreen> {
   PlaceAutocomplete? _selectedPlace; // Holds simple autocomplete data
   PlaceResult?
       _detailedPlace; // Holds detailed place with coords from Map Picker
-  List<Dog> _invitedDogs = [];
+  final List<Dog> _invitedDogs = [];
 
   @override
   void initState() {
@@ -217,8 +216,9 @@ class _CreatePlaydateScreenState extends ConsumerState<CreatePlaydateScreen> {
           .eq('user_id', user.id)
           .limit(1);
 
-      if (myDogsRes.isEmpty)
+      if (myDogsRes.isEmpty) {
         throw Exception('You need a dog profile to create a playdate!');
+      }
       final myDogId = myDogsRes[0]['id'];
 
       await SupabaseConfig.client.from('playdate_participants').insert({
@@ -501,7 +501,7 @@ class _CreatePlaydateScreenState extends ConsumerState<CreatePlaydateScreen> {
                     const SizedBox(width: 8),
                     Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: _isLoadingLocation

@@ -71,7 +71,7 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
         );
       }
-      print('Sign in error: $e');
+      debugPrint('Sign in error: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

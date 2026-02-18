@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/supabase/bark_playdate_services.dart';
 import 'package:barkdate/supabase/notification_service.dart';
 
 /// Simplified playdate service that works with basic schema
@@ -40,8 +39,9 @@ class SimplifiedPlaydateService {
       if (description != null) playdateData['description'] = description;
       if (latitude != null) playdateData['latitude'] = latitude;
       if (longitude != null) playdateData['longitude'] = longitude;
-      if (durationMinutes != 60)
+      if (durationMinutes != 60) {
         playdateData['duration_minutes'] = durationMinutes;
+      }
 
       final playdateResult = await SupabaseConfig.client
           .from('playdates')

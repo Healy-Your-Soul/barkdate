@@ -158,7 +158,7 @@ class _FeedFilterSheetState extends ConsumerState<FeedFilterSheet> {
                     }
                   });
                 },
-                selectedColor: greenColor.withOpacity(0.2),
+                selectedColor: greenColor.withValues(alpha: 0.2),
                 checkmarkColor: greenColor,
                 labelStyle: TextStyle(
                   color: isSelected ? greenColor : Colors.grey[700],
@@ -189,7 +189,7 @@ class _FeedFilterSheetState extends ConsumerState<FeedFilterSheet> {
                     }
                   });
                 },
-                selectedColor: greenColor.withOpacity(0.2),
+                selectedColor: greenColor.withValues(alpha: 0.2),
                 checkmarkColor: greenColor,
                 labelStyle: TextStyle(
                   color: isSelected ? greenColor : Colors.grey[700],

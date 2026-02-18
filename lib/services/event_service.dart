@@ -1,6 +1,5 @@
 import 'package:barkdate/models/event.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:flutter/material.dart';
 import 'package:barkdate/services/notification_manager.dart';
 

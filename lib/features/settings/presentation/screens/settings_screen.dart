@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
@@ -7,7 +6,6 @@ import 'package:barkdate/services/settings_service.dart';
 import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 import 'package:barkdate/services/cache_service.dart';
 import 'package:barkdate/widgets/location_settings_widget.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/screens/terms_of_service_screen.dart';
@@ -352,7 +350,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
-                        .withOpacity(0.6)),
+                        .withValues(alpha: 0.6)),
               ),
             ),
             const SizedBox(height: 16),
@@ -432,14 +430,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
-                            .withOpacity(0.7)),
+                            .withValues(alpha: 0.7)),
                   ),
                 ],
               ),
             ),
             Icon(Icons.chevron_right,
                 color:
-                    Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
+                    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
           ],
         ),
       ),
@@ -537,7 +535,7 @@ class _AppPreferencesSheetState extends State<AppPreferencesSheet> {
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
-                                .withOpacity(0.5),
+                                .withValues(alpha: 0.5),
                           ),
                         ),
                         trailing: Container(
@@ -568,7 +566,7 @@ class _AppPreferencesSheetState extends State<AppPreferencesSheet> {
                         value: _settingsService.notificationsEnabled,
                         onChanged: (value) =>
                             _settingsService.setNotificationsEnabled(value),
-                        activeColor: Colors.black,
+                        activeThumbColor: Colors.black,
                       ),
                     ],
                   ),
@@ -629,7 +627,7 @@ class _PrivacySheetState extends State<PrivacySheet> {
                         value: _settingsService.locationEnabled,
                         onChanged: (value) =>
                             _settingsService.setLocationEnabled(value),
-                        activeColor: Colors.black,
+                        activeThumbColor: Colors.black,
                       ),
                       const SizedBox(height: 16),
                       SwitchListTile(
@@ -641,7 +639,7 @@ class _PrivacySheetState extends State<PrivacySheet> {
                         value: _settingsService.privacyMode,
                         onChanged: (value) =>
                             _settingsService.setPrivacyMode(value),
-                        activeColor: Colors.black,
+                        activeThumbColor: Colors.black,
                       ),
                     ],
                   ),

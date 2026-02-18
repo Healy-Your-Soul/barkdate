@@ -14,9 +14,9 @@ class PlaydateResponseBottomSheet extends StatefulWidget {
 
   const PlaydateResponseBottomSheet({
     super.key,
-    required Map<String, dynamic> request,
+    required this.request,
     this.onResponseSent,
-  }) : request = request;
+  });
 
   // Backward compatibility getter
   Map<String, dynamic> get playdateRequest => request;
@@ -29,8 +29,7 @@ class PlaydateResponseBottomSheet extends StatefulWidget {
 class _PlaydateResponseBottomSheetState
     extends State<PlaydateResponseBottomSheet> with TickerProviderStateMixin {
   bool _isLoading = false;
-  bool _showAdvancedOptions = false;
-  String _responseType = '';
+
   String _message = '';
   DateTime? _suggestedTime;
   String? _suggestedLocation;

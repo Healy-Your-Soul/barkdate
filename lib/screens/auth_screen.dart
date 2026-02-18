@@ -63,20 +63,20 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() => isLoading = true);
 
     try {
-      print(
+      debugPrint(
           '🔑 Attempting email sign-in with: ${_emailController.text.trim()}');
       final response = await Supabase.instance.client.auth.signInWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      print('✅ Sign-in successful: ${response.user?.email}');
+      debugPrint('✅ Sign-in successful: ${response.user?.email}');
 
       if (mounted && response.user != null) {
         Navigator.of(context).pushReplacementNamed('/home');
       }
     } on AuthException catch (e) {
-      print('❌ AuthException: ${e.message}');
+      debugPrint('❌ AuthException: ${e.message}');
       if (mounted) {
         String message = 'Authentication failed';
         switch (e.message) {
@@ -98,7 +98,7 @@ class _AuthScreenState extends State<AuthScreen> {
         );
       }
     } catch (e) {
-      print('❌ General error: $e');
+      debugPrint('❌ General error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -118,14 +118,14 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() => isLoading = true);
 
     try {
-      print(
+      debugPrint(
           '🔑 Attempting email registration with: ${_emailController.text.trim()}');
       final response = await Supabase.instance.client.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      print('✅ Registration successful: ${response.user?.email}');
+      debugPrint('✅ Registration successful: ${response.user?.email}');
 
       if (mounted) {
         if (response.user != null && response.user!.emailConfirmedAt == null) {
@@ -147,7 +147,7 @@ class _AuthScreenState extends State<AuthScreen> {
         }
       }
     } on AuthException catch (e) {
-      print('❌ AuthException: ${e.message}');
+      debugPrint('❌ AuthException: ${e.message}');
       if (mounted) {
         String message = 'Registration failed';
         if (e.message.contains('already registered')) {
@@ -168,7 +168,7 @@ class _AuthScreenState extends State<AuthScreen> {
         );
       }
     } catch (e) {
-      print('❌ General error: $e');
+      debugPrint('❌ General error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -218,11 +218,11 @@ class _AuthScreenState extends State<AuthScreen> {
                 colors: isDark
                     ? [
                         DarkModeColors.darkPrimaryContainer,
-                        DarkModeColors.darkPrimary.withOpacity(0.1),
+                        DarkModeColors.darkPrimary.withValues(alpha: 0.1),
                       ]
                     : [
                         LightModeColors.lightPrimaryContainer,
-                        LightModeColors.lightPrimary.withOpacity(0.1),
+                        LightModeColors.lightPrimary.withValues(alpha: 0.1),
                       ],
               ),
             ),
@@ -291,7 +291,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     borderRadius: BorderRadius.circular(isWide ? 30 : 20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),

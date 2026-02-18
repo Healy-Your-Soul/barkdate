@@ -23,7 +23,7 @@ class DogMarkerGenerator {
     double borderWidth = 4,
   }) async {
     // Create a cache key
-    final cacheKey = '${imageUrl ?? 'default'}_${borderColor.value}_$size';
+    final cacheKey = '${imageUrl ?? 'default'}_${borderColor.toARGB32()}_$size';
 
     // Return cached version if available
     if (_cache.containsKey(cacheKey)) {
@@ -160,11 +160,13 @@ class DogMarkerGenerator {
 
   /// Convert a Color to BitmapDescriptor hue (fallback)
   static double _colorToHue(Color color) {
-    if (color == Colors.green || color.value == Colors.green.value) {
+    if (color == Colors.green || color.toARGB32() == Colors.green.toARGB32()) {
       return BitmapDescriptor.hueGreen;
-    } else if (color == Colors.orange || color.value == Colors.orange.value) {
+    } else if (color == Colors.orange ||
+        color.toARGB32() == Colors.orange.toARGB32()) {
       return BitmapDescriptor.hueOrange;
-    } else if (color == Colors.red || color.value == Colors.red.value) {
+    } else if (color == Colors.red ||
+        color.toARGB32() == Colors.red.toARGB32()) {
       return BitmapDescriptor.hueRed;
     }
     return BitmapDescriptor.hueAzure;

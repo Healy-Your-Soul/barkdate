@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/services/firebase_messaging_service.dart';
 import 'package:barkdate/services/in_app_notification_service.dart';
 import 'package:barkdate/models/notification.dart';
 
@@ -19,7 +18,7 @@ class NotificationService {
 
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
-      print('Error getting unread notifications: $e');
+      debugPrint('Error getting unread notifications: $e');
       return [];
     }
   }
@@ -36,7 +35,7 @@ class NotificationService {
 
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
-      print('Error getting all notifications: $e');
+      debugPrint('Error getting all notifications: $e');
       return [];
     }
   }
@@ -58,7 +57,7 @@ class NotificationService {
           .from('notifications')
           .update({'is_read': true}).eq('id', notificationId);
     } catch (e) {
-      print('Error marking notification as read: $e');
+      debugPrint('Error marking notification as read: $e');
       rethrow;
     }
   }
@@ -70,7 +69,7 @@ class NotificationService {
           .from('notifications')
           .update({'is_read': true}).eq('user_id', userId);
     } catch (e) {
-      print('Error marking all notifications as read: $e');
+      debugPrint('Error marking all notifications as read: $e');
       rethrow;
     }
   }
@@ -114,8 +113,9 @@ class NotificationService {
             final rpc = await SupabaseConfig.client
                 .rpc('create_notification', params: notificationData);
             if (rpc is Map<String, dynamic>) result = rpc;
-            if (rpc is List && rpc.isNotEmpty)
+            if (rpc is List && rpc.isNotEmpty) {
               result = Map<String, dynamic>.from(rpc.first);
+            }
 
             // Fallback return
             result = {
@@ -158,7 +158,7 @@ class NotificationService {
           .delete()
           .eq('id', notificationId);
     } catch (e) {
-      print('Error deleting notification: $e');
+      debugPrint('Error deleting notification: $e');
       rethrow;
     }
   }
@@ -174,7 +174,7 @@ class NotificationService {
 
       return data.length;
     } catch (e) {
-      print('Error getting notification count: $e');
+      debugPrint('Error getting notification count: $e');
       return 0;
     }
   }

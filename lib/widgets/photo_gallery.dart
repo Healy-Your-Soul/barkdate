@@ -473,7 +473,7 @@ class _CompactPhotoGalleryState extends State<CompactPhotoGallery> {
                   decoration: BoxDecoration(
                     color: _currentIndex == index
                         ? Colors.white
-                        : Colors.white.withOpacity(0.5),
+                        : Colors.white.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),

@@ -347,7 +347,7 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(_status).withOpacity(0.1),
+                        color: _getStatusColor(_status).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
@@ -420,7 +420,7 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
                                   dogName, dogPhoto, status,
                                   isOrganizer: false),
                             );
-                          }).toList(),
+                          }),
                         ],
                       ),
                     ),
@@ -501,10 +501,10 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.05),
+                              color: Colors.blue.withValues(alpha: 0.05),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                  color: Colors.blue.withOpacity(0.2)),
+                                  color: Colors.blue.withValues(alpha: 0.2)),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -625,7 +625,7 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
             color: Theme.of(context)
                 .colorScheme
                 .surfaceContainerHighest
-                .withOpacity(0.5),
+                .withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: Theme.of(context).colorScheme.primary),
@@ -637,7 +637,7 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
             Text(
               label,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 12,
               ),
             ),

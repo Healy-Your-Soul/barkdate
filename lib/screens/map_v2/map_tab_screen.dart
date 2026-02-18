@@ -10,7 +10,6 @@ import 'package:barkdate/screens/map_v2/providers/map_viewport_provider.dart';
 import 'package:barkdate/screens/map_v2/providers/map_filters_provider.dart';
 import 'package:barkdate/screens/map_v2/providers/map_selection_provider.dart';
 import 'package:barkdate/screens/map_v2/widgets/map_search_bar.dart';
-import 'package:barkdate/screens/map_v2/widgets/map_filter_chips.dart';
 import 'package:barkdate/screens/map_v2/widgets/map_bottom_sheets.dart';
 import 'package:barkdate/screens/map_v2/widgets/simple_place_sheet.dart';
 import 'package:barkdate/services/places_service.dart';
@@ -22,7 +21,6 @@ import 'package:barkdate/models/checkin.dart';
 import 'package:barkdate/widgets/live_location_toggle.dart';
 import 'package:barkdate/utils/dog_marker_generator.dart';
 import 'package:barkdate/screens/map_v2/widgets/dog_mini_card.dart';
-import 'package:barkdate/screens/map_v2/widgets/place_mini_card.dart';
 import 'package:barkdate/screens/map_v2/widgets/place_mini_card.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
@@ -558,7 +556,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           snippet: '$parkName • ${_formatTimeAgo(hoursAgo)}',
         ),
         icon: icon,
-        zIndex: 50, // Below current user's marker
+        zIndexInt: 50, // Below current user's marker
         onTap: () {
           // Show dog mini card popup
           setState(() => _selectedLiveDog = {
@@ -610,7 +608,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             snippet: _currentUserCheckIn!.parkName,
           ),
           icon: icon,
-          zIndex: 100, // Show on top of all other markers
+          zIndexInt: 100, // Show on top of all other markers
         ));
       }
     }
@@ -741,8 +739,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       onSelected: (_) {
         ref.read(mapFiltersProvider.notifier).setCategory(value);
       },
-      selectedColor: iconColor?.withOpacity(0.2) ??
-          Theme.of(context).colorScheme.primary.withOpacity(0.2),
+      selectedColor: iconColor?.withValues(alpha: 0.2) ??
+          Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
       labelStyle: TextStyle(
         color: selected
             ? (iconColor ?? Theme.of(context).colorScheme.primary)
@@ -789,7 +787,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           border: Border.all(color: statusColor, width: 2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -874,7 +872,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       case PlaceCategory.veterinary:
         return Icons.medical_services;
       case PlaceCategory.other:
-      default:
         return Icons.place;
     }
   }
@@ -891,7 +888,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       case PlaceCategory.veterinary:
         return Colors.red;
       case PlaceCategory.other:
-      default:
         return Colors.grey;
     }
   }
@@ -923,7 +919,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.15),
+        color: statusColor.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -1144,7 +1140,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                   style: const TextStyle(color: Colors.black87),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.85),
+                  backgroundColor: Colors.white.withValues(alpha: 0.85),
                   foregroundColor: Colors.black87,
                   elevation: 0, // Flat design - no shadow
                   shadowColor: Colors.transparent,
@@ -1174,7 +1170,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                     const BorderRadius.vertical(top: Radius.circular(16)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, -2),
                   ),
@@ -1231,7 +1227,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -1257,7 +1253,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             right: 16,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -1471,7 +1467,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                         const BorderRadius.vertical(top: Radius.circular(16)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 10,
                         offset: const Offset(0, -2),
                       ),
@@ -1547,7 +1543,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                         const BorderRadius.vertical(top: Radius.circular(16)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 10,
                         offset: const Offset(0, -2),
                       ),
@@ -1631,11 +1627,10 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                                       child: Text(_selectedEvent!.location)),
                                 ],
                               ),
-                              if (_selectedEvent!.description != null &&
-                                  _selectedEvent!.description!.isNotEmpty) ...[
+                              if (_selectedEvent!.description.isNotEmpty) ...[
                                 const SizedBox(height: 12),
                                 Text(
-                                  _selectedEvent!.description!,
+                                  _selectedEvent!.description,
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ],
@@ -1749,7 +1744,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 12,
                 offset: const Offset(0, -4),
               ),
@@ -1766,7 +1761,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: _getPlaceTypeColor(place.category).withOpacity(0.15),
+                    color: _getPlaceTypeColor(place.category)
+                        .withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -1926,7 +1922,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 12,
                 offset: const Offset(0, -4),
               ),

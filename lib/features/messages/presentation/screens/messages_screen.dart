@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:barkdate/features/messages/presentation/screens/chat_screen.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
 import 'package:barkdate/design_system/app_typography.dart';

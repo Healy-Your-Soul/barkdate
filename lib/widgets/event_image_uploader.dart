@@ -106,7 +106,7 @@ class _AddTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
+          border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(16),
           color: theme.colorScheme.surface,
         ),
@@ -161,7 +161,7 @@ class _ImagePreviewTile extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.black.withOpacity(0.6),
+                color: Colors.black.withValues(alpha: 0.6),
               ),
               padding: const EdgeInsets.all(4),
               child: const Icon(Icons.close, size: 16, color: Colors.white),

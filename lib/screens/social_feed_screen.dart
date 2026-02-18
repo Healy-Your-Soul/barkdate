@@ -1019,7 +1019,7 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
             const SizedBox(height: 20),
 
             // Image picker area
-            Container(
+            SizedBox(
               height: 180, // Reduced height to prevent overflow
               child: _selectedImage != null
                   ? _buildImagePreview()

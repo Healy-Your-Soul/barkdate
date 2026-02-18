@@ -11,7 +11,6 @@ import 'package:barkdate/widgets/dog_card.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/design_system/app_spacing.dart';
 import 'package:intl/intl.dart';
-import 'package:barkdate/models/event.dart';
 import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'dart:async';
@@ -122,7 +121,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withOpacity(0.7),
+                              .withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -140,16 +139,18 @@ class FeedFeatureScreen extends ConsumerWidget {
               Consumer(
                 builder: (context, ref, _) {
                   final filter = ref.watch(feedFilterProvider);
-                  if (!filter.showPackOnly)
+                  if (!filter.showPackOnly) {
                     return const SliverToBoxAdapter(child: SizedBox.shrink());
+                  }
 
                   final pendingAsync = ref.watch(pendingFriendRequestsProvider);
 
                   return pendingAsync.when(
                     data: (requests) {
-                      if (requests.isEmpty)
+                      if (requests.isEmpty) {
                         return const SliverToBoxAdapter(
                             child: SizedBox.shrink());
+                      }
 
                       return SliverToBoxAdapter(
                         child: Padding(
@@ -421,10 +422,10 @@ class FeedFeatureScreen extends ConsumerWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -587,22 +588,22 @@ class FeedFeatureScreen extends ConsumerWidget {
         color: Theme.of(context)
             .colorScheme
             .surfaceContainerHighest
-            .withOpacity(0.3),
+            .withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
         ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
           const SizedBox(height: 8),
           Text(
             message,
             style: AppTypography.bodySmall().copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -663,11 +664,11 @@ class FeedFeatureScreen extends ConsumerWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -1064,11 +1065,11 @@ class FeedFeatureScreen extends ConsumerWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -1152,7 +1153,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                 'See what the pack is up to',
                 style: AppTypography.bodyMedium().copyWith(
                   color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(height: 16),
@@ -1166,13 +1167,13 @@ class FeedFeatureScreen extends ConsumerWidget {
                     color: Theme.of(context)
                         .colorScheme
                         .primaryContainer
-                        .withOpacity(0.2),
+                        .withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: Theme.of(context)
                           .colorScheme
                           .primary
-                          .withOpacity(0.1),
+                          .withValues(alpha: 0.1),
                     ),
                   ),
                   child: Row(
@@ -1198,7 +1199,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
-                                .withOpacity(0.5),
+                                .withValues(alpha: 0.5),
                           ),
                         ),
                       ),
@@ -1207,7 +1208,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                         color: Theme.of(context)
                             .colorScheme
                             .primary
-                            .withOpacity(0.6),
+                            .withValues(alpha: 0.6),
                       ),
                       const SizedBox(width: 8),
                       Icon(
@@ -1215,7 +1216,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                         color: Theme.of(context)
                             .colorScheme
                             .primary
-                            .withOpacity(0.6),
+                            .withValues(alpha: 0.6),
                       ),
                     ],
                   ),
@@ -1311,7 +1312,7 @@ class _NearbyDogsToggle extends ConsumerWidget {
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),

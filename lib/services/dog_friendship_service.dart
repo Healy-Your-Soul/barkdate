@@ -193,10 +193,12 @@ class DogFriendshipService {
             // Refetch if this change involves our dog as the friend (receiver)
             bool isRelevant = false;
 
-            if (newRecord.isNotEmpty && newRecord['friend_dog_id'] == dogId)
+            if (newRecord.isNotEmpty && newRecord['friend_dog_id'] == dogId) {
               isRelevant = true;
-            if (oldRecord.isNotEmpty && oldRecord['friend_dog_id'] == dogId)
+            }
+            if (oldRecord.isNotEmpty && oldRecord['friend_dog_id'] == dogId) {
               isRelevant = true;
+            }
 
             if (isRelevant) {
               getPendingBarksReceived(dogId).then((barks) {

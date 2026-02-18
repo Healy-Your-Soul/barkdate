@@ -3,7 +3,6 @@ import 'package:barkdate/models/notification.dart';
 import 'package:barkdate/widgets/notification_tile.dart';
 import 'package:barkdate/supabase/notification_service.dart' as notif_service;
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/screens/playdates_screen.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/screens/dog_profile_detail.dart';

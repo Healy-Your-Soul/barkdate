@@ -33,7 +33,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
   List<Post> _posts = [];
   final TextEditingController _postController = TextEditingController();
   SelectedImage? _selectedImage;
-  bool _isPosting = false;
+  final bool _isPosting = false;
   bool _isLoading = false;
 
   // New: Track current user and their likes
@@ -229,7 +229,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -438,7 +438,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
                                 color: Theme.of(context)
                                     .colorScheme
                                     .onSurface
-                                    .withOpacity(0.4),
+                                    .withValues(alpha: 0.4),
                               ),
                             ],
                           ],
@@ -450,7 +450,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurface
-                                        .withOpacity(0.6),
+                                        .withValues(alpha: 0.6),
                                   ),
                         ),
                       ],
@@ -463,7 +463,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
-                          .withOpacity(0.6),
+                          .withValues(alpha: 0.6),
                     ),
                     onSelected: (value) {
                       if (value == 'delete') {
@@ -556,7 +556,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
                     color: Theme.of(context)
                         .colorScheme
                         .primaryContainer
-                        .withOpacity(0.3),
+                        .withValues(alpha: 0.3),
                     child: Icon(
                       Icons.image,
                       size: 50,
@@ -593,7 +593,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
-                            .withOpacity(0.5),
+                            .withValues(alpha: 0.5),
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -604,7 +604,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
-                                  .withOpacity(0.6),
+                                  .withValues(alpha: 0.6),
                               fontWeight: FontWeight.w500,
                             ),
                       ),
@@ -674,7 +674,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
                         : Theme.of(context)
                             .colorScheme
                             .onSurface
-                            .withOpacity(0.7),
+                            .withValues(alpha: 0.7),
                     fontWeight: isLiked ? FontWeight.w600 : FontWeight.normal,
                   ),
             ),
@@ -699,7 +699,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
             icon,
             size: 24,
             color: color ??
-                Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
           if (count > 0) ...[
             const SizedBox(width: 4),
@@ -710,7 +710,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
                         Theme.of(context)
                             .colorScheme
                             .onSurface
-                            .withOpacity(0.7),
+                            .withValues(alpha: 0.7),
                   ),
             ),
           ],
@@ -1228,7 +1228,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
-                            .withOpacity(0.4),
+                            .withValues(alpha: 0.4),
                       ),
                     ],
                   ),
@@ -1268,7 +1268,7 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
   final TextEditingController _textController = TextEditingController();
   SelectedImage? _selectedImage;
   bool _isLoading = false;
-  List<Dog> _taggedDogs = []; // Tagged dogs for this post (max 15)
+  final List<Dog> _taggedDogs = []; // Tagged dogs for this post (max 15)
 
   void _openTagSearch() async {
     final result = await showModalBottomSheet<List<Dog>>(
@@ -1402,7 +1402,7 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onSurface
-                                          .withOpacity(0.7),
+                                          .withValues(alpha: 0.7),
                                       fontWeight: FontWeight.w400,
                                     ),
                               ),
@@ -1490,7 +1490,7 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                                             : Theme.of(context)
                                                 .colorScheme
                                                 .onSurface
-                                                .withOpacity(0.5),
+                                                .withValues(alpha: 0.5),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -1529,7 +1529,7 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                                             : Theme.of(context)
                                                 .colorScheme
                                                 .onSurface
-                                                .withOpacity(0.5),
+                                                .withValues(alpha: 0.5),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -1563,13 +1563,13 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                                         color: Theme.of(context)
                                             .colorScheme
                                             .surfaceContainerHighest
-                                            .withOpacity(0.3),
+                                            .withValues(alpha: 0.3),
                                         borderRadius: BorderRadius.circular(16),
                                         border: Border.all(
                                           color: Theme.of(context)
                                               .colorScheme
                                               .outline
-                                              .withOpacity(0.2),
+                                              .withValues(alpha: 0.2),
                                           width: 1,
                                         ),
                                       ),
@@ -1596,7 +1596,7 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                                                               4),
                                                       decoration: BoxDecoration(
                                                         color: Colors.black
-                                                            .withOpacity(0.5),
+                                                            .withValues(alpha: 0.5),
                                                         shape: BoxShape.circle,
                                                       ),
                                                       child: const Icon(
@@ -1650,7 +1650,7 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withOpacity(0.5),
+                                            .withValues(alpha: 0.5),
                                       ),
                                       border: InputBorder.none,
                                       contentPadding: EdgeInsets.zero,
@@ -1684,7 +1684,7 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withOpacity(0.5),
+                                            .withValues(alpha: 0.5),
                                         fontSize: 18,
                                       ),
                                       border: InputBorder.none,
@@ -1725,10 +1725,10 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
               color: Theme.of(context)
                   .colorScheme
                   .surfaceContainerHighest
-                  .withOpacity(0.3),
+                  .withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
             child: Row(
@@ -1747,7 +1747,7 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
-                        .withOpacity(0.6),
+                        .withValues(alpha: 0.6),
                   ),
                 ),
                 const Spacer(),
@@ -1776,11 +1776,11 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                   color: Theme.of(context)
                       .colorScheme
                       .primaryContainer
-                      .withOpacity(0.3),
+                      .withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -1815,7 +1815,7 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
-                            .withOpacity(0.5),
+                            .withValues(alpha: 0.5),
                       ),
                     ),
                   ],
@@ -1907,7 +1907,7 @@ class _PawFloatingButtonState extends State<_PawFloatingButton>
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 8,
                           ),
                         ],
@@ -1942,7 +1942,7 @@ class _PawFloatingButtonState extends State<_PawFloatingButton>
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 8,
                           ),
                         ],
@@ -2397,9 +2397,9 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
       final dt = DateTime.tryParse(createdAt);
       if (dt != null) {
         final diff = DateTime.now().difference(dt);
-        if (diff.inMinutes < 60)
+        if (diff.inMinutes < 60) {
           timeAgo = '${diff.inMinutes}m';
-        else if (diff.inHours < 24)
+        } else if (diff.inHours < 24)
           timeAgo = '${diff.inHours}h';
         else
           timeAgo = '${diff.inDays}d';

@@ -163,12 +163,15 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
   return dogs.where((dog) {
     if (dog.distanceKm > filter.maxDistance) return false;
     if (dog.age < filter.minAge || dog.age > filter.maxAge) return false;
-    if (filter.sizes.isNotEmpty && !filter.sizes.contains(dog.size))
+    if (filter.sizes.isNotEmpty && !filter.sizes.contains(dog.size)) {
       return false;
-    if (filter.genders.isNotEmpty && !filter.genders.contains(dog.gender))
+    }
+    if (filter.genders.isNotEmpty && !filter.genders.contains(dog.gender)) {
       return false;
-    if (filter.breeds.isNotEmpty && !filter.breeds.contains(dog.breed))
+    }
+    if (filter.breeds.isNotEmpty && !filter.breeds.contains(dog.breed)) {
       return false;
+    }
     return true;
   }).map((dog) {
     // Return copy with updated friend status

@@ -28,7 +28,7 @@ class _AdminScreenState extends State<AdminScreen> {
   List<PlaceResult> _searchResults = [];
   bool _isLoading = false;
   bool _showSearchResults = false;
-  Set<String> _selectedAmenities = {};
+  final Set<String> _selectedAmenities = {};
   LatLng? _userLocation; // Add user current location
 
   final List<String> _availableAmenities = [
@@ -712,7 +712,7 @@ class _AdminScreenState extends State<AdminScreen> {
             // Right panel - Map
             Expanded(
               flex: 1,
-              child: Container(
+              child: SizedBox(
                 height: double.infinity,
                 child: GoogleMap(
                   mapType: MapType.normal,

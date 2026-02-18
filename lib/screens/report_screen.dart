@@ -157,7 +157,7 @@ class _ReportScreenState extends State<ReportScreen> {
           ),
         );
       }
-      print('Report submission error: $e');
+      debugPrint('Report submission error: $e');
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);

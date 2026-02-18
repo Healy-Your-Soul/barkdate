@@ -6,7 +6,7 @@ import '../services/playdate_service.dart';
 import '../services/auth_service.dart';
 
 class PlaydatesScreen extends StatefulWidget {
-  const PlaydatesScreen({Key? key}) : super(key: key);
+  const PlaydatesScreen({super.key});
 
   @override
   State<PlaydatesScreen> createState() => _PlaydatesScreenState();
@@ -44,7 +44,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
 
       await _loadData();
     } catch (e) {
-      print('Error initializing playdate data: $e');
+      debugPrint('Error initializing playdate data: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -129,8 +129,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreatePlaydateDialog,
-        child: const Icon(Icons.add),
         tooltip: 'Create Playdate',
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -604,10 +604,10 @@ class CreatePlaydateDialog extends StatefulWidget {
   final VoidCallback onPlaydateCreated;
 
   const CreatePlaydateDialog({
-    Key? key,
+    super.key,
     required this.userDogs,
     required this.onPlaydateCreated,
-  }) : super(key: key);
+  });
 
   @override
   State<CreatePlaydateDialog> createState() => _CreatePlaydateDialogState();
@@ -659,7 +659,7 @@ class _CreatePlaydateDialogState extends State<CreatePlaydateDialog> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<EnhancedDog>(
-                  value: _selectedDog,
+                  initialValue: _selectedDog,
                   decoration: const InputDecoration(labelText: 'Your Dog'),
                   items: widget.userDogs.map((dog) {
                     return DropdownMenuItem(
@@ -813,11 +813,11 @@ class PlaydateDetailsDialog extends StatelessWidget {
   final VoidCallback onPlaydateUpdated;
 
   const PlaydateDetailsDialog({
-    Key? key,
+    super.key,
     required this.playdate,
     required this.currentUserId,
     required this.onPlaydateUpdated,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

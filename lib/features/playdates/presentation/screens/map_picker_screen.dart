@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:barkdate/services/places_service.dart';
 import 'package:barkdate/services/location_service.dart';
-import 'package:barkdate/screens/map_v2/map_tab_screen.dart'; // Reuse providers if possible or create new ones
+// Reuse providers if possible or create new ones
 import 'package:barkdate/utils/dog_marker_generator.dart';
 import 'package:barkdate/features/playdates/presentation/widgets/selection_place_sheet.dart';
 import 'dart:async';
@@ -268,8 +268,8 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
         });
         _searchNearbyPlaces(_initialPosition);
       },
-      selectedColor: iconColor?.withOpacity(0.2) ??
-          Theme.of(context).colorScheme.primary.withOpacity(0.2),
+      selectedColor: iconColor?.withValues(alpha: 0.2) ??
+          Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
       labelStyle: TextStyle(
         color: selected
             ? (iconColor ?? Theme.of(context).colorScheme.primary)

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 
@@ -21,8 +20,8 @@ class _DogSearchSheetState extends State<DogSearchSheet>
   final TextEditingController _searchController = TextEditingController();
   List<Dog> _friendsDogs = [];
   List<Dog> _publicDogs = [];
-  Set<String> _selectedDogIds = {}; // Use a set to track selections
-  List<Dog> _selectedDogs = []; // Return full objects
+  final Set<String> _selectedDogIds = {}; // Use a set to track selections
+  final List<Dog> _selectedDogs = []; // Return full objects
   bool _isLoading = false;
   String? _error;
 
@@ -265,7 +264,7 @@ class _DogSearchSheetState extends State<DogSearchSheet>
                 ),
                 borderRadius: BorderRadius.circular(12),
                 color: isSelected
-                    ? Theme.of(context).primaryColor.withOpacity(0.05)
+                    ? Theme.of(context).primaryColor.withValues(alpha: 0.05)
                     : null,
               ),
               child: Row(

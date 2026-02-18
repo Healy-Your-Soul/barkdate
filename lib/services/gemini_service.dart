@@ -103,7 +103,7 @@ Guidelines:
         text: jsonString,
         sources: [],
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint('❌ Gemini API error: $e');
       return GeminiResponse(
         text:
