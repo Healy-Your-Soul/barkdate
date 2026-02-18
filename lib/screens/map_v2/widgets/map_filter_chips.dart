@@ -62,7 +62,8 @@ class MapFilterChips extends ConsumerWidget {
         const SizedBox(height: 12),
         const Text(
           'Amenities',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey),
+          style: TextStyle(
+              fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -73,14 +74,18 @@ class MapFilterChips extends ConsumerWidget {
               label: const Text('Dog Water Bowls'),
               selected: filters.amenities.contains('Dog Water Bowls'),
               onSelected: (_) {
-                ref.read(mapFiltersProvider.notifier).toggleAmenity('Dog Water Bowls');
+                ref
+                    .read(mapFiltersProvider.notifier)
+                    .toggleAmenity('Dog Water Bowls');
               },
             ),
             FilterChip(
               label: const Text('Shaded Areas'),
               selected: filters.amenities.contains('Shaded Areas'),
               onSelected: (_) {
-                ref.read(mapFiltersProvider.notifier).toggleAmenity('Shaded Areas');
+                ref
+                    .read(mapFiltersProvider.notifier)
+                    .toggleAmenity('Shaded Areas');
               },
             ),
           ],

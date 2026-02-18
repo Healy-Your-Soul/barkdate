@@ -38,7 +38,8 @@ class DogFriendshipService {
           .maybeSingle();
 
       if (existing != null) {
-        debugPrint('Friendship already exists with status: ${existing['status']}');
+        debugPrint(
+            'Friendship already exists with status: ${existing['status']}');
         return false; // Already friends or pending
       }
 
@@ -51,18 +52,21 @@ class DogFriendshipService {
       });
 
       debugPrint('🐕 Bark sent from $fromDogId to $toDogId');
-      
+
       // Send notification to the other dog's owner
       try {
         final dogs = await _supabase
             .from('dogs')
             .select('id, name, user_id')
             .filter('id', 'in', [fromDogId, toDogId]);
-            
-        final fromDog = dogs.firstWhere((d) => d['id'] == fromDogId, orElse: () => {'name': 'A dog'});
-        final toDog = dogs.firstWhere((d) => d['id'] == toDogId, orElse: () => {'user_id': '', 'name': 'your dog'});
-        
-        if (toDog['user_id'] != null && toDog['user_id'].toString().isNotEmpty) {
+
+        final fromDog = dogs.firstWhere((d) => d['id'] == fromDogId,
+            orElse: () => {'name': 'A dog'});
+        final toDog = dogs.firstWhere((d) => d['id'] == toDogId,
+            orElse: () => {'user_id': '', 'name': 'your dog'});
+
+        if (toDog['user_id'] != null &&
+            toDog['user_id'].toString().isNotEmpty) {
           await NotificationManager.sendBarkNotification(
             receiverUserId: toDog['user_id'],
             senderDogName: fromDog['name'],
@@ -74,7 +78,7 @@ class DogFriendshipService {
         debugPrint('Error sending notification for bark: $e');
         // Don't fail the operation just because notification failed
       }
-      
+
       return true;
     } catch (e) {
       debugPrint('Error sending bark: $e');
@@ -85,13 +89,10 @@ class DogFriendshipService {
   /// Accept a bark (friend request)
   static Future<bool> acceptBark(String friendshipId) async {
     try {
-      await _supabase
-          .from('dog_friendships')
-          .update({
-            'status': statusAccepted,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', friendshipId);
+      await _supabase.from('dog_friendships').update({
+        'status': statusAccepted,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', friendshipId);
 
       debugPrint('✅ Bark accepted: $friendshipId');
       return true;
@@ -104,13 +105,10 @@ class DogFriendshipService {
   /// Decline a bark (friend request)
   static Future<bool> declineBark(String friendshipId) async {
     try {
-      await _supabase
-          .from('dog_friendships')
-          .update({
-            'status': statusDeclined,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', friendshipId);
+      await _supabase.from('dog_friendships').update({
+        'status': statusDeclined,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', friendshipId);
 
       debugPrint('❌ Bark declined: $friendshipId');
       return true;
@@ -123,10 +121,7 @@ class DogFriendshipService {
   /// Remove a friendship (unfriend/un-bark)
   static Future<bool> removeFriendship(String friendshipId) async {
     try {
-      await _supabase
-          .from('dog_friendships')
-          .delete()
-          .eq('id', friendshipId);
+      await _supabase.from('dog_friendships').delete().eq('id', friendshipId);
 
       debugPrint('🗑️ Friendship removed: $friendshipId');
       return true;
@@ -158,11 +153,13 @@ class DogFriendshipService {
 
   /// Get pending bark requests for a dog (received requests)
   /// Returns the requesting dog's info including their owner's name and avatar
-  static Future<List<Map<String, dynamic>>> getPendingBarksReceived(String dogId) async {
+  static Future<List<Map<String, dynamic>>> getPendingBarksReceived(
+      String dogId) async {
     try {
       final result = await _supabase
           .from('dog_friendships')
-          .select('*, requester:dogs!dog_friendships_dog_id_fkey(id, name, breed, main_photo_url, user_id, user:users!dogs_user_id_fkey(id, name, avatar_url))')
+          .select(
+              '*, requester:dogs!dog_friendships_dog_id_fkey(id, name, breed, main_photo_url, user_id, user:users!dogs_user_id_fkey(id, name, avatar_url))')
           .eq('friend_dog_id', dogId)
           .eq('status', statusPending);
 
@@ -174,7 +171,8 @@ class DogFriendshipService {
   }
 
   /// Stream pending bark requests for a dog (real-time)
-  static Stream<List<Map<String, dynamic>>> streamPendingBarksReceived(String dogId) {
+  static Stream<List<Map<String, dynamic>>> streamPendingBarksReceived(
+      String dogId) {
     final controller = StreamController<List<Map<String, dynamic>>>.broadcast();
 
     // Initial fetch
@@ -191,17 +189,19 @@ class DogFriendshipService {
           callback: (payload) {
             final newRecord = payload.newRecord;
             final oldRecord = payload.oldRecord;
-            
+
             // Refetch if this change involves our dog as the friend (receiver)
             bool isRelevant = false;
-            
-            if (newRecord.isNotEmpty && newRecord['friend_dog_id'] == dogId) isRelevant = true;
-            if (oldRecord.isNotEmpty && oldRecord['friend_dog_id'] == dogId) isRelevant = true;
-            
+
+            if (newRecord.isNotEmpty && newRecord['friend_dog_id'] == dogId)
+              isRelevant = true;
+            if (oldRecord.isNotEmpty && oldRecord['friend_dog_id'] == dogId)
+              isRelevant = true;
+
             if (isRelevant) {
-               getPendingBarksReceived(dogId).then((barks) {
-                 if (!controller.isClosed) controller.add(barks);
-               });
+              getPendingBarksReceived(dogId).then((barks) {
+                if (!controller.isClosed) controller.add(barks);
+              });
             }
           },
         )
@@ -215,11 +215,13 @@ class DogFriendshipService {
   }
 
   /// Get pending bark requests sent by a dog
-  static Future<List<Map<String, dynamic>>> getPendingBarksSent(String dogId) async {
+  static Future<List<Map<String, dynamic>>> getPendingBarksSent(
+      String dogId) async {
     try {
       final result = await _supabase
           .from('dog_friendships')
-          .select('*, friend_dog:dogs!dog_friendships_friend_dog_id_fkey(id, name, breed, main_photo_url, user_id)')
+          .select(
+              '*, friend_dog:dogs!dog_friendships_friend_dog_id_fkey(id, name, breed, main_photo_url, user_id)')
           .eq('dog_id', dogId)
           .eq('status', statusPending);
 
@@ -236,7 +238,8 @@ class DogFriendshipService {
       // Get friendships where this dog is either the sender or receiver
       final result = await _supabase
           .from('dog_friendships')
-          .select('*, dog:dogs!dog_friendships_dog_id_fkey(id, name, breed, main_photo_url), friend_dog:dogs!dog_friendships_friend_dog_id_fkey(id, name, breed, main_photo_url)')
+          .select(
+              '*, dog:dogs!dog_friendships_dog_id_fkey(id, name, breed, main_photo_url), friend_dog:dogs!dog_friendships_friend_dog_id_fkey(id, name, breed, main_photo_url)')
           .eq('status', statusAccepted)
           .or('dog_id.eq.$dogId,friend_dog_id.eq.$dogId');
 
@@ -255,7 +258,8 @@ class DogFriendshipService {
 
   /// Check if a bark is pending from one dog to another
   static Future<bool> hasPendingBark(String fromDogId, String toDogId) async {
-    final status = await getFriendshipStatus(dogId1: fromDogId, dogId2: toDogId);
+    final status =
+        await getFriendshipStatus(dogId1: fromDogId, dogId2: toDogId);
     return status?['status'] == statusPending;
   }
 }

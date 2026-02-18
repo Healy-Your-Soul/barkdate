@@ -23,7 +23,8 @@ class LiveLocationService {
 
   /// Start live location tracking for a user
   /// Updates location every 30 seconds
-  Future<bool> startLiveTracking(String userId, {String privacy = 'friends'}) async {
+  Future<bool> startLiveTracking(String userId,
+      {String privacy = 'friends'}) async {
     if (_isTracking) {
       debugPrint('⚠️ Live tracking already active');
       return true;

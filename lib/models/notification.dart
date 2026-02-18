@@ -40,7 +40,7 @@ class BarkDateNotification {
       ),
       actionType: data['action_type'],
       relatedId: data['related_id'],
-      metadata: data['metadata'] != null 
+      metadata: data['metadata'] != null
           ? Map<String, dynamic>.from(data['metadata'])
           : null,
       isRead: data['is_read'] ?? false,
@@ -124,9 +124,9 @@ class BarkDateNotification {
 
   /// Check if notification has actionable content
   bool get isActionable {
-    return type == NotificationType.playdateRequest || 
-           type == NotificationType.message ||
-           type == NotificationType.match;
+    return type == NotificationType.playdateRequest ||
+        type == NotificationType.message ||
+        type == NotificationType.match;
   }
 
   /// Create a copy of this notification with updated fields
@@ -212,14 +212,14 @@ class BarkDateNotification {
 
 /// Notification types supported by BarkDate
 enum NotificationType {
-  bark,           // Someone barked at your dog
-  playdate,       // Playdate updates/reminders
+  bark, // Someone barked at your dog
+  playdate, // Playdate updates/reminders
   playdateRequest, // New playdate invitation
-  message,        // New message received
-  match,          // Mutual bark match
-  social,         // Social interactions (likes, comments)
-  achievement,    // Badge unlocked
-  system,         // System notifications
+  message, // New message received
+  match, // Mutual bark match
+  social, // Social interactions (likes, comments)
+  achievement, // Badge unlocked
+  system, // System notifications
 }
 
 /// Action button for actionable notifications

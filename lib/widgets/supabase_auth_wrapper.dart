@@ -57,7 +57,7 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
         }
 
         final session = snapshot.data?.session;
-        
+
         if (session != null) {
           // User is signed in, check if they need onboarding
           return FutureBuilder<ProfileStatus>(
@@ -77,11 +77,13 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
               switch (profileSnapshot.data) {
                 case ProfileStatus.complete:
                   // Profile complete, warm caches first then show app
-                  debugPrint('🚀 Profile complete - warming caches for ${session.user.id}');
+                  debugPrint(
+                      '🚀 Profile complete - warming caches for ${session.user.id}');
                   return FutureBuilder<void>(
                     future: PreloadService.warmFeedCaches(session.user.id),
                     builder: (context, cacheSnapshot) {
-                      if (cacheSnapshot.connectionState == ConnectionState.waiting) {
+                      if (cacheSnapshot.connectionState ==
+                          ConnectionState.waiting) {
                         return const Scaffold(
                           body: Center(
                             child: DogLoadingWidget(
@@ -91,7 +93,8 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
                           ),
                         );
                       }
-                      debugPrint('✅ Cache warming completed - redirecting to /home');
+                      debugPrint(
+                          '✅ Cache warming completed - redirecting to /home');
                       // Use addPostFrameCallback to avoid navigation during build
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (context.mounted) {
@@ -108,13 +111,13 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
                       );
                     },
                   );
-                
+
                 case ProfileStatus.needsDogProfile:
                   // User exists but needs dog profile
                   // Show onboarding screens first for new users (Google sign-in skips to here)
                   // WelcomeScreen will then navigate to CreateProfileScreen
                   return const WelcomeScreen();
-                
+
                 case ProfileStatus.needsFullSetup:
                 default:
                   // Needs full setup, show welcome then onboarding
@@ -135,29 +138,31 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
     final cacheKey = 'profile_status_$userId';
     final cachedStatus = _profileStatusCache[cacheKey];
     final cacheTime = _cacheTimestamps[cacheKey];
-    
+
     if (cachedStatus != null && cacheTime != null) {
       final age = DateTime.now().difference(cacheTime);
       if (age <= _cacheExpiry) {
-        debugPrint('✓ Returning CACHED profile status for $userId (age: ${age.inSeconds}s)');
-        
+        debugPrint(
+            '✓ Returning CACHED profile status for $userId (age: ${age.inSeconds}s)');
+
         // Verify in background (don't block UI)
         _verifyProfileStatusInBackground(userId);
-        
+
         return cachedStatus;
       } else {
-        debugPrint('⚠️ Profile status cache expired for $userId (age: ${age.inSeconds}s)');
+        debugPrint(
+            '⚠️ Profile status cache expired for $userId (age: ${age.inSeconds}s)');
       }
     }
 
     // No cache or expired - fetch fresh
     debugPrint('Fetching FRESH profile status for $userId');
     final status = await _fetchProfileStatus(userId);
-    
+
     // Cache the result
     _profileStatusCache[cacheKey] = status;
     _cacheTimestamps[cacheKey] = DateTime.now();
-    
+
     return status;
   }
 
@@ -176,8 +181,9 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
       }
 
       // Check if basic user info is complete
-      final hasUserName = userResponse['name'] != null && userResponse['name'].toString().isNotEmpty;
-      
+      final hasUserName = userResponse['name'] != null &&
+          userResponse['name'].toString().isNotEmpty;
+
       if (!hasUserName) {
         return ProfileStatus.needsFullSetup;
       }
@@ -196,7 +202,6 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
       } else {
         return ProfileStatus.needsDogProfile;
       }
-      
     } catch (e) {
       debugPrint('Error checking user profile: $e');
       return ProfileStatus.needsFullSetup;
@@ -208,13 +213,14 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
     _fetchProfileStatus(userId).then((freshStatus) {
       final cacheKey = 'profile_status_$userId';
       final cachedStatus = _profileStatusCache[cacheKey];
-      
+
       if (freshStatus != cachedStatus) {
         // Status changed! Update cache and possibly navigate
-        debugPrint('⚠️ Profile status changed from $cachedStatus to $freshStatus');
+        debugPrint(
+            '⚠️ Profile status changed from $cachedStatus to $freshStatus');
         _profileStatusCache[cacheKey] = freshStatus;
         _cacheTimestamps[cacheKey] = DateTime.now();
-        
+
         // If user needs onboarding now, trigger rebuild to show correct screen
         if (mounted && freshStatus != ProfileStatus.complete) {
           setState(() {});

@@ -15,19 +15,19 @@ class CalendarIntegrationService {
   }) async {
     // TODO: Implement calendar integration
     // This will require add_2_calendar or device_calendar package
-    
+
     debugPrint('📅 COMING SOON: Adding to calendar');
     debugPrint('Title: $title');
     debugPrint('Time: $startTime - $endTime');
     debugPrint('Location: $location');
-    
+
     // For now, return true to simulate success
     // In real implementation, this would:
     // 1. Request calendar permissions
     // 2. Create calendar event
     // 3. Add to default calendar or BarkDate calendar
     // 4. Set reminder notifications
-    
+
     return true;
   }
 
@@ -114,7 +114,8 @@ class CalendarIntegrationButton extends StatelessWidget {
     if (!isConfirmed) return const SizedBox.shrink();
 
     return OutlinedButton.icon(
-      onPressed: () => CalendarIntegrationService.showCalendarSetupDialog(context),
+      onPressed: () =>
+          CalendarIntegrationService.showCalendarSetupDialog(context),
       icon: const Icon(Icons.calendar_month, size: 18),
       label: const Text('Add to Calendar'),
       style: OutlinedButton.styleFrom(
@@ -201,27 +202,27 @@ class PlaydateReminderButton extends StatelessWidget {
 }
 
 /// Requirements for Google Calendar Integration
-/// 
+///
 /// 1. Dependencies needed:
 ///    - add_2_calendar: ^3.0.1 (cross-platform)
 ///    - OR device_calendar: ^4.3.2 (more features)
 ///    - permission_handler: ^11.0.1 (for permissions)
-/// 
+///
 /// 2. Android permissions (android/app/src/main/AndroidManifest.xml):
 ///    <uses-permission android:name="android.permission.READ_CALENDAR" />
 ///    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
-/// 
+///
 /// 3. iOS permissions (ios/Runner/Info.plist):
 ///    <key>NSCalendarsUsageDescription</key>
 ///    <string>BarkDate needs calendar access to sync your playdates</string>
-/// 
+///
 /// 4. Google Calendar API setup (optional for advanced features):
 ///    - Enable Google Calendar API in Google Cloud Console
 ///    - Add googleapis dependency
 ///    - Implement OAuth2 flow for cloud sync
-/// 
+///
 /// Implementation priority:
 /// Phase 1: Basic device calendar integration (add_2_calendar)
-/// Phase 2: Advanced features (device_calendar) 
+/// Phase 2: Advanced features (device_calendar)
 /// Phase 3: Google Calendar API sync (cloud sync)
 /// Phase 4: Cross-platform sharing and invitations

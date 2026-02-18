@@ -39,9 +39,9 @@ class EventService {
       }
 
       // Apply ordering and limit, then execute
-    final data = await query
-      .order('start_time', ascending: true)
-      .range(offset, offset + limit - 1);
+      final data = await query
+          .order('start_time', ascending: true)
+          .range(offset, offset + limit - 1);
 
       return data.map((json) {
         // Add organizer info from joined users table
@@ -75,7 +75,7 @@ class EventService {
       // Map dog age to age groups
       final age = int.tryParse(dogAge) ?? 1;
       final ageGroups = <String>[];
-      
+
       if (age <= 1) {
         ageGroups.add('puppy');
       }
@@ -101,17 +101,13 @@ class EventService {
   /// Get events organized by a specific user
   static Future<List<Event>> getUserOrganizedEvents(String userId) async {
     try {
-      final data = await SupabaseConfig.client
-          .from('events')
-          .select('''
+      final data = await SupabaseConfig.client.from('events').select('''
             *,
             users!organizer_id (
               name,
               avatar_url
             )
-          ''')
-          .eq('organizer_id', userId)
-          .order('start_time', ascending: true);
+          ''').eq('organizer_id', userId).order('start_time', ascending: true);
 
       return data.map((json) {
         final userData = json['users'] as Map<String, dynamic>?;
@@ -211,7 +207,8 @@ class EventService {
         'photo_urls': photoUrls,
         // 'is_public': isPublic,
         'visibility': visibility,
-        'is_public': visibility == 'public', // Set deprecated field for backward compatibility
+        'is_public': visibility ==
+            'public', // Set deprecated field for backward compatibility
       };
 
       final data = await SupabaseConfig.client
@@ -223,8 +220,7 @@ class EventService {
               name,
               avatar_url
             )
-          ''')
-          .single();
+          ''').single();
 
       final userData = data['users'] as Map<String, dynamic>?;
       final event = Event.fromJson({
@@ -267,7 +263,8 @@ class EventService {
           'event_id': eventId,
           'dog_id': dogId,
           'invited_by': user.id,
-          if (message != null && message.trim().isNotEmpty) 'message': message.trim(),
+          if (message != null && message.trim().isNotEmpty)
+            'message': message.trim(),
         };
       }).toList();
 
@@ -297,7 +294,7 @@ class EventService {
           .from('dogs')
           .select('id, user_id')
           .filter('id', 'in', dogIds);
-      
+
       for (final dog in dogsData) {
         final ownerId = dog['user_id'] as String;
         if (ownerId != user.id) {
@@ -318,7 +315,8 @@ class EventService {
   }
 
   /// Join an event
-  static Future<bool> joinEvent(String eventId, String userId, String dogId) async {
+  static Future<bool> joinEvent(
+      String eventId, String userId, String dogId) async {
     try {
       await SupabaseConfig.client.from('event_participants').insert({
         'event_id': eventId,
@@ -327,7 +325,8 @@ class EventService {
       });
 
       // Update participant count
-      await SupabaseConfig.client.rpc('increment_event_participants', 
+      await SupabaseConfig.client.rpc(
+        'increment_event_participants',
         params: {'event_id': eventId},
       );
 
@@ -348,7 +347,8 @@ class EventService {
           .eq('user_id', userId);
 
       // Update participant count
-      await SupabaseConfig.client.rpc('decrement_event_participants', 
+      await SupabaseConfig.client.rpc(
+        'decrement_event_participants',
         params: {'event_id': eventId},
       );
 

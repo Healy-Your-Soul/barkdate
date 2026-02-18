@@ -15,9 +15,9 @@ class MessagesScreen extends StatelessWidget {
         title: Text(
           'Messages',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
         ),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         elevation: 0,
@@ -68,38 +68,43 @@ class MessagesScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Stack(
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundImage: NetworkImage(chat.otherDogPhoto),
-            onBackgroundImageError: (exception, stackTrace) {},
-            child: chat.otherDogPhoto.isEmpty 
-              ? Icon(Icons.pets, color: Theme.of(context).colorScheme.primary)
-              : null,
-          ),
-          if (chat.unreadCount > 0)
-            Positioned(
-              right: 0,
-              top: 0,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  shape: BoxShape.circle,
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundImage: NetworkImage(chat.otherDogPhoto),
+                  onBackgroundImageError: (exception, stackTrace) {},
+                  child: chat.otherDogPhoto.isEmpty
+                      ? Icon(Icons.pets,
+                          color: Theme.of(context).colorScheme.primary)
+                      : null,
                 ),
-                constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-                child: Center(
-                  child: Text(
-                    chat.unreadCount.toString(),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      fontWeight: FontWeight.bold,
+                if (chat.unreadCount > 0)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints:
+                          const BoxConstraints(minWidth: 20, minHeight: 20),
+                      child: Center(
+                        child: Text(
+                          chat.unreadCount.toString(),
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelSmall
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ),
-            ],
+              ],
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -117,7 +122,10 @@ class MessagesScreen extends StatelessWidget {
                   Text(
                     'with ${chat.otherDogName} (human: ${chat.otherUserName})',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                   ),
                   const SizedBox(height: 4),
@@ -126,8 +134,13 @@ class MessagesScreen extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: chat.unreadCount > 0
                               ? Theme.of(context).colorScheme.onSurface
-                              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                          fontWeight: chat.unreadCount > 0 ? FontWeight.w500 : FontWeight.normal,
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.7),
+                          fontWeight: chat.unreadCount > 0
+                              ? FontWeight.w500
+                              : FontWeight.normal,
                         ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -143,7 +156,10 @@ class MessagesScreen extends StatelessWidget {
                 Text(
                   _formatMessageTime(chat.lastMessageTime),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                       ),
                 ),
                 if (chat.unreadCount > 0) ...[

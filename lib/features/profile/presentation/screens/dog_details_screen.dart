@@ -68,7 +68,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
     }
 
     // Load owner profile to get relationship status or better avatar
-    final ownerProfile = await BarkDateUserService.getUserProfile(widget.dog.ownerId);
+    final ownerProfile =
+        await BarkDateUserService.getUserProfile(widget.dog.ownerId);
     if (mounted && ownerProfile != null) {
       setState(() {
         _ownerProfile = ownerProfile;
@@ -123,7 +124,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
         }
       } else if (_friendshipId != null) {
         // Remove existing bark/friendship
-        final success = await DogFriendshipService.removeFriendship(_friendshipId!);
+        final success =
+            await DogFriendshipService.removeFriendship(_friendshipId!);
 
         if (success && mounted) {
           setState(() {
@@ -139,7 +141,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
           );
           // Auto-refresh stats and lists
           ref.invalidate(userStatsProvider);
-          ref.invalidate(userDogsProvider); // In case friend list was cached there
+          ref.invalidate(
+              userDogsProvider); // In case friend list was cached there
           ref.invalidate(nearbyDogsProvider);
         }
       }
@@ -165,7 +168,9 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
     }
 
     // Get my dog details for the notification
-    final myDogName = (await BarkDateUserService.getUserDogs(SupabaseConfig.auth.currentUser!.id)).firstWhere((d) => d['id'] == _myDogId)['name'];
+    final myDogName = (await BarkDateUserService.getUserDogs(
+            SupabaseConfig.auth.currentUser!.id))
+        .firstWhere((d) => d['id'] == _myDogId)['name'];
 
     try {
       // Use BarkDateBarkService with rate limiting (3/day for non-friends)
@@ -178,7 +183,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('You\'ve reached your daily bark limit for this pup! 🐕'),
+              content: Text(
+                  'You\'ve reached your daily bark limit for this pup! 🐕'),
               behavior: SnackBarBehavior.floating,
               backgroundColor: Colors.orange,
             ),
@@ -194,7 +200,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
         receiverDogName: widget.dog.name,
         senderUserId: SupabaseConfig.auth.currentUser?.id,
       );
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -236,7 +242,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
     try {
       // Show loading indicator
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Opening chat...'), duration: Duration(seconds: 1)),
+        const SnackBar(
+            content: Text('Opening chat...'), duration: Duration(seconds: 1)),
       );
 
       // Get or create conversation
@@ -270,15 +277,18 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final photos = widget.dog.photos.isNotEmpty ? widget.dog.photos : ['https://via.placeholder.com/400'];
+    final photos = widget.dog.photos.isNotEmpty
+        ? widget.dog.photos
+        : ['https://via.placeholder.com/400'];
 
     // Determine owner avatar URL
     // Use profile override if available, otherwise dog's owner info
-    var ownerAvatarUrl = _ownerProfile?['avatar_url'] ?? widget.dog.ownerAvatarUrl;
-    
+    var ownerAvatarUrl =
+        _ownerProfile?['avatar_url'] ?? widget.dog.ownerAvatarUrl;
+
     // Resolve storage path if needed (if it doesn't start with http)
-    if (ownerAvatarUrl != null && 
-        ownerAvatarUrl.toString().isNotEmpty && 
+    if (ownerAvatarUrl != null &&
+        ownerAvatarUrl.toString().isNotEmpty &&
         !ownerAvatarUrl.toString().startsWith('http')) {
       // Assuming it's in 'user-avatars' bucket if it's a relative path
       // Try to construct public URL - this is a best-guess if we have just a filename/path
@@ -292,7 +302,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
         debugPrint('Error resolving avatar URL: $e');
       }
     }
-    
+
     final ownerName = _ownerProfile?['name'] ?? widget.dog.ownerName;
 
     return Scaffold(
@@ -323,7 +333,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                       child: CircleAvatar(
                         backgroundColor: Colors.white,
                         child: IconButton(
-                          icon: const Icon(Icons.share_outlined, color: Colors.black),
+                          icon: const Icon(Icons.share_outlined,
+                              color: Colors.black),
                           onPressed: () {
                             // TODO: Share
                           },
@@ -337,7 +348,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                       children: [
                         PageView.builder(
                           controller: _pageController,
-                          onPageChanged: (index) => setState(() => _currentPhotoIndex = index),
+                          onPageChanged: (index) =>
+                              setState(() => _currentPhotoIndex = index),
                           itemCount: photos.length,
                           itemBuilder: (context, index) {
                             return Image.network(
@@ -348,13 +360,16 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                                   color: Colors.grey[100],
                                   child: Center(
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.pets, size: 64, color: Colors.grey[300]),
+                                        Icon(Icons.pets,
+                                            size: 64, color: Colors.grey[300]),
                                         const SizedBox(height: 8),
                                         Text(
                                           widget.dog.name,
-                                          style: AppTypography.h3().copyWith(color: Colors.grey[400]),
+                                          style: AppTypography.h3().copyWith(
+                                              color: Colors.grey[400]),
                                         ),
                                       ],
                                     ),
@@ -368,14 +383,16 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                           bottom: 16,
                           right: 16,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
                               color: Colors.black.withOpacity(0.7),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               '${_currentPhotoIndex + 1} / ${photos.length}',
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 12),
                             ),
                           ),
                         ),
@@ -401,32 +418,43 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                                 children: [
                                   Text(
                                     widget.dog.name,
-                                    style: AppTypography.h1().copyWith(fontSize: 32),
+                                    style: AppTypography.h1()
+                                        .copyWith(fontSize: 32),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${widget.dog.breed} • ${widget.dog.age} years old',
-                                    style: AppTypography.h3().copyWith(fontWeight: FontWeight.normal),
+                                    style: AppTypography.h3().copyWith(
+                                        fontWeight: FontWeight.normal),
                                   ),
                                 ],
                               ),
                             ),
                             // Distance badge
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer
+                                    .withOpacity(0.3),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.location_on, size: 14, color: Theme.of(context).colorScheme.primary),
+                                  Icon(Icons.location_on,
+                                      size: 14,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary),
                                   const SizedBox(width: 4),
                                   Text(
                                     '${widget.dog.distanceKm.toStringAsFixed(1)} km',
                                     style: AppTypography.labelSmall().copyWith(
-                                      color: Theme.of(context).colorScheme.primary,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -445,17 +473,22 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                               radius: 24,
                               backgroundColor: Colors.grey[200],
                               // Use CachedNetworkImageProvider for better error handling
-                              backgroundImage: (!_ownerAvatarError && ownerAvatarUrl != null && ownerAvatarUrl.toString().isNotEmpty)
+                              backgroundImage: (!_ownerAvatarError &&
+                                      ownerAvatarUrl != null &&
+                                      ownerAvatarUrl.toString().isNotEmpty)
                                   ? CachedNetworkImageProvider(
                                       ownerAvatarUrl,
                                       errorListener: (e) {
                                         if (mounted && !_ownerAvatarError) {
-                                          setState(() => _ownerAvatarError = true);
-                                          debugPrint('Error loading owner avatar: $e');
+                                          setState(
+                                              () => _ownerAvatarError = true);
+                                          debugPrint(
+                                              'Error loading owner avatar: $e');
                                         }
                                       },
                                     )
-                                  : NetworkImage('https://i.pravatar.cc/150?u=${widget.dog.ownerId}'),
+                                  : NetworkImage(
+                                      'https://i.pravatar.cc/150?u=${widget.dog.ownerId}'),
                               onBackgroundImageError: (exception, stackTrace) {
                                 if (mounted && !_ownerAvatarError) {
                                   setState(() => _ownerAvatarError = true);
@@ -466,25 +499,42 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('My human $ownerName', style: AppTypography.h3().copyWith(fontSize: 16)),
-                                if (_ownerProfile != null && _ownerProfile!['relationship_status'] != null)
+                                Text('My human $ownerName',
+                                    style: AppTypography.h3()
+                                        .copyWith(fontSize: 16)),
+                                if (_ownerProfile != null &&
+                                    _ownerProfile!['relationship_status'] !=
+                                        null)
                                   Container(
                                     margin: const EdgeInsets.only(top: 4),
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.2)),
+                                      border: Border.all(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                              .withOpacity(0.2)),
                                     ),
                                     child: Text(
                                       _ownerProfile!['relationship_status'],
-                                      style: AppTypography.labelSmall().copyWith(
-                                        color: Theme.of(context).colorScheme.primary,
+                                      style:
+                                          AppTypography.labelSmall().copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
-                                Text('${widget.dog.age} years barking together', style: AppTypography.bodySmall().copyWith(color: Colors.grey[600])),
+                                Text('${widget.dog.age} years barking together',
+                                    style: AppTypography.bodySmall()
+                                        .copyWith(color: Colors.grey[600])),
                               ],
                             ),
                           ],
@@ -493,11 +543,15 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                         const Divider(height: 48),
 
                         // About Section
-                        Text('About ${widget.dog.name}', style: AppTypography.h2()),
+                        Text('About ${widget.dog.name}',
+                            style: AppTypography.h2()),
                         const SizedBox(height: 16),
                         Text(
-                          widget.dog.bio.isNotEmpty ? widget.dog.bio : 'No bio available.',
-                          style: AppTypography.bodyLarge().copyWith(color: Colors.grey[800]),
+                          widget.dog.bio.isNotEmpty
+                              ? widget.dog.bio
+                              : 'No bio available.',
+                          style: AppTypography.bodyLarge()
+                              .copyWith(color: Colors.grey[800]),
                         ),
 
                         const Divider(height: 48),
@@ -505,12 +559,15 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                         // Details Grid
                         Text('Details', style: AppTypography.h2()),
                         const SizedBox(height: 16),
-                        _buildDetailRow(Icons.straighten, 'Size', widget.dog.size),
-                        _buildDetailRow(Icons.transgender, 'Gender', widget.dog.gender),
-                        _buildDetailRow(Icons.bolt, 'Energy', 'High'), // Placeholder
+                        _buildDetailRow(
+                            Icons.straighten, 'Size', widget.dog.size),
+                        _buildDetailRow(
+                            Icons.transgender, 'Gender', widget.dog.gender),
+                        _buildDetailRow(
+                            Icons.bolt, 'Energy', 'High'), // Placeholder
 
                         const SizedBox(height: 32),
-                        
+
                         // Action Buttons (only show for other people's dogs)
                         if (_myDogId != null && _myDogId != widget.dog.id) ...[
                           Row(
@@ -519,23 +576,31 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                               Expanded(
                                 child: ElevatedButton.icon(
                                   onPressed: _isLoading ? null : _onAddToPack,
-                                  icon: _isLoading 
-                                    ? const SizedBox(
-                                        width: 16, 
-                                        height: 16, 
-                                        child: CircularProgressIndicator(strokeWidth: 2),
-                                      )
-                                    : Icon(
-                                        _isBarked ? Icons.check : Icons.group_add,
-                                        color: _isBarked ? Colors.white : null,
-                                      ),
+                                  icon: _isLoading
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2),
+                                        )
+                                      : Icon(
+                                          _isBarked
+                                              ? Icons.check
+                                              : Icons.group_add,
+                                          color:
+                                              _isBarked ? Colors.white : null,
+                                        ),
                                   label: Text(_getAddButtonText()),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: _isBarked 
-                                      ? (_friendshipStatus == 'accepted' ? Colors.green : Colors.grey)
-                                      : null,
-                                    foregroundColor: _isBarked ? Colors.white : null,
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    backgroundColor: _isBarked
+                                        ? (_friendshipStatus == 'accepted'
+                                            ? Colors.green
+                                            : Colors.grey)
+                                        : null,
+                                    foregroundColor:
+                                        _isBarked ? Colors.white : null,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
                                   ),
                                 ),
                               ),
@@ -547,14 +612,15 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                                   icon: const Icon(Icons.chat_bubble_outline),
                                   label: const Text('Message'),
                                   style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
                                   ),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 12),
-                          
+
                           // Secondary Row: Bark + Playdate
                           Row(
                             children: [
@@ -562,11 +628,14 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                               Expanded(
                                 child: OutlinedButton.icon(
                                   onPressed: _onBarkPoke,
-                                  icon: const Icon(Icons.pets, color: Colors.orange),
+                                  icon: const Icon(Icons.pets,
+                                      color: Colors.orange),
                                   label: const Text('Bark'),
                                   style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                    side: BorderSide(color: Colors.orange.withOpacity(0.5)),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
+                                    side: BorderSide(
+                                        color: Colors.orange.withOpacity(0.5)),
                                   ),
                                 ),
                               ),
@@ -578,14 +647,15 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                                   icon: const Icon(Icons.calendar_today),
                                   label: const Text('Playdate'),
                                   style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         ],
-                        
+
                         const SizedBox(height: 32),
                       ],
                     ),
@@ -624,7 +694,9 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, style: AppTypography.h3().copyWith(fontSize: 16)),
-                Text(value, style: AppTypography.bodyMedium().copyWith(color: Colors.grey[600])),
+                Text(value,
+                    style: AppTypography.bodyMedium()
+                        .copyWith(color: Colors.grey[600])),
               ],
             ),
           ),

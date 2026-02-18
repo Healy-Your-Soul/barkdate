@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 /// Provides adaptive spacing, sizing, and layout helpers
 class AppResponsive {
   // Screen size breakpoints (mobile-first)
-  static const double mobileMaxWidth = 360.0;  // Small phones
-  static const double tabletMinWidth = 600.0;   // Tablets
+  static const double mobileMaxWidth = 360.0; // Small phones
+  static const double tabletMinWidth = 600.0; // Tablets
   static const double desktopMinWidth = 1024.0; // Desktop
 
   /// Get current screen type
@@ -38,7 +38,8 @@ class AppResponsive {
   }
 
   /// Adaptive spacing based on screen size
-  static double spacing(BuildContext context, {
+  static double spacing(
+    BuildContext context, {
     required double mobile,
     double? tablet,
     double? desktop,
@@ -117,7 +118,8 @@ class AppResponsive {
   }
 
   /// Adaptive horizontal list item width
-  static double horizontalCardWidth(BuildContext context, {
+  static double horizontalCardWidth(
+    BuildContext context, {
     required double mobile,
     double? tablet,
     double? desktop,
@@ -134,7 +136,8 @@ class AppResponsive {
   }
 
   /// Adaptive horizontal list item height
-  static double horizontalCardHeight(BuildContext context, {
+  static double horizontalCardHeight(
+    BuildContext context, {
     required double mobile,
     double? tablet,
     double? desktop,
@@ -152,7 +155,8 @@ class AppResponsive {
 
   /// Get safe width for horizontal scrolling items
   /// Ensures items don't cause overflow on small screens
-  static double safeHorizontalItemWidth(BuildContext context, double preferredWidth) {
+  static double safeHorizontalItemWidth(
+      BuildContext context, double preferredWidth) {
     final screenWidth = MediaQuery.of(context).size.width;
     final padding = screenPadding(context).horizontal;
     final maxWidth = screenWidth - padding - 32; // Account for spacing
@@ -179,7 +183,7 @@ extension ResponsiveContext on BuildContext {
   bool get isTablet => AppResponsive.isTablet(this);
   bool get isDesktop => AppResponsive.isDesktop(this);
   ScreenType get screenType => AppResponsive.getScreenType(this);
-  
+
   EdgeInsets get screenPadding => AppResponsive.screenPadding(this);
   EdgeInsets get cardPadding => AppResponsive.cardPadding(this);
 }

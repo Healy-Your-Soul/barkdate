@@ -13,7 +13,8 @@ class DogCard extends StatefulWidget {
   final VoidCallback? onOpenProfile;
   final VoidCallback? onTap;
   final bool isFriend; // Whether this dog is already in the user's pack
-  final VoidCallback? onAddToPackPressed; // For non-friends: send bark/friend request
+  final VoidCallback?
+      onAddToPackPressed; // For non-friends: send bark/friend request
 
   const DogCard({
     super.key,
@@ -32,19 +33,20 @@ class DogCard extends StatefulWidget {
 
 class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
   String _playdateStatus = 'none'; // 'none', 'pending', 'confirmed'
-  Map<String, dynamic>? _currentPlaydate; // Store current playdate data when confirmed
-  
+  Map<String, dynamic>?
+      _currentPlaydate; // Store current playdate data when confirmed
+
   // Bark button animation
   late AnimationController _barkAnimationController;
   late Animation<double> _barkScaleAnimation;
   bool _hasBarked = false;
   Timer? _barkResetTimer;
-  
+
   @override
   void initState() {
     super.initState();
     _checkPlaydateStatus();
-    
+
     // Initialize bark animation
     _barkAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -58,24 +60,24 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
       curve: Curves.easeInOut,
     ));
   }
-  
+
   @override
   void dispose() {
     _barkAnimationController.dispose();
     _barkResetTimer?.cancel();
     super.dispose();
   }
-  
+
   void _handleBarkPressed() {
     // Trigger animation
     _barkAnimationController.forward(from: 0);
-    
+
     // Set barked state
     setState(() => _hasBarked = true);
-    
+
     // Call original callback
     widget.onBarkPressed();
-    
+
     // Reset after 3 seconds
     _barkResetTimer?.cancel();
     _barkResetTimer = Timer(const Duration(seconds: 3), () {
@@ -107,7 +109,8 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
       // Check for confirmed playdates with this specific dog's owner
       final confirmedAsOrganizer = await SupabaseConfig.client
           .from('playdates')
-          .select('id, organizer_id, participant_id, scheduled_at, title, description, location, status')
+          .select(
+              'id, organizer_id, participant_id, scheduled_at, title, description, location, status')
           .eq('organizer_id', user.id)
           .eq('participant_id', widget.dog.ownerId)
           .eq('status', 'confirmed')
@@ -116,16 +119,18 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
 
       final confirmedAsParticipant = await SupabaseConfig.client
           .from('playdates')
-          .select('id, organizer_id, participant_id, scheduled_at, title, description, location, status')
+          .select(
+              'id, organizer_id, participant_id, scheduled_at, title, description, location, status')
           .eq('organizer_id', widget.dog.ownerId)
           .eq('participant_id', user.id)
           .eq('status', 'confirmed')
           .gte('scheduled_at', DateTime.now().toIso8601String())
           .limit(1);
 
-      if (confirmedAsOrganizer.isNotEmpty || confirmedAsParticipant.isNotEmpty) {
-        final playdateData = confirmedAsOrganizer.isNotEmpty 
-            ? confirmedAsOrganizer.first 
+      if (confirmedAsOrganizer.isNotEmpty ||
+          confirmedAsParticipant.isNotEmpty) {
+        final playdateData = confirmedAsOrganizer.isNotEmpty
+            ? confirmedAsOrganizer.first
             : confirmedAsParticipant.first;
         setState(() {
           _playdateStatus = 'confirmed';
@@ -228,13 +233,10 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
         time.minute,
       );
 
-      await SupabaseConfig.client
-          .from('playdates')
-          .update({
+      await SupabaseConfig.client.from('playdates').update({
         'scheduled_at': newDateTime.toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
-      })
-          .eq('id', _currentPlaydate!['id']);
+      }).eq('id', _currentPlaydate!['id']);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -305,15 +307,22 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.green,
                     side: const BorderSide(color: Colors.green, width: 1),
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.check_circle, size: 12, color: Colors.green),
+                      const Icon(Icons.check_circle,
+                          size: 12, color: Colors.green),
                       const SizedBox(width: 2),
-                      Text('EDIT', style: theme.textTheme.labelSmall?.copyWith(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.green)),
+                      Text('EDIT',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green)),
                     ],
                   ),
                 )
@@ -323,15 +332,22 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.orange,
                         side: const BorderSide(color: Colors.orange, width: 1),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 4),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.hourglass_empty, size: 12, color: Colors.orange),
+                          const Icon(Icons.hourglass_empty,
+                              size: 12, color: Colors.orange),
                           const SizedBox(width: 2),
-                          Text('Sent', style: theme.textTheme.labelSmall?.copyWith(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.orange)),
+                          Text('Sent',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.orange)),
                         ],
                       ),
                     )
@@ -339,16 +355,24 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
                       onPressed: widget.onPlaydatePressed,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF4CAF50),
-                        side: const BorderSide(color: Color(0xFF4CAF50), width: 1),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        side: const BorderSide(
+                            color: Color(0xFF4CAF50), width: 1),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 4),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.calendar_today, size: 12, color: Color(0xFF4CAF50)),
+                          const Icon(Icons.calendar_today,
+                              size: 12, color: Color(0xFF4CAF50)),
                           const SizedBox(width: 2),
-                          Text('Play', style: theme.textTheme.labelSmall?.copyWith(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF4CAF50))),
+                          Text('Play',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF4CAF50))),
                         ],
                       ),
                     ),
@@ -398,7 +422,8 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
               foregroundColor: Colors.grey[700],
               side: BorderSide(color: Colors.grey[400]!, width: 1),
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
             ),
             child: Text(
               'Profile',
@@ -419,7 +444,7 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final dog = widget.dog;
-    
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -429,19 +454,34 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
-          children: [
-            // Dog photo
-            GestureDetector(
-              onTap: widget.onOpenProfile,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(30),
-                child: widget.dog.photos.isNotEmpty 
-                    ? Image.network(
-                        widget.dog.photos.first,
-                        width: 60,
-                        height: 60,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
+            children: [
+              // Dog photo
+              GestureDetector(
+                onTap: widget.onOpenProfile,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: widget.dog.photos.isNotEmpty
+                      ? Image.network(
+                          widget.dog.photos.first,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: Icon(
+                              Icons.pets,
+                              color: theme.colorScheme.primary,
+                              size: 24,
+                            ),
+                          ),
+                        )
+                      : Container(
                           width: 60,
                           height: 60,
                           decoration: BoxDecoration(
@@ -454,75 +494,63 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
                             size: 24,
                           ),
                         ),
-                      )
-                    : Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Icon(
-                          Icons.pets,
-                          color: theme.colorScheme.primary,
-                          size: 24,
-                        ),
-                      ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Dog details
-            Expanded(
-              child: GestureDetector(
-                onTap: widget.onOpenProfile,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      dog.name,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${dog.breed}, ${dog.distanceKm.toStringAsFixed(1)} km away',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'with ${dog.ownerName}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
                 ),
               ),
-            ),
-            // Action buttons - conditional based on friendship status
-            SizedBox(
-              width: 85,
-              child: widget.isFriend
-                  ? _buildFriendButtons(theme)
-                  : _buildNonFriendButtons(theme),
-            ),
-            // Subtle options menu (Report/Block)
-            ContentOptionsMenu(
-              contentType: 'dog_profile',
-              contentId: dog.id ?? '',
-              ownerId: dog.ownerId,
-              ownerName: dog.ownerName,
-            ),
-          ],
+              const SizedBox(width: 12),
+              // Dog details
+              Expanded(
+                child: GestureDetector(
+                  onTap: widget.onOpenProfile,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        dog.name,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${dog.breed}, ${dog.distanceKm.toStringAsFixed(1)} km away',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.7),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'with ${dog.ownerName}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.6),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Action buttons - conditional based on friendship status
+              SizedBox(
+                width: 85,
+                child: widget.isFriend
+                    ? _buildFriendButtons(theme)
+                    : _buildNonFriendButtons(theme),
+              ),
+              // Subtle options menu (Report/Block)
+              ContentOptionsMenu(
+                contentType: 'dog_profile',
+                contentId: dog.id ?? '',
+                ownerId: dog.ownerId,
+                ownerName: dog.ownerName,
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

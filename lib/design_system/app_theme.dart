@@ -3,11 +3,11 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // New Brand Colors
-  static const Color primary = Color(0xFFED924D);      // Warm Orange
-  static const Color secondary = Color(0xFFFF8076);     // Coral/Salmon
-  static const Color accent = Color(0xFFE885DC);        // Pink
-  static const Color tertiary = Color(0xFF4CAF50);      // Bright green
-  static const Color neutral = Color(0xFFF5EDE6);       // Warm Cream
+  static const Color primary = Color(0xFFED924D); // Warm Orange
+  static const Color secondary = Color(0xFFFF8076); // Coral/Salmon
+  static const Color accent = Color(0xFFE885DC); // Pink
+  static const Color tertiary = Color(0xFF4CAF50); // Bright green
+  static const Color neutral = Color(0xFFF5EDE6); // Warm Cream
   static const Color backgroundLight = Colors.white;
   static const Color backgroundDark = Color(0xFF121212);
   static const Color surfaceLight = Colors.white;
@@ -45,7 +45,8 @@ class AppTheme {
           fontWeight: FontWeight.w600,
         ),
       ),
-      textTheme: GoogleFonts.poppinsTextTheme(ThemeData.light().textTheme).apply(
+      textTheme:
+          GoogleFonts.poppinsTextTheme(ThemeData.light().textTheme).apply(
         bodyColor: textPrimaryLight,
         displayColor: textPrimaryLight,
       ),
@@ -80,8 +81,10 @@ class AppTheme {
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
-        selectedLabelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-        unselectedLabelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w400),
+        selectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+        unselectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w400),
         selectedIconTheme: const IconThemeData(size: 22),
         unselectedIconTheme: const IconThemeData(size: 22),
       ),

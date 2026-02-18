@@ -28,12 +28,12 @@ class _NotificationBannerState extends State<NotificationBanner>
   @override
   void initState() {
     super.initState();
-    
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, -1),
       end: Offset.zero,
@@ -41,7 +41,7 @@ class _NotificationBannerState extends State<NotificationBanner>
       parent: _animationController,
       curve: Curves.easeOutBack,
     ));
-    
+
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -49,7 +49,7 @@ class _NotificationBannerState extends State<NotificationBanner>
       parent: _animationController,
       curve: Curves.easeOut,
     ));
-    
+
     // Start animation
     _animationController.forward();
   }
@@ -69,7 +69,7 @@ class _NotificationBannerState extends State<NotificationBanner>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final mediaQuery = MediaQuery.of(context);
-    
+
     return Positioned(
       top: 0,
       left: 0,
@@ -105,7 +105,8 @@ class _NotificationBannerState extends State<NotificationBanner>
                       offset: const Offset(0, 4),
                     ),
                     BoxShadow(
-                      color: widget.notification.iconColor.withValues(alpha: 0.1),
+                      color:
+                          widget.notification.iconColor.withValues(alpha: 0.1),
                       blurRadius: 12,
                       offset: const Offset(0, 2),
                     ),
@@ -127,10 +128,12 @@ class _NotificationBannerState extends State<NotificationBanner>
                               width: 48,
                               height: 48,
                               decoration: BoxDecoration(
-                                color: widget.notification.iconColor.withValues(alpha: 0.2),
+                                color: widget.notification.iconColor
+                                    .withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(24),
                                 border: Border.all(
-                                  color: widget.notification.iconColor.withValues(alpha: 0.4),
+                                  color: widget.notification.iconColor
+                                      .withValues(alpha: 0.4),
                                   width: 2,
                                 ),
                               ),
@@ -140,9 +143,9 @@ class _NotificationBannerState extends State<NotificationBanner>
                                 size: 24,
                               ),
                             ),
-                            
+
                             const SizedBox(width: 16),
-                            
+
                             // Content
                             Expanded(
                               child: Column(
@@ -151,7 +154,8 @@ class _NotificationBannerState extends State<NotificationBanner>
                                 children: [
                                   Text(
                                     widget.notification.title,
-                                    style: theme.textTheme.titleMedium?.copyWith(
+                                    style:
+                                        theme.textTheme.titleMedium?.copyWith(
                                       fontWeight: FontWeight.w600,
                                       color: theme.colorScheme.onSurface,
                                     ),
@@ -162,7 +166,8 @@ class _NotificationBannerState extends State<NotificationBanner>
                                   Text(
                                     widget.notification.body,
                                     style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                                      color: theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.8),
                                     ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
@@ -171,16 +176,17 @@ class _NotificationBannerState extends State<NotificationBanner>
                                   Text(
                                     'Now',
                                     style: theme.textTheme.bodySmall?.copyWith(
-                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                      color: theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.6),
                                       fontSize: 12,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            
+
                             const SizedBox(width: 8),
-                            
+
                             // Dismiss button
                             GestureDetector(
                               onTap: _dismiss,
@@ -188,13 +194,15 @@ class _NotificationBannerState extends State<NotificationBanner>
                                 width: 32,
                                 height: 32,
                                 decoration: BoxDecoration(
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: Icon(
                                   Icons.close,
                                   size: 16,
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
                                 ),
                               ),
                             ),
@@ -233,7 +241,8 @@ class CompactNotificationBanner extends StatefulWidget {
   });
 
   @override
-  State<CompactNotificationBanner> createState() => _CompactNotificationBannerState();
+  State<CompactNotificationBanner> createState() =>
+      _CompactNotificationBannerState();
 }
 
 class _CompactNotificationBannerState extends State<CompactNotificationBanner>
@@ -244,12 +253,12 @@ class _CompactNotificationBannerState extends State<CompactNotificationBanner>
   @override
   void initState() {
     super.initState();
-    
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 250),
       vsync: this,
     );
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, -1),
       end: Offset.zero,
@@ -257,7 +266,7 @@ class _CompactNotificationBannerState extends State<CompactNotificationBanner>
       parent: _animationController,
       curve: Curves.easeOut,
     ));
-    
+
     _animationController.forward();
   }
 
@@ -276,7 +285,7 @@ class _CompactNotificationBannerState extends State<CompactNotificationBanner>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final mediaQuery = MediaQuery.of(context);
-    
+
     return Positioned(
       top: 0,
       left: 0,
@@ -312,7 +321,8 @@ class _CompactNotificationBannerState extends State<CompactNotificationBanner>
                 bottomRight: Radius.circular(12),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
                     Icon(
@@ -338,7 +348,8 @@ class _CompactNotificationBannerState extends State<CompactNotificationBanner>
                           Text(
                             widget.message,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.7),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -351,7 +362,8 @@ class _CompactNotificationBannerState extends State<CompactNotificationBanner>
                       child: Icon(
                         Icons.close,
                         size: 16,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                        color:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
                   ],

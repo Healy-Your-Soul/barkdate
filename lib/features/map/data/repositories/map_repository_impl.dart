@@ -17,7 +17,7 @@ class MapRepositoryImpl implements MapRepository {
     String? keyword,
   }) async {
     PlaceSearchResult googleResult;
-    
+
     if (keyword != null && keyword.isNotEmpty) {
       // Use Text Search for specific keywords (e.g. from AI or user search)
       googleResult = await PlacesService.searchPlacesByText(
@@ -32,19 +32,23 @@ class MapRepositoryImpl implements MapRepository {
         latitude: latitude,
         longitude: longitude,
         radius: radius.toInt(),
-        keyword: null, // Don't pass keyword to nearby search as it filters too strictly
+        keyword:
+            null, // Don't pass keyword to nearby search as it filters too strictly
       );
     }
-    
+
     // Also fetch featured parks from Supabase (admin-added parks)
     final featuredParks = await ParkService.getFeaturedParks();
-    
+
     // Convert featured parks to PlaceResult for consistent display
     final featuredPlaceResults = featuredParks.map((park) {
       final distance = Geolocator.distanceBetween(
-        latitude, longitude, park.latitude, park.longitude,
+        latitude,
+        longitude,
+        park.latitude,
+        park.longitude,
       );
-      
+
       return PlaceResult(
         placeId: 'featured_${park.id}',
         name: park.name,
@@ -56,26 +60,27 @@ class MapRepositoryImpl implements MapRepository {
         isOpen: true,
         category: PlaceCategory.park,
         distance: distance,
-        photoReference: park.photoUrls?.isNotEmpty == true ? park.photoUrls!.first : null,
+        photoReference:
+            park.photoUrls?.isNotEmpty == true ? park.photoUrls!.first : null,
         isFeaturedPark: true, // Admin-verified dog-friendly location
       );
     }).toList();
-    
+
     // Filter featured parks if keyword search
     List<PlaceResult> filteredFeatured = featuredPlaceResults;
     if (keyword != null && keyword.isNotEmpty) {
       final keywordLower = keyword.toLowerCase();
       filteredFeatured = featuredPlaceResults.where((place) {
         return place.name.toLowerCase().contains(keywordLower) ||
-               place.address.toLowerCase().contains(keywordLower);
+            place.address.toLowerCase().contains(keywordLower);
       }).toList();
     }
-    
+
     // Filter by radius
     filteredFeatured = filteredFeatured.where((place) {
       return place.distance <= radius;
     }).toList();
-    
+
     // Merge and return, featured parks first as they're highlighted
     return [...filteredFeatured, ...googleResult.places];
   }

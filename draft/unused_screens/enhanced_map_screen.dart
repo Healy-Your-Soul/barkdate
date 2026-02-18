@@ -21,7 +21,7 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
   bool _loading = true;
   bool _isCheckedIn = false;
   final Set<Marker> _markers = {};
-  
+
   // Enhanced features
   List<Map<String, dynamic>> _nearbyParks = [];
   List<FeaturedPark> _featuredParks = [];
@@ -60,7 +60,8 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
 
       final locationData = await _location.getLocation();
       if (locationData.latitude != null && locationData.longitude != null) {
-        _currentLocation = LatLng(locationData.latitude!, locationData.longitude!);
+        _currentLocation =
+            LatLng(locationData.latitude!, locationData.longitude!);
       }
 
       // Load parks and featured parks
@@ -85,7 +86,7 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
         latitude: _currentLocation!.latitude,
         longitude: _currentLocation!.longitude,
       );
-      
+
       final featured = await ParkService.getFeaturedParks();
 
       if (mounted) {
@@ -101,7 +102,7 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
 
   void _updateMarkers() {
     _markers.clear();
-    
+
     if (_showingSearchResults) {
       // Show search results
       for (final place in _searchResults) {
@@ -127,7 +128,8 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
               title: park['name'],
               snippet: park['address'] ?? 'Dog park nearby',
             ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueGreen),
             onTap: () => _showParkDetails(park),
           ));
         }
@@ -142,12 +144,13 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
             title: '⭐ ${park.name}',
             snippet: 'Featured park • ${park.rating}⭐',
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
           onTap: () => _showFeaturedParkDetails(park),
         ));
       }
     }
-    
+
     // Add current location marker
     if (_currentLocation != null) {
       _markers.add(Marker(
@@ -161,16 +164,16 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
 
   Future<void> _searchPlaces(String query) async {
     if (_currentLocation == null || query.trim().isEmpty) return;
-    
+
     setState(() => _isSearching = true);
-    
+
     try {
       final results = await PlacesService.searchDogFriendlyPlaces(
         latitude: _currentLocation!.latitude,
         longitude: _currentLocation!.longitude,
         keyword: query,
       );
-      
+
       setState(() {
         _searchResults = results;
         _showingSearchResults = true;
@@ -227,7 +230,8 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_isCheckedIn ? 'Checked in successfully!' : 'Checked out'),
+        content:
+            Text(_isCheckedIn ? 'Checked in successfully!' : 'Checked out'),
         backgroundColor: _isCheckedIn ? Colors.green : Colors.orange,
       ),
     );
@@ -244,7 +248,8 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
               : GoogleMap(
                   mapType: MapType.normal,
                   initialCameraPosition: CameraPosition(
-                    target: _currentLocation ?? const LatLng(37.7749, -122.4194),
+                    target:
+                        _currentLocation ?? const LatLng(37.7749, -122.4194),
                     zoom: 14.0,
                   ),
                   markers: _markers,
@@ -259,7 +264,7 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
                   myLocationEnabled: true,
                   myLocationButtonEnabled: false,
                 ),
-          
+
           // Search Bar
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
@@ -293,7 +298,8 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
                               child: SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               ),
                             )
                           : null,
@@ -308,7 +314,7 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
               ),
             ),
           ),
-          
+
           // Filter Buttons
           Positioned(
             top: MediaQuery.of(context).padding.top + 70,
@@ -341,7 +347,7 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
               ],
             ),
           ),
-          
+
           // Admin Button (show only for admin users)
           Positioned(
             bottom: 100,
@@ -359,7 +365,7 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
               child: const Icon(Icons.admin_panel_settings),
             ),
           ),
-          
+
           // Check-in/Check-out Button
           Positioned(
             bottom: 30,
@@ -534,14 +540,18 @@ class FeaturedParkDetailsSheet extends StatelessWidget {
           Text(park.description),
           const SizedBox(height: 16),
           if (park.amenities.isNotEmpty) ...[
-            const Text('Amenities:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Amenities:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Wrap(
               spacing: 4,
-              children: park.amenities.map((amenity) => Chip(
-                label: Text(amenity, style: const TextStyle(fontSize: 12)),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              )).toList(),
+              children: park.amenities
+                  .map((amenity) => Chip(
+                        label:
+                            Text(amenity, style: const TextStyle(fontSize: 12)),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ))
+                  .toList(),
             ),
             const SizedBox(height: 16),
           ],

@@ -15,16 +15,15 @@ class AuthService {
 
   static String getCurrentUserName() {
     final user = _supabase.auth.currentUser;
-    return user?.userMetadata?['name'] ?? 
-           user?.userMetadata?['full_name'] ?? 
-           user?.email?.split('@').first ?? 
-           'User';
+    return user?.userMetadata?['name'] ??
+        user?.userMetadata?['full_name'] ??
+        user?.email?.split('@').first ??
+        'User';
   }
 
   static String? getCurrentUserAvatarUrl() {
     final user = _supabase.auth.currentUser;
-    return user?.userMetadata?['avatar_url'] ?? 
-           user?.userMetadata?['picture'];
+    return user?.userMetadata?['avatar_url'] ?? user?.userMetadata?['picture'];
   }
 
   static String? getCurrentUserEmail() {

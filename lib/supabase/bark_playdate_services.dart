@@ -35,45 +35,41 @@ class BarkNotificationService {
           .maybeSingle();
 
       final now = DateTime.now();
-      
+
       if (existingMatch != null) {
         // Check if last bark was within 24 hours (spam prevention)
         if (existingMatch['last_bark_at'] != null) {
           final lastBark = DateTime.parse(existingMatch['last_bark_at']);
           final hoursSinceLastBark = now.difference(lastBark).inHours;
-          
+
           if (hoursSinceLastBark < 24) {
-            debugPrint('Bark rejected: Too soon since last bark ($hoursSinceLastBark hours ago)');
+            debugPrint(
+                'Bark rejected: Too soon since last bark ($hoursSinceLastBark hours ago)');
             return false;
           }
         }
 
         // Update existing match with new bark
-        await SupabaseConfig.client
-            .from('matches')
-            .update({
-              'bark_count': (existingMatch['bark_count'] ?? 0) + 1,
-              'last_bark_at': now.toIso8601String(),
-              'action': 'bark', // Ensure it's marked as bark
-            })
-            .eq('id', existingMatch['id']);
-            
+        await SupabaseConfig.client.from('matches').update({
+          'bark_count': (existingMatch['bark_count'] ?? 0) + 1,
+          'last_bark_at': now.toIso8601String(),
+          'action': 'bark', // Ensure it's marked as bark
+        }).eq('id', existingMatch['id']);
+
         debugPrint('Updated existing match with new bark');
       } else {
         // Create new match record
-        await SupabaseConfig.client
-            .from('matches')
-            .insert({
-              'user_id': fromUserId,
-              'target_user_id': toUserId,
-              'dog_id': fromDogId,
-              'target_dog_id': toDogId,
-              'action': 'bark',
-              'bark_count': 1,
-              'last_bark_at': now.toIso8601String(),
-              'is_mutual': false, // Will be updated if target user barks back
-            });
-            
+        await SupabaseConfig.client.from('matches').insert({
+          'user_id': fromUserId,
+          'target_user_id': toUserId,
+          'dog_id': fromDogId,
+          'target_dog_id': toDogId,
+          'action': 'bark',
+          'bark_count': 1,
+          'last_bark_at': now.toIso8601String(),
+          'is_mutual': false, // Will be updated if target user barks back
+        });
+
         debugPrint('Created new match record for bark');
       }
 
@@ -122,16 +118,16 @@ class BarkNotificationService {
         // Update both matches to indicate mutual interest
         await SupabaseConfig.client
             .from('matches')
-            .update({'is_mutual': true})
-            .inFilter('id', [mutualMatch['id']]);
-            
+            .update({'is_mutual': true}).inFilter('id', [mutualMatch['id']]);
+
         // Create mutual match notification
         await NotificationService.createNotification(
           userId: fromUserId,
           type: 'match',
           actionType: 'mutual_bark',
           title: 'It\'s a match! 🎉',
-          body: '${fromDog['name']} and ${toDog['name']} both barked at each other!',
+          body:
+              '${fromDog['name']} and ${toDog['name']} both barked at each other!',
           relatedId: toUserId,
           metadata: {
             'match_type': 'mutual_bark',
@@ -146,7 +142,8 @@ class BarkNotificationService {
           type: 'match',
           actionType: 'mutual_bark',
           title: 'It\'s a match! 🎉',
-          body: '${toDog['name']} and ${fromDog['name']} both barked at each other!',
+          body:
+              '${toDog['name']} and ${fromDog['name']} both barked at each other!',
           relatedId: fromUserId,
           metadata: {
             'match_type': 'mutual_bark',
@@ -155,13 +152,12 @@ class BarkNotificationService {
             'other_dog_name': fromDog['name'],
           },
         );
-        
+
         debugPrint('Created mutual bark match! 🎉');
       }
 
       debugPrint('Bark sent successfully!');
       return true;
-      
     } catch (e) {
       debugPrint('Error sending bark: $e');
       return false;
@@ -169,7 +165,8 @@ class BarkNotificationService {
   }
 
   /// Get bark history for a user (who they barked at, who barked at them)
-  static Future<List<Map<String, dynamic>>> getBarkHistory(String userId) async {
+  static Future<List<Map<String, dynamic>>> getBarkHistory(
+      String userId) async {
     try {
       final history = await SupabaseConfig.client
           .from('matches')
@@ -239,41 +236,35 @@ class PlaydateRequestService {
       debugPrint('Created playdate with ID: $playdateId');
 
       // Add organizer as participant
-      await SupabaseConfig.client
-          .from('playdate_participants')
-          .insert({
-            'playdate_id': playdateId,
-            'user_id': organizerId,
-            'dog_id': organizerDogId,
-          });
+      await SupabaseConfig.client.from('playdate_participants').insert({
+        'playdate_id': playdateId,
+        'user_id': organizerId,
+        'dog_id': organizerDogId,
+      });
 
       // Create the playdate request for the invitee (attempt to include requester_dog_id if schema migrated)
       try {
-        await SupabaseConfig.client
-            .from('playdate_requests')
-            .insert({
-              'playdate_id': playdateId,
-              'requester_id': organizerId,
-              'requester_dog_id': organizerDogId, // new column (safe try)
-              'invitee_id': inviteeId,
-              'invitee_dog_id': inviteeDogId,
-              'status': 'pending',
-              'message': message,
-            });
+        await SupabaseConfig.client.from('playdate_requests').insert({
+          'playdate_id': playdateId,
+          'requester_id': organizerId,
+          'requester_dog_id': organizerDogId, // new column (safe try)
+          'invitee_id': inviteeId,
+          'invitee_dog_id': inviteeDogId,
+          'status': 'pending',
+          'message': message,
+        });
       } catch (e) {
         final msg = e.toString();
         if (msg.contains('requester_dog_id') || msg.contains('column')) {
           debugPrint('requester_dog_id column missing – retrying without it');
-          await SupabaseConfig.client
-              .from('playdate_requests')
-              .insert({
-                'playdate_id': playdateId,
-                'requester_id': organizerId,
-                'invitee_id': inviteeId,
-                'invitee_dog_id': inviteeDogId,
-                'status': 'pending',
-                'message': message,
-              });
+          await SupabaseConfig.client.from('playdate_requests').insert({
+            'playdate_id': playdateId,
+            'requester_id': organizerId,
+            'invitee_id': inviteeId,
+            'invitee_dog_id': inviteeDogId,
+            'status': 'pending',
+            'message': message,
+          });
         } else {
           rethrow;
         }
@@ -298,7 +289,8 @@ class PlaydateRequestService {
         type: 'playdate_request',
         actionType: 'playdate_invited',
         title: 'New Playdate Invitation! 🐕',
-        body: '${organizerDog['name']} invited ${inviteeDog['name']} for a playdate at $location',
+        body:
+            '${organizerDog['name']} invited ${inviteeDog['name']} for a playdate at $location',
         relatedId: playdateId,
         metadata: {
           'playdate_id': playdateId,
@@ -321,7 +313,6 @@ class PlaydateRequestService {
 
       debugPrint('Playdate request created successfully!');
       return playdateId;
-
     } catch (e) {
       debugPrint('Error creating playdate request: $e');
       debugPrint('Error type: ${e.runtimeType} - details: ${e.toString()}');
@@ -351,7 +342,8 @@ class PlaydateRequestService {
       };
 
       if (message != null) updateData['message'] = message;
-      if (counterProposal != null) updateData['counter_proposal'] = counterProposal.toString();
+      if (counterProposal != null)
+        updateData['counter_proposal'] = counterProposal.toString();
 
       await SupabaseConfig.client
           .from('playdate_requests')
@@ -359,36 +351,28 @@ class PlaydateRequestService {
           .eq('id', requestId);
 
       // Get request details for notification
-      final request = await SupabaseConfig.client
-          .from('playdate_requests')
-          .select('''
+      final request =
+          await SupabaseConfig.client.from('playdate_requests').select('''
             *,
             playdate:playdates(*),
             requester:users!playdate_requests_requester_id_fkey(name),
             invitee:users!playdate_requests_invitee_id_fkey(name),
             invitee_dog:dogs!playdate_requests_invitee_dog_id_fkey(name)
-          ''')
-          .eq('id', requestId)
-          .single();
+          ''').eq('id', requestId).single();
 
       if (response == 'accepted') {
         // Update playdate to include participant and set status to confirmed
-        await SupabaseConfig.client
-            .from('playdates')
-            .update({
-              'participant_id': request['invitee_id'], // Set the main participant
-              'status': 'confirmed'
-            })
-            .eq('id', request['playdate_id']);
+        await SupabaseConfig.client.from('playdates').update({
+          'participant_id': request['invitee_id'], // Set the main participant
+          'status': 'confirmed'
+        }).eq('id', request['playdate_id']);
 
         // Add invitee as participant (for many-to-many relationships if needed later)
-        await SupabaseConfig.client
-            .from('playdate_participants')
-            .insert({
-              'playdate_id': request['playdate_id'],
-              'user_id': request['invitee_id'],
-              'dog_id': request['invitee_dog_id'],
-            });
+        await SupabaseConfig.client.from('playdate_participants').insert({
+          'playdate_id': request['playdate_id'],
+          'user_id': request['invitee_id'],
+          'dog_id': request['invitee_dog_id'],
+        });
 
         // Notify organizer
         await NotificationService.createNotification(
@@ -396,7 +380,8 @@ class PlaydateRequestService {
           type: 'playdate',
           actionType: 'playdate_accepted',
           title: 'Playdate Accepted! 🎉',
-          body: '${request['invitee']['name']} accepted your playdate invitation!',
+          body:
+              '${request['invitee']['name']} accepted your playdate invitation!',
           relatedId: request['playdate_id'],
           metadata: {
             'playdate_id': request['playdate_id'],
@@ -404,13 +389,11 @@ class PlaydateRequestService {
             'dog_name': request['invitee_dog']['name'],
           },
         );
-
       } else if (response == 'declined') {
         // Update playdate status to cancelled
         await SupabaseConfig.client
             .from('playdates')
-            .update({'status': 'cancelled'})
-            .eq('id', request['playdate_id']);
+            .update({'status': 'cancelled'}).eq('id', request['playdate_id']);
 
         // Notify organizer
         await NotificationService.createNotification(
@@ -418,7 +401,8 @@ class PlaydateRequestService {
           type: 'playdate',
           actionType: 'playdate_declined',
           title: 'Playdate Declined',
-          body: '${request['invitee']['name']} declined your playdate invitation',
+          body:
+              '${request['invitee']['name']} declined your playdate invitation',
           relatedId: request['playdate_id'],
           metadata: {
             'playdate_id': request['playdate_id'],
@@ -426,7 +410,6 @@ class PlaydateRequestService {
             'message': message,
           },
         );
-
       } else if (response == 'counter_proposed') {
         // Notify organizer about counter-proposal
         await NotificationService.createNotification(
@@ -434,7 +417,8 @@ class PlaydateRequestService {
           type: 'playdate',
           actionType: 'playdate_counter_proposed',
           title: 'Playdate Counter-Proposal',
-          body: '${request['invitee']['name']} suggested changes to your playdate',
+          body:
+              '${request['invitee']['name']} suggested changes to your playdate',
           relatedId: request['playdate_id'],
           metadata: {
             'playdate_id': request['playdate_id'],
@@ -447,7 +431,6 @@ class PlaydateRequestService {
 
       debugPrint('Playdate request response processed successfully!');
       return true;
-
     } catch (e) {
       debugPrint('Error responding to playdate request: $e');
       debugPrint('Error type: ${e.runtimeType} - details: ${e.toString()}');
@@ -456,7 +439,8 @@ class PlaydateRequestService {
   }
 
   /// Get pending playdate requests for a user
-  static Future<List<Map<String, dynamic>>> getPendingRequests(String userId) async {
+  static Future<List<Map<String, dynamic>>> getPendingRequests(
+      String userId) async {
     try {
       // Use efficient joined query with Postgrest
       final requests = await SupabaseConfig.client
@@ -475,7 +459,7 @@ class PlaydateRequestService {
       return List<Map<String, dynamic>>.from(requests);
     } catch (e) {
       debugPrint('Error getting pending requests with joins: $e');
-      
+
       // Fallback to manual enrichment if joins fail
       try {
         final requests = await SupabaseConfig.client
@@ -487,10 +471,10 @@ class PlaydateRequestService {
 
         // Manually fetch related data for each request
         final enrichedRequests = <Map<String, dynamic>>[];
-        
+
         for (final request in requests) {
           final enrichedRequest = Map<String, dynamic>.from(request);
-          
+
           // Get playdate details
           try {
             final playdate = await SupabaseConfig.client
@@ -539,10 +523,11 @@ class PlaydateRequestService {
   }
 
   /// Get sent playdate requests for a user (where user is the requester)
-  static Future<List<Map<String, dynamic>>> getSentRequests(String userId) async {
+  static Future<List<Map<String, dynamic>>> getSentRequests(
+      String userId) async {
     try {
       debugPrint('=== GETTING SENT REQUESTS FOR USER: $userId ===');
-      
+
       // Use efficient joined query with Postgrest
       final requests = await SupabaseConfig.client
           .from('playdate_requests')
@@ -559,10 +544,9 @@ class PlaydateRequestService {
 
       debugPrint('Found ${requests.length} sent requests with joins');
       return List<Map<String, dynamic>>.from(requests);
-
     } catch (e) {
       debugPrint('Error getting sent requests with joins: $e');
-      
+
       // Fallback to manual enrichment if joins fail
       try {
         final requests = await SupabaseConfig.client
@@ -576,10 +560,10 @@ class PlaydateRequestService {
 
         // Manually fetch related data for each request
         final enrichedRequests = <Map<String, dynamic>>[];
-        
+
         for (final request in requests) {
           final enrichedRequest = Map<String, dynamic>.from(request);
-          
+
           // Get playdate details
           try {
             final playdate = await SupabaseConfig.client
@@ -622,7 +606,8 @@ class PlaydateRequestService {
           enrichedRequests.add(enrichedRequest);
         }
 
-        debugPrint('Returning ${enrichedRequests.length} enriched sent requests');
+        debugPrint(
+            'Returning ${enrichedRequests.length} enriched sent requests');
         return enrichedRequests;
       } catch (fallbackError) {
         debugPrint('Error in fallback enrichment: $fallbackError');
@@ -638,14 +623,11 @@ class PlaydateRequestService {
       debugPrint('Request ID: $requestId');
 
       // Update request status to declined (cancelled is not allowed in constraint)
-      await SupabaseConfig.client
-          .from('playdate_requests')
-          .update({
-            'status': 'declined',
-            'responded_at': DateTime.now().toIso8601String(),
-            'message': 'Request cancelled by organizer',
-          })
-          .eq('id', requestId);
+      await SupabaseConfig.client.from('playdate_requests').update({
+        'status': 'declined',
+        'responded_at': DateTime.now().toIso8601String(),
+        'message': 'Request cancelled by organizer',
+      }).eq('id', requestId);
 
       // Get request details to update playdate
       final request = await SupabaseConfig.client
@@ -657,12 +639,10 @@ class PlaydateRequestService {
       // Update associated playdate status to cancelled
       await SupabaseConfig.client
           .from('playdates')
-          .update({'status': 'cancelled'})
-          .eq('id', request['playdate_id']);
+          .update({'status': 'cancelled'}).eq('id', request['playdate_id']);
 
       debugPrint('Playdate request cancelled successfully!');
       return true;
-
     } catch (e) {
       debugPrint('Error cancelling playdate request: $e');
       return false;
@@ -691,9 +671,11 @@ class PlaydateRequestService {
 
       if (title != null) updateData['title'] = title;
       if (location != null) updateData['location'] = location;
-      if (scheduledAt != null) updateData['scheduled_at'] = scheduledAt.toIso8601String();
+      if (scheduledAt != null)
+        updateData['scheduled_at'] = scheduledAt.toIso8601String();
       if (description != null) updateData['description'] = description;
-      if (durationMinutes != null) updateData['duration_minutes'] = durationMinutes;
+      if (durationMinutes != null)
+        updateData['duration_minutes'] = durationMinutes;
       if (latitude != null) updateData['latitude'] = latitude;
       if (longitude != null) updateData['longitude'] = longitude;
 
@@ -728,7 +710,6 @@ class PlaydateRequestService {
 
       debugPrint('Playdate updated successfully!');
       return true;
-
     } catch (e) {
       debugPrint('Error updating playdate: $e');
       return false;
@@ -750,13 +731,11 @@ class PlaydateManagementService {
   }) async {
     try {
       // Insert participant (ignore if duplicate by relying on DB unique constraints if present)
-      await SupabaseConfig.client
-          .from('playdate_participants')
-          .insert({
-            'playdate_id': playdateId,
-            'user_id': userId,
-            'dog_id': dogId,
-          });
+      await SupabaseConfig.client.from('playdate_participants').insert({
+        'playdate_id': playdateId,
+        'user_id': userId,
+        'dog_id': dogId,
+      });
 
       // Notify the added user
       await NotificationService.createNotification(
@@ -833,13 +812,10 @@ class PlaydateManagementService {
   }) async {
     try {
       // Update playdate status
-      await SupabaseConfig.client
-          .from('playdates')
-          .update({
-            'status': 'cancelled',
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', playdateId);
+      await SupabaseConfig.client.from('playdates').update({
+        'status': 'cancelled',
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', playdateId);
 
       // Get all participants (including organizer) to notify
       final participantRows = await SupabaseConfig.client
@@ -853,7 +829,9 @@ class PlaydateManagementService {
           type: 'playdate',
           actionType: 'playdate_cancelled',
           title: 'Playdate cancelled',
-          body: reason == null ? 'A playdate you joined was cancelled.' : 'Cancelled: $reason',
+          body: reason == null
+              ? 'A playdate you joined was cancelled.'
+              : 'Cancelled: $reason',
           relatedId: playdateId,
           metadata: {
             'playdate_id': playdateId,
@@ -886,10 +864,12 @@ class PlaydateManagementService {
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      if (newScheduledAt != null) updateData['scheduled_at'] = newScheduledAt.toIso8601String();
+      if (newScheduledAt != null)
+        updateData['scheduled_at'] = newScheduledAt.toIso8601String();
       if (newLocation != null) updateData['location'] = newLocation;
       if (newDescription != null) updateData['description'] = newDescription;
-      if (newDurationMinutes != null) updateData['duration_minutes'] = newDurationMinutes;
+      if (newDurationMinutes != null)
+        updateData['duration_minutes'] = newDurationMinutes;
       if (newLatitude != null) updateData['latitude'] = newLatitude;
       if (newLongitude != null) updateData['longitude'] = newLongitude;
 
@@ -970,23 +950,20 @@ class PlaydateRecapService {
       }
 
       // Create the recap
-      await SupabaseConfig.client
-          .from('playdate_recaps')
-          .insert({
-            'playdate_id': playdateId,
-            'user_id': userId,
-            'dog_id': dogId,
-            'experience_rating': experienceRating,
-            'location_rating': locationRating,
-            'recap_text': recapText,
-            'photos': photos ?? [],
-            'shared_to_feed': shareToFeed,
-            'post_id': postId,
-          });
+      await SupabaseConfig.client.from('playdate_recaps').insert({
+        'playdate_id': playdateId,
+        'user_id': userId,
+        'dog_id': dogId,
+        'experience_rating': experienceRating,
+        'location_rating': locationRating,
+        'recap_text': recapText,
+        'photos': photos ?? [],
+        'shared_to_feed': shareToFeed,
+        'post_id': postId,
+      });
 
       debugPrint('Playdate recap created successfully!');
       return true;
-
     } catch (e) {
       debugPrint('Error creating playdate recap: $e');
       return false;
@@ -994,7 +971,8 @@ class PlaydateRecapService {
   }
 
   /// Get recaps for a playdate
-  static Future<List<Map<String, dynamic>>> getPlaydateRecaps(String playdateId) async {
+  static Future<List<Map<String, dynamic>>> getPlaydateRecaps(
+      String playdateId) async {
     try {
       final recaps = await SupabaseConfig.client
           .from('playdate_recaps')
@@ -1039,9 +1017,13 @@ class DogFriendshipService {
       if (friendships.isEmpty) return [];
 
       // Get all friend dog IDs
-      final friendDogIds = friendships.map((f) {
-        return f['dog_id'] == dogId ? f['friend_dog_id'] : f['dog_id'];
-      }).whereType<String>().toSet().toList();
+      final friendDogIds = friendships
+          .map((f) {
+            return f['dog_id'] == dogId ? f['friend_dog_id'] : f['dog_id'];
+          })
+          .whereType<String>()
+          .toSet()
+          .toList();
 
       if (friendDogIds.isEmpty) return [];
 
@@ -1052,15 +1034,16 @@ class DogFriendshipService {
           .filter('id', 'in', '(${friendDogIds.join(',')})');
 
       // Fetch owners for these dogs
-      final userIds = dogs.map((d) => d['user_id']).whereType<String>().toSet().toList();
+      final userIds =
+          dogs.map((d) => d['user_id']).whereType<String>().toSet().toList();
       Map<String, Map<String, dynamic>> userMap = {};
-      
+
       if (userIds.isNotEmpty) {
         final users = await SupabaseConfig.client
             .from('users')
             .select('id, name, avatar_url')
             .filter('id', 'in', '(${userIds.join(',')})');
-        
+
         for (final user in users) {
           userMap[user['id']] = user;
         }
@@ -1070,7 +1053,8 @@ class DogFriendshipService {
       final dogMap = <String, Map<String, dynamic>>{};
       for (final dog in dogs) {
         final dogData = Map<String, dynamic>.from(dog);
-        if (dogData['user_id'] != null && userMap.containsKey(dogData['user_id'])) {
+        if (dogData['user_id'] != null &&
+            userMap.containsKey(dogData['user_id'])) {
           dogData['user'] = userMap[dogData['user_id']];
         }
         dogMap[dog['id']] = dogData;
@@ -1078,14 +1062,14 @@ class DogFriendshipService {
 
       // Build result list with friendship info
       return friendships.map((f) {
-        final friendId = f['dog_id'] == dogId ? f['friend_dog_id'] : f['dog_id'];
+        final friendId =
+            f['dog_id'] == dogId ? f['friend_dog_id'] : f['dog_id'];
         return {
           ...f,
           'friend_dog_id': friendId,
           'friend_dog': dogMap[friendId],
         };
       }).toList();
-
     } catch (e) {
       debugPrint('Error getting dog friends: $e');
       return [];
@@ -1101,15 +1085,13 @@ class DogFriendshipService {
   }) async {
     try {
       // Use dog_id and friend_dog_id columns
-      await SupabaseConfig.client
-          .from('dog_friendships')
-          .insert({
-            'dog_id': dog1Id,
-            'friend_dog_id': dog2Id,
-            'formed_through_playdate_id': playdateId,
-            'friendship_level': friendshipLevel,
-            'status': 'accepted',
-          });
+      await SupabaseConfig.client.from('dog_friendships').insert({
+        'dog_id': dog1Id,
+        'friend_dog_id': dog2Id,
+        'formed_through_playdate_id': playdateId,
+        'friendship_level': friendshipLevel,
+        'status': 'accepted',
+      });
 
       return true;
     } catch (e) {
@@ -1119,10 +1101,11 @@ class DogFriendshipService {
   }
 
   /// Get all requests for a user (all statuses)
-  static Future<List<Map<String, dynamic>>> getAllRequests(String userId, String role) async {
+  static Future<List<Map<String, dynamic>>> getAllRequests(
+      String userId, String role) async {
     try {
       String columnName = role == 'invitee' ? 'invitee_id' : 'requester_id';
-      
+
       final requests = await SupabaseConfig.client
           .from('playdate_requests')
           .select('*')
@@ -1131,10 +1114,10 @@ class DogFriendshipService {
 
       // Manually fetch related data for each request
       final enrichedRequests = <Map<String, dynamic>>[];
-      
+
       for (final request in requests) {
         final enrichedRequest = Map<String, dynamic>.from(request);
-        
+
         // Get playdate details
         try {
           final playdate = await SupabaseConfig.client
@@ -1142,10 +1125,11 @@ class DogFriendshipService {
               .select('*')
               .eq('id', request['playdate_id'])
               .maybeSingle();
-          
+
           enrichedRequest['playdate'] = playdate;
         } catch (e) {
-          debugPrint('Error fetching playdate for request ${request['id']}: $e');
+          debugPrint(
+              'Error fetching playdate for request ${request['id']}: $e');
         }
 
         // Get requester details
@@ -1155,20 +1139,21 @@ class DogFriendshipService {
               .select('id, name, avatar_url')
               .eq('id', request['requester_id'])
               .maybeSingle();
-          
+
           enrichedRequest['requester'] = requester;
         } catch (e) {
-          debugPrint('Error fetching requester for request ${request['id']}: $e');
+          debugPrint(
+              'Error fetching requester for request ${request['id']}: $e');
         }
 
-        // Get invitee details  
+        // Get invitee details
         try {
           final invitee = await SupabaseConfig.client
               .from('profiles')
               .select('id, name, avatar_url')
               .eq('id', request['invitee_id'])
               .maybeSingle();
-          
+
           enrichedRequest['invitee'] = invitee;
         } catch (e) {
           debugPrint('Error fetching invitee for request ${request['id']}: $e');
@@ -1181,10 +1166,11 @@ class DogFriendshipService {
               .select('*')
               .eq('id', request['invitee_dog_id'])
               .maybeSingle();
-          
+
           enrichedRequest['invitee_dog'] = inviteeDog;
         } catch (e) {
-          debugPrint('Error fetching invitee dog for request ${request['id']}: $e');
+          debugPrint(
+              'Error fetching invitee dog for request ${request['id']}: $e');
         }
 
         // Get requester dog details
@@ -1194,18 +1180,19 @@ class DogFriendshipService {
               .select('*')
               .eq('id', request['requester_dog_id'])
               .maybeSingle();
-          
+
           enrichedRequest['requester_dog'] = requesterDog;
         } catch (e) {
-          debugPrint('Error fetching requester dog for request ${request['id']}: $e');
+          debugPrint(
+              'Error fetching requester dog for request ${request['id']}: $e');
         }
 
         enrichedRequests.add(enrichedRequest);
       }
 
-      debugPrint('Returning ${enrichedRequests.length} enriched $role requests');
+      debugPrint(
+          'Returning ${enrichedRequests.length} enriched $role requests');
       return enrichedRequests;
-
     } catch (e) {
       debugPrint('Error getting $role requests for user $userId: $e');
       return [];
@@ -1234,11 +1221,12 @@ class PlaydateQueryService {
   }
 
   /// Fetch upcoming & past playdates for a user (based on participation) with aggregated participants.
-  static Future<Map<String, List<Map<String, dynamic>>>> getUserPlaydatesAggregated(
+  static Future<Map<String, List<Map<String, dynamic>>>>
+      getUserPlaydatesAggregated(
     String userId, {
-  int upcomingLimit = 50,
+    int upcomingLimit = 50,
     int upcomingOffset = 0,
-  int pastLimit = 50,
+    int pastLimit = 50,
     int pastOffset = 0,
   }) async {
     try {
@@ -1256,9 +1244,12 @@ class PlaydateQueryService {
           .eq('organizer_id', userId);
 
       // Combine both participant and organizer playdates
-      final participantIds = participantRows.map((r) => r['playdate_id']).toList();
+      final participantIds =
+          participantRows.map((r) => r['playdate_id']).toList();
       final organizerIds = organizerRows.map((r) => r['id']).toList();
-      final playdateIds = [...participantIds, ...organizerIds].toSet().toList(); // Remove duplicates
+      final playdateIds = [...participantIds, ...organizerIds]
+          .toSet()
+          .toList(); // Remove duplicates
 
       if (playdateIds.isEmpty) {
         return {
@@ -1318,7 +1309,8 @@ class PlaydateQueryService {
           .order('updated_at', ascending: false)
           .limit(50);
 
-      final results = await Future.wait([upcomingFuture, pastFuture, cancelledFuture]);
+      final results =
+          await Future.wait([upcomingFuture, pastFuture, cancelledFuture]);
       final upcoming = (results[0] as List).cast<dynamic>();
       final past = (results[1] as List).cast<dynamic>();
       final cancelled = (results[2] as List).cast<dynamic>();
@@ -1333,12 +1325,14 @@ class PlaydateQueryService {
       Map<String, List<Map<String, dynamic>>> participantsByPlaydate = {};
       if (allFetchedIds.isNotEmpty) {
         final participantRows = await SupabaseConfig.client
-            .from('playdate_participants')
-            .select('playdate_id, user_id, dog_id, joined_at')
-            .filter('playdate_id', 'in', _buildInClause(allFetchedIds)) as List<dynamic>;
+                .from('playdate_participants')
+                .select('playdate_id, user_id, dog_id, joined_at')
+                .filter('playdate_id', 'in', _buildInClause(allFetchedIds))
+            as List<dynamic>;
 
         final participants = participantRows
-            .map<Map<String, dynamic>>((row) => Map<String, dynamic>.from(row as Map))
+            .map<Map<String, dynamic>>(
+                (row) => Map<String, dynamic>.from(row as Map))
             .toList();
 
         final userIds = participants
@@ -1397,17 +1391,21 @@ class PlaydateQueryService {
             participant['dog'] = dogMap[dogId];
           }
 
-          participantsByPlaydate.putIfAbsent(playdateId, () => []).add(participant);
+          participantsByPlaydate
+              .putIfAbsent(playdateId, () => [])
+              .add(participant);
         }
       }
 
       // 4. Attach participants lists
-      List<Map<String, dynamic>> attach(List<dynamic> list) => list.map<Map<String, dynamic>>((p) {
-        final map = Map<String, dynamic>.from(p as Map);
-        map['participants'] = participantsByPlaydate[p['id']?.toString()] ?? [];
-        map['title'] = map['title'] ?? 'Playdate';
-        return map;
-      }).toList();
+      List<Map<String, dynamic>> attach(List<dynamic> list) =>
+          list.map<Map<String, dynamic>>((p) {
+            final map = Map<String, dynamic>.from(p as Map);
+            map['participants'] =
+                participantsByPlaydate[p['id']?.toString()] ?? [];
+            map['title'] = map['title'] ?? 'Playdate';
+            return map;
+          }).toList();
 
       return {
         'upcoming': attach(upcoming),

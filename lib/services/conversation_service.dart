@@ -16,7 +16,8 @@ class ConversationService {
     final orderedUser1 = ids[0];
     final orderedUser2 = ids[1];
 
-    debugPrint('💬 Getting or creating conversation between $orderedUser1 and $orderedUser2');
+    debugPrint(
+        '💬 Getting or creating conversation between $orderedUser1 and $orderedUser2');
 
     try {
       // Check if conversation already exists
@@ -51,7 +52,8 @@ class ConversationService {
   }
 
   /// Get all conversations for a user with latest message preview
-  static Future<List<Map<String, dynamic>>> getUserConversations(String userId) async {
+  static Future<List<Map<String, dynamic>>> getUserConversations(
+      String userId) async {
     try {
       final data = await _client
           .from('conversations')
@@ -70,7 +72,7 @@ class ConversationService {
       return (data as List).map((conv) {
         final user1 = conv['user1'] as Map<String, dynamic>?;
         final user2 = conv['user2'] as Map<String, dynamic>?;
-        
+
         // Determine who the "other" user is
         final isUser1 = user1?['id'] == userId;
         final otherUser = isUser1 ? user2 : user1;
@@ -117,7 +119,8 @@ class ConversationService {
       return null;
     }
 
-    debugPrint('🎾 Creating playdate conversation for $playdateId with ${participantUserIds.length} participants');
+    debugPrint(
+        '🎾 Creating playdate conversation for $playdateId with ${participantUserIds.length} participants');
 
     try {
       // Check if conversation already exists for this playdate
@@ -134,7 +137,7 @@ class ConversationService {
 
       // Determine if this is a group (2+ participants) or 1:1
       final isGroup = participantUserIds.length > 2;
-      
+
       // Create new conversation
       final conversationData = <String, dynamic>{
         'is_group': isGroup,
@@ -165,14 +168,16 @@ class ConversationService {
         await _client.from('conversation_participants').insert({
           'conversation_id': conversationId,
           'user_id': userId,
-          'role': i == 0 ? 'admin' : 'member', // First participant is admin (organizer)
+          'role': i == 0
+              ? 'admin'
+              : 'member', // First participant is admin (organizer)
         });
       }
       debugPrint('✅ Added ${participantUserIds.length} participants');
 
       // Post welcome system message
       await postSystemMessage(
-        conversationId, 
+        conversationId,
         '🎾 Playdate chat created! Coordinate details here.',
       );
 
@@ -184,21 +189,18 @@ class ConversationService {
   }
 
   /// Get conversation for a specific playdate
-  static Future<Map<String, dynamic>?> getPlaydateConversation(String playdateId) async {
+  static Future<Map<String, dynamic>?> getPlaydateConversation(
+      String playdateId) async {
     try {
-      final data = await _client
-          .from('conversations')
-          .select('''
+      final data = await _client.from('conversations').select('''
             id,
             is_group,
             group_name,
             playdate_id,
             last_message_at,
             created_at
-          ''')
-          .eq('playdate_id', playdateId)
-          .maybeSingle();
-      
+          ''').eq('playdate_id', playdateId).maybeSingle();
+
       return data;
     } catch (e) {
       debugPrint('❌ Error fetching playdate conversation: $e');
@@ -207,18 +209,16 @@ class ConversationService {
   }
 
   /// Get all participants in a group conversation
-  static Future<List<Map<String, dynamic>>> getGroupParticipants(String conversationId) async {
+  static Future<List<Map<String, dynamic>>> getGroupParticipants(
+      String conversationId) async {
     try {
-      final data = await _client
-          .from('conversation_participants')
-          .select('''
+      final data = await _client.from('conversation_participants').select('''
             id,
             user_id,
             role,
             joined_at,
             user:user_id(id, name, avatar_url)
-          ''')
-          .eq('conversation_id', conversationId);
+          ''').eq('conversation_id', conversationId);
 
       return (data as List).cast<Map<String, dynamic>>();
     } catch (e) {
@@ -228,7 +228,8 @@ class ConversationService {
   }
 
   /// Add a participant to a group conversation
-  static Future<bool> addParticipant(String conversationId, String userId, {String role = 'member'}) async {
+  static Future<bool> addParticipant(String conversationId, String userId,
+      {String role = 'member'}) async {
     try {
       await _client.from('conversation_participants').insert({
         'conversation_id': conversationId,
@@ -244,7 +245,8 @@ class ConversationService {
   }
 
   /// Post a system message (for playdate updates)
-  static Future<void> postSystemMessage(String conversationId, String text) async {
+  static Future<void> postSystemMessage(
+      String conversationId, String text) async {
     try {
       await _client.from('messages').insert({
         'conversation_id': conversationId,
@@ -260,15 +262,15 @@ class ConversationService {
   }
 
   /// Get all conversations for a user (including group chats)
-  static Future<List<Map<String, dynamic>>> getAllUserConversations(String userId) async {
+  static Future<List<Map<String, dynamic>>> getAllUserConversations(
+      String userId) async {
     try {
       // Get direct conversations (1:1)
       final directConversations = await getUserConversations(userId);
 
       // Get group conversations via participants table
-      final groupData = await _client
-          .from('conversation_participants')
-          .select('''
+      final groupData =
+          await _client.from('conversation_participants').select('''
             conversation:conversation_id(
               id,
               is_group,
@@ -277,22 +279,23 @@ class ConversationService {
               last_message_at,
               created_at
             )
-          ''')
-          .eq('user_id', userId);
+          ''').eq('user_id', userId);
 
       final groupConversations = (groupData as List)
-          .where((item) => item['conversation'] != null && item['conversation']['is_group'] == true)
+          .where((item) =>
+              item['conversation'] != null &&
+              item['conversation']['is_group'] == true)
           .map<Map<String, dynamic>>((item) {
-            final conv = item['conversation'] as Map<String, dynamic>;
-            return {
-              'id': conv['id'],
-              'is_group': true,
-              'group_name': conv['group_name'] ?? 'Playdate Chat',
-              'playdate_id': conv['playdate_id'],
-              'last_message_at': conv['last_message_at'],
-              'created_at': conv['created_at'],
-            };
-          }).toList();
+        final conv = item['conversation'] as Map<String, dynamic>;
+        return {
+          'id': conv['id'],
+          'is_group': true,
+          'group_name': conv['group_name'] ?? 'Playdate Chat',
+          'playdate_id': conv['playdate_id'],
+          'last_message_at': conv['last_message_at'],
+          'created_at': conv['created_at'],
+        };
+      }).toList();
 
       // Combine and sort by last_message_at
       final allConversations = [...directConversations, ...groupConversations];

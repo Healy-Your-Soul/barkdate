@@ -4,7 +4,9 @@ class PlaydatesScreen extends StatefulWidget {
   final int? initialTabIndex;
   final String? highlightPlaydateId;
 
-  const PlaydatesScreen({Key? key, this.initialTabIndex, this.highlightPlaydateId}) : super(key: key);
+  const PlaydatesScreen(
+      {Key? key, this.initialTabIndex, this.highlightPlaydateId})
+      : super(key: key);
 
   @override
   State<PlaydatesScreen> createState() => _PlaydatesScreenState();

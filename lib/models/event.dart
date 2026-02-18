@@ -77,32 +77,33 @@ class Event {
     String? status,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) => Event(
-    id: id ?? this.id,
-    title: title ?? this.title,
-    description: description ?? this.description,
-    organizerId: organizerId ?? this.organizerId,
-    organizerType: organizerType ?? this.organizerType,
-    organizerName: organizerName ?? this.organizerName,
-    organizerAvatarUrl: organizerAvatarUrl ?? this.organizerAvatarUrl,
-    startTime: startTime ?? this.startTime,
-    endTime: endTime ?? this.endTime,
-    location: location ?? this.location,
-    latitude: latitude ?? this.latitude,
-    longitude: longitude ?? this.longitude,
-    category: category ?? this.category,
-    maxParticipants: maxParticipants ?? this.maxParticipants,
-    currentParticipants: currentParticipants ?? this.currentParticipants,
-    targetAgeGroups: targetAgeGroups ?? this.targetAgeGroups,
-    targetSizes: targetSizes ?? this.targetSizes,
-    price: price ?? this.price,
-    photoUrls: photoUrls ?? this.photoUrls,
-    requiresRegistration: requiresRegistration ?? this.requiresRegistration,
-    visibility: visibility ?? this.visibility,
-    status: status ?? this.status,
-    createdAt: createdAt ?? this.createdAt,
-    updatedAt: updatedAt ?? this.updatedAt,
-  );
+  }) =>
+      Event(
+        id: id ?? this.id,
+        title: title ?? this.title,
+        description: description ?? this.description,
+        organizerId: organizerId ?? this.organizerId,
+        organizerType: organizerType ?? this.organizerType,
+        organizerName: organizerName ?? this.organizerName,
+        organizerAvatarUrl: organizerAvatarUrl ?? this.organizerAvatarUrl,
+        startTime: startTime ?? this.startTime,
+        endTime: endTime ?? this.endTime,
+        location: location ?? this.location,
+        latitude: latitude ?? this.latitude,
+        longitude: longitude ?? this.longitude,
+        category: category ?? this.category,
+        maxParticipants: maxParticipants ?? this.maxParticipants,
+        currentParticipants: currentParticipants ?? this.currentParticipants,
+        targetAgeGroups: targetAgeGroups ?? this.targetAgeGroups,
+        targetSizes: targetSizes ?? this.targetSizes,
+        price: price ?? this.price,
+        photoUrls: photoUrls ?? this.photoUrls,
+        requiresRegistration: requiresRegistration ?? this.requiresRegistration,
+        visibility: visibility ?? this.visibility,
+        status: status ?? this.status,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
 
   factory Event.fromJson(Map<String, dynamic> json) {
     return Event(
@@ -126,7 +127,8 @@ class Event {
       price: json['price'] as double?,
       photoUrls: List<String>.from(json['photo_urls'] ?? []),
       requiresRegistration: json['requires_registration'] as bool? ?? true,
-      visibility: json['visibility'] as String? ?? (json['is_public'] == true ? 'public' : 'invite_only'),
+      visibility: json['visibility'] as String? ??
+          (json['is_public'] == true ? 'public' : 'invite_only'),
       status: json['status'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -178,7 +180,7 @@ class Event {
   String get formattedDate {
     final now = DateTime.now();
     final difference = startTime.difference(now);
-    
+
     if (difference.inDays == 0) {
       return 'Today at ${_formatTime(startTime)}';
     } else if (difference.inDays == 1) {
@@ -204,8 +206,20 @@ class Event {
   }
 
   String _formatMonthDay(DateTime dateTime) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return '${months[dateTime.month - 1]} ${dateTime.day}';
   }
 

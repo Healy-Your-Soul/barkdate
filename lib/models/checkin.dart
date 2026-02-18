@@ -40,20 +40,21 @@ class CheckIn {
     DateTime? scheduledFor,
     double? latitude,
     double? longitude,
-  }) => CheckIn(
-    id: id ?? this.id,
-    userId: userId ?? this.userId,
-    dogId: dogId ?? this.dogId,
-    parkId: parkId ?? this.parkId,
-    parkName: parkName ?? this.parkName,
-    checkedInAt: checkedInAt ?? this.checkedInAt,
-    checkedOutAt: checkedOutAt ?? this.checkedOutAt,
-    status: status ?? this.status,
-    isFutureCheckin: isFutureCheckin ?? this.isFutureCheckin,
-    scheduledFor: scheduledFor ?? this.scheduledFor,
-    latitude: latitude ?? this.latitude,
-    longitude: longitude ?? this.longitude,
-  );
+  }) =>
+      CheckIn(
+        id: id ?? this.id,
+        userId: userId ?? this.userId,
+        dogId: dogId ?? this.dogId,
+        parkId: parkId ?? this.parkId,
+        parkName: parkName ?? this.parkName,
+        checkedInAt: checkedInAt ?? this.checkedInAt,
+        checkedOutAt: checkedOutAt ?? this.checkedOutAt,
+        status: status ?? this.status,
+        isFutureCheckin: isFutureCheckin ?? this.isFutureCheckin,
+        scheduledFor: scheduledFor ?? this.scheduledFor,
+        latitude: latitude ?? this.latitude,
+        longitude: longitude ?? this.longitude,
+      );
 
   factory CheckIn.fromJson(Map<String, dynamic> json) {
     return CheckIn(
@@ -63,7 +64,7 @@ class CheckIn {
       parkId: json['park_id'] as String,
       parkName: json['park_name'] as String? ?? 'Unknown Park',
       checkedInAt: DateTime.parse(json['checked_in_at'] as String),
-      checkedOutAt: json['checked_out_at'] != null 
+      checkedOutAt: json['checked_out_at'] != null
           ? DateTime.parse(json['checked_out_at'] as String)
           : null,
       status: json['status'] as String,
@@ -107,10 +108,10 @@ class CheckIn {
   String get formattedDuration {
     final duration = this.duration;
     if (duration == null) return 'Still active';
-    
+
     final hours = duration.inHours;
     final minutes = duration.inMinutes % 60;
-    
+
     if (hours > 0) {
       return '${hours}h ${minutes}m';
     } else {
@@ -121,7 +122,7 @@ class CheckIn {
   String get formattedCheckInTime {
     final now = DateTime.now();
     final difference = now.difference(checkedInAt);
-    
+
     if (difference.inMinutes < 1) {
       return 'Just now';
     } else if (difference.inMinutes < 60) {
@@ -135,10 +136,10 @@ class CheckIn {
 
   String get formattedScheduledTime {
     if (scheduledFor == null) return '';
-    
+
     final now = DateTime.now();
     final difference = scheduledFor!.difference(now);
-    
+
     if (difference.isNegative) {
       return 'Overdue';
     } else if (difference.inMinutes < 60) {

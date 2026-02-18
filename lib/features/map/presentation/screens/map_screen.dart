@@ -56,10 +56,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
       // Update viewport provider
       final location = LatLng(position.latitude, position.longitude);
-      ref.read(mapViewportProvider.notifier).state = ref.read(mapViewportProvider).copyWith(
-        center: location,
-        zoom: 14.0,
-      );
+      ref.read(mapViewportProvider.notifier).state =
+          ref.read(mapViewportProvider).copyWith(
+                center: location,
+                zoom: 14.0,
+              );
 
       setState(() {
         _isLoadingLocation = false;
@@ -80,23 +81,27 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (_mapController == null) return;
 
     final bounds = await _mapController!.getVisibleRegion();
-    final position = await _mapController!.getVisibleRegion(); // Wait, getVisibleRegion returns LatLngBounds
+    final position = await _mapController!
+        .getVisibleRegion(); // Wait, getVisibleRegion returns LatLngBounds
     // We need camera position for center/zoom, but getVisibleRegion gives bounds.
     // We can't get CameraPosition directly from controller easily without tracking it or using getCameraPosition (if available, mostly not in controller).
     // Actually we can track it in onCameraMove.
-    
+
     // But better: just update bounds in provider, which triggers fetch.
     // We also need center for search radius.
-    
+
     // Let's assume we tracked center in onCameraMove but didn't update provider to avoid rebuilds.
     // Or we can just use the bounds center.
-    final centerLat = (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
-    final centerLng = (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
-    
-    ref.read(mapViewportProvider.notifier).state = ref.read(mapViewportProvider).copyWith(
-      center: LatLng(centerLat, centerLng),
-      bounds: bounds,
-    );
+    final centerLat =
+        (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
+    final centerLng =
+        (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
+
+    ref.read(mapViewportProvider.notifier).state =
+        ref.read(mapViewportProvider).copyWith(
+              center: LatLng(centerLat, centerLng),
+              bounds: bounds,
+            );
   }
 
   Future<void> _recenterMap() async {
@@ -104,15 +109,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      
+
       final location = LatLng(position.latitude, position.longitude);
-      
+
       if (_mapController != null) {
         await _mapController!.animateCamera(
           CameraUpdate.newLatLngZoom(location, 14.0),
         );
       }
-      
+
       // Provider update will happen in _onCameraIdle
     } catch (e) {
       if (mounted) {
@@ -129,29 +134,34 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     // Places
     for (final place in data.places) {
-       // Filter by category if needed (though repository might have done it, or we do it here)
-       if (filters.category != 'all' && place.category.name != filters.category) {
-         // Simple string check, might need better mapping
-         // Actually PlaceCategory is an enum.
-         // Let's map filter string to enum or check display name
-         if (place.category.name.toLowerCase() != filters.category && 
-             place.category.displayName.toLowerCase() != filters.category) {
-            // This is a bit loose, but okay for now.
-            // Better: 'park' -> PlaceCategory.park
-            if (filters.category == 'park' && place.category != PlaceCategory.park) continue;
-            if (filters.category == 'cafe' && place.category != PlaceCategory.restaurant) continue; // Assuming cafe is restaurant
-            if (filters.category == 'store' && place.category != PlaceCategory.petStore) continue;
-         }
-       }
+      // Filter by category if needed (though repository might have done it, or we do it here)
+      if (filters.category != 'all' &&
+          place.category.name != filters.category) {
+        // Simple string check, might need better mapping
+        // Actually PlaceCategory is an enum.
+        // Let's map filter string to enum or check display name
+        if (place.category.name.toLowerCase() != filters.category &&
+            place.category.displayName.toLowerCase() != filters.category) {
+          // This is a bit loose, but okay for now.
+          // Better: 'park' -> PlaceCategory.park
+          if (filters.category == 'park' &&
+              place.category != PlaceCategory.park) continue;
+          if (filters.category == 'cafe' &&
+              place.category != PlaceCategory.restaurant)
+            continue; // Assuming cafe is restaurant
+          if (filters.category == 'store' &&
+              place.category != PlaceCategory.petStore) continue;
+        }
+      }
 
-       if (filters.openNow && !place.isOpen) continue;
+      if (filters.openNow && !place.isOpen) continue;
 
-       final dogCount = data.checkInCounts[place.placeId] ?? 0;
-       final snippet = dogCount > 0
+      final dogCount = data.checkInCounts[place.placeId] ?? 0;
+      final snippet = dogCount > 0
           ? '$dogCount 🐕 here now • ${place.distanceText}'
           : '${place.category.icon} ${place.distanceText}';
 
-       newMarkers.add(Marker(
+      newMarkers.add(Marker(
         markerId: MarkerId('place_${place.placeId}'),
         position: LatLng(place.latitude, place.longitude),
         infoWindow: InfoWindow(
@@ -179,7 +189,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             title: event.title,
             snippet: '${event.categoryIcon} ${event.formattedDate}',
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
           onTap: () {
             ref.read(mapSelectionProvider.notifier).selectEvent(event);
           },
@@ -237,7 +248,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 children: [
                   const Icon(Icons.location_off, size: 64, color: Colors.grey),
                   const SizedBox(height: 16),
-                  Text('Location unavailable', style: Theme.of(context).textTheme.titleLarge),
+                  Text('Location unavailable',
+                      style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 8),
                   ElevatedButton.icon(
                     onPressed: _getUserLocation,
@@ -290,29 +302,35 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
           // Loading indicator
           if (mapDataAsync.isLoading)
-             Positioned(
-               top: 50,
-               left: 0,
-               right: 0,
-               child: Center(
-                 child: Container(
-                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                   decoration: BoxDecoration(
-                     color: Colors.white,
-                     borderRadius: BorderRadius.circular(20),
-                     boxShadow: [BoxShadow(blurRadius: 4, color: Colors.black12)],
-                   ),
-                   child: const Row(
-                     mainAxisSize: MainAxisSize.min,
-                     children: [
-                       SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                       SizedBox(width: 8),
-                       Text('Searching area...'),
-                     ],
-                   ),
-                 ),
-               ),
-             ),
+            Positioned(
+              top: 50,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(blurRadius: 4, color: Colors.black12)
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2)),
+                      SizedBox(width: 8),
+                      Text('Searching area...'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
           // Bottom UI
           Positioned(
@@ -332,7 +350,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(20)),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.1),
@@ -346,7 +365,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           children: [
                             const Text(
                               'Filters',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 12),
                             const MapFilterChips(),
@@ -355,7 +375,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                               width: double.infinity,
                               child: AnimatedAiButton(
                                 onPressed: () {
-                                  ref.read(mapSelectionProvider.notifier).showAiAssistant();
+                                  ref
+                                      .read(mapSelectionProvider.notifier)
+                                      .showAiAssistant();
                                 },
                               ),
                             ),
@@ -398,7 +420,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               onTap: (placeId, placeName) {
                 // Find the place and select it
                 final places = mapDataAsync.value?.places ?? [];
-                final place = places.where((p) => p.placeId == placeId).firstOrNull;
+                final place =
+                    places.where((p) => p.placeId == placeId).firstOrNull;
                 if (place != null) {
                   ref.read(mapSelectionProvider.notifier).selectPlace(place);
                 }
@@ -493,7 +516,8 @@ class _AnimatedAiButtonState extends State<AnimatedAiButton>
               borderRadius: BorderRadius.circular(12),
               onTap: widget.onPressed,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -513,7 +537,8 @@ class _AnimatedAiButtonState extends State<AnimatedAiButton>
                     ),
                     const SizedBox(width: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(8),
@@ -545,7 +570,8 @@ class FloatingCheckInIndicator extends StatefulWidget {
   const FloatingCheckInIndicator({super.key, this.onTap});
 
   @override
-  State<FloatingCheckInIndicator> createState() => _FloatingCheckInIndicatorState();
+  State<FloatingCheckInIndicator> createState() =>
+      _FloatingCheckInIndicatorState();
 }
 
 class _FloatingCheckInIndicatorState extends State<FloatingCheckInIndicator> {

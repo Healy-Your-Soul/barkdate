@@ -113,7 +113,8 @@ class AchievementToast extends StatelessWidget {
               onPressed: onDismiss,
               style: TextButton.styleFrom(
                 backgroundColor: Colors.white.withOpacity(0.2),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
@@ -141,7 +142,7 @@ void showAchievementToast(
   required String icon,
 }) {
   late OverlayEntry overlayEntry;
-  
+
   overlayEntry = OverlayEntry(
     builder: (context) => Positioned(
       top: MediaQuery.of(context).padding.top + 20,
@@ -171,9 +172,9 @@ void showAchievementToast(
       ),
     ),
   );
-  
+
   Overlay.of(context).insert(overlayEntry);
-  
+
   // Auto-dismiss after 5 seconds
   Future.delayed(const Duration(seconds: 5), () {
     if (overlayEntry.mounted) {

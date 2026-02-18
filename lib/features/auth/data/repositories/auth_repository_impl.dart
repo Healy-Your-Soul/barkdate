@@ -13,12 +13,16 @@ class AuthRepositoryImpl implements AuthRepository {
   User? get currentUser => _auth.currentUser;
 
   @override
-  Future<AuthResponse> signIn({required String email, required String password}) {
+  Future<AuthResponse> signIn(
+      {required String email, required String password}) {
     return _auth.signInWithPassword(email: email, password: password);
   }
 
   @override
-  Future<AuthResponse> signUp({required String email, required String password, Map<String, dynamic>? data}) {
+  Future<AuthResponse> signUp(
+      {required String email,
+      required String password,
+      Map<String, dynamic>? data}) {
     return _auth.signUp(email: email, password: password, data: data);
   }
 

@@ -94,76 +94,75 @@ class _AcceptShareScreenState extends ConsumerState<AcceptShareScreen> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-      appBar: AppBar(
-        title: const Text('Connect to Dog'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Icon(Icons.pets, size: 64, color: Colors.grey),
-            const SizedBox(height: 24),
-            Text(
-              'Enter Share Code',
-              style: AppTypography.h2(),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Enter the 8-character code shared by the dog owner.',
-              style: AppTypography.bodySmall(),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            
-            TextField(
-              controller: _codeController,
-              decoration: InputDecoration(
-                labelText: 'Share Code',
-                hintText: 'e.g. ABC123XY',
-                border: const OutlineInputBorder(),
-                errorText: _requiresPin ? null : _error,
-                prefixIcon: const Icon(Icons.vpn_key),
+        appBar: AppBar(
+          title: const Text('Connect to Dog'),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(Icons.pets, size: 64, color: Colors.grey),
+              const SizedBox(height: 24),
+              Text(
+                'Enter Share Code',
+                style: AppTypography.h2(),
+                textAlign: TextAlign.center,
               ),
-              textCapitalization: TextCapitalization.characters,
-              onChanged: (_) => setState(() => _error = null),
-            ),
-            
-            if (_requiresPin) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
+              Text(
+                'Enter the 8-character code shared by the dog owner.',
+                style: AppTypography.bodySmall(),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
               TextField(
-                controller: _pinController,
+                controller: _codeController,
                 decoration: InputDecoration(
-                  labelText: 'PIN Code',
-                  hintText: 'Enter 6-digit PIN',
+                  labelText: 'Share Code',
+                  hintText: 'e.g. ABC123XY',
                   border: const OutlineInputBorder(),
-                  errorText: _error,
-                  prefixIcon: const Icon(Icons.lock),
+                  errorText: _requiresPin ? null : _error,
+                  prefixIcon: const Icon(Icons.vpn_key),
                 ),
-                keyboardType: TextInputType.number,
-                maxLength: 6,
+                textCapitalization: TextCapitalization.characters,
+                onChanged: (_) => setState(() => _error = null),
+              ),
+              if (_requiresPin) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _pinController,
+                  decoration: InputDecoration(
+                    labelText: 'PIN Code',
+                    hintText: 'Enter 6-digit PIN',
+                    border: const OutlineInputBorder(),
+                    errorText: _error,
+                    prefixIcon: const Icon(Icons.lock),
+                  ),
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                ),
+              ],
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _submitCode,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(_requiresPin ? 'Verify PIN & Connect' : 'Connect'),
               ),
             ],
-
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _submitCode,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : Text(_requiresPin ? 'Verify PIN & Connect' : 'Connect'),
-            ),
-          ],
+          ),
         ),
-      ),
       ), // Close GestureDetector
     );
   }

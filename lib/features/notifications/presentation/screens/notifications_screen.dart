@@ -7,10 +7,11 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:barkdate/supabase/notification_service.dart';
 
 /// Provider for notifications
-final notificationsProvider = StreamProvider.autoDispose<List<Map<String, dynamic>>>((ref) {
+final notificationsProvider =
+    StreamProvider.autoDispose<List<Map<String, dynamic>>>((ref) {
   final user = SupabaseConfig.auth.currentUser;
   if (user == null) return Stream.value([]);
-  
+
   return NotificationService.streamUserNotifications(user.id);
 });
 
@@ -113,12 +114,14 @@ class NotificationsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildNotificationItem(BuildContext context, Map<String, dynamic> notification) {
+  Widget _buildNotificationItem(
+      BuildContext context, Map<String, dynamic> notification) {
     final type = notification['type'] as String? ?? 'general';
     final title = notification['title'] as String? ?? 'Notification';
     final body = notification['body'] as String? ?? '';
     final isRead = notification['is_read'] as bool? ?? false;
-    final createdAt = DateTime.tryParse(notification['created_at'] ?? '') ?? DateTime.now();
+    final createdAt =
+        DateTime.tryParse(notification['created_at'] ?? '') ?? DateTime.now();
     final notificationId = notification['id'] as String?;
     final relatedId = notification['related_id'] as String?;
     final metadata = notification['metadata'] as Map<String, dynamic>?;
@@ -158,10 +161,10 @@ class NotificationsScreen extends ConsumerWidget {
         if (notificationId != null && !isRead) {
           await NotificationService.markAsRead(notificationId);
         }
-        
+
         // 2. Route based on type
         if (!context.mounted) return;
-        
+
         switch (type) {
           case 'playdate_request':
           case 'playdate_confirmed':
@@ -214,7 +217,8 @@ class NotificationsScreen extends ConsumerWidget {
             const SizedBox(height: 4),
             Text(
               body,
-              style: AppTypography.bodySmall().copyWith(color: Colors.grey[600]),
+              style:
+                  AppTypography.bodySmall().copyWith(color: Colors.grey[600]),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -247,8 +251,7 @@ class NotificationsScreen extends ConsumerWidget {
 
       await SupabaseConfig.client
           .from('notifications')
-          .update({'is_read': true})
-          .eq('user_id', user.id);
+          .update({'is_read': true}).eq('user_id', user.id);
 
       ref.invalidate(notificationsProvider);
 

@@ -34,17 +34,16 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
 
   void _onBark() {
     setState(() => _isBarked = !_isBarked);
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          _isBarked 
-            ? 'Barked! ${widget.dog.ownerName} will be notified.' 
-            : 'Bark removed',
+          _isBarked
+              ? 'Barked! ${widget.dog.ownerName} will be notified.'
+              : 'Bark removed',
         ),
-        backgroundColor: _isBarked 
-          ? Theme.of(context).colorScheme.primary 
-          : Colors.grey,
+        backgroundColor:
+            _isBarked ? Theme.of(context).colorScheme.primary : Colors.grey,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
@@ -107,7 +106,7 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
               ),
             ),
             const SizedBox(height: 24),
-            
+
             ListTile(
               leading: const Icon(Icons.flag_outlined, color: Colors.red),
               title: const Text('Report'),
@@ -206,7 +205,7 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
               },
             ),
           ),
-          
+
           // Gradient overlay
           Container(
             height: MediaQuery.of(context).size.height * 0.6,
@@ -223,7 +222,7 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
               ),
             ),
           ),
-          
+
           // Top bar
           SafeArea(
             child: Padding(
@@ -247,7 +246,7 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                       ),
                     ),
                   ),
-                  
+
                   // Photo indicator
                   if (widget.dog.photos.length > 1)
                     Container(
@@ -268,7 +267,7 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                         ),
                       ),
                     ),
-                  
+
                   // More options button
                   GestureDetector(
                     onTap: _showMoreOptions,
@@ -289,7 +288,7 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
               ),
             ),
           ),
-          
+
           // Content sheet
           DraggableScrollableSheet(
             initialChildSize: 0.45,
@@ -322,7 +321,7 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        
+
                         // Dog name and basic info
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,17 +332,25 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                                 children: [
                                   Text(
                                     widget.dog.name,
-                                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${widget.dog.breed}, ${widget.dog.age} years old',
-                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      color: Theme.of(context).colorScheme.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                   ),
                                 ],
                               ),
@@ -354,7 +361,9 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primaryContainer,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
@@ -369,7 +378,7 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                           ],
                         ),
                         const SizedBox(height: 24),
-                        
+
                         // Owner info
                         Container(
                           padding: const EdgeInsets.all(16),
@@ -377,14 +386,19 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                             color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .outline
+                                  .withValues(alpha: 0.2),
                             ),
                           ),
                           child: Row(
                             children: [
                               CircleAvatar(
                                 radius: 20,
-                                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
                                 child: Icon(
                                   Icons.person,
                                   color: Theme.of(context).colorScheme.primary,
@@ -397,15 +411,24 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                                   children: [
                                     Text(
                                       widget.dog.ownerName,
-                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                     ),
                                     Text(
                                       'Dog parent',
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.6),
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -414,28 +437,32 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        
+
                         // Dog details
                         _buildDetailSection('Details', [
                           _buildDetailRow('Size', widget.dog.size),
                           _buildDetailRow('Gender', widget.dog.gender),
-                          _buildDetailRow('Energy Level', 'High'), // TODO: Add to model
+                          _buildDetailRow(
+                              'Energy Level', 'High'), // TODO: Add to model
                         ]),
-                        
+
                         if (widget.dog.bio.isNotEmpty) ...[
                           const SizedBox(height: 24),
                           _buildDetailSection('About ${widget.dog.name}', [
                             Text(
                               widget.dog.bio,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                height: 1.5,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    height: 1.5,
+                                  ),
                             ),
                           ]),
                         ],
-                        
+
                         const SizedBox(height: 32),
-                        
+
                         // Action buttons
                         Row(
                           children: [
@@ -444,18 +471,23 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                               child: ElevatedButton.icon(
                                 onPressed: _onBark,
                                 icon: Icon(
-                                  _isBarked ? Icons.favorite : Icons.favorite_border,
+                                  _isBarked
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
                                   color: _isBarked ? Colors.red : null,
                                 ),
                                 label: Text(_isBarked ? 'Barked' : 'Bark'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: _isBarked 
-                                    ? Colors.red.withValues(alpha: 0.1)
-                                    : Theme.of(context).colorScheme.primaryContainer,
-                                  foregroundColor: _isBarked 
-                                    ? Colors.red 
-                                    : Theme.of(context).colorScheme.primary,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  backgroundColor: _isBarked
+                                      ? Colors.red.withValues(alpha: 0.1)
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .primaryContainer,
+                                  foregroundColor: _isBarked
+                                      ? Colors.red
+                                      : Theme.of(context).colorScheme.primary,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -463,7 +495,7 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            
+
                             // Message button
                             Expanded(
                               child: ElevatedButton.icon(
@@ -471,9 +503,12 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                                 icon: const Icon(Icons.message),
                                 label: const Text('Message'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(context).colorScheme.primary,
-                                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  backgroundColor:
+                                      Theme.of(context).colorScheme.primary,
+                                  foregroundColor:
+                                      Theme.of(context).colorScheme.onPrimary,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -482,9 +517,9 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                             ),
                           ],
                         ),
-                        
+
                         const SizedBox(height: 12),
-                        
+
                         // Share button (full width)
                         SizedBox(
                           width: double.infinity,
@@ -493,8 +528,12 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                             icon: const Icon(Icons.share),
                             label: const Text('Share Dog Profile'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                              foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                              backgroundColor: Theme.of(context)
+                                  .colorScheme
+                                  .secondaryContainer,
+                              foregroundColor: Theme.of(context)
+                                  .colorScheme
+                                  .onSecondaryContainer,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -503,7 +542,7 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        
+
                         // Suggest Playdate button
                         SizedBox(
                           width: double.infinity,
@@ -519,7 +558,7 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                             ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 32),
                       ],
                     ),
@@ -540,8 +579,8 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
         Text(
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 12),
         ...children,
@@ -558,14 +597,17 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
           Text(
             label,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
+                ),
           ),
           Text(
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+                  fontWeight: FontWeight.w600,
+                ),
           ),
         ],
       ),

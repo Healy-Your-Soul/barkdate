@@ -36,7 +36,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     try {
-      final profile = await SupabaseService.selectSingle('users', filters: {'id': user.id});
+      final profile =
+          await SupabaseService.selectSingle('users', filters: {'id': user.id});
       if (!mounted) return;
       setState(() {
         _searchRadiusKm = (profile?['search_radius_km'] as int?) ?? 25;
@@ -60,8 +61,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await SupabaseConfig.client
           .from('users')
-          .update({'search_radius_km': radiusKm})
-          .eq('id', userId);
+          .update({'search_radius_km': radiusKm}).eq('id', userId);
       CacheService().invalidate('nearby_$userId');
     } catch (e) {
       debugPrint('Error updating search radius: $e');
@@ -72,7 +72,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     }
   }
-
 
   void _showSignOutDialog(BuildContext context) {
     showDialog(
@@ -89,21 +88,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             TextButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                
+
                 try {
                   final userId = SupabaseConfig.auth.currentUser?.id;
-                  
+
                   // Real Supabase sign out! 🚪
                   await SupabaseAuth.signOut();
-                  
+
                   // Clear profile status cache to prevent stale data on next sign-in
                   if (userId != null) {
                     SupabaseAuthWrapper.clearProfileCache(userId);
                   }
-                  
+
                   // Navigate to sign in and clear all previous routes
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const SignInScreen()),
+                    MaterialPageRoute(
+                        builder: (context) => const SignInScreen()),
                     (route) => false,
                   );
                 } catch (e) {
@@ -130,14 +130,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return AlertDialog(
           title: const Text('⚠️ Delete Account'),
           content: const Text(
-            'This action cannot be undone. All your data will be permanently deleted:\n\n'
-            '• Your profile and dog information\n'
-            '• All posts and comments\n'
-            '• Matches and messages\n'
-            '• Playdates and achievements\n'
-            '• Photos and uploaded files\n\n'
-            'Are you absolutely sure you want to delete your account?'
-          ),
+              'This action cannot be undone. All your data will be permanently deleted:\n\n'
+              '• Your profile and dog information\n'
+              '• All posts and comments\n'
+              '• Matches and messages\n'
+              '• Playdates and achievements\n'
+              '• Photos and uploaded files\n\n'
+              'Are you absolutely sure you want to delete your account?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -211,7 +210,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           (route) => false,
         );
       }
-
     } catch (e) {
       // Close loading dialog if still mounted
       if (mounted) {
@@ -245,9 +243,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: Text(
           'Settings',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
         ),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         elevation: 0,
@@ -263,7 +261,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           children: [
             const SizedBox(height: 16),
-            
+
             // Account Section
             _buildSectionHeader(context, 'Account'),
             _buildSettingsItem(
@@ -280,12 +278,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     'users',
                     filters: {'id': user.id},
                   );
-                  
+
                   if (mounted) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => CreateProfileScreen(editMode: EditMode.editOwner, 
+                        builder: (context) => CreateProfileScreen(
+                          editMode: EditMode.editOwner,
                           userName: userProfile?['name'],
                           userEmail: userProfile?['email'] ?? user.email,
                           userId: user.id,
@@ -296,7 +295,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please sign in to edit profile')),
+                    const SnackBar(
+                        content: Text('Please sign in to edit profile')),
                   );
                 }
               },
@@ -315,12 +315,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     'users',
                     filters: {'id': user.id},
                   );
-                  
+
                   if (mounted) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => CreateProfileScreen(editMode: EditMode.editOwner, 
+                        builder: (context) => CreateProfileScreen(
+                          editMode: EditMode.editOwner,
                           userName: userProfile?['name'],
                           userEmail: userProfile?['email'] ?? user.email,
                           userId: user.id,
@@ -331,7 +332,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please sign in to manage dogs')),
+                    const SnackBar(
+                        content: Text('Please sign in to manage dogs')),
                   );
                 }
               },
@@ -354,9 +356,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _showPrivacySheet(context);
               },
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Location Section
             _buildSectionHeader(context, 'Location'),
             Padding(
@@ -370,12 +372,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ..invalidate('nearby_$userId')
                       ..invalidateFeedSnapshot(userId);
                   }
-                  
+
                   // Show feedback
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Location settings updated. Pull to refresh your feed.'),
+                        content: Text(
+                            'Location settings updated. Pull to refresh your feed.'),
                         duration: Duration(seconds: 3),
                       ),
                     );
@@ -383,9 +386,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Support Section
             _buildSectionHeader(context, 'Support'),
             _buildSettingsItem(
@@ -408,7 +411,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () {
                 // TODO: Open email or contact form
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Contact support: support@barkdate.com')),
+                  const SnackBar(
+                      content: Text('Contact support: support@barkdate.com')),
                 );
               },
             ),
@@ -420,7 +424,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () {
                 // TODO: Open bug report form
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Bug report form - Coming soon!')),
+                  const SnackBar(
+                      content: Text('Bug report form - Coming soon!')),
                 );
               },
             ),
@@ -448,9 +453,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               },
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Legal Section
             _buildSectionHeader(context, 'Legal'),
             _buildSettingsItem(
@@ -461,7 +466,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const TermsOfServiceScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const TermsOfServiceScreen()),
                 );
               },
             ),
@@ -473,13 +479,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () {
                 // TODO: Show privacy policy
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Privacy Policy - Coming soon!')),
+                  const SnackBar(
+                      content: Text('Privacy Policy - Coming soon!')),
                 );
               },
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Danger Zone Section
             _buildSectionHeader(context, 'Danger Zone'),
             _buildSettingsItem(
@@ -489,18 +496,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: 'Permanently delete your account and all data',
               onTap: () => _showDeleteAccountDialog(context),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // App version
             Text(
               'BarkDate v1.0.0',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
+                  ),
             ),
             const SizedBox(height: 16),
-            
+
             // Sign Out button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -537,9 +547,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Text(
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.primary,
+              ),
         ),
       ),
     );
@@ -558,7 +568,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+          color: Theme.of(context)
+              .colorScheme
+              .primaryContainer
+              .withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
@@ -570,14 +583,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       title: Text(
         title,
         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
+              fontWeight: FontWeight.w600,
+            ),
       ),
       subtitle: Text(
         subtitle,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-        ),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
+            ),
       ),
       trailing: Icon(
         Icons.arrow_forward_ios,
@@ -659,138 +675,156 @@ class _AppPreferencesSheetState extends State<AppPreferencesSheet> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: _settingsService,
-      builder: (context, child) {
-        return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Handle bar
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          Text(
-            'App Preferences',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          Expanded(
-            child: ListView(
-              controller: widget.scrollController,
+        listenable: _settingsService,
+        builder: (context, child) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
               children: [
-                // Theme Settings
-                Text(
-                  'Appearance',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.primary,
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .outline
+                        .withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 12),
-                ListTile(
-                  title: const Text('Theme'),
-                  subtitle: Text(_getThemeDisplayName(_settingsService.themeMode)),
-                  trailing: DropdownButton<ThemeMode>(
-                    value: _settingsService.themeMode,
-                    items: [
-                      DropdownMenuItem(value: ThemeMode.system, child: const Text('System')),
-                      DropdownMenuItem(value: ThemeMode.light, child: const Text('Light')),
-                      DropdownMenuItem(value: ThemeMode.dark, child: const Text('Dark')),
+                const SizedBox(height: 16),
+
+                Text(
+                  'App Preferences',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 24),
+
+                Expanded(
+                  child: ListView(
+                    controller: widget.scrollController,
+                    children: [
+                      // Theme Settings
+                      Text(
+                        'Appearance',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                      ),
+                      const SizedBox(height: 12),
+                      ListTile(
+                        title: const Text('Theme'),
+                        subtitle: Text(
+                            _getThemeDisplayName(_settingsService.themeMode)),
+                        trailing: DropdownButton<ThemeMode>(
+                          value: _settingsService.themeMode,
+                          items: [
+                            DropdownMenuItem(
+                                value: ThemeMode.system,
+                                child: const Text('System')),
+                            DropdownMenuItem(
+                                value: ThemeMode.light,
+                                child: const Text('Light')),
+                            DropdownMenuItem(
+                                value: ThemeMode.dark,
+                                child: const Text('Dark')),
+                          ],
+                          onChanged: (ThemeMode? mode) {
+                            if (mode != null) {
+                              _settingsService.setThemeMode(mode);
+                            }
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Notifications
+                      Text(
+                        'Notifications',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                      ),
+                      const SizedBox(height: 12),
+                      SwitchListTile(
+                        title: const Text('Push Notifications'),
+                        subtitle:
+                            const Text('Receive notifications on your device'),
+                        value: _settingsService.notificationsEnabled,
+                        onChanged: (value) =>
+                            _settingsService.setNotificationsEnabled(value),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Privacy
+                      Text(
+                        'Privacy',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                      ),
+                      const SizedBox(height: 12),
+                      SwitchListTile(
+                        title: const Text('Location Sharing'),
+                        subtitle: const Text(
+                            'Allow others to see your general location'),
+                        value: _settingsService.locationEnabled,
+                        onChanged: (value) =>
+                            _settingsService.setLocationEnabled(value),
+                      ),
+                      SwitchListTile(
+                        title: const Text('Privacy Mode'),
+                        subtitle: const Text('Limit who can see your profile'),
+                        value: _settingsService.privacyMode,
+                        onChanged: (value) =>
+                            _settingsService.setPrivacyMode(value),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Search Preferences
+                      Text(
+                        'Search',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                      ),
+                      const SizedBox(height: 12),
+                      const ListTile(
+                        title: Text('Search Radius'),
+                        subtitle: Text('25 miles'),
+                        trailing: SizedBox(
+                          width: 150,
+                          child: Slider(
+                            value: 25.0,
+                            min: 1,
+                            max: 50,
+                            divisions: 49,
+                            onChanged:
+                                null, // TODO: Implement search radius setting
+                          ),
+                        ),
+                      ),
                     ],
-                    onChanged: (ThemeMode? mode) {
-                      if (mode != null) {
-                        _settingsService.setThemeMode(mode);
-                      }
-                    },
                   ),
                 ),
-                
-                const SizedBox(height: 24),
-
-                // Notifications
-                Text(
-                  'Notifications',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  title: const Text('Push Notifications'),
-                  subtitle: const Text('Receive notifications on your device'),
-                  value: _settingsService.notificationsEnabled,
-                  onChanged: (value) => _settingsService.setNotificationsEnabled(value),
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Privacy
-                Text(
-                  'Privacy',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  title: const Text('Location Sharing'),
-                  subtitle: const Text('Allow others to see your general location'),
-                  value: _settingsService.locationEnabled,
-                  onChanged: (value) => _settingsService.setLocationEnabled(value),
-                ),
-                SwitchListTile(
-                  title: const Text('Privacy Mode'),
-                  subtitle: const Text('Limit who can see your profile'),
-                  value: _settingsService.privacyMode,
-                  onChanged: (value) => _settingsService.setPrivacyMode(value),
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Search Preferences
-                Text(
-                  'Search',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const ListTile(
-                  title: Text('Search Radius'),
-                  subtitle: Text('25 miles'),
-                  trailing: SizedBox(
-                    width: 150,
-                    child: Slider(
-                      value: 25.0,
-                      min: 1,
-                      max: 50,
-                      divisions: 49,
-                      onChanged: null, // TODO: Implement search radius setting
-                    ),
-                  ),
-                ),
-
               ],
             ),
-          ),
-        ],
-      ),
-    );
-      }
-    );
+          );
+        });
   }
 }
 
@@ -820,20 +854,21 @@ class _PrivacySheetState extends State<PrivacySheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+              color:
+                  Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 16),
-          
+
           Text(
             'Privacy Settings',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 24),
-          
+
           Expanded(
             child: ListView(
               controller: widget.scrollController,
@@ -842,9 +877,9 @@ class _PrivacySheetState extends State<PrivacySheet> {
                 Text(
                   'Profile Visibility',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile(
@@ -859,16 +894,16 @@ class _PrivacySheetState extends State<PrivacySheet> {
                   value: _showDistance,
                   onChanged: (value) => setState(() => _showDistance = value),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Communication
                 Text(
                   'Communication',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile(
@@ -877,16 +912,16 @@ class _PrivacySheetState extends State<PrivacySheet> {
                   value: _allowMessages,
                   onChanged: (value) => setState(() => _allowMessages = value),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Data Collection
                 Text(
                   'Data & Analytics',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile(
@@ -895,9 +930,9 @@ class _PrivacySheetState extends State<PrivacySheet> {
                   value: _dataCollection,
                   onChanged: (value) => setState(() => _dataCollection = value),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Blocked Users
                 ListTile(
                   leading: const Icon(Icons.block),
@@ -907,11 +942,12 @@ class _PrivacySheetState extends State<PrivacySheet> {
                   onTap: () {
                     // TODO: Navigate to blocked users list
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Blocked users - Coming soon!')),
+                      const SnackBar(
+                          content: Text('Blocked users - Coming soon!')),
                     );
                   },
                 ),
-                
+
                 ListTile(
                   leading: const Icon(Icons.delete_outline),
                   title: const Text('Delete Account'),
@@ -920,7 +956,8 @@ class _PrivacySheetState extends State<PrivacySheet> {
                   onTap: () {
                     // TODO: Show delete account confirmation
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Delete account - Contact support')),
+                      const SnackBar(
+                          content: Text('Delete account - Contact support')),
                     );
                   },
                 ),

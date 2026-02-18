@@ -90,7 +90,7 @@ class _CheckInButtonState extends State<CheckInButton> {
         setState(() {
           _activeCheckIn = checkIn;
         });
-        
+
         _showSuccessSnackBar('Woof! I\'m checked in at ${widget.parkName}! 🐕');
         widget.onCheckInSuccess?.call();
       } else {
@@ -121,7 +121,7 @@ class _CheckInButtonState extends State<CheckInButton> {
         setState(() {
           _activeCheckIn = null;
         });
-        
+
         _showSuccessSnackBar('Checked out successfully! See you next time! 🐾');
         widget.onCheckOutSuccess?.call();
       } else {
@@ -379,15 +379,18 @@ class _CheckInStatusBannerState extends State<CheckInStatusBanner> {
                 Text(
                   'Currently at ${_activeCheckIn!.parkName}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  ),
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
                 ),
                 Text(
                   'Checked in ${_activeCheckIn!.formattedCheckInTime}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
-                  ),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onPrimaryContainer
+                            .withValues(alpha: 0.7),
+                      ),
                 ),
               ],
             ),

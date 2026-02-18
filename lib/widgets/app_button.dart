@@ -7,6 +7,7 @@ import 'package:barkdate/design_system/app_colors.dart';
 /// Consistent button styling with clear hierarchy
 
 enum AppButtonSize { small, medium, large }
+
 enum AppButtonType { primary, secondary, outline, text }
 
 class AppButton extends StatelessWidget {
@@ -34,20 +35,23 @@ class AppButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     // Size configuration
     final double height = switch (size) {
       AppButtonSize.small => 36.0,
       AppButtonSize.medium => 48.0,
       AppButtonSize.large => 56.0,
     };
-    
+
     final EdgeInsets padding = switch (size) {
-      AppButtonSize.small => const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-      AppButtonSize.medium => const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
-      AppButtonSize.large => const EdgeInsets.symmetric(horizontal: AppSpacing.xxl, vertical: AppSpacing.lg),
+      AppButtonSize.small => const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      AppButtonSize.medium => const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl, vertical: AppSpacing.md),
+      AppButtonSize.large => const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xxl, vertical: AppSpacing.lg),
     };
-    
+
     final double fontSize = switch (size) {
       AppButtonSize.small => 14.0,
       AppButtonSize.medium => 16.0,
@@ -66,7 +70,9 @@ class AppButton extends StatelessWidget {
             child: CircularProgressIndicator(
               strokeWidth: 2,
               valueColor: AlwaysStoppedAnimation<Color>(
-                type == AppButtonType.primary ? Colors.white : AppColors.primaryGreen,
+                type == AppButtonType.primary
+                    ? Colors.white
+                    : AppColors.primaryGreen,
               ),
             ),
           )
@@ -90,66 +96,66 @@ class AppButton extends StatelessWidget {
     // Build button based on type
     Widget button = switch (type) {
       AppButtonType.primary => ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: customColor ?? AppColors.primaryGreen,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shadowColor: Colors.transparent,
-          padding: padding,
-          minimumSize: Size(0, height),
-          shape: RoundedRectangleBorder(
-            borderRadius: AppStyles.borderRadiusSM,
+          onPressed: isLoading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: customColor ?? AppColors.primaryGreen,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            padding: padding,
+            minimumSize: Size(0, height),
+            shape: RoundedRectangleBorder(
+              borderRadius: AppStyles.borderRadiusSM,
+            ),
           ),
+          child: buttonContent,
         ),
-        child: buttonContent,
-      ),
-      
       AppButtonType.secondary => ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: isDark ? AppColors.darkSurfaceVariant : AppColors.lightSurfaceVariant,
-          foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-          elevation: 0,
-          shadowColor: Colors.transparent,
-          padding: padding,
-          minimumSize: Size(0, height),
-          shape: RoundedRectangleBorder(
-            borderRadius: AppStyles.borderRadiusSM,
+          onPressed: isLoading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isDark
+                ? AppColors.darkSurfaceVariant
+                : AppColors.lightSurfaceVariant,
+            foregroundColor:
+                isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            padding: padding,
+            minimumSize: Size(0, height),
+            shape: RoundedRectangleBorder(
+              borderRadius: AppStyles.borderRadiusSM,
+            ),
           ),
+          child: buttonContent,
         ),
-        child: buttonContent,
-      ),
-      
       AppButtonType.outline => OutlinedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: customColor ?? AppColors.primaryGreen,
-          side: BorderSide(
-            color: customColor ?? AppColors.primaryGreen,
-            width: 1.5,
+          onPressed: isLoading ? null : onPressed,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: customColor ?? AppColors.primaryGreen,
+            side: BorderSide(
+              color: customColor ?? AppColors.primaryGreen,
+              width: 1.5,
+            ),
+            padding: padding,
+            minimumSize: Size(0, height),
+            shape: RoundedRectangleBorder(
+              borderRadius: AppStyles.borderRadiusSM,
+            ),
           ),
-          padding: padding,
-          minimumSize: Size(0, height),
-          shape: RoundedRectangleBorder(
-            borderRadius: AppStyles.borderRadiusSM,
-          ),
+          child: buttonContent,
         ),
-        child: buttonContent,
-      ),
-      
       AppButtonType.text => TextButton(
-        onPressed: isLoading ? null : onPressed,
-        style: TextButton.styleFrom(
-          foregroundColor: customColor ?? AppColors.primaryGreen,
-          padding: padding,
-          minimumSize: Size(0, height),
-          shape: RoundedRectangleBorder(
-            borderRadius: AppStyles.borderRadiusSM,
+          onPressed: isLoading ? null : onPressed,
+          style: TextButton.styleFrom(
+            foregroundColor: customColor ?? AppColors.primaryGreen,
+            padding: padding,
+            minimumSize: Size(0, height),
+            shape: RoundedRectangleBorder(
+              borderRadius: AppStyles.borderRadiusSM,
+            ),
           ),
+          child: buttonContent,
         ),
-        child: buttonContent,
-      ),
     };
 
     if (isFullWidth) {
@@ -183,7 +189,7 @@ class AppIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       width: size,
       height: size,
@@ -200,7 +206,8 @@ class AppIconButton extends StatelessWidget {
       child: IconButton(
         icon: Icon(icon),
         onPressed: onPressed,
-        color: color ?? (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+        color: color ??
+            (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
         iconSize: size * 0.5,
         padding: EdgeInsets.zero,
       ),

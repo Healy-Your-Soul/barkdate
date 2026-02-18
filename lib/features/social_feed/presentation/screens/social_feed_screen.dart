@@ -14,11 +14,10 @@ import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
 import 'package:barkdate/features/playdates/presentation/widgets/dog_search_sheet.dart';
 import 'package:barkdate/services/notification_manager.dart';
 
-
 class SocialFeedScreen extends StatefulWidget {
   final int initialTab;
   final bool openCreatePost;
-  
+
   const SocialFeedScreen({
     super.key,
     this.initialTab = 0,
@@ -29,17 +28,18 @@ class SocialFeedScreen extends StatefulWidget {
   State<SocialFeedScreen> createState() => _SocialFeedScreenState();
 }
 
-class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerProviderStateMixin {
+class _SocialFeedScreenState extends State<SocialFeedScreen>
+    with SingleTickerProviderStateMixin {
   List<Post> _posts = [];
   final TextEditingController _postController = TextEditingController();
   SelectedImage? _selectedImage;
   bool _isPosting = false;
   bool _isLoading = false;
-  
+
   // New: Track current user and their likes
   String? _currentUserId;
   Set<String> _likedPostIds = {};
-  
+
   // New: Tab controller for "For You" / "Following"
   late TabController _tabController;
   int _selectedTab = 0; // 0 = For You, 1 = Following
@@ -48,7 +48,8 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _selectedTab = widget.initialTab;
-    _tabController = TabController(length: 2, vsync: this, initialIndex: widget.initialTab);
+    _tabController =
+        TabController(length: 2, vsync: this, initialIndex: widget.initialTab);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
       setState(() => _selectedTab = _tabController.index);
@@ -56,7 +57,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
     });
     _currentUserId = SupabaseConfig.auth.currentUser?.id;
     _loadFeed();
-    
+
     // Auto-open create post dialog if requested
     if (widget.openCreatePost) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -121,11 +122,12 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
               ),
             ),
           ),
-          
+
           // Grid content
           Expanded(
             child: _isLoading
-                ? const Center(child: DogLoadingWidget(message: 'Sniffing for posts...'))
+                ? const Center(
+                    child: DogLoadingWidget(message: 'Sniffing for posts...'))
                 : RefreshIndicator(
                     onRefresh: _loadFeed,
                     child: _posts.isEmpty
@@ -142,7 +144,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
       ),
     );
   }
-  
+
   Widget _buildFilterChip(String label, int index) {
     final isSelected = _selectedTab == index;
     return GestureDetector(
@@ -153,10 +155,13 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white,
+          color:
+              isSelected ? Theme.of(context).colorScheme.primary : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : Colors.grey.shade300,
           ),
         ),
         child: Text(
@@ -170,21 +175,23 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
       ),
     );
   }
-  
+
   /// Pinterest-style staggered grid
   Widget _buildPinterestGrid() {
     return LayoutBuilder(
       builder: (context, constraints) {
         final crossAxisCount = constraints.maxWidth > 600 ? 3 : 2;
         final spacing = 12.0;
-        final itemWidth = (constraints.maxWidth - (spacing * (crossAxisCount + 1))) / crossAxisCount;
-        
+        final itemWidth =
+            (constraints.maxWidth - (spacing * (crossAxisCount + 1))) /
+                crossAxisCount;
+
         // Split posts into columns
         List<List<Post>> columns = List.generate(crossAxisCount, (_) => []);
         for (int i = 0; i < _posts.length; i++) {
           columns[i % crossAxisCount].add(_posts[i]);
         }
-        
+
         return SingleChildScrollView(
           padding: EdgeInsets.all(spacing),
           physics: const AlwaysScrollableScrollPhysics(),
@@ -195,9 +202,9 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: spacing / 2),
                   child: Column(
-                    children: columnPosts.map((post) => 
-                      _buildGridPostCard(post, itemWidth)
-                    ).toList(),
+                    children: columnPosts
+                        .map((post) => _buildGridPostCard(post, itemWidth))
+                        .toList(),
                   ),
                 ),
               );
@@ -207,12 +214,12 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
       },
     );
   }
-  
+
   /// Modern grid card for Pinterest layout
   Widget _buildGridPostCard(Post post, double width) {
     // Vary heights for Pinterest effect
     final hasImage = post.imageUrl != null && post.imageUrl!.isNotEmpty;
-    
+
     return GestureDetector(
       onTap: () => _openExpandedPost(post),
       child: Container(
@@ -234,7 +241,8 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
             // Image
             if (hasImage)
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
                 child: Image.network(
                   post.imageUrl!,
                   width: double.infinity,
@@ -246,7 +254,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
                   ),
                 ),
               ),
-            
+
             // Content
             Padding(
               padding: const EdgeInsets.all(12),
@@ -255,17 +263,22 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
                 children: [
                   // Dog avatar + name
                   GestureDetector(
-                    onTap: post.dogId != null ? () => _navigateToDogProfile(post.dogId!) : null,
+                    onTap: post.dogId != null
+                        ? () => _navigateToDogProfile(post.dogId!)
+                        : null,
                     child: Row(
                       children: [
                         CircleAvatar(
                           radius: 14,
                           backgroundColor: Colors.grey[200],
-                          backgroundImage: post.userPhoto.isNotEmpty && !post.userPhoto.contains('placeholder')
+                          backgroundImage: post.userPhoto.isNotEmpty &&
+                                  !post.userPhoto.contains('placeholder')
                               ? NetworkImage(post.userPhoto)
                               : null,
-                          child: post.userPhoto.isEmpty || post.userPhoto.contains('placeholder')
-                              ? Icon(Icons.pets, size: 14, color: Colors.grey[500])
+                          child: post.userPhoto.isEmpty ||
+                                  post.userPhoto.contains('placeholder')
+                              ? Icon(Icons.pets,
+                                  size: 14, color: Colors.grey[500])
                               : null,
                         ),
                         const SizedBox(width: 8),
@@ -282,7 +295,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
                       ],
                     ),
                   ),
-                  
+
                   // Caption
                   if (post.content.isNotEmpty) ...[
                     const SizedBox(height: 8),
@@ -297,7 +310,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
                       ),
                     ),
                   ],
-                  
+
                   // Stats row
                   const SizedBox(height: 10),
                   Row(
@@ -309,7 +322,8 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
                         style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
                       const SizedBox(width: 12),
-                      Icon(Icons.chat_bubble_outline, size: 14, color: Colors.grey[400]),
+                      Icon(Icons.chat_bubble_outline,
+                          size: 14, color: Colors.grey[400]),
                       const SizedBox(width: 4),
                       Text(
                         '${post.comments}',
@@ -330,7 +344,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
       ),
     );
   }
-  
+
   /// Open expanded view of a post
   void _openExpandedPost(Post post) {
     showModalBottomSheet(
@@ -345,7 +359,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
       ),
     );
   }
-  
+
   String _formatTimeAgo(DateTime dateTime) {
     final diff = DateTime.now().difference(dateTime);
     if (diff.inMinutes < 60) return '${diff.inMinutes}m';
@@ -356,7 +370,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
 
   Widget _buildPostCard(BuildContext context, Post post) {
     final isOwnPost = post.userId == _currentUserId;
-    
+
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 16),
@@ -366,7 +380,9 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
         children: [
           // Post header - tappable to view dog profile
           InkWell(
-            onTap: post.dogId != null ? () => _navigateToDogProfile(post.dogId!) : null,
+            onTap: post.dogId != null
+                ? () => _navigateToDogProfile(post.dogId!)
+                : null,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -374,16 +390,21 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundImage: post.userPhoto.isNotEmpty && !post.userPhoto.contains('placeholder')
+                    backgroundImage: post.userPhoto.isNotEmpty &&
+                            !post.userPhoto.contains('placeholder')
                         ? NetworkImage(post.userPhoto)
                         : null,
-                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                    onBackgroundImageError: post.userPhoto.isNotEmpty && !post.userPhoto.contains('placeholder')
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
+                    onBackgroundImageError: post.userPhoto.isNotEmpty &&
+                            !post.userPhoto.contains('placeholder')
                         ? (exception, stackTrace) {
-                            debugPrint('Error loading profile image: $exception');
+                            debugPrint(
+                                'Error loading profile image: $exception');
                           }
                         : null,
-                    child: post.userPhoto.isEmpty || post.userPhoto.contains('placeholder')
+                    child: post.userPhoto.isEmpty ||
+                            post.userPhoto.contains('placeholder')
                         ? Icon(
                             Icons.pets,
                             size: 20,
@@ -400,26 +421,37 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
                           children: [
                             Text(
                               post.dogName,
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                  ),
                             ),
                             if (post.dogId != null) ...[
                               const SizedBox(width: 4),
                               Icon(
                                 Icons.chevron_right,
                                 size: 16,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.4),
                               ),
                             ],
                           ],
                         ),
                         Text(
                           'with ${post.userName} • ${_formatPostTime(post.timestamp)}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withOpacity(0.6),
+                                  ),
                         ),
                       ],
                     ),
@@ -428,14 +460,18 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
                   PopupMenuButton<String>(
                     icon: Icon(
                       Icons.more_horiz,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.6),
                     ),
                     onSelected: (value) {
                       if (value == 'delete') {
                         _deletePost(post);
                       } else if (value == 'report') {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Report feature coming soon')),
+                          const SnackBar(
+                              content: Text('Report feature coming soon')),
                         );
                       }
                     },
@@ -447,7 +483,8 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
                             children: [
                               Icon(Icons.delete_outline, color: Colors.red),
                               SizedBox(width: 8),
-                              Text('Delete Post', style: TextStyle(color: Colors.red)),
+                              Text('Delete Post',
+                                  style: TextStyle(color: Colors.red)),
                             ],
                           ),
                         ),
@@ -468,7 +505,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
               ),
             ),
           ),
-          
+
           // Post content
           if (post.content.isNotEmpty)
             Padding(
@@ -476,27 +513,32 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
               child: Text(
                 post.content,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
               ),
             ),
-          
+
           // Hashtags
           if (post.hashtags.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Wrap(
                 spacing: 8,
-                children: post.hashtags.map((hashtag) => Text(
-                  hashtag,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                )).toList(),
+                children: post.hashtags
+                    .map((hashtag) => Text(
+                          hashtag,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ))
+                    .toList(),
               ),
             ),
-          
+
           // Post image
           if (post.imageUrl != null)
             Padding(
@@ -511,7 +553,10 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
                   errorBuilder: (context, error, stackTrace) => Container(
                     width: double.infinity,
                     height: 300,
-                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primaryContainer
+                        .withOpacity(0.3),
                     child: Icon(
                       Icons.image,
                       size: 50,
@@ -521,16 +566,17 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
                 ),
               ),
             ),
-          
+
           // Tagged dogs display (like Instagram - small text under image)
           FutureBuilder<List<Map<String, dynamic>>>(
             future: _getPostTags(post.id),
             builder: (context, snapshot) {
               final tags = snapshot.data ?? [];
               if (tags.isEmpty) return const SizedBox.shrink();
-              
+
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: GestureDetector(
                   onTap: () {
                     // Show all tagged dogs
@@ -544,7 +590,10 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
                       Icon(
                         Icons.pets,
                         size: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.5),
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -552,9 +601,12 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
                             ? 'with ${tags.first['dog_name'] ?? 'a friend'}'
                             : 'with ${tags.first['dog_name'] ?? 'a friend'} and ${tags.length - 1} others',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                          fontWeight: FontWeight.w500,
-                        ),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.6),
+                              fontWeight: FontWeight.w500,
+                            ),
                       ),
                     ],
                   ),
@@ -562,7 +614,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
               );
             },
           ),
-          
+
           // Post actions - using bone emoji 🦴 instead of hearts
           Padding(
             padding: const EdgeInsets.all(16),
@@ -596,11 +648,11 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
       ),
     );
   }
-  
+
   /// Build the bone "like" button using emoji
   Widget _buildBoneButton(BuildContext context, Post post) {
     final isLiked = _likedPostIds.contains(post.id);
-    
+
     return GestureDetector(
       onTap: () => _toggleLike(post),
       child: Row(
@@ -617,11 +669,14 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
             Text(
               post.likes.toString(),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: isLiked 
-                    ? Colors.amber[700] 
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                fontWeight: isLiked ? FontWeight.w600 : FontWeight.normal,
-              ),
+                    color: isLiked
+                        ? Colors.amber[700]
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.7),
+                    fontWeight: isLiked ? FontWeight.w600 : FontWeight.normal,
+                  ),
             ),
           ],
         ],
@@ -643,15 +698,20 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
           Icon(
             icon,
             size: 24,
-            color: color ?? Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            color: color ??
+                Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
           ),
           if (count > 0) ...[
             const SizedBox(width: 4),
             Text(
               count.toString(),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: color ?? Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
+                    color: color ??
+                        Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.7),
+                  ),
             ),
           ],
         ],
@@ -680,9 +740,9 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
   /// Toggle like on a post - now persists to database
   Future<void> _toggleLike(Post post) async {
     if (_currentUserId == null) return;
-    
+
     final isCurrentlyLiked = _likedPostIds.contains(post.id);
-    
+
     // Optimistic UI update
     setState(() {
       if (isCurrentlyLiked) {
@@ -690,7 +750,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
       } else {
         _likedPostIds.add(post.id);
       }
-      
+
       final index = _posts.indexWhere((p) => p.id == post.id);
       if (index >= 0) {
         _posts[index] = post.copyWith(
@@ -699,7 +759,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
         );
       }
     });
-    
+
     // Persist to database
     try {
       await BarkDateSocialService.togglePostLike(post.id, _currentUserId!);
@@ -713,7 +773,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
           } else {
             _likedPostIds.remove(post.id);
           }
-          
+
           final index = _posts.indexWhere((p) => p.id == post.id);
           if (index >= 0) {
             _posts[index] = post.copyWith(
@@ -737,8 +797,6 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
     });
   }
 
-
-
   void _sharePost(Post post) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -755,11 +813,11 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
       PageRouteBuilder(
         opaque: false, // Make the route transparent
         barrierColor: Colors.transparent, // Transparent barrier
-        pageBuilder: (context, animation, secondaryAnimation) => 
+        pageBuilder: (context, animation, secondaryAnimation) =>
             _CreatePostScreen(
-              onPost: _handleCreatePost,
-              isPosting: _isLoading,
-            ),
+          onPost: _handleCreatePost,
+          isPosting: _isLoading,
+        ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(0.0, 1.0);
           const end = Offset.zero;
@@ -789,7 +847,8 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
   }
 
   /// Handle post creation from new screen
-  Future<void> _handleCreatePost(String content, SelectedImage? image, List<Dog> taggedDogs) async {
+  Future<void> _handleCreatePost(
+      String content, SelectedImage? image, List<Dog> taggedDogs) async {
     setState(() => _isLoading = true);
 
     try {
@@ -799,7 +858,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
       }
 
       String? imageUrl;
-      
+
       // Upload image if selected
       if (image != null) {
         final postId = DateTime.now().millisecondsSinceEpoch.toString();
@@ -825,14 +884,14 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
           })
           .select()
           .single();
-      
+
       final postId = postResult['id'] as String;
 
       // Save tags if any
       if (taggedDogs.isNotEmpty && dogId != null) {
         // Fetch tagging dog name for notification
         final taggerDogName = userDogs.first['name'] ?? 'A friend';
-        
+
         for (final taggedDog in taggedDogs) {
           try {
             await SupabaseConfig.client.from('post_tags').insert({
@@ -841,16 +900,16 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
               'tagged_dog_id': taggedDog.id,
               'is_collaborator': false,
             });
-            
+
             // Send notification to tagged dog's owner
             // We need the owner ID. If it's not in the Dog object, we might miss it.
             // Dog search usually includes ownerId.
             if (taggedDog.ownerId.isNotEmpty && taggedDog.ownerId != userId) {
-               await NotificationManager.sendPostTagNotification(
-                 receiverUserId: taggedDog.ownerId,
-                 taggerDogName: taggerDogName,
-                 postId: postId,
-               );
+              await NotificationManager.sendPostTagNotification(
+                receiverUserId: taggedDog.ownerId,
+                taggerDogName: taggerDogName,
+                postId: postId,
+              );
             }
           } catch (e) {
             debugPrint('Error tagging/notifying dog ${taggedDog.name}: $e');
@@ -862,16 +921,15 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(taggedDogs.isNotEmpty 
-                ? 'Post created with ${taggedDogs.length} tags!' 
+            content: Text(taggedDogs.isNotEmpty
+                ? 'Post created with ${taggedDogs.length} tags!'
                 : 'Post created successfully!'),
           ),
         );
-        
+
         // Reload feed to show new post
         _loadFeed();
       }
-
     } catch (e) {
       debugPrint('Error creating post: $e');
       if (mounted) {
@@ -889,10 +947,10 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
   /// Load feed posts from Supabase
   Future<void> _loadFeed() async {
     setState(() => _isLoading = true);
-    
+
     try {
       List<Map<String, dynamic>> postsData;
-      
+
       // Load different feeds based on selected tab
       if (_selectedTab == 0) {
         // "For You" tab - all public posts
@@ -907,32 +965,33 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
           );
         }
       }
-      
+
       // Load user's liked posts for UI state
       if (_currentUserId != null) {
-        _likedPostIds = await BarkDateSocialService.getUserLikedPostIds(_currentUserId!);
+        _likedPostIds =
+            await BarkDateSocialService.getUserLikedPostIds(_currentUserId!);
       }
-      
+
       // Convert to Post objects
       final posts = postsData.map((postData) {
-        
         final dogPhoto = postData['dog']?['main_photo_url'];
         final userAvatar = postData['user']?['avatar_url'];
-        final finalPhoto = dogPhoto ?? userAvatar ?? 'https://via.placeholder.com/150';
+        final finalPhoto =
+            dogPhoto ?? userAvatar ?? 'https://via.placeholder.com/150';
         final postId = postData['id'] ?? '';
-        
+
         return Post(
           id: postId,
           userId: postData['user_id'] ?? '',
           userName: postData['user']?['name'] ?? 'Unknown User',
           userPhoto: finalPhoto,
           dogName: postData['dog']?['name'] ?? 'Unnamed Dog',
-          dogId: postData['dog']?['id'],  // Include dogId for navigation
+          dogId: postData['dog']?['id'], // Include dogId for navigation
           content: postData['content'] ?? '',
-          imageUrl: postData['image_urls']?.isNotEmpty == true 
-              ? postData['image_urls'][0] 
+          imageUrl: postData['image_urls']?.isNotEmpty == true
+              ? postData['image_urls'][0]
               : null,
-          timestamp: DateTime.tryParse(postData['created_at'] ?? '') ?? 
+          timestamp: DateTime.tryParse(postData['created_at'] ?? '') ??
               DateTime.now().subtract(const Duration(minutes: 5)),
           likes: postData['likes_count'] ?? 0,
           comments: postData['comments_count'] ?? 0,
@@ -940,7 +999,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
           isLiked: _likedPostIds.contains(postId),
         );
       }).toList();
-      
+
       if (mounted) {
         setState(() {
           _posts = posts;
@@ -964,11 +1023,12 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
   /// Extract hashtags from post content
   List<String> _extractHashtags(String content) {
     final hashtagRegex = RegExp(r'#\w+');
-    return hashtagRegex.allMatches(content)
+    return hashtagRegex
+        .allMatches(content)
         .map((match) => match.group(0)!)
         .toList();
   }
-  
+
   /// Navigate to dog profile
   Future<void> _navigateToDogProfile(String dogId) async {
     try {
@@ -978,7 +1038,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
           .select('*, user:users(name, avatar_url)')
           .eq('id', dogId)
           .single();
-      
+
       if (mounted) {
         final dog = Dog.fromJson(dogData);
         context.push('/dog/${dog.id}', extra: dog);
@@ -992,7 +1052,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
       }
     }
   }
-  
+
   /// Delete a post
   Future<void> _deletePost(Post post) async {
     final confirm = await showDialog<bool>(
@@ -1013,15 +1073,15 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
         ],
       ),
     );
-    
+
     if (confirm == true) {
       try {
         await BarkDateSocialService.deletePost(post.id);
-        
+
         setState(() {
           _posts.removeWhere((p) => p.id == post.id);
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Post deleted')),
@@ -1041,18 +1101,20 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
   /// Build empty state when no posts
   Widget _buildEmptyState() {
     final isFollowingTab = _selectedTab == 1;
-    
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: CuteEmptyState(
           icon: isFollowingTab ? Icons.group : Icons.pets,
           title: isFollowingTab ? 'No Friend Posts Yet!' : 'No Posts Yet!',
-          message: isFollowingTab 
+          message: isFollowingTab
               ? 'Once your dog makes friends, their posts will appear here! Start barking to connect.'
               : 'Be the first to share your dog\'s adventure! Tap the + button to create a post.',
-          actionLabel: isFollowingTab ? 'Find Dogs to Follow' : 'Create First Post',
-          onAction: isFollowingTab ? () => context.pop() : _showCreatePostDialog,
+          actionLabel:
+              isFollowingTab ? 'Find Dogs to Follow' : 'Create First Post',
+          onAction:
+              isFollowingTab ? () => context.pop() : _showCreatePostDialog,
         ),
       ),
     );
@@ -1061,25 +1123,21 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
   /// Get approved tags for a post
   Future<List<Map<String, dynamic>>> _getPostTags(String postId) async {
     try {
-      final result = await SupabaseConfig.client
-          .from('post_tags')
-          .select('''
+      final result = await SupabaseConfig.client.from('post_tags').select('''
             id,
             tagged_dog_id,
             is_collaborator,
             dogs!post_tags_tagged_dog_id_fkey(id, name, photos)
-          ''')
-          .eq('post_id', postId)
-          .eq('status', 'approved');
-      
+          ''').eq('post_id', postId).eq('status', 'approved');
+
       return (result as List).map((tag) {
         final dog = tag['dogs'] as Map<String, dynamic>?;
         return {
           'id': tag['id'],
           'dog_id': tag['tagged_dog_id'],
           'dog_name': dog?['name'] ?? 'Unknown',
-          'dog_photo': (dog?['photos'] as List?)?.isNotEmpty == true 
-              ? dog!['photos'][0] 
+          'dog_photo': (dog?['photos'] as List?)?.isNotEmpty == true
+              ? dog!['photos'][0]
               : null,
           'is_collaborator': tag['is_collaborator'] ?? false,
         };
@@ -1113,58 +1171,69 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
           Text(
             'Tagged Dogs',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 16),
           ...tags.map((tag) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToDogProfile(tag['dog_id']);
-              },
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundImage: tag['dog_photo'] != null 
-                        ? NetworkImage(tag['dog_photo']) 
-                        : null,
-                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                    child: tag['dog_photo'] == null 
-                        ? const Icon(Icons.pets) 
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          tag['dog_name'],
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (tag['is_collaborator'] == true)
-                          Text(
-                            '✨ Contributor',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
+                padding: const EdgeInsets.only(bottom: 12),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context);
+                    _navigateToDogProfile(tag['dog_id']);
+                  },
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundImage: tag['dog_photo'] != null
+                            ? NetworkImage(tag['dog_photo'])
+                            : null,
+                        backgroundColor:
+                            Theme.of(context).colorScheme.primaryContainer,
+                        child: tag['dog_photo'] == null
+                            ? const Icon(Icons.pets)
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              tag['dog_name'],
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                             ),
-                          ),
-                      ],
-                    ),
+                            if (tag['is_collaborator'] == true)
+                              Text(
+                                '✨ Contributor',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                    ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.4),
+                      ),
+                    ],
                   ),
-                  Icon(
-                    Icons.chevron_right,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-                  ),
-                ],
-              ),
-            ),
-          )),
+                ),
+              )),
         ],
       ),
     );
@@ -1180,7 +1249,8 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> with SingleTickerPr
 
 /// New full-screen create post screen with tabs
 class _CreatePostScreen extends StatefulWidget {
-  final Function(String content, SelectedImage? image, List<Dog> taggedDogs) onPost;
+  final Function(String content, SelectedImage? image, List<Dog> taggedDogs)
+      onPost;
   final bool isPosting;
 
   const _CreatePostScreen({
@@ -1209,7 +1279,7 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
         excludedDogIds: _taggedDogs.map((d) => d.id).toList(),
       ),
     );
-    
+
     if (result != null && result.isNotEmpty && mounted) {
       setState(() {
         // Enforce max 15 tags
@@ -1264,9 +1334,10 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
     }
 
     setState(() => _isLoading = true);
-    
+
     try {
-      await widget.onPost(_textController.text.trim(), _selectedImage, _taggedDogs);
+      await widget.onPost(
+          _textController.text.trim(), _selectedImage, _taggedDogs);
       if (mounted) {
         Navigator.pop(context);
       }
@@ -1293,280 +1364,346 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
           child: Container(
             width: double.infinity,
             height: double.infinity,
-            color: Colors.transparent, // Transparent overlay to remove grey tint
+            color:
+                Colors.transparent, // Transparent overlay to remove grey tint
             child: Align(
               alignment: Alignment.bottomCenter,
               child: GestureDetector(
-              onTap: () {}, // Prevent closing when tapping modal content
-              child: Container(
-                height: modalHeight,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(20),
+                onTap: () {}, // Prevent closing when tapping modal content
+                child: Container(
+                  height: modalHeight,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
                   ),
-                ),
-                child: Column(
-                  children: [
-                    // Safe area padding for status bar when modal is near top
-                    SizedBox(height: MediaQuery.of(context).viewPadding.top > 0 
-                        ? MediaQuery.of(context).viewPadding.top * 0.5 
-                        : 0),
-                    // Header with Cancel, Create Post, and Post button
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-                      child: Row(
-                        children: [
-                          // Cancel button on left
-                          GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: Text(
-                              'Cancel',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ),
-                          
-                          // Create Post title in center
-                          Expanded(
-                            child: Center(
+                  child: Column(
+                    children: [
+                      // Safe area padding for status bar when modal is near top
+                      SizedBox(
+                          height: MediaQuery.of(context).viewPadding.top > 0
+                              ? MediaQuery.of(context).viewPadding.top * 0.5
+                              : 0),
+                      // Header with Cancel, Create Post, and Post button
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+                        child: Row(
+                          children: [
+                            // Cancel button on left
+                            GestureDetector(
+                              onTap: () => Navigator.pop(context),
                               child: Text(
-                                'Create Post',
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                'Cancel',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.7),
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                              ),
+                            ),
+
+                            // Create Post title in center
+                            Expanded(
+                              child: Center(
+                                child: Text(
+                                  'Create Post',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
+                                      ),
+                                ),
+                              ),
+                            ),
+
+                            // Post button on right
+                            ElevatedButton(
+                              onPressed: (_isLoading || widget.isPosting)
+                                  ? null
+                                  : _handlePost,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.primary,
+                                foregroundColor:
+                                    Theme.of(context).colorScheme.onPrimary,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: Text(
+                                'Post',
+                                style: TextStyle(
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             ),
-                          ),
-                          
-                          // Post button on right
-                          ElevatedButton(
-                            onPressed: (_isLoading || widget.isPosting) ? null : _handlePost,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.primary,
-                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: Text(
-                              'Post',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
 
-                    // Subtle tab bar (like in the image)
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Row(
-                        children: [
-                          // Text tab
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() => _tabController.index = 1),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    bottom: BorderSide(
-                                      color: _tabController.index == 1 
-                                          ? Theme.of(context).colorScheme.primary 
-                                          : Colors.transparent,
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    'Text',
-                                    style: TextStyle(
-                                      color: _tabController.index == 1 
-                                          ? Theme.of(context).colorScheme.primary 
-                                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          // Image tab
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() => _tabController.index = 0),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    bottom: BorderSide(
-                                      color: _tabController.index == 0 
-                                          ? Theme.of(context).colorScheme.primary 
-                                          : Colors.transparent,
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    'Photo',
-                                    style: TextStyle(
-                                      color: _tabController.index == 0 
-                                          ? Theme.of(context).colorScheme.primary 
-                                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Tab content
-                    Expanded(
-                      child: TabBarView(
-                        controller: _tabController,
-                        physics: const NeverScrollableScrollPhysics(), // Disable swipe to change tabs
-                        children: [
-                          // Photo Tab Content
-                          SingleChildScrollView(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              children: [
-                                // Image picker area
-                                GestureDetector(
-                                  onTap: _pickImage,
-                                  child: Container(
-                                    height: 250,
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(
-                                        color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-                                        width: 1,
+                      // Subtle tab bar (like in the image)
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Row(
+                          children: [
+                            // Text tab
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () =>
+                                    setState(() => _tabController.index = 1),
+                                child: Container(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: _tabController.index == 1
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                            : Colors.transparent,
+                                        width: 2,
                                       ),
                                     ),
-                                    child: _selectedImage != null
-                                        ? Stack(
-                                            fit: StackFit.expand,
-                                            children: [
-                                              ClipRRect(
-                                                borderRadius: BorderRadius.circular(16),
-                                                child: Image.memory(
-                                                  _selectedImage!.bytes,
-                                                  fit: BoxFit.cover,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Text',
+                                      style: TextStyle(
+                                        color: _tabController.index == 1
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withOpacity(0.5),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Image tab
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () =>
+                                    setState(() => _tabController.index = 0),
+                                child: Container(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: _tabController.index == 0
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                            : Colors.transparent,
+                                        width: 2,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Photo',
+                                      style: TextStyle(
+                                        color: _tabController.index == 0
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withOpacity(0.5),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Tab content
+                      Expanded(
+                        child: TabBarView(
+                          controller: _tabController,
+                          physics:
+                              const NeverScrollableScrollPhysics(), // Disable swipe to change tabs
+                          children: [
+                            // Photo Tab Content
+                            SingleChildScrollView(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                children: [
+                                  // Image picker area
+                                  GestureDetector(
+                                    onTap: _pickImage,
+                                    child: Container(
+                                      height: 250,
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainerHighest
+                                            .withOpacity(0.3),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .outline
+                                              .withOpacity(0.2),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: _selectedImage != null
+                                          ? Stack(
+                                              fit: StackFit.expand,
+                                              children: [
+                                                ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
+                                                  child: Image.memory(
+                                                    _selectedImage!.bytes,
+                                                    fit: BoxFit.cover,
+                                                  ),
                                                 ),
-                                              ),
-                                              Positioned(
-                                                top: 8,
-                                                right: 8,
-                                                child: GestureDetector(
-                                                  onTap: _removeImage,
-                                                  child: Container(
-                                                    padding: const EdgeInsets.all(4),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.black.withOpacity(0.5),
-                                                      shape: BoxShape.circle,
-                                                    ),
-                                                    child: const Icon(
-                                                      Icons.close,
-                                                      color: Colors.white,
-                                                      size: 20,
+                                                Positioned(
+                                                  top: 8,
+                                                  right: 8,
+                                                  child: GestureDetector(
+                                                    onTap: _removeImage,
+                                                    child: Container(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              4),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.black
+                                                            .withOpacity(0.5),
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                      child: const Icon(
+                                                        Icons.close,
+                                                        color: Colors.white,
+                                                        size: 20,
+                                                      ),
                                                     ),
                                                   ),
                                                 ),
-                                              ),
-                                            ],
-                                          )
-                                        : Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.add_photo_alternate_outlined,
-                                                size: 48,
-                                                color: Theme.of(context).colorScheme.primary,
-                                              ),
-                                              const SizedBox(height: 12),
-                                              Text(
-                                                'Add a photo',
-                                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                  color: Theme.of(context).colorScheme.onSurface,
-                                                  fontWeight: FontWeight.w500,
+                                              ],
+                                            )
+                                          : Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons
+                                                      .add_photo_alternate_outlined,
+                                                  size: 48,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primary,
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
-                                // Caption input
-                                TextField(
-                                  controller: _textController,
-                                  maxLines: 3,
-                                  decoration: InputDecoration(
-                                    hintText: 'Write a caption...',
-                                    hintStyle: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                                const SizedBox(height: 12),
+                                                Text(
+                                                  'Add a photo',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .titleMedium
+                                                      ?.copyWith(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSurface,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
                                     ),
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
                                   ),
-                                ),
-                                const SizedBox(height: 16),
-                                // Tag Dogs Section
-                                _buildTagDogsSection(),
-                              ],
+                                  const SizedBox(height: 24),
+                                  // Caption input
+                                  TextField(
+                                    controller: _textController,
+                                    maxLines: 3,
+                                    decoration: InputDecoration(
+                                      hintText: 'Write a caption...',
+                                      hintStyle: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.5),
+                                      ),
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.zero,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  // Tag Dogs Section
+                                  _buildTagDogsSection(),
+                                ],
+                              ),
                             ),
-                          ),
 
-                          // Text Tab Content
-                          SingleChildScrollView(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              children: [
-                                TextField(
-                                  controller: _textController,
-                                  maxLines: 8,
-                                  autofocus: true,
-                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    fontSize: 18,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'What\'s on your dog\'s mind?',
-                                    hintStyle: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                                      fontSize: 18,
+                            // Text Tab Content
+                            SingleChildScrollView(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                children: [
+                                  TextField(
+                                    controller: _textController,
+                                    maxLines: 8,
+                                    autofocus: true,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.copyWith(
+                                          fontSize: 18,
+                                        ),
+                                    decoration: InputDecoration(
+                                      hintText: 'What\'s on your dog\'s mind?',
+                                      hintStyle: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.5),
+                                        fontSize: 18,
+                                      ),
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.zero,
                                     ),
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
                                   ),
-                                ),
-                                const SizedBox(height: 16),
-                                // Tag Dogs Section
-                                _buildTagDogsSection(),
-                              ],
+                                  const SizedBox(height: 16),
+                                  // Tag Dogs Section
+                                  _buildTagDogsSection(),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
             ),
           ),
         ),
@@ -1585,7 +1722,10 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              color: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withOpacity(0.3),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
@@ -1600,18 +1740,21 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  _taggedDogs.isEmpty 
-                      ? 'Tag dogs...' 
+                  _taggedDogs.isEmpty
+                      ? 'Tag dogs...'
                       : 'Tag more dogs (${_taggedDogs.length}/15)',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6),
                   ),
                 ),
                 const Spacer(),
                 Icon(
                   Icons.add,
                   size: 18,
-                  color: _taggedDogs.length < 15 
+                  color: _taggedDogs.length < 15
                       ? Theme.of(context).colorScheme.primary
                       : Colors.grey,
                 ),
@@ -1627,12 +1770,17 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
             runSpacing: 8,
             children: _taggedDogs.map((dog) {
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primaryContainer
+                      .withOpacity(0.3),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.3),
                   ),
                 ),
                 child: Row(
@@ -1640,12 +1788,13 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                   children: [
                     CircleAvatar(
                       radius: 12,
-                      backgroundImage: dog.photos.isNotEmpty 
-                          ? NetworkImage(dog.photos.first) 
+                      backgroundImage: dog.photos.isNotEmpty
+                          ? NetworkImage(dog.photos.first)
                           : null,
-                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                      child: dog.photos.isEmpty 
-                          ? const Icon(Icons.pets, size: 12) 
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primaryContainer,
+                      child: dog.photos.isEmpty
+                          ? const Icon(Icons.pets, size: 12)
                           : null,
                     ),
                     const SizedBox(width: 6),
@@ -1663,7 +1812,10 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
                       child: Icon(
                         Icons.close,
                         size: 16,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.5),
                       ),
                     ),
                   ],
@@ -1681,7 +1833,7 @@ class _CreatePostScreenState extends State<_CreatePostScreen>
 class _PawFloatingButton extends StatefulWidget {
   final VoidCallback onPhotoPressed;
   final VoidCallback onTextPressed;
-  
+
   const _PawFloatingButton({
     required this.onPhotoPressed,
     required this.onTextPressed,
@@ -1691,11 +1843,12 @@ class _PawFloatingButton extends StatefulWidget {
   State<_PawFloatingButton> createState() => _PawFloatingButtonState();
 }
 
-class _PawFloatingButtonState extends State<_PawFloatingButton> with SingleTickerProviderStateMixin {
+class _PawFloatingButtonState extends State<_PawFloatingButton>
+    with SingleTickerProviderStateMixin {
   bool _isExpanded = false;
   late AnimationController _animationController;
   late Animation<double> _expandAnimation;
-  
+
   @override
   void initState() {
     super.initState();
@@ -1708,13 +1861,13 @@ class _PawFloatingButtonState extends State<_PawFloatingButton> with SingleTicke
       curve: Curves.easeOut,
     );
   }
-  
+
   @override
   void dispose() {
     _animationController.dispose();
     super.dispose();
   }
-  
+
   void _toggle() {
     setState(() {
       _isExpanded = !_isExpanded;
@@ -1747,7 +1900,8 @@ class _PawFloatingButtonState extends State<_PawFloatingButton> with SingleTicke
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
@@ -1758,7 +1912,8 @@ class _PawFloatingButtonState extends State<_PawFloatingButton> with SingleTicke
                           ),
                         ],
                       ),
-                      child: const Text('Photo', style: TextStyle(fontWeight: FontWeight.w500)),
+                      child: const Text('Photo',
+                          style: TextStyle(fontWeight: FontWeight.w500)),
                     ),
                     const SizedBox(width: 8),
                     FloatingActionButton.small(
@@ -1780,7 +1935,8 @@ class _PawFloatingButtonState extends State<_PawFloatingButton> with SingleTicke
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
@@ -1791,7 +1947,8 @@ class _PawFloatingButtonState extends State<_PawFloatingButton> with SingleTicke
                           ),
                         ],
                       ),
-                      child: const Text('Text', style: TextStyle(fontWeight: FontWeight.w500)),
+                      child: const Text('Text',
+                          style: TextStyle(fontWeight: FontWeight.w500)),
                     ),
                     const SizedBox(width: 8),
                     FloatingActionButton.small(
@@ -1831,7 +1988,7 @@ class _ExpandedPostWithComments extends StatefulWidget {
   final String? currentUserId;
   final Set<String> likedPostIds;
   final VoidCallback onLikeToggle;
-  
+
   const _ExpandedPostWithComments({
     required this.post,
     this.currentUserId,
@@ -1840,7 +1997,8 @@ class _ExpandedPostWithComments extends StatefulWidget {
   });
 
   @override
-  State<_ExpandedPostWithComments> createState() => _ExpandedPostWithCommentsState();
+  State<_ExpandedPostWithComments> createState() =>
+      _ExpandedPostWithCommentsState();
 }
 
 class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
@@ -1848,22 +2006,23 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
   List<Map<String, dynamic>> _comments = [];
   bool _isLoading = true;
   bool _isPostingComment = false;
-  
+
   @override
   void initState() {
     super.initState();
     _loadComments();
   }
-  
+
   @override
   void dispose() {
     _commentController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadComments() async {
     try {
-      final comments = await BarkDateSocialService.getPostComments(widget.post.id);
+      final comments =
+          await BarkDateSocialService.getPostComments(widget.post.id);
       if (mounted) {
         setState(() {
           _comments = comments;
@@ -1874,13 +2033,13 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-  
+
   Future<void> _postComment() async {
     final text = _commentController.text.trim();
     if (text.isEmpty || _isPostingComment) return;
-    
+
     setState(() => _isPostingComment = true);
-    
+
     try {
       final userId = widget.currentUserId;
       if (userId == null) throw Exception('Not logged in');
@@ -1909,7 +2068,7 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
           .select('*, user:users(name, avatar_url)')
           .eq('id', dogId)
           .single();
-      
+
       if (mounted) {
         final dog = Dog.fromJson(dogData);
         context.push('/dog/${dog.id}', extra: dog);
@@ -1928,7 +2087,7 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
   Widget build(BuildContext context) {
     final post = widget.post;
     final isLiked = widget.likedPostIds.contains(post.id);
-    
+
     return GestureDetector(
       onTap: () => Navigator.pop(context), // Tap outside to dismiss
       child: Container(
@@ -1959,258 +2118,294 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
                       ),
                     ),
                   ),
-            
-            // Scrollable content
-            Expanded(
-              child: SingleChildScrollView(
-                controller: scrollController,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                      // Post header
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            GestureDetector(
-                              onTap: post.dogId != null ? () => _navigateToDogProfile(post.dogId!) : null,
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 22,
-                                    backgroundColor: Colors.grey[200],
-                                    backgroundImage: post.userPhoto.isNotEmpty
-                                        ? NetworkImage(post.userPhoto)
-                                        : null,
-                                    child: post.userPhoto.isEmpty
-                                        ? Icon(Icons.pets, color: Colors.grey[500])
-                                        : null,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+
+                  // Scrollable content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Post header
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                GestureDetector(
+                                  onTap: post.dogId != null
+                                      ? () => _navigateToDogProfile(post.dogId!)
+                                      : null,
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        post.dogName,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 16,
-                                        ),
+                                      CircleAvatar(
+                                        radius: 22,
+                                        backgroundColor: Colors.grey[200],
+                                        backgroundImage:
+                                            post.userPhoto.isNotEmpty
+                                                ? NetworkImage(post.userPhoto)
+                                                : null,
+                                        child: post.userPhoto.isEmpty
+                                            ? Icon(Icons.pets,
+                                                color: Colors.grey[500])
+                                            : null,
                                       ),
-                                      Text(
-                                        'with ${post.userName}',
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 13,
-                                        ),
+                                      const SizedBox(width: 12),
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            post.dogName,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                          Text(
+                                            'with ${post.userName}',
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
-                                ],
-                              ),
-                            ),
-                          IconButton(
-                            icon: Icon(Icons.close, color: Colors.grey[600]),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    // Post image
-                    if (post.imageUrl != null && post.imageUrl!.isNotEmpty)
-                      Image.network(
-                        post.imageUrl!,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          height: 200,
-                          color: Colors.grey[200],
-                          child: Icon(Icons.image, size: 48, color: Colors.grey[400]),
-                        ),
-                      ),
-                    
-                    // Action buttons with paw icon
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          // Paw like button
-                          GestureDetector(
-                            onTap: widget.onLikeToggle,
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.pets,
-                                  size: 24,
-                                  color: isLiked ? Colors.orange : Colors.grey[600],
                                 ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '${post.likes}',
-                                  style: TextStyle(
-                                    color: isLiked ? Colors.orange : Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                IconButton(
+                                  icon: Icon(Icons.close,
+                                      color: Colors.grey[600]),
+                                  onPressed: () => Navigator.pop(context),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 20),
-                          // Comment count
-                          Row(
-                            children: [
-                              Icon(Icons.chat_bubble_outline, size: 22, color: Colors.grey[600]),
-                              const SizedBox(width: 6),
-                              Text(
-                                '${_comments.length}',
-                                style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500),
+
+                          // Post image
+                          if (post.imageUrl != null &&
+                              post.imageUrl!.isNotEmpty)
+                            Image.network(
+                              post.imageUrl!,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                height: 200,
+                                color: Colors.grey[200],
+                                child: Icon(Icons.image,
+                                    size: 48, color: Colors.grey[400]),
                               ),
-                            ],
+                            ),
+
+                          // Action buttons with paw icon
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                // Paw like button
+                                GestureDetector(
+                                  onTap: widget.onLikeToggle,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.pets,
+                                        size: 24,
+                                        color: isLiked
+                                            ? Colors.orange
+                                            : Colors.grey[600],
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '${post.likes}',
+                                        style: TextStyle(
+                                          color: isLiked
+                                              ? Colors.orange
+                                              : Colors.grey[600],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 20),
+                                // Comment count
+                                Row(
+                                  children: [
+                                    Icon(Icons.chat_bubble_outline,
+                                        size: 22, color: Colors.grey[600]),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${_comments.length}',
+                                      style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
+                                ),
+                                const Spacer(),
+                                Icon(Icons.share_outlined,
+                                    size: 22, color: Colors.grey[600]),
+                              ],
+                            ),
                           ),
-                          const Spacer(),
-                          Icon(Icons.share_outlined, size: 22, color: Colors.grey[600]),
+
+                          // Caption
+                          if (post.content.isNotEmpty)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              child: RichText(
+                                text: TextSpan(
+                                  style: TextStyle(
+                                      color: Colors.grey[800],
+                                      fontSize: 14,
+                                      height: 1.4),
+                                  children: [
+                                    TextSpan(
+                                      text: '${post.dogName} ',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                    TextSpan(text: post.content),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                          const Divider(height: 32),
+
+                          // Comments section
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'Comments',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                                color: Colors.grey[800],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Comments list
+                          if (_isLoading)
+                            const Padding(
+                              padding: EdgeInsets.all(20),
+                              child: Center(
+                                  child: DogLoadingWidget(
+                                      message: 'Loading comments...')),
+                            )
+                          else if (_comments.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Center(
+                                child: Text(
+                                  'No comments yet. Be the first!',
+                                  style: TextStyle(color: Colors.grey[500]),
+                                ),
+                              ),
+                            )
+                          else
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _comments.length,
+                              itemBuilder: (context, index) {
+                                final comment = _comments[index];
+                                return _buildCommentTile(comment);
+                              },
+                            ),
+
+                          const SizedBox(height: 80), // Space for input
                         ],
                       ),
                     ),
-                    
-                    // Caption
-                    if (post.content.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: RichText(
-                          text: TextSpan(
-                            style: TextStyle(color: Colors.grey[800], fontSize: 14, height: 1.4),
-                            children: [
-                              TextSpan(
-                                text: '${post.dogName} ',
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+
+                  // Comment input
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border:
+                          Border(top: BorderSide(color: Colors.grey.shade200)),
+                    ),
+                    child: SafeArea(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _commentController,
+                              decoration: InputDecoration(
+                                hintText: 'Add a comment...',
+                                hintStyle: TextStyle(color: Colors.grey[400]),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
                               ),
-                              TextSpan(text: post.content),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
-                    
-                    const Divider(height: 32),
-                    
-                    // Comments section
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'Comments',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                          color: Colors.grey[800],
-                        ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: _isPostingComment ? null : _postComment,
+                            icon: _isPostingComment
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: DogCircularProgress(
+                                        size: 20, strokeWidth: 2),
+                                  )
+                                : Icon(Icons.send,
+                                    color:
+                                        Theme.of(context).colorScheme.primary),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    
-                    // Comments list
-                    if (_isLoading)
-                      const Padding(
-                        padding: EdgeInsets.all(20),
-                        child: Center(child: DogLoadingWidget(message: 'Loading comments...')),
-                      )
-                    else if (_comments.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Center(
-                          child: Text(
-                            'No comments yet. Be the first!',
-                            style: TextStyle(color: Colors.grey[500]),
-                          ),
-                        ),
-                      )
-                    else
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _comments.length,
-                        itemBuilder: (context, index) {
-                          final comment = _comments[index];
-                          return _buildCommentTile(comment);
-                        },
-                      ),
-                    
-                    const SizedBox(height: 80), // Space for input
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ),
-            
-            // Comment input
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: Colors.grey.shade200)),
-              ),
-              child: SafeArea(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _commentController,
-                        decoration: InputDecoration(
-                          hintText: 'Add a comment...',
-                          hintStyle: TextStyle(color: Colors.grey[400]),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: _isPostingComment ? null : _postComment,
-                      icon: _isPostingComment
-                          ? const SizedBox(
-                              width: 20, height: 20,
-                              child: DogCircularProgress(size: 20, strokeWidth: 2),
-                            )
-                          : Icon(Icons.send, color: Theme.of(context).colorScheme.primary),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
             ),
           ),
         ),
       ),
     );
   }
-  
+
   Widget _buildCommentTile(Map<String, dynamic> comment) {
     // Extract dog data from nested object
     final dogData = comment['dog'] as Map<String, dynamic>?;
     final userData = comment['user'] as Map<String, dynamic>?;
-    final dogName = dogData?['name'] as String? ?? userData?['name'] as String? ?? 'Unknown';
-    final text = comment['text'] as String? ?? comment['content'] as String? ?? '';
+    final dogName = dogData?['name'] as String? ??
+        userData?['name'] as String? ??
+        'Unknown';
+    final text =
+        comment['text'] as String? ?? comment['content'] as String? ?? '';
     final createdAt = comment['created_at'] as String?;
-    final dogPhoto = dogData?['main_photo_url'] as String? ?? userData?['avatar_url'] as String?;
+    final dogPhoto = dogData?['main_photo_url'] as String? ??
+        userData?['avatar_url'] as String?;
     final dogId = dogData?['id'] as String?; // Extract dog ID
-    
+
     String timeAgo = '';
     if (createdAt != null) {
       final dt = DateTime.tryParse(createdAt);
       if (dt != null) {
         final diff = DateTime.now().difference(dt);
-        if (diff.inMinutes < 60) timeAgo = '${diff.inMinutes}m';
-        else if (diff.inHours < 24) timeAgo = '${diff.inHours}h';
-        else timeAgo = '${diff.inDays}d';
+        if (diff.inMinutes < 60)
+          timeAgo = '${diff.inMinutes}m';
+        else if (diff.inHours < 24)
+          timeAgo = '${diff.inHours}h';
+        else
+          timeAgo = '${diff.inDays}d';
       }
     }
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -2222,7 +2417,9 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
               radius: 16,
               backgroundColor: Colors.grey[200],
               backgroundImage: dogPhoto != null ? NetworkImage(dogPhoto) : null,
-              child: dogPhoto == null ? Icon(Icons.pets, size: 14, color: Colors.grey[500]) : null,
+              child: dogPhoto == null
+                  ? Icon(Icons.pets, size: 14, color: Colors.grey[500])
+                  : null,
             ),
           ),
           const SizedBox(width: 10),
@@ -2231,7 +2428,8 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 GestureDetector(
-                  onTap: dogId != null ? () => _navigateToDogProfile(dogId) : null,
+                  onTap:
+                      dogId != null ? () => _navigateToDogProfile(dogId) : null,
                   child: RichText(
                     text: TextSpan(
                       style: TextStyle(color: Colors.grey[800], fontSize: 14),

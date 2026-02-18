@@ -7,7 +7,7 @@ class SettingsService extends ChangeNotifier {
   SettingsService._internal();
 
   late SharedPreferences _prefs;
-  
+
   // Settings keys
   static const String _themeKey = 'theme_mode';
   static const String _notificationsKey = 'notifications_enabled';

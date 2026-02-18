@@ -58,7 +58,8 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(userName != null ? '$userName unblocked' : 'User unblocked'),
+            content: Text(
+                userName != null ? '$userName unblocked' : 'User unblocked'),
             backgroundColor: Colors.green,
           ),
         );
@@ -132,7 +133,8 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
 
         return Card(
           margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
@@ -140,8 +142,9 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
             ),
             leading: CircleAvatar(
               radius: 24,
-              backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-              child: avatarUrl == null 
+              backgroundImage:
+                  avatarUrl != null ? NetworkImage(avatarUrl) : null,
+              child: avatarUrl == null
                   ? const Icon(Icons.person, color: Colors.white)
                   : null,
               backgroundColor: Colors.grey[300],
@@ -170,8 +173,20 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
   }
 
   String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }

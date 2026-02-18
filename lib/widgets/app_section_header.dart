@@ -41,7 +41,10 @@ class AppSectionHeader extends StatelessWidget {
                   Text(
                     subtitle!,
                     style: AppTypography.bodyMedium(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -69,7 +72,7 @@ class AppDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       margin: margin,
       height: height ?? 1,

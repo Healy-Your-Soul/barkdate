@@ -116,18 +116,20 @@ class GoogleCalendarService {
   }) async {
     try {
       final events = await getUpcomingEvents(maxResults: 100);
-      
+
       for (final event in events) {
-        final eventStart = DateTime.parse(event['start']['dateTime'] ?? event['start']['date']);
-        final eventEnd = DateTime.parse(event['end']['dateTime'] ?? event['end']['date']);
-        
+        final eventStart = DateTime.parse(
+            event['start']['dateTime'] ?? event['start']['date']);
+        final eventEnd =
+            DateTime.parse(event['end']['dateTime'] ?? event['end']['date']);
+
         // Check for overlap
         if (startTime.isBefore(eventEnd) && endTime.isAfter(eventStart)) {
           debugPrint('⚠️ Conflicting event found: ${event['summary']}');
           return true;
         }
       }
-      
+
       return false;
     } catch (e) {
       debugPrint('❌ Error checking for conflicts: $e');

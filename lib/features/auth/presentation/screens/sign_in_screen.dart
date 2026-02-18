@@ -20,13 +20,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   bool _isLoading = false;
   bool _isGoogleLoading = false;
   bool _isAppleLoading = false;
   bool _obscurePassword = true;
   bool _rememberMe = false;
-  
+
   // Auth state subscription for OAuth redirect handling
   late final dynamic _authSubscription;
 
@@ -34,13 +34,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   void initState() {
     super.initState();
     // Listen for auth state changes (important for OAuth redirects)
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
-      if (data.event == AuthChangeEvent.signedIn && data.session?.user != null && mounted) {
+    _authSubscription =
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+      if (data.event == AuthChangeEvent.signedIn &&
+          data.session?.user != null &&
+          mounted) {
         debugPrint('✅ OAuth sign-in detected via auth state change');
-        
+
         // Pre-warm feed caches
         await PreloadService.warmFeedCaches(data.session!.user.id);
-        
+
         // Check if user has completed onboarding (has dog profile)
         if (mounted) {
           final dogs = await Supabase.instance.client
@@ -48,7 +51,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               .select('id')
               .eq('user_id', data.session!.user.id)
               .limit(1);
-          
+
           if (mounted) {
             if (dogs.isEmpty) {
               // New user - go to onboarding
@@ -78,16 +81,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
     try {
       final response = await ref.read(authRepositoryProvider).signIn(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-      
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
+
       if (mounted) {
         if (response.user != null) {
           // Pre-warm feed caches
           final uid = response.user!.id;
           await PreloadService.warmFeedCaches(uid);
-          
+
           if (mounted) {
             context.go('/home');
           }
@@ -127,10 +130,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         OAuthProvider.google,
         redirectTo: kIsWeb ? null : 'io.supabase.bark://login-callback/',
       );
-      
+
       // Note: On web, this will redirect to Google's consent page
       // The SupabaseAuthWrapper will handle the session when we return
-      
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -169,7 +171,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       if (mounted && response.user != null) {
         // Pre-warm feed caches
         await PreloadService.warmFeedCaches(response.user!.id);
-        
+
         if (mounted) {
           context.go('/home');
         }
@@ -228,21 +230,24 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 Text(
                   'Sign In',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Join our community of dog lovers and find the\nperfect playdates for your furry friend.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
+                      ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Google Sign In Button - Official Google Branding
                 Container(
                   height: 50,
@@ -273,7 +278,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                 child: SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 ),
                               )
                             : Row(
@@ -304,7 +310,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Apple Sign In Button - Only show on iOS
                 if (!kIsWeb && Platform.isIOS)
                   Container(
@@ -351,15 +357,17 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       ),
                     ),
                   ),
-                if (!kIsWeb && Platform.isIOS)
-                  const SizedBox(height: 24),
-                
+                if (!kIsWeb && Platform.isIOS) const SizedBox(height: 24),
+
                 // Divider
                 Row(
                   children: [
                     Expanded(
                       child: Divider(
-                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withValues(alpha: 0.3),
                       ),
                     ),
                     Padding(
@@ -367,20 +375,26 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       child: Text(
                         'or sign in with email',
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                           fontSize: 13,
                         ),
                       ),
                     ),
                     Expanded(
                       child: Divider(
-                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withValues(alpha: 0.3),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 24),
-                
+
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -413,7 +427,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() => _obscurePassword = !_obscurePassword);
@@ -499,7 +515,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     Text(
                       "Don't have an account? ",
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                       ),
                     ),
                     TextButton(
@@ -530,7 +549,7 @@ class _GoogleLogoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
-    
+
     // Blue arc (right side)
     paint.color = const Color(0xFF4285F4);
     canvas.drawArc(
@@ -540,7 +559,7 @@ class _GoogleLogoPainter extends CustomPainter {
       true,
       paint,
     );
-    
+
     // Green arc (bottom)
     paint.color = const Color(0xFF34A853);
     canvas.drawArc(
@@ -550,7 +569,7 @@ class _GoogleLogoPainter extends CustomPainter {
       true,
       paint,
     );
-    
+
     // Yellow arc (bottom-left)
     paint.color = const Color(0xFFFBBC05);
     canvas.drawArc(
@@ -560,7 +579,7 @@ class _GoogleLogoPainter extends CustomPainter {
       true,
       paint,
     );
-    
+
     // Red arc (top-left)
     paint.color = const Color(0xFFEA4335);
     canvas.drawArc(
@@ -570,7 +589,7 @@ class _GoogleLogoPainter extends CustomPainter {
       true,
       paint,
     );
-    
+
     // White center circle
     paint.color = Colors.white;
     canvas.drawCircle(
@@ -578,7 +597,7 @@ class _GoogleLogoPainter extends CustomPainter {
       size.width * 0.35,
       paint,
     );
-    
+
     // Blue horizontal bar
     paint.color = const Color(0xFF4285F4);
     canvas.drawRect(
@@ -595,5 +614,3 @@ class _GoogleLogoPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-
-

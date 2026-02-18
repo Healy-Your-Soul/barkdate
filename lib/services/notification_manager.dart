@@ -9,24 +9,24 @@ import 'package:barkdate/models/notification.dart';
 /// Central notification manager that coordinates all notification services
 class NotificationManager {
   static bool _initialized = false;
-  
+
   /// Initialize all notification services
   static Future<void> initialize() async {
     if (_initialized) return;
-    
+
     try {
       // Initialize Firebase messaging first
       await FirebaseMessagingService.initialize();
-      
+
       // Initialize in-app notification service
       await InAppNotificationService.initialize();
-      
+
       // Initialize sound service (fallback if no custom sounds)
       await NotificationSoundService.initialize();
-      
+
       // Set up real-time subscription for current user notifications
       _setupRealtimeNotifications();
-      
+
       _initialized = true;
       debugPrint('✅ NotificationManager initialized successfully');
     } catch (e) {
@@ -34,28 +34,29 @@ class NotificationManager {
       rethrow;
     }
   }
-  
+
   /// Set up real-time notification listening for the current user
   static void _setupRealtimeNotifications() {
     final currentUser = SupabaseConfig.auth.currentUser;
     if (currentUser == null) return;
-    
+
     // Listen to real-time notifications
     NotificationService.streamUserNotifications(currentUser.id).listen(
       (notifications) {
         if (notifications.isNotEmpty) {
           // Get the latest notification
           final latestNotification = notifications.first;
-          
+
           // Check if it's unread and recent (within last 10 seconds)
           final isUnread = latestNotification['is_read'] == false;
           final createdAt = DateTime.parse(latestNotification['created_at']);
           final isRecent = DateTime.now().difference(createdAt).inSeconds < 10;
-          
+
           if (isUnread && isRecent) {
             // Show in-app notification for recent unread notifications
             try {
-              final notification = BarkDateNotification.fromMap(latestNotification);
+              final notification =
+                  BarkDateNotification.fromMap(latestNotification);
               InAppNotificationService.showNotification(notification);
             } catch (e) {
               debugPrint('Error showing real-time notification: $e');
@@ -68,7 +69,7 @@ class NotificationManager {
       },
     );
   }
-  
+
   /// Create and send a comprehensive notification
   static Future<void> sendNotification({
     required String userId,
@@ -93,7 +94,7 @@ class NotificationManager {
         relatedId: relatedId,
         metadata: metadata,
       );
-      
+
       // Send push notification if requested
       if (sendPush) {
         try {
@@ -103,9 +104,9 @@ class NotificationManager {
               .select('fcm_token')
               .eq('id', userId)
               .maybeSingle();
-          
+
           final fcmToken = userResponse?['fcm_token'] as String?;
-          
+
           if (fcmToken != null && fcmToken.isNotEmpty) {
             await FirebaseMessagingService.sendPushNotificationToUser(
               userToken: fcmToken,
@@ -126,7 +127,7 @@ class NotificationManager {
           debugPrint('Failed to send push notification: $e');
         }
       }
-      
+
       // Play sound if requested
       if (playSound) {
         try {
@@ -135,14 +136,14 @@ class NotificationManager {
           debugPrint('Failed to play notification sound: $e');
         }
       }
-      
+
       debugPrint('✅ Notification sent successfully to user $userId');
     } catch (e) {
       debugPrint('❌ Failed to send notification: $e');
       rethrow;
     }
   }
-  
+
   /// Send a bark notification
   static Future<void> sendBarkNotification({
     required String receiverUserId,
@@ -163,7 +164,7 @@ class NotificationManager {
       },
     );
   }
-  
+
   /// Send a playdate invitation notification
   static Future<void> sendPlaydateInviteNotification({
     required String receiverUserId,
@@ -175,7 +176,8 @@ class NotificationManager {
     await sendNotification(
       userId: receiverUserId,
       title: '🎾 New Playdate Invitation!',
-      body: '$senderName invited you to a playdate on ${NotificationManager._formatDate(playdateDate)} at $location',
+      body:
+          '$senderName invited you to a playdate on ${NotificationManager._formatDate(playdateDate)} at $location',
       type: NotificationType.playdateRequest,
       actionType: 'open_playdate',
       relatedId: playdateId,
@@ -186,7 +188,7 @@ class NotificationManager {
       },
     );
   }
-  
+
   /// Send a playdate response notification
   static Future<void> sendPlaydateResponseNotification({
     required String receiverUserId,
@@ -209,7 +211,7 @@ class NotificationManager {
       },
     );
   }
-  
+
   /// Send a playdate reminder notification
   static Future<void> sendPlaydateReminderNotification({
     required String userId,
@@ -230,7 +232,7 @@ class NotificationManager {
       },
     );
   }
-  
+
   /// Send a match notification
   static Future<void> sendMatchNotification({
     required String userId,
@@ -262,7 +264,8 @@ class NotificationManager {
       title: '💬 New Message from $senderName',
       body: messageContent, // The actual message content
       type: NotificationType.message,
-      actionType: 'open_chat', // Navigation logic in FirebaseMessagingService handles this
+      actionType:
+          'open_chat', // Navigation logic in FirebaseMessagingService handles this
       relatedId: matchId,
       metadata: {
         'sender_name': senderName,
@@ -313,12 +316,12 @@ class NotificationManager {
       },
     );
   }
-  
+
   /// Format date for notifications
   static String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = date.difference(now);
-    
+
     if (difference.inDays == 0) {
       return 'today at ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     } else if (difference.inDays == 1) {
@@ -327,7 +330,7 @@ class NotificationManager {
       return '${date.month}/${date.day} at ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     }
   }
-  
+
   /// Clean up notification services
   static void dispose() {
     _initialized = false;

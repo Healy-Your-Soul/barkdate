@@ -38,7 +38,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     try {
-      final profile = await SupabaseService.selectSingle('users', filters: {'id': user.id});
+      final profile =
+          await SupabaseService.selectSingle('users', filters: {'id': user.id});
       if (!mounted) return;
       setState(() {
         _searchRadiusKm = (profile?['search_radius_km'] as int?) ?? 25;
@@ -99,14 +100,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return AlertDialog(
           title: const Text('⚠️ Delete Account'),
           content: const Text(
-            'This action cannot be undone. All your data will be permanently deleted:\n\n'
-            '• Your profile and dog information\n'
-            '• All posts and comments\n'
-            '• Matches and messages\n'
-            '• Playdates and achievements\n'
-            '• Photos and uploaded files\n\n'
-            'Are you absolutely sure you want to delete your account?'
-          ),
+              'This action cannot be undone. All your data will be permanently deleted:\n\n'
+              '• Your profile and dog information\n'
+              '• All posts and comments\n'
+              '• Matches and messages\n'
+              '• Playdates and achievements\n'
+              '• Photos and uploaded files\n\n'
+              'Are you absolutely sure you want to delete your account?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -156,7 +156,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       if (mounted) {
         scaffoldMessenger.showSnackBar(
-          const SnackBar(content: Text('Account deleted successfully'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('Account deleted successfully'),
+              backgroundColor: Colors.green),
         );
         context.go('/auth');
       }
@@ -164,7 +166,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) Navigator.of(context).pop();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete account: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Failed to delete account: $e'),
+              backgroundColor: Colors.red),
         );
       }
     }
@@ -192,7 +196,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 16),
-            
+
             _buildSectionHeader(context, 'Account'),
             _buildSettingsItem(
               context,
@@ -202,7 +206,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () async {
                 final user = SupabaseConfig.auth.currentUser;
                 if (user != null) {
-                  final userProfile = await SupabaseService.selectSingle('users', filters: {'id': user.id});
+                  final userProfile = await SupabaseService.selectSingle(
+                      'users',
+                      filters: {'id': user.id});
                   if (mounted) {
                     context.push('/create-profile', extra: {
                       'editMode': EditMode.editOwner,
@@ -220,7 +226,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'My Dogs',
               subtitle: 'Manage your dog profiles',
               onTap: () {
-                 context.push('/create-profile', extra: {'editMode': EditMode.editDog});
+                context.push('/create-profile',
+                    extra: {'editMode': EditMode.editDog});
               },
             ),
             _buildSettingsItem(
@@ -237,9 +244,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: 'Manage your privacy settings',
               onTap: () => _showPrivacySheet(context),
             ),
-            
+
             const Divider(height: 48),
-            
+
             _buildSectionHeader(context, 'Location'),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -253,15 +260,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Location settings updated. Pull to refresh your feed.')),
+                      const SnackBar(
+                          content: Text(
+                              'Location settings updated. Pull to refresh your feed.')),
                     );
                   }
                 },
               ),
             ),
-            
+
             const Divider(height: 48),
-            
+
             // Privacy & Safety Section
             _buildSectionHeader(context, 'Privacy & Safety'),
             _buildSettingsItem(
@@ -272,13 +281,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const BlockedUsersScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const BlockedUsersScreen()),
                 );
               },
             ),
-            
+
             const Divider(height: 48),
-            
+
             _buildSectionHeader(context, 'Support'),
             _buildSettingsItem(
               context,
@@ -286,7 +296,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'Help Center',
               subtitle: 'Get help with the app',
               onTap: () {
-                 ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Help Center - Coming soon!')),
                 );
               },
@@ -298,13 +308,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: 'Contact us for support',
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Contact support: support@barkdate.com')),
+                  const SnackBar(
+                      content: Text('Contact support: support@barkdate.com')),
                 );
               },
             ),
-            
+
             const Divider(height: 48),
-            
+
             _buildSectionHeader(context, 'Legal'),
             _buildSettingsItem(
               context,
@@ -314,13 +325,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const TermsOfServiceScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const TermsOfServiceScreen()),
                 );
               },
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             _buildSectionHeader(context, 'Danger Zone'),
             _buildSettingsItem(
               context,
@@ -330,17 +342,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () => _showDeleteAccountDialog(context),
               isDestructive: true,
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             Center(
               child: Text(
                 'BarkDate v1.0.0',
-                style: AppTypography.caption().copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                style: AppTypography.caption().copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6)),
               ),
             ),
             const SizedBox(height: 16),
-            
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: SizedBox(
@@ -349,12 +365,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onPressed: () => _showSignOutDialog(context),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: BorderSide(color: Theme.of(context).colorScheme.outline),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    side: BorderSide(
+                        color: Theme.of(context).colorScheme.outline),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                   child: Text(
                     'Log Out',
-                    style: AppTypography.labelLarge().copyWith(color: Colors.black),
+                    style: AppTypography.labelLarge()
+                        .copyWith(color: Colors.black),
                   ),
                 ),
               ),
@@ -390,7 +409,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Row(
           children: [
-            Icon(icon, size: 24, color: isDestructive ? Colors.red : Theme.of(context).colorScheme.onSurface),
+            Icon(icon,
+                size: 24,
+                color: isDestructive
+                    ? Colors.red
+                    : Theme.of(context).colorScheme.onSurface),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -405,12 +428,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     subtitle,
-                    style: AppTypography.bodySmall().copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+                    style: AppTypography.bodySmall().copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.7)),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
+            Icon(Icons.chevron_right,
+                color:
+                    Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
           ],
         ),
       ),
@@ -473,73 +502,81 @@ class _AppPreferencesSheetState extends State<AppPreferencesSheet> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: _settingsService,
-      builder: (context, child) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.outline,
-                    borderRadius: BorderRadius.circular(2),
+        listenable: _settingsService,
+        builder: (context, child) {
+          return Container(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.outline,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Text('App Preferences', style: AppTypography.h2()),
-              const SizedBox(height: 24),
-              Expanded(
-                child: ListView(
-                  controller: widget.scrollController,
-                  children: [
-                    Text('Appearance', style: AppTypography.h3()),
-                    const SizedBox(height: 16),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text('Theme', style: AppTypography.bodyLarge()),
-                      subtitle: Text(
-                        'Dark mode coming soon',
-                        style: AppTypography.caption().copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                const SizedBox(height: 24),
+                Text('App Preferences', style: AppTypography.h2()),
+                const SizedBox(height: 24),
+                Expanded(
+                  child: ListView(
+                    controller: widget.scrollController,
+                    children: [
+                      Text('Appearance', style: AppTypography.h3()),
+                      const SizedBox(height: 16),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('Theme', style: AppTypography.bodyLarge()),
+                        subtitle: Text(
+                          'Dark mode coming soon',
+                          style: AppTypography.caption().copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.5),
+                          ),
                         ),
-                      ),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '☀️ Light',
-                          style: AppTypography.labelMedium().copyWith(
-                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color:
+                                Theme.of(context).colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '☀️ Light',
+                            style: AppTypography.labelMedium().copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimaryContainer,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text('Notifications', style: AppTypography.h3()),
-                    const SizedBox(height: 16),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text('Push Notifications', style: AppTypography.bodyLarge()),
-                      value: _settingsService.notificationsEnabled,
-                      onChanged: (value) => _settingsService.setNotificationsEnabled(value),
-                      activeColor: Colors.black,
-                    ),
-                  ],
+                      const SizedBox(height: 24),
+                      Text('Notifications', style: AppTypography.h3()),
+                      const SizedBox(height: 16),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('Push Notifications',
+                            style: AppTypography.bodyLarge()),
+                        value: _settingsService.notificationsEnabled,
+                        onChanged: (value) =>
+                            _settingsService.setNotificationsEnabled(value),
+                        activeColor: Colors.black,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        );
-      }
-    );
+              ],
+            ),
+          );
+        });
   }
 }
 
@@ -558,54 +595,60 @@ class _PrivacySheetState extends State<PrivacySheet> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: _settingsService,
-      builder: (context, child) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
+        listenable: _settingsService,
+        builder: (context, child) {
+          return Container(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Text('Privacy Settings', style: AppTypography.h2()),
-              const SizedBox(height: 24),
-              Expanded(
-                child: ListView(
-                  controller: widget.scrollController,
-                  children: [
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text('Location Sharing', style: AppTypography.bodyLarge()),
-                      subtitle: Text('Allow others to see your general location', style: AppTypography.bodySmall()),
-                      value: _settingsService.locationEnabled,
-                      onChanged: (value) => _settingsService.setLocationEnabled(value),
-                      activeColor: Colors.black,
-                    ),
-                    const SizedBox(height: 16),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text('Privacy Mode', style: AppTypography.bodyLarge()),
-                      subtitle: Text('Limit who can see your profile', style: AppTypography.bodySmall()),
-                      value: _settingsService.privacyMode,
-                      onChanged: (value) => _settingsService.setPrivacyMode(value),
-                      activeColor: Colors.black,
-                    ),
-                  ],
+                const SizedBox(height: 24),
+                Text('Privacy Settings', style: AppTypography.h2()),
+                const SizedBox(height: 24),
+                Expanded(
+                  child: ListView(
+                    controller: widget.scrollController,
+                    children: [
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('Location Sharing',
+                            style: AppTypography.bodyLarge()),
+                        subtitle: Text(
+                            'Allow others to see your general location',
+                            style: AppTypography.bodySmall()),
+                        value: _settingsService.locationEnabled,
+                        onChanged: (value) =>
+                            _settingsService.setLocationEnabled(value),
+                        activeColor: Colors.black,
+                      ),
+                      const SizedBox(height: 16),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('Privacy Mode',
+                            style: AppTypography.bodyLarge()),
+                        subtitle: Text('Limit who can see your profile',
+                            style: AppTypography.bodySmall()),
+                        value: _settingsService.privacyMode,
+                        onChanged: (value) =>
+                            _settingsService.setPrivacyMode(value),
+                        activeColor: Colors.black,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        );
-      }
-    );
+              ],
+            ),
+          );
+        });
   }
 }

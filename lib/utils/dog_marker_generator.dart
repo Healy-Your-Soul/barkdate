@@ -11,7 +11,7 @@ class DogMarkerGenerator {
   static final Map<String, BitmapDescriptor> _cache = {};
 
   /// Create a circular dog photo marker with a colored border
-  /// 
+  ///
   /// [imageUrl] - URL of the dog photo
   /// [borderColor] - Color of the border (based on freshness: green/orange/red)
   /// [size] - Size of the marker in pixels (default 80)
@@ -24,7 +24,7 @@ class DogMarkerGenerator {
   }) async {
     // Create a cache key
     final cacheKey = '${imageUrl ?? 'default'}_${borderColor.value}_$size';
-    
+
     // Return cached version if available
     if (_cache.containsKey(cacheKey)) {
       return _cache[cacheKey]!;
@@ -36,7 +36,7 @@ class DogMarkerGenerator {
       if (imageUrl != null && imageUrl.isNotEmpty) {
         dogImage = await _loadNetworkImage(imageUrl);
       }
-      
+
       // Create the marker image
       final markerBytes = await _createCircularMarker(
         dogImage: dogImage,
@@ -44,7 +44,7 @@ class DogMarkerGenerator {
         size: size,
         borderWidth: borderWidth,
       );
-      
+
       final descriptor = BitmapDescriptor.bytes(markerBytes);
       _cache[cacheKey] = descriptor;
       return descriptor;
@@ -61,9 +61,9 @@ class DogMarkerGenerator {
   static Future<ui.Image?> _loadNetworkImage(String url) async {
     try {
       final response = await http.get(Uri.parse(url)).timeout(
-        const Duration(seconds: 5),
-      );
-      
+            const Duration(seconds: 5),
+          );
+
       if (response.statusCode == 200) {
         final codec = await ui.instantiateImageCodec(response.bodyBytes);
         final frame = await codec.getNextFrame();
@@ -85,38 +85,38 @@ class DogMarkerGenerator {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final paint = Paint();
-    
+
     final center = Offset(size / 2, size / 2);
     final radius = size / 2;
-    
+
     // Draw shadow
     paint
       ..color = Colors.black.withValues(alpha: 0.3)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
     canvas.drawCircle(center + const Offset(2, 2), radius - 2, paint);
-    
+
     // Reset paint
     paint.maskFilter = null;
-    
+
     // Draw border (colored ring)
     paint.color = borderColor;
     canvas.drawCircle(center, radius - 2, paint);
-    
+
     // Draw white ring (inner border)
     paint.color = Colors.white;
     final innerRadius = radius - borderWidth - 2;
     canvas.drawCircle(center, innerRadius, paint);
-    
+
     if (dogImage != null) {
       // Clip and draw the dog image
       canvas.save();
       final clipPath = Path()
         ..addOval(Rect.fromCircle(center: center, radius: innerRadius - 2));
       canvas.clipPath(clipPath);
-      
+
       // Scale and center the image
-      final imageSize = dogImage.width > dogImage.height 
-          ? dogImage.height.toDouble() 
+      final imageSize = dogImage.width > dogImage.height
+          ? dogImage.height.toDouble()
           : dogImage.width.toDouble();
       final srcRect = Rect.fromCenter(
         center: Offset(dogImage.width / 2, dogImage.height / 2),
@@ -124,14 +124,14 @@ class DogMarkerGenerator {
         height: imageSize,
       );
       final dstRect = Rect.fromCircle(center: center, radius: innerRadius - 2);
-      
+
       canvas.drawImageRect(dogImage, srcRect, dstRect, Paint());
       canvas.restore();
     } else {
       // Draw a dog icon placeholder
       paint.color = Colors.grey[300]!;
       canvas.drawCircle(center, innerRadius - 2, paint);
-      
+
       // Draw paw print icon
       final textPainter = TextPainter(
         text: TextSpan(
@@ -149,12 +149,12 @@ class DogMarkerGenerator {
         ),
       );
     }
-    
+
     // Convert to bytes
     final picture = recorder.endRecording();
     final image = await picture.toImage(size, size);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    
+
     return byteData!.buffer.asUint8List();
   }
 
@@ -185,9 +185,9 @@ class DogMarkerGenerator {
   static void clearCache() {
     _cache.clear();
   }
-  
+
   /// Create a custom place marker with category-specific color and icon
-  /// 
+  ///
   /// [category] - Place category (park, cafe, store, vet, etc.)
   /// [size] - Size of the marker in pixels (default 40)
   static Future<BitmapDescriptor> createPlaceMarker({
@@ -196,7 +196,7 @@ class DogMarkerGenerator {
   }) async {
     // Create a cache key
     final cacheKey = 'place_${category}_$size';
-    
+
     // Return cached version if available
     if (_cache.containsKey(cacheKey)) {
       return _cache[cacheKey]!;
@@ -206,40 +206,40 @@ class DogMarkerGenerator {
       // Get color and icon based on category
       Color markerColor;
       String icon;
-      
+
       switch (category.toLowerCase()) {
         case 'park':
         case 'dog_park':
           markerColor = Colors.green;
-          icon = 'P';  // Park
+          icon = 'P'; // Park
           break;
         case 'cafe':
         case 'restaurant':
           markerColor = Colors.orange;
-          icon = 'C';  // Cafe
+          icon = 'C'; // Cafe
           break;
         case 'store':
         case 'pet_store':
         case 'petstore':
           markerColor = Colors.blue;
-          icon = 'S';  // Store
+          icon = 'S'; // Store
           break;
         case 'veterinary':
         case 'vet':
           markerColor = Colors.red;
-          icon = 'V';  // Vet
+          icon = 'V'; // Vet
           break;
         default:
           markerColor = Colors.purple;
-          icon = '•';  // Other
+          icon = '•'; // Other
       }
-      
+
       final markerBytes = await _createPlaceMarkerImage(
         color: markerColor,
         icon: icon,
         size: size,
       );
-      
+
       final descriptor = BitmapDescriptor.bytes(markerBytes);
       _cache[cacheKey] = descriptor;
       return descriptor;
@@ -249,7 +249,7 @@ class DogMarkerGenerator {
       return BitmapDescriptor.defaultMarker;
     }
   }
-  
+
   /// Create the place marker image with colored background and icon
   static Future<Uint8List> _createPlaceMarkerImage({
     required Color color,
@@ -259,30 +259,30 @@ class DogMarkerGenerator {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final paint = Paint();
-    
+
     final center = Offset(size / 2, size / 2);
     final radius = size / 2;
-    
+
     // Draw shadow
     paint
       ..color = Colors.black.withValues(alpha: 0.3)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
     canvas.drawCircle(center + const Offset(1, 1), radius - 2, paint);
-    
+
     // Reset paint
     paint.maskFilter = null;
-    
+
     // Draw colored circle
     paint.color = color;
     canvas.drawCircle(center, radius - 2, paint);
-    
+
     // Draw white border
     paint
       ..color = Colors.white
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
     canvas.drawCircle(center, radius - 3, paint);
-    
+
     // Draw white letter icon in center (more reliable than emojis)
     final textPainter = TextPainter(
       text: TextSpan(
@@ -303,17 +303,17 @@ class DogMarkerGenerator {
         center.dy - textPainter.height / 2,
       ),
     );
-    
+
     // Convert to bytes
     final picture = recorder.endRecording();
     final image = await picture.toImage(size, size);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    
+
     return byteData!.buffer.asUint8List();
   }
-  
+
   /// Create a place marker with dog count badge
-  /// 
+  ///
   /// [category] - Place category (park, cafe, store, vet, etc.)
   /// [dogCount] - Number of dogs currently checked in
   /// [size] - Size of the marker in pixels (default 48)
@@ -324,7 +324,7 @@ class DogMarkerGenerator {
   }) async {
     // Create a cache key that includes dog count
     final cacheKey = 'place_${category}_${dogCount}_$size';
-    
+
     // Return cached version if available
     if (_cache.containsKey(cacheKey)) {
       return _cache[cacheKey]!;
@@ -334,7 +334,7 @@ class DogMarkerGenerator {
       // Get color based on category
       Color markerColor;
       String icon;
-      
+
       switch (category.toLowerCase()) {
         case 'park':
         case 'dog_park':
@@ -361,14 +361,14 @@ class DogMarkerGenerator {
           markerColor = Colors.purple;
           icon = '📍';
       }
-      
+
       final markerBytes = await _createPlaceMarkerWithCountImage(
         color: markerColor,
         icon: icon,
         dogCount: dogCount,
         size: size,
       );
-      
+
       final descriptor = BitmapDescriptor.bytes(markerBytes);
       _cache[cacheKey] = descriptor;
       return descriptor;
@@ -377,7 +377,7 @@ class DogMarkerGenerator {
       return BitmapDescriptor.defaultMarker;
     }
   }
-  
+
   /// Create the place marker image with count badge
   static Future<Uint8List> _createPlaceMarkerWithCountImage({
     required Color color,
@@ -388,32 +388,37 @@ class DogMarkerGenerator {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final paint = Paint();
-    
-    final center = Offset(size / 2, size / 2 + 4); // Offset down to leave room for badge
+
+    final center =
+        Offset(size / 2, size / 2 + 4); // Offset down to leave room for badge
     final radius = (size - 12) / 2; // Smaller to leave room for badge
-    
+
     // Draw shadow
     paint
       ..color = Colors.black.withValues(alpha: 0.3)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
     canvas.drawCircle(center + const Offset(1, 1), radius - 2, paint);
-    
+
     // Reset paint
     paint.maskFilter = null;
-    
+
     // Draw colored circle
     paint.color = color;
     canvas.drawCircle(center, radius - 2, paint);
-    
+
     // Draw white border
     paint
       ..color = Colors.white
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
     canvas.drawCircle(center, radius - 3, paint);
-    
+
     // Draw icon in center (using letter for reliability)
-    final letterIcon = icon == '🌳' ? 'P' : (icon == '☕' ? 'C' : (icon == '🏪' ? 'S' : (icon == '🏥' ? 'V' : '•')));
+    final letterIcon = icon == '🌳'
+        ? 'P'
+        : (icon == '☕'
+            ? 'C'
+            : (icon == '🏪' ? 'S' : (icon == '🏥' ? 'V' : '•')));
     final textPainter = TextPainter(
       text: TextSpan(
         text: letterIcon,
@@ -433,25 +438,27 @@ class DogMarkerGenerator {
         center.dy - textPainter.height / 2,
       ),
     );
-    
+
     // Draw dog count badge (top right) if count > 0
     if (dogCount > 0) {
       final badgeRadius = size * 0.22;
       final badgeCenter = Offset(size - badgeRadius - 2, badgeRadius + 2);
-      
+
       // Badge background (red/orange circle)
       paint
         ..style = PaintingStyle.fill
-        ..color = dogCount >= 6 ? Colors.red : (dogCount >= 3 ? Colors.orange : Colors.green);
+        ..color = dogCount >= 6
+            ? Colors.red
+            : (dogCount >= 3 ? Colors.orange : Colors.green);
       canvas.drawCircle(badgeCenter, badgeRadius, paint);
-      
+
       // Badge border
       paint
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
         ..color = Colors.white;
       canvas.drawCircle(badgeCenter, badgeRadius, paint);
-      
+
       // Badge text (dog count)
       final countText = dogCount > 9 ? '9+' : dogCount.toString();
       final badgeTextPainter = TextPainter(
@@ -474,12 +481,12 @@ class DogMarkerGenerator {
         ),
       );
     }
-    
+
     // Convert to bytes
     final picture = recorder.endRecording();
     final image = await picture.toImage(size, size);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    
+
     return byteData!.buffer.asUint8List();
   }
 }

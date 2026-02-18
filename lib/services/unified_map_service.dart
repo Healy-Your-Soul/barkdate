@@ -90,8 +90,9 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
 
   // Mock data for places - replace with actual PlacesService.searchPlaces when ready
   Future<List<Map<String, dynamic>>> _getMockPlaces(String query) async {
-    await Future.delayed(const Duration(milliseconds: 500)); // Simulate network delay
-    
+    await Future.delayed(
+        const Duration(milliseconds: 500)); // Simulate network delay
+
     final mockPlaces = [
       {
         'place_id': '1',
@@ -131,9 +132,15 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
     ];
 
     return mockPlaces
-        .where((place) => 
-            (place['name'] as String?)?.toLowerCase().contains(query.toLowerCase()) == true ||
-            (place['address'] as String?)?.toLowerCase().contains(query.toLowerCase()) == true)
+        .where((place) =>
+            (place['name'] as String?)
+                    ?.toLowerCase()
+                    .contains(query.toLowerCase()) ==
+                true ||
+            (place['address'] as String?)
+                    ?.toLowerCase()
+                    .contains(query.toLowerCase()) ==
+                true)
         .toList();
   }
 
@@ -157,7 +164,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
+
           // Title
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -179,7 +186,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
               ],
             ),
           ),
-          
+
           // Search field
           Padding(
             padding: const EdgeInsets.all(20),
@@ -209,7 +216,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
               },
             ),
           ),
-          
+
           // Search results
           Expanded(
             child: _isLoading
@@ -226,11 +233,15 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
                         itemCount: _searchResults.length,
                         itemBuilder: (context, index) {
                           final place = _searchResults[index];
-                          final isSelected = _selectedLocation?['place_id'] == place['place_id'];
-                          
+                          final isSelected = _selectedLocation?['place_id'] ==
+                              place['place_id'];
+
                           return ListTile(
                             leading: CircleAvatar(
-                              backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                              backgroundColor: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.1),
                               child: Icon(
                                 Icons.location_on,
                                 color: Theme.of(context).colorScheme.primary,
@@ -238,10 +249,11 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
                             ),
                             title: Text(place['name'] ?? 'Unknown'),
                             subtitle: Text(place['address'] ?? ''),
-                            trailing: isSelected 
+                            trailing: isSelected
                                 ? Icon(
                                     Icons.check_circle,
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
                                   )
                                 : null,
                             selected: isSelected,
@@ -255,7 +267,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
                         },
                       ),
           ),
-          
+
           // Confirm button
           if (_selectedLocation != null)
             Container(

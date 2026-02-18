@@ -44,19 +44,17 @@ class DogMiniCard extends StatelessWidget {
                 child: const Icon(Icons.close, size: 20, color: Colors.grey),
               ),
             ),
-            
+
             // Dog photo
             CircleAvatar(
               radius: 32,
-              backgroundImage: dogPhotoUrl != null 
-                  ? NetworkImage(dogPhotoUrl!) 
-                  : null,
-              child: dogPhotoUrl == null 
-                  ? const Icon(Icons.pets, size: 32) 
-                  : null,
+              backgroundImage:
+                  dogPhotoUrl != null ? NetworkImage(dogPhotoUrl!) : null,
+              child:
+                  dogPhotoUrl == null ? const Icon(Icons.pets, size: 32) : null,
             ),
             const SizedBox(height: 8),
-            
+
             // Dog name (Human name)
             Text(
               dogName,
@@ -73,9 +71,9 @@ class DogMiniCard extends StatelessWidget {
                   fontSize: 12,
                 ),
               ),
-            
+
             const SizedBox(height: 4),
-            
+
             // Status
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -95,9 +93,9 @@ class DogMiniCard extends StatelessWidget {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // Actions - hidden for own dog
             if (!isOwnDog)
               Column(
@@ -119,38 +117,36 @@ class DogMiniCard extends StatelessWidget {
                         child: const Text('Add to Pack'),
                       ),
                     ),
-                  
                   if (!isFriend) const SizedBox(height: 8),
-                  
                   SizedBox(
                     width: double.infinity,
-                    child: isFriend 
-                      ? ElevatedButton.icon(
-                          onPressed: onBark,
-                          icon: const Icon(Icons.record_voice_over, size: 16),
-                          label: const Text('Bark 👋'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                    child: isFriend
+                        ? ElevatedButton.icon(
+                            onPressed: onBark,
+                            icon: const Icon(Icons.record_voice_over, size: 16),
+                            label: const Text('Bark 👋'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                          )
+                        : OutlinedButton.icon(
+                            onPressed: onBark,
+                            icon: const Icon(Icons.record_voice_over, size: 14),
+                            label: const Text('Bark 👋'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              side: const BorderSide(color: Colors.orange),
+                              foregroundColor: Colors.orange,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
                             ),
                           ),
-                        )
-                      : OutlinedButton.icon(
-                          onPressed: onBark,
-                          icon: const Icon(Icons.record_voice_over, size: 14),
-                          label: const Text('Bark 👋'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            side: const BorderSide(color: Colors.orange),
-                            foregroundColor: Colors.orange,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
-                        ),
                   ),
                 ],
               )

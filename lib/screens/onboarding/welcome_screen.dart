@@ -18,19 +18,22 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   final List<OnboardingPage> _pages = [
     OnboardingPage(
       title: 'Find Nearby Dog Friends',
-      description: 'Discover dogs in your area and connect with their owners for playdates and adventures.',
+      description:
+          'Discover dogs in your area and connect with their owners for playdates and adventures.',
       icon: Icons.location_on,
       color: const Color(0xFF4CAF50),
     ),
     OnboardingPage(
       title: 'Schedule Playdates',
-      description: 'Easily organize meetups at local parks and create lasting friendships for your furry friend.',
+      description:
+          'Easily organize meetups at local parks and create lasting friendships for your furry friend.',
       icon: Icons.calendar_today,
       color: const Color(0xFF2196F3),
     ),
     OnboardingPage(
       title: 'Build Your Pack',
-      description: 'Join a community of dog lovers, share experiences, and create memories together.',
+      description:
+          'Join a community of dog lovers, share experiences, and create memories together.',
       icon: Icons.groups,
       color: const Color(0xFFFF9800),
     ),
@@ -67,7 +70,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => context.go('/auth'),
           tooltip: 'Back to Sign In',
         ),
@@ -92,7 +96,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 ),
               ),
             ),
-            
+
             // Page content
             Expanded(
               child: PageView.builder(
@@ -123,24 +127,31 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           ),
                         ),
                         const SizedBox(height: 48),
-                        
+
                         // Title
                         Text(
                           page.title,
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 16),
-                        
+
                         // Description
                         Text(
                           page.description,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
+                                  ),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -149,7 +160,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 },
               ),
             ),
-            
+
             // Page indicator and button
             Padding(
               padding: const EdgeInsets.all(24),
@@ -168,14 +179,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         decoration: BoxDecoration(
                           color: _currentPage == index
                               ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Get Started button (only on last page)
                   AnimatedOpacity(
                     opacity: _currentPage == _pages.length - 1 ? 1.0 : 0.0,
@@ -183,10 +197,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     child: SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _currentPage == _pages.length - 1 ? _navigateToNext : null,
+                        onPressed: _currentPage == _pages.length - 1
+                            ? _navigateToNext
+                            : null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.onPrimary,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -202,7 +220,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       ),
                     ),
                   ),
-                  
+
                   // Next button (not on last page)
                   if (_currentPage < _pages.length - 1)
                     SizedBox(
@@ -215,8 +233,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.onPrimary,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

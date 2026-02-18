@@ -36,7 +36,8 @@ class MapBottomSheets extends ConsumerWidget {
         place: selection.selectedPlace!,
         dogCount: dogCount,
         events: events
-            .where((e) => e.latitude == selection.selectedPlace!.latitude &&
+            .where((e) =>
+                e.latitude == selection.selectedPlace!.latitude &&
                 e.longitude == selection.selectedPlace!.longitude)
             .toList(),
         onCheckInSuccess: onCheckInSuccess,
@@ -83,7 +84,8 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
   Future<void> _loadActiveCheckIns() async {
     setState(() => _isLoadingCheckIns = true);
     try {
-      final checkIns = await CheckInService.getActiveCheckInsAtPlace(widget.place.placeId);
+      final checkIns =
+          await CheckInService.getActiveCheckInsAtPlace(widget.place.placeId);
       if (mounted) {
         setState(() {
           _activeCheckIns = checkIns;
@@ -154,11 +156,14 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                           itemCount: _activeCheckIns.length,
                           itemBuilder: (context, index) {
                             final checkIn = _activeCheckIns[index];
-                            final user = checkIn['user'] as Map<String, dynamic>?;
+                            final user =
+                                checkIn['user'] as Map<String, dynamic>?;
                             final dog = checkIn['dog'] as Map<String, dynamic>?;
-                            final checkedInAt = DateTime.parse(checkIn['checked_in_at']);
-                            final duration = DateTime.now().difference(checkedInAt);
-                            
+                            final checkedInAt =
+                                DateTime.parse(checkIn['checked_in_at']);
+                            final duration =
+                                DateTime.now().difference(checkedInAt);
+
                             String timeAgo;
                             if (duration.inMinutes < 1) {
                               timeAgo = 'Just now';
@@ -189,7 +194,8 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                               trailing: user?['name'] != null
                                   ? Text(
                                       user!['name'],
-                                      style: Theme.of(context).textTheme.bodySmall,
+                                      style:
+                                          Theme.of(context).textTheme.bodySmall,
                                     )
                                   : null,
                             );
@@ -209,13 +215,14 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
     final lat = widget.place.latitude;
     final lng = widget.place.longitude;
     final name = Uri.encodeComponent(widget.place.name);
-    
+
     // Try opening in Apple Maps on iOS, Google Maps on Android
     Uri mapsUrl;
     if (Platform.isIOS) {
       mapsUrl = Uri.parse('https://maps.apple.com/?daddr=$lat,$lng&q=$name');
     } else {
-      mapsUrl = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&destination_place_id=${widget.place.placeId}');
+      mapsUrl = Uri.parse(
+          'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&destination_place_id=${widget.place.placeId}');
     }
 
     try {
@@ -223,7 +230,8 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
         await launchUrl(mapsUrl, mode: LaunchMode.externalApplication);
       } else {
         // Fallback to Google Maps web
-        final fallback = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+        final fallback = Uri.parse(
+            'https://www.google.com/maps/search/?api=1&query=$lat,$lng');
         await launchUrl(fallback, mode: LaunchMode.externalApplication);
       }
     } catch (e) {
@@ -240,12 +248,42 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
   Widget _buildPlaceTagsSection() {
     // Common place amenity tags
     final List<Map<String, dynamic>> availableTags = [
-      {'id': 'dog_friendly', 'icon': Icons.pets, 'label': 'Dog Friendly', 'color': Colors.green},
-      {'id': 'water', 'icon': Icons.water_drop, 'label': 'Water Available', 'color': Colors.blue},
-      {'id': 'poo_bags', 'icon': Icons.shopping_bag, 'label': 'Poo Bags', 'color': Colors.brown},
-      {'id': 'garbage', 'icon': Icons.delete, 'label': 'Trash Bins', 'color': Colors.grey},
-      {'id': 'fenced', 'icon': Icons.fence, 'label': 'Fenced Area', 'color': Colors.orange},
-      {'id': 'shade', 'icon': Icons.wb_shade, 'label': 'Shade Available', 'color': Colors.teal},
+      {
+        'id': 'dog_friendly',
+        'icon': Icons.pets,
+        'label': 'Dog Friendly',
+        'color': Colors.green
+      },
+      {
+        'id': 'water',
+        'icon': Icons.water_drop,
+        'label': 'Water Available',
+        'color': Colors.blue
+      },
+      {
+        'id': 'poo_bags',
+        'icon': Icons.shopping_bag,
+        'label': 'Poo Bags',
+        'color': Colors.brown
+      },
+      {
+        'id': 'garbage',
+        'icon': Icons.delete,
+        'label': 'Trash Bins',
+        'color': Colors.grey
+      },
+      {
+        'id': 'fenced',
+        'icon': Icons.fence,
+        'label': 'Fenced Area',
+        'color': Colors.orange
+      },
+      {
+        'id': 'shade',
+        'icon': Icons.wb_shade,
+        'label': 'Shade Available',
+        'color': Colors.teal
+      },
     ];
 
     return Column(
@@ -361,20 +399,24 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
             Wrap(
               spacing: 10,
               runSpacing: 10,
-              children: tags.map((tag) => ActionChip(
-                avatar: Icon(tag['icon'] as IconData, size: 18, color: tag['color'] as Color),
-                label: Text(tag['label'] as String),
-                onPressed: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Tagged as "${tag['label']}"! Thank you! 🐕'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  // TODO: Save tag to database
-                },
-              )).toList(),
+              children: tags
+                  .map((tag) => ActionChip(
+                        avatar: Icon(tag['icon'] as IconData,
+                            size: 18, color: tag['color'] as Color),
+                        label: Text(tag['label'] as String),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  'Tagged as "${tag['label']}"! Thank you! 🐕'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          // TODO: Save tag to database
+                        },
+                      ))
+                  .toList(),
             ),
             const SizedBox(height: 20),
           ],
@@ -425,14 +467,16 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                       child: Text(
                         widget.place.name,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () {
-                        ref.read(mapSelectionProvider.notifier).clearSelection();
+                        ref
+                            .read(mapSelectionProvider.notifier)
+                            .clearSelection();
                       },
                     ),
                   ],
@@ -460,18 +504,25 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: widget.place.isOpen ? Colors.green.shade50 : Colors.red.shade50,
+                            color: widget.place.isOpen
+                                ? Colors.green.shade50
+                                : Colors.red.shade50,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: widget.place.isOpen ? Colors.green : Colors.red,
+                              color: widget.place.isOpen
+                                  ? Colors.green
+                                  : Colors.red,
                             ),
                           ),
                           child: Text(
                             widget.place.isOpen ? 'Open Now' : 'Closed',
                             style: TextStyle(
-                              color: widget.place.isOpen ? Colors.green.shade700 : Colors.red.shade700,
+                              color: widget.place.isOpen
+                                  ? Colors.green.shade700
+                                  : Colors.red.shade700,
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                             ),
@@ -481,7 +532,9 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                         if (widget.place.rating > 0) ...[
                           const Icon(Icons.star, color: Colors.amber, size: 18),
                           const SizedBox(width: 4),
-                          Text('${widget.place.rating}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                          Text('${widget.place.rating}',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 15)),
                         ],
                       ],
                     ),
@@ -490,16 +543,21 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                     // 3. Category
                     Row(
                       children: [
-                        const Text('Categories: ', style: TextStyle(color: Colors.grey)),
+                        const Text('Categories: ',
+                            style: TextStyle(color: Colors.grey)),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: const Color(0xFF4CAF50).withOpacity(0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             widget.place.category.displayName.toLowerCase(),
-                            style: const TextStyle(fontSize: 13, color: Color(0xFF2E7D32), fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF2E7D32),
+                                fontWeight: FontWeight.w500),
                           ),
                         ),
                       ],
@@ -508,25 +566,36 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
 
                     // 4. Dog-Friendly Badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
                         color: widget.place.isDogFriendly
-                            ? (widget.place.isFeaturedPark ? Colors.green.shade50 : Colors.orange.shade50)
+                            ? (widget.place.isFeaturedPark
+                                ? Colors.green.shade50
+                                : Colors.orange.shade50)
                             : Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: widget.place.isDogFriendly
-                              ? (widget.place.isFeaturedPark ? Colors.green.shade300 : Colors.orange.shade300)
+                              ? (widget.place.isFeaturedPark
+                                  ? Colors.green.shade300
+                                  : Colors.orange.shade300)
                               : Colors.grey.shade300,
                         ),
                       ),
                       child: Row(
                         children: [
                           Icon(
-                            widget.place.isFeaturedPark ? Icons.verified : (widget.place.isDogFriendly ? Icons.pets : Icons.help_outline),
+                            widget.place.isFeaturedPark
+                                ? Icons.verified
+                                : (widget.place.isDogFriendly
+                                    ? Icons.pets
+                                    : Icons.help_outline),
                             size: 20,
                             color: widget.place.isDogFriendly
-                                ? (widget.place.isFeaturedPark ? Colors.green.shade700 : Colors.orange.shade700)
+                                ? (widget.place.isFeaturedPark
+                                    ? Colors.green.shade700
+                                    : Colors.orange.shade700)
                                 : Colors.grey.shade600,
                           ),
                           const SizedBox(width: 10),
@@ -540,12 +609,17 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                                     fontWeight: FontWeight.w600,
                                     fontSize: 14,
                                     color: widget.place.isDogFriendly
-                                        ? (widget.place.isFeaturedPark ? Colors.green.shade800 : Colors.orange.shade800)
+                                        ? (widget.place.isFeaturedPark
+                                            ? Colors.green.shade800
+                                            : Colors.orange.shade800)
                                         : Colors.grey.shade700,
                                   ),
                                 ),
                                 if (!widget.place.isDogFriendly)
-                                  Text('Call ahead to confirm dogs are welcome', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                  Text('Call ahead to confirm dogs are welcome',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600)),
                               ],
                             ),
                           ),
@@ -555,22 +629,30 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                     const SizedBox(height: 16),
 
                     // 5. Photo
-                    if (widget.place.photoReference != null && widget.place.photoReference!.isNotEmpty) ...[
+                    if (widget.place.photoReference != null &&
+                        widget.place.photoReference!.isNotEmpty) ...[
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: SizedBox(
                           height: 150,
                           width: double.infinity,
                           child: Image.network(
-                            PlacesService.getPhotoUrl(widget.place.photoReference!, maxWidth: 600),
+                            PlacesService.getPhotoUrl(
+                                widget.place.photoReference!,
+                                maxWidth: 600),
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
                               color: Colors.grey.shade200,
-                              child: Center(child: Icon(Icons.park, size: 48, color: Colors.grey.shade400)),
+                              child: Center(
+                                  child: Icon(Icons.park,
+                                      size: 48, color: Colors.grey.shade400)),
                             ),
                             loadingBuilder: (context, child, loadingProgress) {
                               if (loadingProgress == null) return child;
-                              return Center(child: CircularProgressIndicator(strokeWidth: 2));
+                              return Center(
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2));
                             },
                           ),
                         ),
@@ -587,7 +669,8 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                         label: const Text('Get Directions'),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                     ),
@@ -606,21 +689,32 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(color: Colors.green.shade50, shape: BoxShape.circle),
-                                child: const Icon(Icons.pets, color: Colors.green, size: 20),
+                                decoration: BoxDecoration(
+                                    color: Colors.green.shade50,
+                                    shape: BoxShape.circle),
+                                child: const Icon(Icons.pets,
+                                    color: Colors.green, size: 20),
                               ),
                               const SizedBox(width: 12),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Who\'s Here Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                  Text('${widget.dogCount} ${widget.dogCount == 1 ? 'dog' : 'dogs'} checked in',
-                                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                                  const Text('Who\'s Here Now',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16)),
+                                  Text(
+                                      '${widget.dogCount} ${widget.dogCount == 1 ? 'dog' : 'dogs'} checked in',
+                                      style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                          fontSize: 13)),
                                 ],
                               ),
                             ],
                           ),
-                          TextButton(onPressed: _showActiveCheckInsDialog, child: const Text('See all')),
+                          TextButton(
+                              onPressed: _showActiveCheckInsDialog,
+                              child: const Text('See all')),
                         ],
                       ),
                       const SizedBox(height: 20),
@@ -628,21 +722,28 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
 
                     // 9. Events
                     if (widget.events.isNotEmpty) ...[
-                      const Text('Upcoming Events', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const Text('Upcoming Events',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16)),
                       const SizedBox(height: 12),
                       ...widget.events.map((event) => Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                            child: Text(event.categoryIcon),
-                          ),
-                          title: Text(event.title),
-                          subtitle: Text(event.formattedDate),
-                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                          onTap: () => ref.read(mapSelectionProvider.notifier).selectEvent(event),
-                        ),
-                      )),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
+                                child: Text(event.categoryIcon),
+                              ),
+                              title: Text(event.title),
+                              subtitle: Text(event.formattedDate),
+                              trailing:
+                                  const Icon(Icons.arrow_forward_ios, size: 16),
+                              onTap: () => ref
+                                  .read(mapSelectionProvider.notifier)
+                                  .selectEvent(event),
+                            ),
+                          )),
                     ],
                   ],
                 ),
@@ -720,11 +821,12 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
         // Clean up response text if it contains markdown code blocks
         String jsonString = response.text;
         if (jsonString.contains('```json')) {
-          jsonString = jsonString.replaceAll('```json', '').replaceAll('```', '');
+          jsonString =
+              jsonString.replaceAll('```json', '').replaceAll('```', '');
         } else if (jsonString.contains('```')) {
           jsonString = jsonString.replaceAll('```', '');
         }
-        
+
         jsonString = jsonString.trim();
 
         final Map<String, dynamic> json = jsonDecode(jsonString);
@@ -733,7 +835,8 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
         }
         if (json.containsKey('suggested_places')) {
           final List<dynamic> places = json['suggested_places'];
-          suggestedPlaceNames = places.map((p) => p['name'].toString()).toList();
+          suggestedPlaceNames =
+              places.map((p) => p['name'].toString()).toList();
         }
       } catch (e) {
         debugPrint('⚠️ Failed to parse AI JSON: $e');
@@ -743,14 +846,17 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
       // Update Map Filters if we have suggestions
       if (suggestedPlaceNames.isNotEmpty) {
         debugPrint('🤖 AI Suggested Places: $suggestedPlaceNames');
-        ref.read(mapFiltersProvider.notifier).setAiSuggestions(suggestedPlaceNames);
-        
+        ref
+            .read(mapFiltersProvider.notifier)
+            .setAiSuggestions(suggestedPlaceNames);
+
         // Trigger a refresh of the map data to search for these places
         ref.refresh(mapDataProvider);
       }
 
       setState(() {
-        _response = GeminiResponse(text: displayText, sources: response.sources);
+        _response =
+            GeminiResponse(text: displayText, sources: response.sources);
         _isLoading = false;
       });
     } catch (e) {
@@ -805,7 +911,10 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -821,16 +930,20 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
                         children: [
                           Text(
                             'AI Map Assistant',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                ),
                           ),
                           Text(
                             'Ask about dog-friendly spots',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey[600],
+                                    ),
                           ),
                         ],
                       ),
@@ -838,7 +951,9 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
                     IconButton(
                       icon: const Icon(Icons.close, color: Colors.black54),
                       onPressed: () {
-                        ref.read(mapSelectionProvider.notifier).clearSelection();
+                        ref
+                            .read(mapSelectionProvider.notifier)
+                            .clearSelection();
                       },
                     ),
                   ],
@@ -1075,8 +1190,9 @@ class _AnimatedCheckInButtonState extends State<AnimatedCheckInButton> {
 
   @override
   Widget build(BuildContext context) {
-    final buttonColor = _isCheckedIn ? const Color(0xFFF44336) : const Color(0xFF4CAF50);
-    
+    final buttonColor =
+        _isCheckedIn ? const Color(0xFFF44336) : const Color(0xFF4CAF50);
+
     return Container(
       width: double.infinity,
       child: ElevatedButton.icon(

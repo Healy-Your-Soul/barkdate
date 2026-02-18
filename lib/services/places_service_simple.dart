@@ -24,7 +24,7 @@ class PlacesService {
         category: PlaceCategory.park,
       ),
       PlaceResult(
-        placeId: 'mock_2', 
+        placeId: 'mock_2',
         name: 'Riverside Dog Run',
         address: '456 River St',
         latitude: latitude - 0.01,

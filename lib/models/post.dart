@@ -4,7 +4,7 @@ class Post {
   final String userName;
   final String userPhoto;
   final String dogName;
-  final String? dogId;  // For navigating to dog profile
+  final String? dogId; // For navigating to dog profile
   final String content;
   final String? imageUrl;
   final List<String> hashtags;
@@ -46,22 +46,23 @@ class Post {
     int? comments,
     int? shares,
     bool? isLiked,
-  }) => Post(
-    id: id ?? this.id,
-    userId: userId ?? this.userId,
-    userName: userName ?? this.userName,
-    userPhoto: userPhoto ?? this.userPhoto,
-    dogName: dogName ?? this.dogName,
-    dogId: dogId ?? this.dogId,
-    content: content ?? this.content,
-    imageUrl: imageUrl ?? this.imageUrl,
-    hashtags: hashtags ?? this.hashtags,
-    timestamp: timestamp ?? this.timestamp,
-    likes: likes ?? this.likes,
-    comments: comments ?? this.comments,
-    shares: shares ?? this.shares,
-    isLiked: isLiked ?? this.isLiked,
-  );
+  }) =>
+      Post(
+        id: id ?? this.id,
+        userId: userId ?? this.userId,
+        userName: userName ?? this.userName,
+        userPhoto: userPhoto ?? this.userPhoto,
+        dogName: dogName ?? this.dogName,
+        dogId: dogId ?? this.dogId,
+        content: content ?? this.content,
+        imageUrl: imageUrl ?? this.imageUrl,
+        hashtags: hashtags ?? this.hashtags,
+        timestamp: timestamp ?? this.timestamp,
+        likes: likes ?? this.likes,
+        comments: comments ?? this.comments,
+        shares: shares ?? this.shares,
+        isLiked: isLiked ?? this.isLiked,
+      );
 }
 
 class Comment {

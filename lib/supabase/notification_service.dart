@@ -7,7 +7,8 @@ import 'package:barkdate/models/notification.dart';
 /// Service for managing notifications in BarkDate
 class NotificationService {
   /// Get unread notifications for a user
-  static Future<List<Map<String, dynamic>>> getUnreadNotifications(String userId) async {
+  static Future<List<Map<String, dynamic>>> getUnreadNotifications(
+      String userId) async {
     try {
       final data = await SupabaseConfig.client
           .from('notifications')
@@ -15,7 +16,7 @@ class NotificationService {
           .eq('user_id', userId)
           .eq('is_read', false)
           .order('created_at', ascending: false);
-      
+
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       print('Error getting unread notifications: $e');
@@ -24,14 +25,15 @@ class NotificationService {
   }
 
   /// Get all notifications for a user
-  static Future<List<Map<String, dynamic>>> getAllNotifications(String userId) async {
+  static Future<List<Map<String, dynamic>>> getAllNotifications(
+      String userId) async {
     try {
       final data = await SupabaseConfig.client
           .from('notifications')
           .select('*')
           .eq('user_id', userId)
           .order('created_at', ascending: false);
-      
+
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       print('Error getting all notifications: $e');
@@ -40,7 +42,8 @@ class NotificationService {
   }
 
   /// Real-time stream of notifications for a user (ordered newest first)
-  static Stream<List<Map<String, dynamic>>> streamUserNotifications(String userId) {
+  static Stream<List<Map<String, dynamic>>> streamUserNotifications(
+      String userId) {
     return SupabaseConfig.client
         .from('notifications')
         .stream(primaryKey: ['id'])
@@ -53,8 +56,7 @@ class NotificationService {
     try {
       await SupabaseConfig.client
           .from('notifications')
-          .update({'is_read': true})
-          .eq('id', notificationId);
+          .update({'is_read': true}).eq('id', notificationId);
     } catch (e) {
       print('Error marking notification as read: $e');
       rethrow;
@@ -66,8 +68,7 @@ class NotificationService {
     try {
       await SupabaseConfig.client
           .from('notifications')
-          .update({'is_read': true})
-          .eq('user_id', userId);
+          .update({'is_read': true}).eq('user_id', userId);
     } catch (e) {
       print('Error marking all notifications as read: $e');
       rethrow;
@@ -100,18 +101,22 @@ class NotificationService {
       // Try client insert first, fallback to RPC if RLS blocks
       Map<String, dynamic> result;
       try {
-        final insertResult = await SupabaseService.insert('notifications', notificationData);
+        final insertResult =
+            await SupabaseService.insert('notifications', notificationData);
         result = insertResult.first;
       } catch (e) {
         final errMsg = e.toString();
-        
-        if (errMsg.contains('row-level security') || errMsg.contains('violates row-level security')) {
+
+        if (errMsg.contains('row-level security') ||
+            errMsg.contains('violates row-level security')) {
           // Use server-side RPC for cross-user notifications
           try {
-            final rpc = await SupabaseConfig.client.rpc('create_notification', params: notificationData);
+            final rpc = await SupabaseConfig.client
+                .rpc('create_notification', params: notificationData);
             if (rpc is Map<String, dynamic>) result = rpc;
-            if (rpc is List && rpc.isNotEmpty) result = Map<String, dynamic>.from(rpc.first);
-            
+            if (rpc is List && rpc.isNotEmpty)
+              result = Map<String, dynamic>.from(rpc.first);
+
             // Fallback return
             result = {
               'id': null,
@@ -166,7 +171,7 @@ class NotificationService {
           .select('id')
           .eq('user_id', userId)
           .eq('is_read', false);
-      
+
       return data.length;
     } catch (e) {
       print('Error getting notification count: $e');
@@ -175,7 +180,8 @@ class NotificationService {
   }
 
   /// Show in-app notification banner (for foreground notifications)
-  static Future<void> showInAppNotification(BarkDateNotification notification) async {
+  static Future<void> showInAppNotification(
+      BarkDateNotification notification) async {
     try {
       await InAppNotificationService.showNotification(notification);
     } catch (e) {

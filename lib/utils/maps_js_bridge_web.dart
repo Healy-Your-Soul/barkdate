@@ -11,6 +11,7 @@ void registerMapsApiReadyCallback(void Function() onReady) {
 }
 
 bool googleMapsApiLoadedFlag() {
-  final dynamic value = js_util.getProperty(js_util.globalThis, '_googleMapsLoaded');
+  final dynamic value =
+      js_util.getProperty(js_util.globalThis, '_googleMapsLoaded');
   return value == true;
 }

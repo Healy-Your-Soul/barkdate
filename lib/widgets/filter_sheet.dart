@@ -71,7 +71,7 @@ class _FilterSheetState extends State<FilterSheet> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Header
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -79,8 +79,8 @@ class _FilterSheetState extends State<FilterSheet> {
                     Text(
                       'Filter',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     Row(
                       children: [
@@ -120,7 +120,7 @@ class _FilterSheetState extends State<FilterSheet> {
               ],
             ),
           ),
-          
+
           // Filter content
           Expanded(
             child: SingleChildScrollView(
@@ -142,10 +142,13 @@ class _FilterSheetState extends State<FilterSheet> {
                           ),
                           Text(
                             '${_filters.maxDistance.round()} km',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                           ),
                         ],
                       ),
@@ -162,7 +165,7 @@ class _FilterSheetState extends State<FilterSheet> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Age Range
                   _buildSectionHeader('Age'),
                   const SizedBox(height: 12),
@@ -177,16 +180,20 @@ class _FilterSheetState extends State<FilterSheet> {
                           ),
                           Text(
                             '${_filters.minAge} - ${_filters.maxAge} years',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       RangeSlider(
-                        values: RangeValues(_filters.minAge.toDouble(), _filters.maxAge.toDouble()),
+                        values: RangeValues(_filters.minAge.toDouble(),
+                            _filters.maxAge.toDouble()),
                         min: 0,
                         max: 20,
                         divisions: 20,
@@ -200,7 +207,7 @@ class _FilterSheetState extends State<FilterSheet> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Size
                   _buildSectionHeader('Size'),
                   const SizedBox(height: 12),
@@ -220,13 +227,14 @@ class _FilterSheetState extends State<FilterSheet> {
                             }
                           });
                         },
-                        selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                        selectedColor:
+                            Theme.of(context).colorScheme.primaryContainer,
                         checkmarkColor: Theme.of(context).colorScheme.primary,
                       );
                     }).toList(),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Gender
                   _buildSectionHeader('Gender'),
                   const SizedBox(height: 12),
@@ -246,13 +254,14 @@ class _FilterSheetState extends State<FilterSheet> {
                             }
                           });
                         },
-                        selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                        selectedColor:
+                            Theme.of(context).colorScheme.primaryContainer,
                         checkmarkColor: Theme.of(context).colorScheme.primary,
                       );
                     }).toList(),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Energy Level
                   _buildSectionHeader('Energy Level'),
                   const SizedBox(height: 12),
@@ -272,13 +281,14 @@ class _FilterSheetState extends State<FilterSheet> {
                             }
                           });
                         },
-                        selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                        selectedColor:
+                            Theme.of(context).colorScheme.primaryContainer,
                         checkmarkColor: Theme.of(context).colorScheme.primary,
                       );
                     }).toList(),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Breed
                   _buildSectionHeader('Breed'),
                   const SizedBox(height: 12),
@@ -287,7 +297,10 @@ class _FilterSheetState extends State<FilterSheet> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withValues(alpha: 0.3),
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -297,9 +310,15 @@ class _FilterSheetState extends State<FilterSheet> {
                         if (_filters.breeds.isEmpty)
                           Text(
                             'Any breed',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
+                                ),
                           )
                         else
                           Wrap(
@@ -311,7 +330,9 @@ class _FilterSheetState extends State<FilterSheet> {
                                 onDeleted: () {
                                   setState(() => _filters.breeds.remove(breed));
                                 },
-                                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
                               );
                             }).toList(),
                           ),
@@ -327,13 +348,14 @@ class _FilterSheetState extends State<FilterSheet> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Availability
                   _buildSectionHeader('Availability'),
                   const SizedBox(height: 12),
                   SwitchListTile(
                     title: const Text('Available for playdates'),
-                    subtitle: const Text('Only show dogs available for meetups'),
+                    subtitle:
+                        const Text('Only show dogs available for meetups'),
                     value: _filters.availableForPlaydates,
                     onChanged: (value) {
                       setState(() => _filters.availableForPlaydates = value);
@@ -344,7 +366,7 @@ class _FilterSheetState extends State<FilterSheet> {
               ),
             ),
           ),
-          
+
           // Apply button
           Container(
             padding: const EdgeInsets.all(16),
@@ -379,18 +401,34 @@ class _FilterSheetState extends State<FilterSheet> {
     return Text(
       title,
       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.w600,
-        color: Theme.of(context).colorScheme.primary,
-      ),
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
     );
   }
 
   void _showBreedSelector() {
     final popularBreeds = [
-      'Golden Retriever', 'Labrador', 'German Shepherd', 'Bulldog', 'Poodle',
-      'Beagle', 'Rottweiler', 'Yorkshire Terrier', 'Dachshund', 'Siberian Husky',
-      'Boston Terrier', 'Pomeranian', 'Australian Shepherd', 'Shih Tzu', 'Boxer',
-      'Border Collie', 'Chihuahua', 'French Bulldog', 'Cocker Spaniel', 'Pit Bull',
+      'Golden Retriever',
+      'Labrador',
+      'German Shepherd',
+      'Bulldog',
+      'Poodle',
+      'Beagle',
+      'Rottweiler',
+      'Yorkshire Terrier',
+      'Dachshund',
+      'Siberian Husky',
+      'Boston Terrier',
+      'Pomeranian',
+      'Australian Shepherd',
+      'Shih Tzu',
+      'Boxer',
+      'Border Collie',
+      'Chihuahua',
+      'French Bulldog',
+      'Cocker Spaniel',
+      'Pit Bull',
     ];
 
     showModalBottomSheet(
@@ -414,22 +452,22 @@ class _FilterSheetState extends State<FilterSheet> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             Text(
               'Select Breeds',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 24),
-            
+
             Expanded(
               child: ListView.builder(
                 itemCount: popularBreeds.length,
                 itemBuilder: (context, index) {
                   final breed = popularBreeds[index];
                   final isSelected = _filters.breeds.contains(breed);
-                  
+
                   return CheckboxListTile(
                     title: Text(breed),
                     value: isSelected,
@@ -497,7 +535,8 @@ class FilterOptions {
       genders: genders ?? Set.from(this.genders),
       breeds: breeds ?? Set.from(this.breeds),
       energyLevels: energyLevels ?? Set.from(this.energyLevels),
-      availableForPlaydates: availableForPlaydates ?? this.availableForPlaydates,
+      availableForPlaydates:
+          availableForPlaydates ?? this.availableForPlaydates,
     );
   }
 }

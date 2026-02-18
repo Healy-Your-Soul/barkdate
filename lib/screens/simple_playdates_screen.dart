@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class SimplePlaydatesScreen extends StatelessWidget {
   final int? initialTabIndex;
   final String? highlightPlaydateId;
-  
+
   SimplePlaydatesScreen({
     Key? key,
     this.initialTabIndex,

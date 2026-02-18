@@ -18,7 +18,8 @@ import 'dart:async';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/models/dog.dart';
-import 'package:barkdate/supabase/bark_playdate_services.dart' hide DogFriendshipService;
+import 'package:barkdate/supabase/bark_playdate_services.dart'
+    hide DogFriendshipService;
 
 class FeedFeatureScreen extends ConsumerWidget {
   const FeedFeatureScreen({super.key});
@@ -52,7 +53,9 @@ class FeedFeatureScreen extends ConsumerWidget {
                       Text(
                         'Bark',
                         style: AppTypography.brandTitle(
-                          color: Theme.of(context).colorScheme.primary, // New primary color
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary, // New primary color
                         ),
                       ),
                       Row(
@@ -64,9 +67,10 @@ class FeedFeatureScreen extends ConsumerWidget {
                           IconButton(
                             icon: Consumer(
                               builder: (context, ref, child) {
-                                final unreadAsync = ref.watch(unreadNotificationCountProvider);
+                                final unreadAsync =
+                                    ref.watch(unreadNotificationCountProvider);
                                 final unreadCount = unreadAsync.value ?? 0;
-                                
+
                                 return Badge(
                                   isLabelVisible: unreadCount > 0,
                                   label: Text('$unreadCount'),
@@ -88,290 +92,319 @@ class FeedFeatureScreen extends ConsumerWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: _buildDashboard(context, userStatsAsync, playdatesAsync),
+                  child:
+                      _buildDashboard(context, userStatsAsync, playdatesAsync),
                 ),
               ),
 
-            // 2. Nearby Dogs Section with integrated search
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: AppSpacing.lg),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Nearby Dogs',
-                          style: AppTypography.h2(),
-                        ),
-                        // Toggle buttons will be managed by parent
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'Find playmates in your area',
-                      style: AppTypography.bodyMedium().copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              // 2. Nearby Dogs Section with integrated search
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: AppSpacing.lg),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Nearby Dogs',
+                            style: AppTypography.h2(),
+                          ),
+                          // Toggle buttons will be managed by parent
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    // Integrated search bar
-                    _buildPackSearchBar(context),
-                    const SizedBox(height: AppSpacing.md),
-                    // Friends / All Toggle
-                    _NearbyDogsToggle(),
-                  ],
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        'Find playmates in your area',
+                        style: AppTypography.bodyMedium().copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.7),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      // Integrated search bar
+                      _buildPackSearchBar(context),
+                      const SizedBox(height: AppSpacing.md),
+                      // Friends / All Toggle
+                      _NearbyDogsToggle(),
+                    ],
+                  ),
                 ),
               ),
-            ),
 
-            // Pending Friend Requests (only show in My Pack mode)
-            Consumer(
-              builder: (context, ref, _) {
-                final filter = ref.watch(feedFilterProvider);
-                if (!filter.showPackOnly) return const SliverToBoxAdapter(child: SizedBox.shrink());
-                
-                final pendingAsync = ref.watch(pendingFriendRequestsProvider);
-                
-                return pendingAsync.when(
-                  data: (requests) {
-                    if (requests.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
-                    
-                    return SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: AppSpacing.md),
-                            Row(
-                              children: [
-                                Icon(Icons.pets, size: 20, color: Colors.orange[700]),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Pack Requests',
-                                  style: AppTypography.h3().copyWith(color: Colors.orange[700]),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange[100],
-                                    borderRadius: BorderRadius.circular(12),
+              // Pending Friend Requests (only show in My Pack mode)
+              Consumer(
+                builder: (context, ref, _) {
+                  final filter = ref.watch(feedFilterProvider);
+                  if (!filter.showPackOnly)
+                    return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+                  final pendingAsync = ref.watch(pendingFriendRequestsProvider);
+
+                  return pendingAsync.when(
+                    data: (requests) {
+                      if (requests.isEmpty)
+                        return const SliverToBoxAdapter(
+                            child: SizedBox.shrink());
+
+                      return SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: AppSpacing.md),
+                              Row(
+                                children: [
+                                  Icon(Icons.pets,
+                                      size: 20, color: Colors.orange[700]),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Pack Requests',
+                                    style: AppTypography.h3()
+                                        .copyWith(color: Colors.orange[700]),
                                   ),
-                                  child: Text(
-                                    '${requests.length}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.orange[800],
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange[100],
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '${requests.length}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange[800],
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            ...requests.map((request) => _buildFriendRequestCard(context, ref, request)),
-                            const SizedBox(height: AppSpacing.md),
-                          ],
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              ...requests.map((request) =>
+                                  _buildFriendRequestCard(
+                                      context, ref, request)),
+                              const SizedBox(height: AppSpacing.md),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                    loading: () =>
+                        const SliverToBoxAdapter(child: SizedBox.shrink()),
+                    error: (_, __) =>
+                        const SliverToBoxAdapter(child: SizedBox.shrink()),
+                  );
+                },
+              ),
+
+              // Nearby Dogs List
+              nearbyDogsAsync.when(
+                data: (dogs) {
+                  final filter = ref.watch(feedFilterProvider);
+                  final isPackMode = filter.showPackOnly;
+
+                  if (dogs.isEmpty) {
+                    return SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: CuteEmptyState(
+                          icon:
+                              isPackMode ? Icons.group_off : Icons.location_off,
+                          title: isPackMode
+                              ? 'No Friends Nearby'
+                              : 'No Dogs Nearby',
+                          message: isPackMode
+                              ? 'None of your pack members are nearby right now. Find new friends!'
+                              : 'We couldn\'t find any dogs in your area. Try adjusting your filters or check back later!',
+                          actionLabel:
+                              isPackMode ? 'Find Your Pack' : 'Adjust Filters',
+                          onAction: () {
+                            if (isPackMode) {
+                              _showPackSearchSheet(context);
+                            } else {
+                              showFeedFilterSheet(context);
+                            }
+                          },
                         ),
                       ),
                     );
-                  },
-                  loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
-                  error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
-                );
-              },
-            ),
+                  }
 
-            // Nearby Dogs List
-            nearbyDogsAsync.when(
-              data: (dogs) {
-                final filter = ref.watch(feedFilterProvider);
-                final isPackMode = filter.showPackOnly;
-                
-                if (dogs.isEmpty) {
+                  // Fixed height list for nested scrolling
                   return SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32.0),
-                      child: CuteEmptyState(
-                        icon: isPackMode ? Icons.group_off : Icons.location_off,
-                        title: isPackMode ? 'No Friends Nearby' : 'No Dogs Nearby',
-                        message: isPackMode 
-                            ? 'None of your pack members are nearby right now. Find new friends!'
-                            : 'We couldn\'t find any dogs in your area. Try adjusting your filters or check back later!',
-                        actionLabel: isPackMode ? 'Find Your Pack' : 'Adjust Filters',
-                        onAction: () {
-                          if (isPackMode) {
-                            _showPackSearchSheet(context);
-                          } else {
-                            showFeedFilterSheet(context);
-                          }
+                    child: SizedBox(
+                      height: 400, // Fixed height window for the list
+                      child: ListView.builder(
+                        padding: EdgeInsets.zero,
+                        itemCount: dogs.length,
+                        itemBuilder: (context, index) {
+                          final dog = dogs[index];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: AppSpacing.xs,
+                            ),
+                            child: DogCard(
+                              dog: dog,
+                              // Use actual friendship status if available, otherwise use tab mode
+                              // This ensures friends show "In Pack" even in "All Dogs" tab
+                              isFriend: dog.isFriend ?? isPackMode,
+                              onTap: () {
+                                context.push('/dog-details', extra: dog);
+                              },
+                              onBarkPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        'Barked! ${dog.ownerName} will be notified.'),
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.primary,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              },
+                              onPlaydatePressed: () {
+                                context.push('/create-playdate', extra: dog);
+                              },
+                            ),
+                          );
                         },
                       ),
                     ),
                   );
-                }
-                
-                // Fixed height list for nested scrolling
-                return SliverToBoxAdapter(
+                },
+                loading: () => const SliverToBoxAdapter(
                   child: SizedBox(
-                    height: 400, // Fixed height window for the list
-                    child: ListView.builder(
-                      padding: EdgeInsets.zero,
-                      itemCount: dogs.length,
-                      itemBuilder: (context, index) {
-                        final dog = dogs[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: AppSpacing.xs,
+                    height: 200,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          DogLoadingWidget(size: 80),
+                          SizedBox(height: 16),
+                          Text(
+                            'Sniffing out your pack...',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                          child: DogCard(
-                            dog: dog,
-                            // Use actual friendship status if available, otherwise use tab mode
-                            // This ensures friends show "In Pack" even in "All Dogs" tab
-                            isFriend: dog.isFriend ?? isPackMode,
-                            onTap: () {
-                              context.push('/dog-details', extra: dog);
-                            },
-                            onBarkPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Barked! ${dog.ownerName} will be notified.'),
-                                  backgroundColor: Theme.of(context).colorScheme.primary,
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            },
-                            onPlaydatePressed: () {
-                              context.push('/create-playdate', extra: dog);
-                            },
-                          ),
-                        );
-                      },
+                        ],
+                      ),
                     ),
                   ),
-                );
-              },
-              loading: () => const SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 200,
+                ),
+                error: (error, stack) => SliverToBoxAdapter(
                   child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        DogLoadingWidget(size: 80),
-                        SizedBox(height: 16),
-                        Text(
-                          'Sniffing out your pack...',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Text('Error: $error'),
                     ),
                   ),
                 ),
               ),
-              error: (error, stack) => SliverToBoxAdapter(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Text('Error: $error'),
+
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
+
+              // 3. Upcoming Playdates Section (MOVED DOWN)
+              SliverToBoxAdapter(
+                child: _buildSectionHeader(context, "Upcoming Playdates", () {
+                  context.go('/playdates');
+                }),
+              ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 156,
+                  child: playdatesAsync.when(
+                    data: (playdates) {
+                      if (playdates.isEmpty) {
+                        return _buildEmptyHorizontalState(
+                          context,
+                          "No playdates yet",
+                          Icons.calendar_today,
+                        );
+                      }
+                      return ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        clipBehavior: Clip.none,
+                        padding: const EdgeInsets.only(
+                            left: 24, right: 24, bottom: 16),
+                        itemCount: playdates.length,
+                        itemBuilder: (context, index) {
+                          final playdate = playdates[index];
+                          return _buildPlaydateCard(context, ref, playdate);
+                        },
+                      );
+                    },
+                    loading: () => const Center(
+                        child: Padding(
+                            padding: EdgeInsets.all(20),
+                            child: DogCircularProgress())),
+                    error: (_, __) => const SizedBox.shrink(),
                   ),
                 ),
               ),
+
+              // 4. Suggested Events Section
+              SliverToBoxAdapter(
+                child: _buildSectionHeader(context, "Suggested Events", () {
+                  context.go('/events');
+                }),
               ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
-
-            // 3. Upcoming Playdates Section (MOVED DOWN)
-            SliverToBoxAdapter(
-              child: _buildSectionHeader(context, "Upcoming Playdates", () {
-                context.go('/playdates');
-              }),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 156,
-                child: playdatesAsync.when(
-                  data: (playdates) {
-                    if (playdates.isEmpty) {
-                      return _buildEmptyHorizontalState(
-                        context,
-                        "No playdates yet",
-                        Icons.calendar_today,
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 156,
+                  child: eventsAsync.when(
+                    data: (events) {
+                      if (events.isEmpty) {
+                        return _buildEmptyHorizontalState(
+                          context,
+                          "No events nearby",
+                          Icons.event,
+                        );
+                      }
+                      return ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        clipBehavior: Clip.none,
+                        padding: const EdgeInsets.only(
+                            left: 24, right: 24, bottom: 16),
+                        itemCount: events.length,
+                        itemBuilder: (context, index) {
+                          final event = events[index];
+                          return _buildEventCard(context, event);
+                        },
                       );
-                    }
-                    return ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      clipBehavior: Clip.none,
-                      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 16),
-                      itemCount: playdates.length,
-                      itemBuilder: (context, index) {
-                        final playdate = playdates[index];
-                        return _buildPlaydateCard(context, ref, playdate);
-                      },
-                    );
-                  },
-                  loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: DogCircularProgress())),
-                  error: (_, __) => const SizedBox.shrink(),
+                    },
+                    loading: () => const Center(
+                        child: Padding(
+                            padding: EdgeInsets.all(20),
+                            child: DogCircularProgress())),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
                 ),
               ),
-            ),
 
-            // 4. Suggested Events Section
-            SliverToBoxAdapter(
-              child: _buildSectionHeader(context, "Suggested Events", () {
-                context.go('/events');
-              }),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 156,
-                child: eventsAsync.when(
-                  data: (events) {
-                    if (events.isEmpty) {
-                      return _buildEmptyHorizontalState(
-                        context,
-                        "No events nearby",
-                        Icons.event,
-                      );
-                    }
-                    return ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      clipBehavior: Clip.none,
-                      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 16),
-                      itemCount: events.length,
-                      itemBuilder: (context, index) {
-                        final event = events[index];
-                        return _buildEventCard(context, event);
-                      },
-                    );
-                  },
-                  loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: DogCircularProgress())),
-                  error: (_, __) => const SizedBox.shrink(),
-                ),
+              // 5. Sniff Around (Social Feed Preview)
+              const SliverToBoxAdapter(
+                  child: SizedBox(height: 32)), // Wider gap
+              SliverToBoxAdapter(
+                child: _buildSniffAroundSection(context, ref),
               ),
-            ),
-            
-            // 5. Sniff Around (Social Feed Preview)
-            const SliverToBoxAdapter(child: SizedBox(height: 32)), // Wider gap
-            SliverToBoxAdapter(
-              child: _buildSniffAroundSection(context, ref),
-            ),
 
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 80), // Bottom padding for FAB/Nav
-            ),
-          ],
-        ),
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 80), // Bottom padding for FAB/Nav
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -387,7 +420,8 @@ class FeedFeatureScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
+        border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -411,7 +445,8 @@ class FeedFeatureScreen extends ConsumerWidget {
             icon: Icons.pets_outlined,
             label: 'Barks',
             value: statsAsync.value?['barks'].toString() ?? '-',
-            onTap: () => context.go('/messages'), // Navigate to messages/friends
+            onTap: () =>
+                context.go('/messages'), // Navigate to messages/friends
           ),
           _buildDashboardItem(
             context,
@@ -421,11 +456,12 @@ class FeedFeatureScreen extends ConsumerWidget {
             onTap: () => context.go('/notifications'),
             valueBuilder: (context) => Consumer(
               builder: (context, ref, _) {
-                 final unreadAsync = ref.watch(unreadNotificationCountProvider);
-                 final statsAsync = ref.watch(userStatsProvider);
-                 // Prefer stream, fallback to specific stats, fallback to 0
-                 final count = unreadAsync.value ?? statsAsync.value?['alerts'] ?? 0;
-                 return Text(
+                final unreadAsync = ref.watch(unreadNotificationCountProvider);
+                final statsAsync = ref.watch(userStatsProvider);
+                // Prefer stream, fallback to specific stats, fallback to 0
+                final count =
+                    unreadAsync.value ?? statsAsync.value?['alerts'] ?? 0;
+                return Text(
                   count.toString(),
                   style: AppTypography.h2().copyWith(fontSize: 24),
                 );
@@ -464,7 +500,8 @@ class FeedFeatureScreen extends ConsumerWidget {
               const SizedBox(width: 4),
               Text(
                 label,
-                style: AppTypography.bodySmall().copyWith(color: Colors.grey[600]),
+                style:
+                    AppTypography.bodySmall().copyWith(color: Colors.grey[600]),
               ),
             ],
           ),
@@ -473,7 +510,8 @@ class FeedFeatureScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, VoidCallback onTap) {
+  Widget _buildSectionHeader(
+      BuildContext context, String title, VoidCallback onTap) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
       child: Row(
@@ -540,12 +578,16 @@ class FeedFeatureScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyHorizontalState(BuildContext context, String message, IconData icon) {
+  Widget _buildEmptyHorizontalState(
+      BuildContext context, String message, IconData icon) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        color: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withOpacity(0.3),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
@@ -554,7 +596,8 @@ class FeedFeatureScreen extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
+          Icon(icon,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
           const SizedBox(height: 8),
           Text(
             message,
@@ -567,24 +610,27 @@ class FeedFeatureScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPlaydateCard(BuildContext context, WidgetRef ref, Map<String, dynamic> playdate) {
-    final date = DateTime.tryParse(playdate['date_time'] ?? playdate['scheduled_at'] ?? '') ?? DateTime.now();
+  Widget _buildPlaydateCard(
+      BuildContext context, WidgetRef ref, Map<String, dynamic> playdate) {
+    final date = DateTime.tryParse(
+            playdate['date_time'] ?? playdate['scheduled_at'] ?? '') ??
+        DateTime.now();
     final formattedDate = DateFormat('MMM d, h:mm a').format(date);
     final playdateId = playdate['id'] as String?;
     final status = playdate['status'] as String?;
     final currentUserId = SupabaseConfig.auth.currentUser?.id;
     final organizerId = playdate['organizer_id'] as String?;
-    
+
     // Show action buttons if pending and user is NOT the organizer
-    final showActionButtons = status?.toLowerCase() == 'pending' && 
-        currentUserId != null && 
+    final showActionButtons = status?.toLowerCase() == 'pending' &&
+        currentUserId != null &&
         organizerId != currentUserId;
-    
+
     // Get dog photos for display - prioritize invited dogs from requests
     final requests = playdate['requests'] as List<dynamic>? ?? [];
     final participants = playdate['participants'] as List<dynamic>? ?? [];
     final avatarPhotos = <String>[];
-    
+
     // First: get invited dogs from playdate_requests (these are the actual invited dogs)
     for (final req in requests) {
       final inviteeDog = req['invitee_dog'] as Map<String, dynamic>?;
@@ -592,8 +638,8 @@ class FeedFeatureScreen extends ConsumerWidget {
         avatarPhotos.add(inviteeDog['main_photo_url'] as String);
       }
     }
-    
-    // Second: get dog photos from playdate_participants 
+
+    // Second: get dog photos from playdate_participants
     if (avatarPhotos.isEmpty) {
       for (final p in participants) {
         final dog = p['dog'] as Map<String, dynamic>?;
@@ -602,7 +648,7 @@ class FeedFeatureScreen extends ConsumerWidget {
         }
       }
     }
-    
+
     return GestureDetector(
       onTap: () {
         if (playdateId != null) {
@@ -633,12 +679,14 @@ class FeedFeatureScreen extends ConsumerWidget {
             // Date row
             Row(
               children: [
-                const Icon(Icons.calendar_today, size: 16, color: Color(0xFF4CAF50)),
+                const Icon(Icons.calendar_today,
+                    size: 16, color: Color(0xFF4CAF50)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     formattedDate,
-                    style: AppTypography.bodySmall().copyWith(fontWeight: FontWeight.bold),
+                    style: AppTypography.bodySmall()
+                        .copyWith(fontWeight: FontWeight.bold),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -659,7 +707,12 @@ class FeedFeatureScreen extends ConsumerWidget {
                 height: 28,
                 child: Row(
                   children: [
-                    ...avatarPhotos.take(3).toList().asMap().entries.map((entry) {
+                    ...avatarPhotos
+                        .take(3)
+                        .toList()
+                        .asMap()
+                        .entries
+                        .map((entry) {
                       final index = entry.key;
                       final photoUrl = entry.value;
                       return Align(
@@ -692,7 +745,8 @@ class FeedFeatureScreen extends ConsumerWidget {
                           child: Center(
                             child: Text(
                               '+${avatarPhotos.length - 3}',
-                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                  fontSize: 10, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
@@ -709,7 +763,8 @@ class FeedFeatureScreen extends ConsumerWidget {
                     child: SizedBox(
                       height: 28,
                       child: OutlinedButton(
-                        onPressed: () => _respondToPlaydate(context, ref, playdateId!, false),
+                        onPressed: () => _respondToPlaydate(
+                            context, ref, playdateId!, false),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.red,
                           side: const BorderSide(color: Colors.red),
@@ -718,7 +773,8 @@ class FeedFeatureScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        child: const Text('Decline', style: TextStyle(fontSize: 11)),
+                        child: const Text('Decline',
+                            style: TextStyle(fontSize: 11)),
                       ),
                     ),
                   ),
@@ -727,7 +783,8 @@ class FeedFeatureScreen extends ConsumerWidget {
                     child: SizedBox(
                       height: 28,
                       child: ElevatedButton(
-                        onPressed: () => _respondToPlaydate(context, ref, playdateId!, true),
+                        onPressed: () =>
+                            _respondToPlaydate(context, ref, playdateId!, true),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4CAF50),
                           foregroundColor: Colors.white,
@@ -737,7 +794,8 @@ class FeedFeatureScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        child: const Text('Accept', style: TextStyle(fontSize: 11)),
+                        child: const Text('Accept',
+                            style: TextStyle(fontSize: 11)),
                       ),
                     ),
                   ),
@@ -757,7 +815,8 @@ class FeedFeatureScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _respondToPlaydate(BuildContext context, WidgetRef ref, String playdateId, bool accept) async {
+  Future<void> _respondToPlaydate(BuildContext context, WidgetRef ref,
+      String playdateId, bool accept) async {
     try {
       final currentUserId = SupabaseConfig.auth.currentUser?.id;
       if (currentUserId == null) return;
@@ -773,7 +832,9 @@ class FeedFeatureScreen extends ConsumerWidget {
       if (requests.isEmpty) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No pending request found'), backgroundColor: Colors.orange),
+            const SnackBar(
+                content: Text('No pending request found'),
+                backgroundColor: Colors.orange),
           );
         }
         return;
@@ -781,20 +842,21 @@ class FeedFeatureScreen extends ConsumerWidget {
 
       final requestId = requests.first['id'] as String;
       final response = accept ? 'accepted' : 'declined';
-      
+
       final success = await PlaydateRequestService.respondToPlaydateRequest(
         requestId: requestId,
         userId: currentUserId,
         response: response,
       );
-      
+
       if (context.mounted && success) {
         // Refresh the playdates list
         ref.invalidate(userPlaydatesProvider);
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(accept ? '✅ Playdate accepted!' : '❌ Playdate declined'),
+            content:
+                Text(accept ? '✅ Playdate accepted!' : '❌ Playdate declined'),
             backgroundColor: accept ? Colors.green : Colors.red,
           ),
         );
@@ -807,7 +869,7 @@ class FeedFeatureScreen extends ConsumerWidget {
       }
     }
   }
-  
+
   Color _getStatusColor(BuildContext context, String? status) {
     switch (status?.toLowerCase()) {
       case 'confirmed':
@@ -823,7 +885,8 @@ class FeedFeatureScreen extends ConsumerWidget {
     }
   }
 
-  Widget _buildFriendRequestCard(BuildContext context, WidgetRef ref, Map<String, dynamic> request) {
+  Widget _buildFriendRequestCard(
+      BuildContext context, WidgetRef ref, Map<String, dynamic> request) {
     final requester = request['requester'] as Map<String, dynamic>?;
     final dogName = requester?['name'] ?? 'Unknown Dog';
     final dogPhoto = requester?['main_photo_url'] as String?;
@@ -831,7 +894,7 @@ class FeedFeatureScreen extends ConsumerWidget {
     final ownerName = ownerData?['name'] ?? 'Unknown';
     final ownerAvatar = ownerData?['avatar_url'] as String?;
     final requestId = request['id'] as String;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       padding: const EdgeInsets.all(16),
@@ -859,7 +922,8 @@ class FeedFeatureScreen extends ConsumerWidget {
                 CircleAvatar(
                   radius: 32,
                   backgroundColor: Colors.grey[200],
-                  backgroundImage: dogPhoto != null ? NetworkImage(dogPhoto) : null,
+                  backgroundImage:
+                      dogPhoto != null ? NetworkImage(dogPhoto) : null,
                   child: dogPhoto == null
                       ? Icon(Icons.pets, color: Colors.grey[400], size: 28)
                       : null,
@@ -876,9 +940,12 @@ class FeedFeatureScreen extends ConsumerWidget {
                     child: CircleAvatar(
                       radius: 14,
                       backgroundColor: Colors.grey[300],
-                      backgroundImage: ownerAvatar != null ? NetworkImage(ownerAvatar) : null,
+                      backgroundImage: ownerAvatar != null
+                          ? NetworkImage(ownerAvatar)
+                          : null,
                       child: ownerAvatar == null
-                          ? Icon(Icons.person, color: Colors.grey[500], size: 14)
+                          ? Icon(Icons.person,
+                              color: Colors.grey[500], size: 14)
                           : null,
                     ),
                   ),
@@ -895,7 +962,8 @@ class FeedFeatureScreen extends ConsumerWidget {
               children: [
                 TextSpan(
                   text: '$dogName & $ownerName',
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.black87),
                 ),
                 const TextSpan(text: ' want to join your pack'),
               ],
@@ -909,12 +977,16 @@ class FeedFeatureScreen extends ConsumerWidget {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () async {
-                    final success = await BarkDateFriendService.declineFriendRequest(requestId);
+                    final success =
+                        await BarkDateFriendService.declineFriendRequest(
+                            requestId);
                     if (success) {
                       ref.invalidate(pendingFriendRequestsProvider);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Request declined'), backgroundColor: Colors.grey),
+                          const SnackBar(
+                              content: Text('Request declined'),
+                              backgroundColor: Colors.grey),
                         );
                       }
                     }
@@ -923,9 +995,11 @@ class FeedFeatureScreen extends ConsumerWidget {
                     foregroundColor: Colors.grey[600],
                     side: BorderSide(color: Colors.grey[300]!),
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Ignore', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Ignore',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -933,7 +1007,9 @@ class FeedFeatureScreen extends ConsumerWidget {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () async {
-                    final success = await BarkDateFriendService.acceptFriendRequest(requestId);
+                    final success =
+                        await BarkDateFriendService.acceptFriendRequest(
+                            requestId);
                     if (success) {
                       ref.invalidate(pendingFriendRequestsProvider);
                       ref.invalidate(nearbyDogsProvider);
@@ -948,13 +1024,16 @@ class FeedFeatureScreen extends ConsumerWidget {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFCF5EE), // Light orange/peach
+                    backgroundColor:
+                        const Color(0xFFFCF5EE), // Light orange/peach
                     foregroundColor: Colors.orange[800],
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Accept', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text('Accept',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -967,7 +1046,7 @@ class FeedFeatureScreen extends ConsumerWidget {
   Widget _buildEventCard(BuildContext context, dynamic event) {
     // Assuming event is an Event object or Map
     final title = event is Map ? event['title'] : event.title;
-    final date = event is Map 
+    final date = event is Map
         ? DateTime.tryParse(event['date_time'] ?? '') ?? DateTime.now()
         : event.dateTime;
     final formattedDate = DateFormat('MMM d, h:mm a').format(date);
@@ -1004,7 +1083,8 @@ class FeedFeatureScreen extends ConsumerWidget {
                 const SizedBox(width: 8),
                 Text(
                   formattedDate,
-                  style: AppTypography.bodySmall().copyWith(fontWeight: FontWeight.bold),
+                  style: AppTypography.bodySmall()
+                      .copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -1013,7 +1093,8 @@ class FeedFeatureScreen extends ConsumerWidget {
               title ?? 'Untitled Event',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.bodyMedium().copyWith(fontWeight: FontWeight.w600),
+              style: AppTypography.bodyMedium()
+                  .copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
             Text(
@@ -1032,13 +1113,14 @@ class FeedFeatureScreen extends ConsumerWidget {
   Widget _buildSniffAroundSection(BuildContext context, WidgetRef ref) {
     // Get user's first dog for personalization
     final userDogsAsync = ref.watch(userDogsProvider);
-    
+
     return userDogsAsync.when(
       data: (dogs) {
         final firstDog = dogs.isNotEmpty ? dogs.first : null;
         final dogName = firstDog?.name ?? 'your pup';
-        final dogPhoto = firstDog?.photos.isNotEmpty == true ? firstDog!.photos.first : null;
-        
+        final dogPhoto =
+            firstDog?.photos.isNotEmpty == true ? firstDog!.photos.first : null;
+
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
@@ -1069,21 +1151,28 @@ class FeedFeatureScreen extends ConsumerWidget {
               Text(
                 'See what the pack is up to',
                 style: AppTypography.bodyMedium().copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               // Create Post CTA - Opens create post dialog
               GestureDetector(
                 onTap: () => context.push('/social-feed?create=true'),
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.2),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primaryContainer
+                        .withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
                     ),
                   ),
                   child: Row(
@@ -1091,10 +1180,14 @@ class FeedFeatureScreen extends ConsumerWidget {
                       // Dog's photo or fallback
                       CircleAvatar(
                         radius: 20,
-                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                        backgroundImage: dogPhoto != null ? NetworkImage(dogPhoto) : null,
+                        backgroundColor:
+                            Theme.of(context).colorScheme.primaryContainer,
+                        backgroundImage:
+                            dogPhoto != null ? NetworkImage(dogPhoto) : null,
                         child: dogPhoto == null
-                            ? Icon(Icons.pets, size: 18, color: Theme.of(context).colorScheme.primary)
+                            ? Icon(Icons.pets,
+                                size: 18,
+                                color: Theme.of(context).colorScheme.primary)
                             : null,
                       ),
                       const SizedBox(width: 12),
@@ -1102,18 +1195,27 @@ class FeedFeatureScreen extends ConsumerWidget {
                         child: Text(
                           "Share $dogName's moments...",
                           style: AppTypography.bodyMedium().copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.5),
                           ),
                         ),
                       ),
                       Icon(
                         Icons.camera_alt_outlined,
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.6),
                       ),
                       const SizedBox(width: 8),
                       Icon(
                         Icons.photo_library_outlined,
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.6),
                       ),
                     ],
                   ),
@@ -1121,14 +1223,17 @@ class FeedFeatureScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 16),
-              
+
               // Quick action buttons with proper navigation
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => context.push('/social-feed?tab=0'), // For You tab
-                      icon: Icon(Icons.pets, size: 18, color: Theme.of(context).colorScheme.primary),
+                      onPressed: () =>
+                          context.push('/social-feed?tab=0'), // For You tab
+                      icon: Icon(Icons.pets,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.primary),
                       label: const Text('Browse Feed'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1141,7 +1246,8 @@ class FeedFeatureScreen extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => context.push('/social-feed?tab=1'), // Following tab
+                      onPressed: () =>
+                          context.push('/social-feed?tab=1'), // Following tab
                       icon: const Icon(Icons.group_outlined, size: 18),
                       label: const Text('Friends'),
                       style: OutlinedButton.styleFrom(
@@ -1170,7 +1276,7 @@ class _NearbyDogsToggle extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filter = ref.watch(feedFilterProvider);
     final isPackSelected = filter.showPackOnly;
-    
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[100],
@@ -1179,19 +1285,22 @@ class _NearbyDogsToggle extends ConsumerWidget {
       padding: const EdgeInsets.all(4),
       child: Row(
         children: [
-          _buildToggleButton(context, ref, true, 'My Pack', Icons.group, isPackSelected),
-          _buildToggleButton(context, ref, false, 'All Dogs', Icons.pets, !isPackSelected),
+          _buildToggleButton(
+              context, ref, true, 'My Pack', Icons.group, isPackSelected),
+          _buildToggleButton(
+              context, ref, false, 'All Dogs', Icons.pets, !isPackSelected),
         ],
       ),
     );
   }
-  
-  Widget _buildToggleButton(BuildContext context, WidgetRef ref, bool packFilter, String label, IconData icon, bool isSelected) {
+
+  Widget _buildToggleButton(BuildContext context, WidgetRef ref,
+      bool packFilter, String label, IconData icon, bool isSelected) {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          ref.read(feedFilterProvider.notifier).state = 
-            ref.read(feedFilterProvider).copyWith(showPackOnly: packFilter);
+          ref.read(feedFilterProvider.notifier).state =
+              ref.read(feedFilterProvider).copyWith(showPackOnly: packFilter);
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -1199,13 +1308,15 @@ class _NearbyDogsToggle extends ConsumerWidget {
           decoration: BoxDecoration(
             color: isSelected ? Colors.white : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
-            boxShadow: isSelected ? [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ] : null,
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -1213,8 +1324,8 @@ class _NearbyDogsToggle extends ConsumerWidget {
               Icon(
                 icon,
                 size: 16,
-                color: isSelected 
-                    ? Theme.of(context).colorScheme.primary 
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
                     : Colors.grey[600],
               ),
               const SizedBox(width: 6),
@@ -1223,8 +1334,8 @@ class _NearbyDogsToggle extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected 
-                      ? Theme.of(context).colorScheme.primary 
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
                       : Colors.grey[600],
                 ),
               ),
@@ -1242,30 +1353,32 @@ class _PackSearchModal extends ConsumerStatefulWidget {
   ConsumerState<_PackSearchModal> createState() => _PackSearchModalState();
 }
 
-class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleTickerProviderStateMixin {
+class _PackSearchModalState extends ConsumerState<_PackSearchModal>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounceTimer;
   List<Map<String, dynamic>> _searchResults = [];
-  List<Map<String, dynamic>> _defaultContent = []; // Auto-loaded content for each tab
+  List<Map<String, dynamic>> _defaultContent =
+      []; // Auto-loaded content for each tab
   bool _isLoading = false;
   bool _isLoadingDefault = false;
   String? _currentUserId;
-  
+
   final List<Map<String, dynamic>> _tabs = [
     {'label': 'All', 'icon': Icons.pets},
     {'label': 'Friends', 'icon': Icons.group},
     {'label': 'Nearby', 'icon': Icons.location_on},
     {'label': 'New', 'icon': Icons.auto_awesome},
   ];
-  
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
     _tabController.addListener(_onTabChanged);
     _currentUserId = SupabaseConfig.auth.currentUser?.id;
-    
+
     // Auto-load content for the initial tab
     _loadDefaultContent();
   }
@@ -1283,13 +1396,13 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
   /// Load default content for the current tab (no search required)
   Future<void> _loadDefaultContent() async {
     if (_currentUserId == null) return;
-    
+
     setState(() => _isLoadingDefault = true);
-    
+
     try {
       final categoryIndex = _tabController.index;
       List<Map<String, dynamic>> results = [];
-      
+
       switch (categoryIndex) {
         case 0: // All Dogs - show recent/popular dogs
           final response = await SupabaseConfig.client
@@ -1300,22 +1413,23 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
               .limit(20);
           results = List<Map<String, dynamic>>.from(response);
           break;
-          
+
         case 1: // Friends - show ALL friends without search
-          final userDogs = await BarkDateUserService.getUserDogs(_currentUserId!);
+          final userDogs =
+              await BarkDateUserService.getUserDogs(_currentUserId!);
           if (userDogs.isNotEmpty) {
             final myDogId = userDogs.first['id'];
             final friends = await DogFriendshipService.getFriends(myDogId);
-            
+
             // Map to dog objects
             results = friends.map((f) {
-              return f['friend_dog']['id'] == myDogId 
+              return f['friend_dog']['id'] == myDogId
                   ? f['dog'] as Map<String, dynamic>
                   : f['friend_dog'] as Map<String, dynamic>;
             }).toList();
           }
           break;
-          
+
         case 2: // Nearby - show nearby dogs
           final nearby = await BarkDateMatchService.getNearbyDogs(
             _currentUserId!,
@@ -1324,7 +1438,7 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
           );
           results = nearby;
           break;
-          
+
         case 3: // New - show newest dogs
           final response = await SupabaseConfig.client
               .from('dogs')
@@ -1335,7 +1449,7 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
           results = List<Map<String, dynamic>>.from(response);
           break;
       }
-      
+
       if (mounted) {
         setState(() {
           _defaultContent = results;
@@ -1349,7 +1463,7 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
       }
     }
   }
-  
+
   @override
   void dispose() {
     _tabController.removeListener(_onTabChanged);
@@ -1366,13 +1480,13 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
     }
 
     setState(() => _isLoading = true);
-    
+
     // Cancel previous debounce if called directly (though usually called via debounce)
-    
+
     try {
       final categoryIndex = _tabController.index;
       List<Map<String, dynamic>> results = [];
-      
+
       switch (categoryIndex) {
         case 0: // All Dogs
           final response = await SupabaseConfig.client
@@ -1383,41 +1497,50 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
               .limit(20);
           results = List<Map<String, dynamic>>.from(response);
           break;
-          
+
         case 1: // Friends
-             // Get user's first dog to find friends
-            final userDogs = await BarkDateUserService.getUserDogs(_currentUserId ?? '');
-            if (userDogs.isEmpty) break;
-            
-            final myDogId = userDogs.first['id'];
-            final friends = await DogFriendshipService.getFriends(myDogId);
-            
-            // Filter locally
-            results = friends.where((f) {
-              final friendDog = f['friend_dog']['id'] == myDogId ? f['dog'] : f['friend_dog'];
-              final name = friendDog['name'].toString().toLowerCase();
-              return name.contains(query.toLowerCase());
-            }).map((f) {
-               // Normalize to dog object structure
-               return f['friend_dog']['id'] == myDogId ? f['dog'] : f['friend_dog'];
-            }).cast<Map<String, dynamic>>().toList();
+          // Get user's first dog to find friends
+          final userDogs =
+              await BarkDateUserService.getUserDogs(_currentUserId ?? '');
+          if (userDogs.isEmpty) break;
+
+          final myDogId = userDogs.first['id'];
+          final friends = await DogFriendshipService.getFriends(myDogId);
+
+          // Filter locally
+          results = friends
+              .where((f) {
+                final friendDog = f['friend_dog']['id'] == myDogId
+                    ? f['dog']
+                    : f['friend_dog'];
+                final name = friendDog['name'].toString().toLowerCase();
+                return name.contains(query.toLowerCase());
+              })
+              .map((f) {
+                // Normalize to dog object structure
+                return f['friend_dog']['id'] == myDogId
+                    ? f['dog']
+                    : f['friend_dog'];
+              })
+              .cast<Map<String, dynamic>>()
+              .toList();
           break;
-          
+
         case 2: // Nearby
           // Search nearby then filter locally
           final nearby = await BarkDateMatchService.getNearbyDogs(
-             _currentUserId ?? '',
-             limit: 50,
-             radiusKm: 50, // Wider search for explicit nearby search
+            _currentUserId ?? '',
+            limit: 50,
+            radiusKm: 50, // Wider search for explicit nearby search
           );
           results = nearby.where((dog) {
             final name = dog['name'].toString().toLowerCase();
             return name.contains(query.toLowerCase());
           }).toList();
           break;
-          
+
         case 3: // New
-           final response = await SupabaseConfig.client
+          final response = await SupabaseConfig.client
               .from('dogs')
               .select('*, users:user_id(name, avatar_url)')
               .ilike('name', '%$query%')
@@ -1426,7 +1549,7 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
           results = List<Map<String, dynamic>>.from(response);
           break;
       }
-      
+
       if (mounted) {
         setState(() {
           _searchResults = results;
@@ -1470,77 +1593,80 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-          const SizedBox(height: 8),
-          
-          // Search field
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TextField(
-              controller: _searchController,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'Search dogs, friends...',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: const Color(0xFFF5F5F5),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
+            const SizedBox(height: 8),
+
+            // Search field
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search dogs, friends...',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: const Color(0xFFF5F5F5),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                onChanged: _onSearchChanged,
               ),
-              onChanged: _onSearchChanged,
             ),
-          ),
-          const SizedBox(height: 12),
-          
-          // Filter tabs - fit all 4 without scrolling
-          TabBar(
-            controller: _tabController,
-            isScrollable: false, // Stretch to fit all tabs
-            labelColor: Theme.of(context).colorScheme.primary,
-            unselectedLabelColor: Colors.grey[600],
-            indicatorColor: Theme.of(context).colorScheme.primary,
-            indicatorSize: TabBarIndicatorSize.tab,
-            labelPadding: EdgeInsets.zero, // No extra padding
-            tabs: _tabs.map((tab) => Tab(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
+            const SizedBox(height: 12),
+
+            // Filter tabs - fit all 4 without scrolling
+            TabBar(
+              controller: _tabController,
+              isScrollable: false, // Stretch to fit all tabs
+              labelColor: Theme.of(context).colorScheme.primary,
+              unselectedLabelColor: Colors.grey[600],
+              indicatorColor: Theme.of(context).colorScheme.primary,
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelPadding: EdgeInsets.zero, // No extra padding
+              tabs: _tabs
+                  .map((tab) => Tab(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(tab['icon'] as IconData, size: 16),
+                            const SizedBox(width: 4),
+                            Text(tab['label'] as String,
+                                style: const TextStyle(fontSize: 13)),
+                          ],
+                        ),
+                      ))
+                  .toList(),
+            ),
+
+            // Tab content
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
                 children: [
-                  Icon(tab['icon'] as IconData, size: 16),
-                  const SizedBox(width: 4),
-                  Text(tab['label'] as String, style: const TextStyle(fontSize: 13)),
+                  // All Dogs
+                  _buildSearchResults(scrollController, 'All Dogs'),
+                  // Friends
+                  _buildSearchResults(scrollController, 'Friends'),
+                  // Nearby
+                  _buildSearchResults(scrollController, 'Nearby Dogs'),
+                  // New
+                  _buildSearchResults(scrollController, 'New Dogs'),
                 ],
               ),
-            )).toList(),
-          ),
-          
-          // Tab content
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // All Dogs
-                _buildSearchResults(scrollController, 'All Dogs'),
-                // Friends
-                _buildSearchResults(scrollController, 'Friends'),
-                // Nearby
-                _buildSearchResults(scrollController, 'Nearby Dogs'),
-                // New
-                _buildSearchResults(scrollController, 'New Dogs'),
-              ],
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
-  
+
   Widget _buildSearchResults(ScrollController controller, String category) {
     final query = _searchController.text;
-    
+
     // Show default content when no search query
     if (query.isEmpty) {
       // Show loading state for default content
@@ -1559,7 +1685,7 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
           ),
         );
       }
-      
+
       // Show empty state if no default content
       if (_defaultContent.isEmpty) {
         return Center(
@@ -1569,8 +1695,8 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
               Icon(Icons.pets, size: 48, color: Colors.grey[300]),
               const SizedBox(height: 12),
               Text(
-                category == 'Friends' 
-                    ? 'No friends yet. Bark at some dogs!' 
+                category == 'Friends'
+                    ? 'No friends yet. Bark at some dogs!'
                     : 'No $category found',
                 style: AppTypography.bodyMedium().copyWith(color: Colors.grey),
                 textAlign: TextAlign.center,
@@ -1579,7 +1705,7 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
           ),
         );
       }
-      
+
       // Show default content list
       return ListView.builder(
         controller: controller,
@@ -1589,47 +1715,54 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
           if (index == 0) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
-              child: Text('$category (${_defaultContent.length})', style: AppTypography.labelMedium()),
+              child: Text('$category (${_defaultContent.length})',
+                  style: AppTypography.labelMedium()),
             );
           }
-          
+
           final dog = _defaultContent[index - 1];
           // Ensure photos list is valid for DogCard
           if (dog['photos'] == null && dog['main_photo_url'] != null) {
             dog['photos'] = [dog['main_photo_url']];
           }
-          
+
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: DogCard(
               dog: Dog.fromJson(dog),
               isFriend: false,
-              onTap: () => context.push('/dog-details', extra: Dog.fromJson(dog)),
+              onTap: () =>
+                  context.push('/dog-details', extra: Dog.fromJson(dog)),
               onBarkPressed: () async {
                 final currentUser = SupabaseConfig.auth.currentUser;
                 if (currentUser == null) return;
                 try {
-                  final userDogs = await BarkDateUserService.getUserDogs(currentUser.id);
+                  final userDogs =
+                      await BarkDateUserService.getUserDogs(currentUser.id);
                   if (userDogs.isEmpty) return;
                   final myDogId = userDogs.first['id'];
                   final targetDog = Dog.fromJson(dog);
-                  await DogFriendshipService.sendBark(fromDogId: myDogId, toDogId: targetDog.id);
+                  await DogFriendshipService.sendBark(
+                      fromDogId: myDogId, toDogId: targetDog.id);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Barked at ${targetDog.name}! 🐕'), backgroundColor: Colors.green),
+                      SnackBar(
+                          content: Text('Barked at ${targetDog.name}! 🐕'),
+                          backgroundColor: Colors.green),
                     );
                   }
                 } catch (e) {
                   debugPrint('Error: $e');
                 }
               },
-              onPlaydatePressed: () => context.push('/create-playdate', extra: Dog.fromJson(dog)),
+              onPlaydatePressed: () =>
+                  context.push('/create-playdate', extra: Dog.fromJson(dog)),
             ),
           );
         },
       );
     }
-    
+
     // TODO: Implement actual search results
     if (_isLoading) {
       return Center(
@@ -1646,13 +1779,13 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
         ),
       );
     }
-    
+
     if (_searchResults.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-             Icon(Icons.search_off, size: 48, color: Colors.grey[300]),
+            Icon(Icons.search_off, size: 48, color: Colors.grey[300]),
             const SizedBox(height: 16),
             Text(
               'No dogs found for "$query"',
@@ -1671,16 +1804,17 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
         if (index == 0) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: Text('Found ${_searchResults.length} matches', style: AppTypography.labelMedium()),
+            child: Text('Found ${_searchResults.length} matches',
+                style: AppTypography.labelMedium()),
           );
         }
-        
+
         final dog = _searchResults[index - 1];
         // Ensure photos list is valid for DogCard
         if (dog['photos'] == null && dog['main_photo_url'] != null) {
           dog['photos'] = [dog['main_photo_url']];
         }
-        
+
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: DogCard(
@@ -1696,30 +1830,32 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
                 );
                 return;
               }
-              
+
               try {
-                final userDogs = await BarkDateUserService.getUserDogs(currentUser.id);
+                final userDogs =
+                    await BarkDateUserService.getUserDogs(currentUser.id);
                 if (userDogs.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please add a dog profile first')),
+                    const SnackBar(
+                        content: Text('Please add a dog profile first')),
                   );
                   return;
                 }
-                
+
                 final myDogId = userDogs.first['id'];
                 final targetDog = Dog.fromJson(dog);
-                
+
                 final success = await DogFriendshipService.sendBark(
                   fromDogId: myDogId,
                   toDogId: targetDog.id,
                 );
-                
+
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(success 
-                        ? 'Woof! Barked at ${targetDog.name}! 🐕' 
-                        : 'Already barked at ${targetDog.name}'),
+                      content: Text(success
+                          ? 'Woof! Barked at ${targetDog.name}! 🐕'
+                          : 'Already barked at ${targetDog.name}'),
                       backgroundColor: success ? Colors.green : Colors.orange,
                     ),
                   );
@@ -1733,7 +1869,8 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal> with SingleT
                 }
               }
             },
-            onPlaydatePressed: () => context.push('/create-playdate', extra: Dog.fromJson(dog)),
+            onPlaydatePressed: () =>
+                context.push('/create-playdate', extra: Dog.fromJson(dog)),
           ),
         );
       },

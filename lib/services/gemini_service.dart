@@ -68,13 +68,13 @@ Guidelines:
   }) async {
     try {
       final StringBuffer promptBuffer = StringBuffer();
-      
+
       if (latitude != null && longitude != null) {
         promptBuffer.writeln(
           'The user is currently located at latitude $latitude and longitude $longitude.',
         );
       }
-      
+
       promptBuffer.writeln('\nUser query: "$query"');
 
       final prompt = promptBuffer.toString();
@@ -86,26 +86,28 @@ Guidelines:
 
       final rawText = response.text ?? '{}';
       // Clean up markdown if present
-      final jsonString = rawText.replaceAll('```json', '').replaceAll('```', '').trim();
-      
+      final jsonString =
+          rawText.replaceAll('```json', '').replaceAll('```', '').trim();
+
       debugPrint('✅ Gemini raw response: $jsonString');
 
       // Note: In a real app, we would use jsonDecode here.
       // For now, we'll return the raw text if parsing fails or just pass it through.
       // But to make it work with the UI, let's try to parse it.
-      
+
       // Since we don't have dart:convert imported, let's just return the raw text for now
       // and let the provider handle it, OR import dart:convert.
       // Let's assume the provider will handle the "Manual Grounding" by parsing this JSON.
-      
+
       return GeminiResponse(
-        text: jsonString, 
+        text: jsonString,
         sources: [],
       );
     } catch (e, stackTrace) {
       debugPrint('❌ Gemini API error: $e');
       return GeminiResponse(
-        text: '{"response_text": "Sorry, I encountered an error.", "suggested_places": []}',
+        text:
+            '{"response_text": "Sorry, I encountered an error.", "suggested_places": []}',
         sources: [],
       );
     }
@@ -113,10 +115,10 @@ Guidelines:
 
   /// Quick suggestions for common queries
   static List<String> get quickReplies => [
-    'Find cafes with patios',
-    'Any dog parks with water?',
-    'What\'s happening this weekend?',
-    'Best places for puppies nearby',
-    'Dog-friendly restaurants with shade',
-  ];
+        'Find cafes with patios',
+        'Any dog parks with water?',
+        'What\'s happening this weekend?',
+        'Best places for puppies nearby',
+        'Dog-friendly restaurants with shade',
+      ];
 }

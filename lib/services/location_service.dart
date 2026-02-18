@@ -53,7 +53,8 @@ class LocationService {
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      debugPrint('📍 Got location: ${position.latitude}, ${position.longitude}');
+      debugPrint(
+          '📍 Got location: ${position.latitude}, ${position.longitude}');
       return position;
     } catch (e) {
       debugPrint('❌ Error getting location: $e');
@@ -69,18 +70,14 @@ class LocationService {
   ) async {
     try {
       final timestamp = DateTime.now().toIso8601String();
-      await SupabaseConfig.client
-          .from('users')
-          .update({
+      await SupabaseConfig.client.from('users').update({
         'latitude': latitude,
         'longitude': longitude,
         'location_updated_at': timestamp,
       }).eq('id', userId);
 
       // Update owned dogs to inherit the new location
-      await SupabaseConfig.client
-          .from('dogs')
-          .update({
+      await SupabaseConfig.client.from('dogs').update({
         'latitude': latitude,
         'longitude': longitude,
       }).eq('user_id', userId);
@@ -97,22 +94,16 @@ class LocationService {
   /// Disable location for a user and their dogs
   static Future<void> disableLocation(String userId) async {
     try {
-      await SupabaseConfig.client
-          .from('users')
-          .update({
-            'latitude': null,
-            'longitude': null,
-            'location_updated_at': null,
-          })
-          .eq('id', userId);
+      await SupabaseConfig.client.from('users').update({
+        'latitude': null,
+        'longitude': null,
+        'location_updated_at': null,
+      }).eq('id', userId);
 
-      await SupabaseConfig.client
-          .from('dogs')
-          .update({
-            'latitude': null,
-            'longitude': null,
-          })
-          .eq('user_id', userId);
+      await SupabaseConfig.client.from('dogs').update({
+        'latitude': null,
+        'longitude': null,
+      }).eq('user_id', userId);
 
       CacheService()
         ..invalidate('nearby_$userId')
@@ -156,7 +147,8 @@ class LocationService {
       if (!serviceEnabled) {
         return const LocationPermissionInfo(
           status: LocationStatus.serviceDisabled,
-          message: 'Location services are disabled on your device. Please enable them in system settings.',
+          message:
+              'Location services are disabled on your device. Please enable them in system settings.',
           canRequestPermission: false,
           needsSystemSettings: true,
         );
@@ -164,24 +156,26 @@ class LocationService {
 
       // Check app permission
       final permission = await Geolocator.checkPermission();
-      
+
       switch (permission) {
         case LocationPermission.denied:
           return const LocationPermissionInfo(
             status: LocationStatus.permissionDenied,
-            message: 'Location permission is required to find nearby dogs and events.',
+            message:
+                'Location permission is required to find nearby dogs and events.',
             canRequestPermission: true,
             needsSystemSettings: false,
           );
-        
+
         case LocationPermission.deniedForever:
           return const LocationPermissionInfo(
             status: LocationStatus.permissionDeniedForever,
-            message: 'Location permission was permanently denied. Please enable it in app settings.',
+            message:
+                'Location permission was permanently denied. Please enable it in app settings.',
             canRequestPermission: false,
             needsSystemSettings: true,
           );
-        
+
         case LocationPermission.whileInUse:
         case LocationPermission.always:
           return const LocationPermissionInfo(
@@ -190,7 +184,7 @@ class LocationService {
             canRequestPermission: false,
             needsSystemSettings: false,
           );
-        
+
         default:
           return const LocationPermissionInfo(
             status: LocationStatus.unknown,
@@ -215,7 +209,7 @@ class LocationService {
     try {
       final permission = await Geolocator.requestPermission();
       return permission == LocationPermission.whileInUse ||
-             permission == LocationPermission.always;
+          permission == LocationPermission.always;
     } catch (e) {
       debugPrint('Error requesting location permission: $e');
       return false;
@@ -266,7 +260,7 @@ class LocationService {
         position.latitude,
         position.longitude,
       );
-      
+
       return true;
     } catch (e) {
       debugPrint('Error syncing location: $e');

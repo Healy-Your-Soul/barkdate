@@ -46,8 +46,8 @@ class _MapScreenState extends State<MapScreen> {
 
   void _setupRealTimeDogCounts() {
     try {
-      _dogCountSubscription = BarkDateUserService.getDogCountUpdates()
-          .listen((counts) {
+      _dogCountSubscription =
+          BarkDateUserService.getDogCountUpdates().listen((counts) {
         if (mounted) {
           setState(() {
             _dogCounts = counts;
@@ -83,7 +83,8 @@ class _MapScreenState extends State<MapScreen> {
 
       final locationData = await _location.getLocation();
       if (locationData.latitude != null && locationData.longitude != null) {
-        _currentLocation = LatLng(locationData.latitude!, locationData.longitude!);
+        _currentLocation =
+            LatLng(locationData.latitude!, locationData.longitude!);
       } else {
         _setDefaultLocation();
       }
@@ -117,20 +118,22 @@ class _MapScreenState extends State<MapScreen> {
         latitude: _currentLocation!.latitude,
         longitude: _currentLocation!.longitude,
       );
-      
+
       // Load featured parks and convert to Map format
       final featuredData = await ParkService.getFeaturedParks();
-      final featured = featuredData.map((park) => {
-        'id': park.id,
-        'name': park.name,
-        'latitude': park.latitude,
-        'longitude': park.longitude,
-        'description': park.description,
-        'amenities': park.amenities,
-        'rating': park.rating,
-        'address': park.address,
-      }).toList();
-      
+      final featured = featuredData
+          .map((park) => {
+                'id': park.id,
+                'name': park.name,
+                'latitude': park.latitude,
+                'longitude': park.longitude,
+                'description': park.description,
+                'amenities': park.amenities,
+                'rating': park.rating,
+                'address': park.address,
+              })
+          .toList();
+
       // Get current dog counts
       Map<String, int> counts = {};
       try {
@@ -153,7 +156,7 @@ class _MapScreenState extends State<MapScreen> {
 
   void _updateMarkers() {
     _markers.clear();
-    
+
     if (_showingSearchResults) {
       // Show search results
       for (int i = 0; i < _searchResults.length; i++) {
@@ -178,9 +181,11 @@ class _MapScreenState extends State<MapScreen> {
           position: LatLng(park['latitude'], park['longitude']),
           infoWindow: InfoWindow(
             title: park['name'],
-            snippet: dogCount > 0 ? '$dogCount dogs active' : 'No dogs currently',
+            snippet:
+                dogCount > 0 ? '$dogCount dogs active' : 'No dogs currently',
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           onTap: () => _showParkDetails(park),
         ));
       }
@@ -195,27 +200,28 @@ class _MapScreenState extends State<MapScreen> {
             title: '⭐ ${park['name']}',
             snippet: dogCount > 0 ? '$dogCount dogs active' : 'Featured park',
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
           onTap: () => _showFeaturedParkDetails(park),
         ));
       }
     }
-    
+
     if (mounted) setState(() {});
   }
 
   Future<void> _searchPlaces(String query) async {
     if (_currentLocation == null || query.trim().isEmpty) return;
-    
+
     setState(() => _isSearching = true);
-    
+
     try {
       final results = await PlacesService.searchDogFriendlyPlaces(
         latitude: _currentLocation!.latitude,
         longitude: _currentLocation!.longitude,
         keyword: query,
       );
-      
+
       setState(() {
         _searchResults = results;
         _showingSearchResults = true;
@@ -286,7 +292,8 @@ class _MapScreenState extends State<MapScreen> {
                                 ? const SizedBox(
                                     width: 20,
                                     height: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
                                   )
                                 : _searchController.text.isNotEmpty
                                     ? IconButton(
@@ -297,14 +304,17 @@ class _MapScreenState extends State<MapScreen> {
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
                           ),
                           onSubmitted: _searchPlaces,
                         ),
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: _isSearching ? null : () => _searchPlaces(_searchController.text),
+                        onPressed: _isSearching
+                            ? null
+                            : () => _searchPlaces(_searchController.text),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2E7D32),
                           foregroundColor: Colors.white,
@@ -319,7 +329,8 @@ class _MapScreenState extends State<MapScreen> {
                   height: 300,
                   child: GoogleMap(
                     initialCameraPosition: CameraPosition(
-                      target: _currentLocation ?? const LatLng(40.7829, -73.9654),
+                      target:
+                          _currentLocation ?? const LatLng(40.7829, -73.9654),
                       zoom: 12,
                     ),
                     myLocationEnabled: true,
@@ -332,7 +343,9 @@ class _MapScreenState extends State<MapScreen> {
                 ),
                 // Parks list
                 Expanded(
-                  child: _showingSearchResults ? _buildSearchResultsList() : _buildParksList(),
+                  child: _showingSearchResults
+                      ? _buildSearchResultsList()
+                      : _buildParksList(),
                 ),
               ],
             ),
@@ -341,7 +354,7 @@ class _MapScreenState extends State<MapScreen> {
 
   Widget _buildParksList() {
     final allParks = [..._featuredParks, ..._nearbyParks];
-    
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: allParks.length,
@@ -349,12 +362,13 @@ class _MapScreenState extends State<MapScreen> {
         final park = allParks[index];
         final isFeatured = index < _featuredParks.length;
         final dogCount = _dogCounts[park['id']] ?? 0;
-        
+
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: isFeatured ? Colors.orange : const Color(0xFF2E7D32),
+              backgroundColor:
+                  isFeatured ? Colors.orange : const Color(0xFF2E7D32),
               child: Icon(
                 isFeatured ? Icons.star : Icons.park,
                 color: Colors.white,
@@ -368,11 +382,13 @@ class _MapScreenState extends State<MapScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (park['distance'] != null)
-                  Text('${(park['distance'] as double).toStringAsFixed(1)} km away'),
+                  Text(
+                      '${(park['distance'] as double).toStringAsFixed(1)} km away'),
                 if (dogCount > 0)
                   Container(
                     margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -389,7 +405,9 @@ class _MapScreenState extends State<MapScreen> {
               ],
             ),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => isFeatured ? _showFeaturedParkDetails(park) : _showParkDetails(park),
+            onTap: () => isFeatured
+                ? _showFeaturedParkDetails(park)
+                : _showParkDetails(park),
           ),
         );
       },
@@ -473,9 +491,10 @@ class _MapScreenState extends State<MapScreen> {
                         const SizedBox(height: 4),
                         Text(
                           place.category.displayName,
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Colors.blue,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.labelMedium?.copyWith(
+                                    color: Colors.blue,
+                                  ),
                         ),
                       ],
                     ),
@@ -491,7 +510,7 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Rating and distance
               Row(
                 children: [
@@ -524,7 +543,8 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: place.isOpen ? Colors.green : Colors.red,
                       borderRadius: BorderRadius.circular(12),
@@ -536,9 +556,9 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Address
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -553,9 +573,9 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Action button
               SizedBox(
                 width: double.infinity,
@@ -585,7 +605,7 @@ class _MapScreenState extends State<MapScreen> {
       ),
       builder: (context) {
         final dogCount = _dogCounts[park['id']] ?? 0;
-        
+
         return Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -610,9 +630,10 @@ class _MapScreenState extends State<MapScreen> {
                         const SizedBox(height: 4),
                         Text(
                           'Dog Park',
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: const Color(0xFF2E7D32),
-                          ),
+                          style:
+                              Theme.of(context).textTheme.labelMedium?.copyWith(
+                                    color: const Color(0xFF2E7D32),
+                                  ),
                         ),
                       ],
                     ),
@@ -628,7 +649,6 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -640,7 +660,7 @@ class _MapScreenState extends State<MapScreen> {
                     const Icon(Icons.pets, color: Color(0xFF2E7D32)),
                     const SizedBox(width: 8),
                     Text(
-                      dogCount > 0 
+                      dogCount > 0
                           ? '$dogCount dogs currently active at this park'
                           : 'No dogs currently at this park',
                       style: const TextStyle(color: Color(0xFF2E7D32)),
@@ -648,9 +668,7 @@ class _MapScreenState extends State<MapScreen> {
                   ],
                 ),
               ),
-              
               const SizedBox(height: 24),
-              
               Row(
                 children: [
                   Expanded(
@@ -694,7 +712,7 @@ class _MapScreenState extends State<MapScreen> {
       ),
       builder: (context) {
         final dogCount = _dogCounts[park['id']] ?? 0;
-        
+
         return DraggableScrollableSheet(
           initialChildSize: 0.6,
           maxChildSize: 0.9,
@@ -726,9 +744,12 @@ class _MapScreenState extends State<MapScreen> {
                             const SizedBox(height: 4),
                             Text(
                               'Featured Dog Park',
-                              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                color: Colors.orange,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelMedium
+                                  ?.copyWith(
+                                    color: Colors.orange,
+                                  ),
                             ),
                           ],
                         ),
@@ -743,9 +764,9 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Rating and info
                   if (park['rating'] != null) ...[
                     Row(
@@ -760,7 +781,7 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                     const SizedBox(width: 16),
                   ],
-                  
+
                   // Dog count
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -773,7 +794,7 @@ class _MapScreenState extends State<MapScreen> {
                         const Icon(Icons.pets, color: Color(0xFF2E7D32)),
                         const SizedBox(width: 8),
                         Text(
-                          dogCount > 0 
+                          dogCount > 0
                               ? '$dogCount dogs currently active'
                               : 'No dogs currently at this park',
                           style: const TextStyle(color: Color(0xFF2E7D32)),
@@ -781,7 +802,7 @@ class _MapScreenState extends State<MapScreen> {
                       ],
                     ),
                   ),
-                  
+
                   // Description
                   if (park['description'] != null) ...[
                     const SizedBox(height: 16),
@@ -795,9 +816,10 @@ class _MapScreenState extends State<MapScreen> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
-                  
+
                   // Amenities
-                  if (park['amenities'] != null && (park['amenities'] as List).isNotEmpty) ...[
+                  if (park['amenities'] != null &&
+                      (park['amenities'] as List).isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Text(
                       'Amenities',
@@ -809,11 +831,15 @@ class _MapScreenState extends State<MapScreen> {
                       runSpacing: 8,
                       children: (park['amenities'] as List<dynamic>)
                           .map((amenity) => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                                  color: const Color(0xFF2E7D32)
+                                      .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: const Color(0xFF2E7D32).withValues(alpha: 0.3)),
+                                  border: Border.all(
+                                      color: const Color(0xFF2E7D32)
+                                          .withValues(alpha: 0.3)),
                                 ),
                                 child: Text(
                                   amenity.toString(),
@@ -827,9 +853,9 @@ class _MapScreenState extends State<MapScreen> {
                           .toList(),
                     ),
                   ],
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Action buttons
                   Row(
                     children: [
@@ -845,7 +871,8 @@ class _MapScreenState extends State<MapScreen> {
                           onPressed: () {
                             final uri = Uri.parse(
                                 'https://www.google.com/maps/search/?api=1&query=${park['latitude']},${park['longitude']}');
-                            launchUrl(uri, mode: LaunchMode.externalApplication);
+                            launchUrl(uri,
+                                mode: LaunchMode.externalApplication);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF2E7D32),

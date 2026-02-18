@@ -54,10 +54,10 @@ class PlacesService {
       for (final result in allResults) {
         uniqueResults[result.placeId] = result;
       }
-      
+
       final resultList = uniqueResults.values.toList();
       resultList.sort((a, b) => a.distance.compareTo(b.distance));
-      
+
       return resultList.take(20).toList(); // Limit to 20 results
     } catch (e) {
       debugPrint('Error searching places: $e');
@@ -90,7 +90,7 @@ class PlacesService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final results = data['results'] as List;
-        
+
         return results.map((place) {
           final location = place['geometry']['location'];
           final distance = Geolocator.distanceBetween(
@@ -99,7 +99,7 @@ class PlacesService {
             location['lat'],
             location['lng'],
           );
-          
+
           return PlaceResult(
             placeId: place['place_id'],
             name: place['name'],
@@ -115,7 +115,8 @@ class PlacesService {
           );
         }).toList();
       } else {
-        debugPrint('Places API error: ${response.statusCode} - ${response.body}');
+        debugPrint(
+            'Places API error: ${response.statusCode} - ${response.body}');
         return [];
       }
     } catch (e) {
@@ -143,7 +144,8 @@ class PlacesService {
         final data = json.decode(response.body);
         return data['result'];
       } else {
-        debugPrint('Place details API error: ${response.statusCode} - ${response.body}');
+        debugPrint(
+            'Place details API error: ${response.statusCode} - ${response.body}');
         return null;
       }
     } catch (e) {
@@ -155,7 +157,7 @@ class PlacesService {
   // Autocomplete for admin interface
   static Future<List<PlaceAutocomplete>> autocomplete(String input) async {
     if (input.isEmpty) return [];
-    
+
     try {
       final url = '$_baseUrl/autocomplete/json?'
           'input=$input&'
@@ -172,17 +174,22 @@ class PlacesService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final predictions = data['predictions'] as List;
-        
-        return predictions.map((prediction) => PlaceAutocomplete(
-          placeId: prediction['place_id'],
-          description: prediction['description'],
-          structuredFormatting: PlaceStructuredFormatting(
-            mainText: prediction['structured_formatting']['main_text'],
-            secondaryText: prediction['structured_formatting']['secondary_text'] ?? '',
-          ),
-        )).toList();
+
+        return predictions
+            .map((prediction) => PlaceAutocomplete(
+                  placeId: prediction['place_id'],
+                  description: prediction['description'],
+                  structuredFormatting: PlaceStructuredFormatting(
+                    mainText: prediction['structured_formatting']['main_text'],
+                    secondaryText: prediction['structured_formatting']
+                            ['secondary_text'] ??
+                        '',
+                  ),
+                ))
+            .toList();
       } else {
-        debugPrint('Autocomplete API error: ${response.statusCode} - ${response.body}');
+        debugPrint(
+            'Autocomplete API error: ${response.statusCode} - ${response.body}');
         return [];
       }
     } catch (e) {
@@ -192,7 +199,8 @@ class PlacesService {
   }
 
   // Get place details by place ID for admin
-  static Future<Map<String, dynamic>?> getPlaceDetailsByPlaceId(String placeId) async {
+  static Future<Map<String, dynamic>?> getPlaceDetailsByPlaceId(
+      String placeId) async {
     try {
       final url = '$_baseUrl/details/json?'
           'place_id=$placeId&'
@@ -210,7 +218,8 @@ class PlacesService {
         final data = json.decode(response.body);
         return data['result'];
       } else {
-        debugPrint('Place details API error: ${response.statusCode} - ${response.body}');
+        debugPrint(
+            'Place details API error: ${response.statusCode} - ${response.body}');
         return null;
       }
     } catch (e) {

@@ -4,6 +4,7 @@ import 'package:barkdate/features/profile/data/repositories/profile_repository_i
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/dog_sharing_service.dart';
+
 // Repository Provider
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
   return ProfileRepositoryImpl();

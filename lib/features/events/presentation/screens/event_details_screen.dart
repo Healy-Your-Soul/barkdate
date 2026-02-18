@@ -34,7 +34,7 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
       setState(() {
         _currentUserId = user.id;
       });
-      
+
       // Get user's first dog for participation
       try {
         final dogs = await BarkDateUserService.getUserDogs(user.id);
@@ -51,12 +51,13 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
 
   Future<void> _checkParticipation() async {
     if (_currentUserId == null) return;
-    
+
     try {
-      final participating = await ref.read(eventRepositoryProvider).isUserParticipating(
-        eventId: widget.event.id,
-        userId: _currentUserId!,
-      );
+      final participating =
+          await ref.read(eventRepositoryProvider).isUserParticipating(
+                eventId: widget.event.id,
+                userId: _currentUserId!,
+              );
       if (mounted) {
         setState(() {
           _isParticipating = participating;
@@ -88,10 +89,10 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
 
     try {
       final success = await ref.read(eventRepositoryProvider).joinEvent(
-        eventId: widget.event.id,
-        userId: _currentUserId!,
-        dogId: _currentDogId!,
-      );
+            eventId: widget.event.id,
+            userId: _currentUserId!,
+            dogId: _currentDogId!,
+          );
 
       if (success) {
         setState(() {
@@ -143,9 +144,9 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
 
     try {
       final success = await ref.read(eventRepositoryProvider).leaveEvent(
-        eventId: widget.event.id,
-        userId: _currentUserId!,
-      );
+            eventId: widget.event.id,
+            userId: _currentUserId!,
+          );
 
       if (success) {
         setState(() {
@@ -227,19 +228,24 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
                         ),
                       ),
                     ),
-                    
+
                     // Price badge
                     Positioned(
                       top: 60,
                       right: 16,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: widget.event.isFree ? Colors.green : Theme.of(context).colorScheme.primary,
+                          color: widget.event.isFree
+                              ? Colors.green
+                              : Theme.of(context).colorScheme.primary,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
-                          widget.event.isFree ? 'FREE' : widget.event.formattedPrice,
+                          widget.event.isFree
+                              ? 'FREE'
+                              : widget.event.formattedPrice,
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -256,7 +262,7 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
               onPressed: () => Navigator.pop(context),
             ),
           ),
-          
+
           // Event details
           SliverToBoxAdapter(
             child: Padding(
@@ -268,25 +274,27 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
                   Text(
                     widget.event.title,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
-                  
+
                   const SizedBox(height: 8),
-                  
+
                   // Organizer
                   Row(
                     children: [
                       CircleAvatar(
                         radius: 16,
-                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                        backgroundImage: widget.event.organizerAvatarUrl.isNotEmpty
-                            ? NetworkImage(widget.event.organizerAvatarUrl)
-                            : null,
+                        backgroundColor:
+                            Theme.of(context).colorScheme.primaryContainer,
+                        backgroundImage:
+                            widget.event.organizerAvatarUrl.isNotEmpty
+                                ? NetworkImage(widget.event.organizerAvatarUrl)
+                                : null,
                         child: widget.event.organizerAvatarUrl.isEmpty
                             ? Icon(
-                                widget.event.organizerType == 'professional' 
-                                    ? Icons.business 
+                                widget.event.organizerType == 'professional'
+                                    ? Icons.business
                                     : Icons.person,
                                 size: 16,
                                 color: Theme.of(context).colorScheme.primary,
@@ -300,112 +308,124 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
                           children: [
                             Text(
                               'Organized by ${widget.event.organizerName}',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                  ),
                             ),
                             Text(
                               widget.event.categoryDisplayName,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withOpacity(0.7),
+                                  ),
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Date and time
                   _buildDetailRow(
                     icon: Icons.schedule,
                     title: 'Date & Time',
                     content: widget.event.formattedDate,
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Location
                   _buildDetailRow(
                     icon: Icons.location_on,
                     title: 'Location',
                     content: widget.event.location,
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Participants
                   _buildDetailRow(
                     icon: Icons.pets,
                     title: 'Participants',
-                    content: '${widget.event.currentParticipants}/${widget.event.maxParticipants} dogs',
+                    content:
+                        '${widget.event.currentParticipants}/${widget.event.maxParticipants} dogs',
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Description
                   Text(
                     'About This Event',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     widget.event.description ?? 'No description provided.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Target audience
-                  if (widget.event.targetAgeGroups.isNotEmpty || widget.event.targetSizes.isNotEmpty) ...[
+                  if (widget.event.targetAgeGroups.isNotEmpty ||
+                      widget.event.targetSizes.isNotEmpty) ...[
                     Text(
                       'Target Audience',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     const SizedBox(height: 8),
-                    
                     if (widget.event.targetAgeGroups.isNotEmpty) ...[
                       Text(
                         'Age Groups',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
+                              fontWeight: FontWeight.w500,
+                            ),
                       ),
                       const SizedBox(height: 4),
                       Wrap(
                         spacing: 8,
-                        children: widget.event.targetAgeGroups.map((age) => 
-                          _buildChip(context, age.capitalize(), Theme.of(context).colorScheme.secondary)
-                        ).toList(),
+                        children: widget.event.targetAgeGroups
+                            .map((age) => _buildChip(context, age.capitalize(),
+                                Theme.of(context).colorScheme.secondary))
+                            .toList(),
                       ),
                       const SizedBox(height: 8),
                     ],
-                    
                     if (widget.event.targetSizes.isNotEmpty) ...[
                       Text(
                         'Sizes',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
+                              fontWeight: FontWeight.w500,
+                            ),
                       ),
                       const SizedBox(height: 4),
                       Wrap(
                         spacing: 8,
-                        children: widget.event.targetSizes.map((size) => 
-                          _buildChip(context, size.capitalize(), Theme.of(context).colorScheme.tertiary)
-                        ).toList(),
+                        children: widget.event.targetSizes
+                            .map((size) => _buildChip(
+                                context,
+                                size.capitalize(),
+                                Theme.of(context).colorScheme.tertiary))
+                            .toList(),
                       ),
                     ],
-                    
                     const SizedBox(height: 32),
                   ],
-                  
+
                   // Action button
                   AppButton(
                     text: _isParticipating
@@ -423,7 +443,7 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
                         ? Theme.of(context).colorScheme.error
                         : null,
                   ),
-                  
+
                   const SizedBox(height: 32),
                 ],
               ),
@@ -455,14 +475,17 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
               Text(
                 title,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                ),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.6),
+                    ),
               ),
               Text(
                 content,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
+                      fontWeight: FontWeight.w500,
+                    ),
               ),
             ],
           ),

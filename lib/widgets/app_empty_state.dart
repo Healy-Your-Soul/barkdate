@@ -35,18 +35,24 @@ class AppEmptyState extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.xxl),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
                 size: 64,
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.6),
               ),
             ),
-            
+
             AppSpacing.verticalSpaceXXL,
-            
+
             // Title
             Text(
               title,
@@ -55,20 +61,23 @@ class AppEmptyState extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             AppSpacing.verticalSpaceMD,
-            
+
             // Message
             Text(
               message,
               style: AppTypography.bodyMedium(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             AppSpacing.verticalSpaceXXL,
-            
+
             // Action button
             if (customAction != null)
               customAction!
@@ -111,10 +120,10 @@ class _SkeletonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final shimmerColor = isDark 
+    final shimmerColor = isDark
         ? Colors.white.withValues(alpha: 0.1)
         : Colors.black.withValues(alpha: 0.05);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.lg),
       padding: AppSpacing.cardPadding,
@@ -134,7 +143,7 @@ class _SkeletonCard extends StatelessWidget {
             ),
           ),
           AppSpacing.verticalSpaceMD,
-          
+
           // Title placeholder
           Container(
             height: 20,
@@ -145,7 +154,7 @@ class _SkeletonCard extends StatelessWidget {
             ),
           ),
           AppSpacing.verticalSpaceSM,
-          
+
           // Subtitle placeholder
           Container(
             height: 16,

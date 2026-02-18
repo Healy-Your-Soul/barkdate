@@ -68,12 +68,15 @@ class MapFilters {
       openNow: openNow ?? this.openNow,
       category: category ?? this.category,
       amenities: amenities ?? this.amenities,
-      aiSuggestedPlaceNames: aiSuggestedPlaceNames ?? this.aiSuggestedPlaceNames,
+      aiSuggestedPlaceNames:
+          aiSuggestedPlaceNames ?? this.aiSuggestedPlaceNames,
     );
   }
 }
 
-final mapFiltersProvider = StateNotifierProvider<MapFiltersNotifier, MapFilters>((ref) => MapFiltersNotifier());
+final mapFiltersProvider =
+    StateNotifierProvider<MapFiltersNotifier, MapFilters>(
+        (ref) => MapFiltersNotifier());
 
 // Data state
 class MapData {
@@ -102,15 +105,17 @@ final mapDataProvider = FutureProvider<MapData>((ref) async {
 
   // Logic: If AI suggestions exist, search for EACH of them.
   // Otherwise, do normal search.
-  if (filters.aiSuggestedPlaceNames != null && filters.aiSuggestedPlaceNames!.isNotEmpty) {
+  if (filters.aiSuggestedPlaceNames != null &&
+      filters.aiSuggestedPlaceNames!.isNotEmpty) {
     // Parallel search for all AI suggestions
-    final futures = filters.aiSuggestedPlaceNames!.map((name) => repository.searchPlaces(
-      latitude: viewport.center.latitude,
-      longitude: viewport.center.longitude,
-      radius: 10000, // Wider radius for specific AI suggestions
-      keyword: name,
-    ));
-    
+    final futures =
+        filters.aiSuggestedPlaceNames!.map((name) => repository.searchPlaces(
+              latitude: viewport.center.latitude,
+              longitude: viewport.center.longitude,
+              radius: 10000, // Wider radius for specific AI suggestions
+              keyword: name,
+            ));
+
     final results = await Future.wait(futures);
     // Flatten and deduplicate
     final uniquePlaces = <String, PlaceResult>{};
@@ -120,7 +125,6 @@ final mapDataProvider = FutureProvider<MapData>((ref) async {
       }
     }
     places = uniquePlaces.values.toList();
-    
   } else {
     // Normal Search
     places = await repository.searchPlaces(
@@ -165,7 +169,8 @@ class MapSelection {
     this.showAiAssistant = false,
   });
 
-  bool get hasSelection => selectedPlace != null || selectedEvent != null || showAiAssistant;
+  bool get hasSelection =>
+      selectedPlace != null || selectedEvent != null || showAiAssistant;
 
   MapSelection copyWith({
     PlaceResult? selectedPlace,
@@ -200,7 +205,8 @@ class MapSelectionNotifier extends StateNotifier<MapSelection> {
   }
 }
 
-final mapSelectionProvider = StateNotifierProvider<MapSelectionNotifier, MapSelection>((ref) {
+final mapSelectionProvider =
+    StateNotifierProvider<MapSelectionNotifier, MapSelection>((ref) {
   return MapSelectionNotifier();
 });
 
@@ -218,7 +224,7 @@ class MapFiltersNotifier extends StateNotifier<MapFilters> {
   void setOpenNow(bool open) {
     state = state.copyWith(openNow: open);
   }
-  
+
   void setCategory(String category) {
     state = state.copyWith(category: category);
   }

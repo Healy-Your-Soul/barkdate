@@ -9,7 +9,8 @@ class LocationPermissionScreen extends StatefulWidget {
   const LocationPermissionScreen({super.key});
 
   @override
-  State<LocationPermissionScreen> createState() => _LocationPermissionScreenState();
+  State<LocationPermissionScreen> createState() =>
+      _LocationPermissionScreenState();
 }
 
 class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
@@ -36,7 +37,8 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
           userName: user.userMetadata?['name'],
           userEmail: user.email,
           locationEnabled: _locationEnabled,
-          editMode: EditMode.createProfile, // Use createProfile mode to navigate to /home after
+          editMode: EditMode
+              .createProfile, // Use createProfile mode to navigate to /home after
         ),
       ),
     );
@@ -48,7 +50,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
 
     // Request permission
     final granted = await LocationService.requestPermission();
-    
+
     if (granted) {
       // Sync location to database
       final synced = await LocationService.syncLocation(user.id);
@@ -74,12 +76,13 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
         badge: true,
         sound: true,
       );
-      
-      final granted = settings.authorizationStatus == AuthorizationStatus.authorized ||
-                      settings.authorizationStatus == AuthorizationStatus.provisional;
-      
+
+      final granted =
+          settings.authorizationStatus == AuthorizationStatus.authorized ||
+              settings.authorizationStatus == AuthorizationStatus.provisional;
+
       setState(() => _notificationsEnabled = granted);
-      
+
       if (granted && mounted) {
         // Get and save FCM token
         final user = SupabaseConfig.auth.currentUser;
@@ -88,8 +91,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
           if (token != null) {
             await SupabaseConfig.client
                 .from('users')
-                .update({'fcm_token': token})
-                .eq('id', user.id);
+                .update({'fcm_token': token}).eq('id', user.id);
           }
         }
         ScaffoldMessenger.of(context).showSnackBar(
@@ -111,8 +113,6 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
     await _navigateNext();
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -124,13 +124,16 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Spacer(),
-              
+
               // Illustration
               Container(
                 width: 200,
                 height: 200,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.2),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primaryContainer
+                      .withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Stack(
@@ -151,7 +154,8 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
                           color: _locationEnabled ? Colors.green : Colors.grey,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.location_on, size: 20, color: Colors.white),
+                        child: const Icon(Icons.location_on,
+                            size: 20, color: Colors.white),
                       ),
                     ),
                     // Notification bell
@@ -161,38 +165,44 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: _notificationsEnabled ? Colors.green : Colors.grey,
+                          color: _notificationsEnabled
+                              ? Colors.green
+                              : Colors.grey,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.notifications, size: 20, color: Colors.white),
+                        child: const Icon(Icons.notifications,
+                            size: 20, color: Colors.white),
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 32),
-              
+
               // Title
               Text(
                 'Set Up Permissions',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
-              
+
               // Description
               Text(
                 'Enable these for the best experience',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
+                    ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              
+
               // Permission toggles
               _buildPermissionTile(
                 context,
@@ -211,9 +221,9 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
                 enabled: _notificationsEnabled,
                 onTap: _requestNotificationPermission,
               ),
-              
+
               const Spacer(),
-              
+
               // Enable All button
               SizedBox(
                 width: double.infinity,
@@ -233,7 +243,6 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
                   ),
                 ),
               ),
-
             ],
           ),
         ),
@@ -255,7 +264,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: enabled 
+          color: enabled
               ? Colors.green.withValues(alpha: 0.1)
               : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
@@ -269,7 +278,9 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: enabled ? Colors.green : Theme.of(context).colorScheme.primary,
+                color: enabled
+                    ? Colors.green
+                    : Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, color: Colors.white, size: 24),
@@ -282,14 +293,17 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                   Text(
                     subtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
+                        ),
                   ),
                 ],
               ),
@@ -312,7 +326,10 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+            color: Theme.of(context)
+                .colorScheme
+                .primaryContainer
+                .withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -326,8 +343,8 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
           child: Text(
             text,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
           ),
         ),
       ],

@@ -31,6 +31,7 @@ import 'package:barkdate/screens/qr_checkin_screen.dart';
 import 'package:barkdate/screens/qr_scan_screen.dart';
 import 'package:barkdate/screens/create_event_screen.dart';
 import 'package:barkdate/features/notifications/presentation/screens/notifications_screen.dart';
+
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -136,7 +137,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'social-feed',
                     builder: (context, state) => const SocialFeedScreen(),
                   ),
-
                 ],
               ),
             ],
@@ -176,9 +176,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                
+
                 if (snapshot.hasError || !snapshot.hasData) {
-                  return const Center(child: Text('Error loading dog profile')); 
+                  return const Center(child: Text('Error loading dog profile'));
                 }
 
                 // Parse the dog data
@@ -221,7 +221,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/event/:id',
         builder: (context, state) {
           final eventId = state.pathParameters['id'];
-          if (eventId == null) return const Scaffold(body: Center(child: Text('Event not found')));
+          if (eventId == null)
+            return const Scaffold(body: Center(child: Text('Event not found')));
 
           return Scaffold(
             body: FutureBuilder<Map<String, dynamic>>(
@@ -234,9 +235,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                
+
                 if (snapshot.hasError || !snapshot.hasData) {
-                  return const Center(child: Text('Error loading event')); 
+                  return const Center(child: Text('Error loading event'));
                 }
 
                 try {
@@ -286,9 +287,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/social-feed',
         builder: (context, state) {
-          final initialTab = int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0;
+          final initialTab =
+              int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0;
           final openCreatePost = state.uri.queryParameters['create'] == 'true';
-          return SocialFeedScreen(initialTab: initialTab, openCreatePost: openCreatePost);
+          return SocialFeedScreen(
+              initialTab: initialTab, openCreatePost: openCreatePost);
         },
       ),
       // Notifications

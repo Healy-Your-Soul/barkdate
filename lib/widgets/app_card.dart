@@ -29,12 +29,13 @@ class AppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     final cardWidget = Container(
-      margin: margin ?? const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.sm,
-      ),
+      margin: margin ??
+          const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.sm,
+          ),
       decoration: BoxDecoration(
         color: color ?? (isDark ? const Color(0xFF1E1E1E) : Colors.white),
         borderRadius: borderRadius ?? AppStyles.borderRadiusMD,
@@ -90,7 +91,7 @@ class AppImageCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     Widget content = Container(
       height: height ?? 200,
       width: width,
@@ -110,19 +111,22 @@ class AppImageCard extends StatelessWidget {
                 imageUrl!,
                 fit: fit,
                 errorBuilder: (context, error, stackTrace) => Container(
-                  color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F5F5),
+                  color: isDark
+                      ? const Color(0xFF2C2C2C)
+                      : const Color(0xFFF5F5F5),
                   child: const Icon(Icons.image, size: 48, color: Colors.grey),
                 ),
               )
             else
               Container(
-                color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F5F5),
+                color:
+                    isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F5F5),
                 child: const Icon(Icons.image, size: 48, color: Colors.grey),
               ),
-            
+
             // Overlay
             if (overlay != null) overlay!,
-            
+
             // Badges (top-right corner)
             if (badges != null && badges!.isNotEmpty)
               Positioned(
@@ -133,7 +137,7 @@ class AppImageCard extends StatelessWidget {
                   children: badges!,
                 ),
               ),
-            
+
             // Child content (bottom overlay)
             if (child != null)
               Positioned(
@@ -182,7 +186,7 @@ class AppInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardColor = color ?? Theme.of(context).colorScheme.primary;
-    
+
     return AppCard(
       onTap: onTap,
       padding: AppSpacing.paddingLG,
@@ -212,17 +216,17 @@ class AppInfoCard extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+                  fontWeight: FontWeight.w600,
+                ),
           ),
           AppSpacing.verticalSpaceXS,
           Text(
             subtitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: isDark 
-                  ? Colors.white.withValues(alpha: 0.7)
-                  : Colors.black.withValues(alpha: 0.6),
-            ),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.7)
+                      : Colors.black.withValues(alpha: 0.6),
+                ),
           ),
         ],
       ),

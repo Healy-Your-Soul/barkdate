@@ -27,7 +27,7 @@ class SimplifiedPlaydateService {
       debugPrint('Location: $location, Time: $scheduledAt');
 
       // Create playdate with only basic fields that definitely exist
-  final Map<String, dynamic> playdateData = {
+      final Map<String, dynamic> playdateData = {
         'organizer_id': organizerId,
         'participant_id': inviteeId,
         'title': title,
@@ -40,7 +40,8 @@ class SimplifiedPlaydateService {
       if (description != null) playdateData['description'] = description;
       if (latitude != null) playdateData['latitude'] = latitude;
       if (longitude != null) playdateData['longitude'] = longitude;
-      if (durationMinutes != 60) playdateData['duration_minutes'] = durationMinutes;
+      if (durationMinutes != 60)
+        playdateData['duration_minutes'] = durationMinutes;
 
       final playdateResult = await SupabaseConfig.client
           .from('playdates')
@@ -71,7 +72,8 @@ class SimplifiedPlaydateService {
           type: 'playdate_request',
           actionType: 'playdate_invited',
           title: 'New Playdate Invitation! 🐕',
-          body: '${organizerDog['name']} invited ${inviteeDog['name']} for a playdate at $location',
+          body:
+              '${organizerDog['name']} invited ${inviteeDog['name']} for a playdate at $location',
           relatedId: playdateId,
           metadata: {
             'playdate_id': playdateId,
@@ -98,7 +100,8 @@ class SimplifiedPlaydateService {
   }
 
   /// Get upcoming playdates for a user
-  static Future<List<Map<String, dynamic>>> getUpcomingPlaydates(String userId) async {
+  static Future<List<Map<String, dynamic>>> getUpcomingPlaydates(
+      String userId) async {
     try {
       final now = DateTime.now();
       final playdates = await SupabaseConfig.client
@@ -116,7 +119,8 @@ class SimplifiedPlaydateService {
   }
 
   /// Get past playdates for a user
-  static Future<List<Map<String, dynamic>>> getPastPlaydates(String userId) async {
+  static Future<List<Map<String, dynamic>>> getPastPlaydates(
+      String userId) async {
     try {
       final now = DateTime.now();
       final playdates = await SupabaseConfig.client
@@ -141,8 +145,7 @@ class SimplifiedPlaydateService {
     try {
       await SupabaseConfig.client
           .from('playdates')
-          .update({'status': status})
-          .eq('id', playdateId);
+          .update({'status': status}).eq('id', playdateId);
 
       debugPrint('Updated playdate $playdateId status to $status');
       return true;

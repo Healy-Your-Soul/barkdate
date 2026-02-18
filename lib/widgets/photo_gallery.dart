@@ -121,7 +121,9 @@ class _PhotoGalleryState extends State<PhotoGallery> {
                 imageProvider: _getImageProvider(_allImages[index]),
                 initialScale: PhotoViewComputedScale.contained,
                 minScale: PhotoViewComputedScale.contained,
-                maxScale: widget.enableZoom ? PhotoViewComputedScale.covered * 3 : PhotoViewComputedScale.contained,
+                maxScale: widget.enableZoom
+                    ? PhotoViewComputedScale.covered * 3
+                    : PhotoViewComputedScale.contained,
                 onTapUp: (context, details, controllerValue) => _toggleUI(),
                 heroAttributes: PhotoViewHeroAttributes(tag: 'photo_$index'),
               );
@@ -156,12 +158,13 @@ class _PhotoGalleryState extends State<PhotoGallery> {
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                 ),
-                
+
                 const Spacer(),
-                
+
                 // Photo counter
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.black54,
                     borderRadius: BorderRadius.circular(20),
@@ -174,9 +177,9 @@ class _PhotoGalleryState extends State<PhotoGallery> {
                     ),
                   ),
                 ),
-                
+
                 const Spacer(),
-                
+
                 // Delete button (if editable)
                 if (widget.isEditable && widget.onDelete != null)
                   IconButton(
@@ -189,9 +192,9 @@ class _PhotoGalleryState extends State<PhotoGallery> {
             ),
           ),
         ),
-        
+
         const Spacer(),
-        
+
         // Bottom thumbnail strip
         if (widget.showThumbnails && _allImages.length > 1)
           _buildThumbnailStrip(),
@@ -468,8 +471,8 @@ class _CompactPhotoGalleryState extends State<CompactPhotoGallery> {
                   height: 6,
                   width: _currentIndex == index ? 20 : 6,
                   decoration: BoxDecoration(
-                    color: _currentIndex == index 
-                        ? Colors.white 
+                    color: _currentIndex == index
+                        ? Colors.white
                         : Colors.white.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(3),
                   ),

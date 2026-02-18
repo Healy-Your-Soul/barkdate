@@ -16,7 +16,8 @@ final messageRepositoryProvider = Provider<MessageRepository>((ref) {
 });
 
 // Playdates
-final userPlaydatesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+final userPlaydatesProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final repository = ref.watch(playdateRepositoryProvider);
   final user = SupabaseConfig.auth.currentUser;
   if (user == null) return [];
@@ -30,7 +31,8 @@ final conversationsProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   return BarkDateMessageService.streamConversations(user.id);
 });
 
-final mutualMatchesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+final mutualMatchesProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final repository = ref.watch(messageRepositoryProvider);
   final user = SupabaseConfig.auth.currentUser;
   if (user == null) return [];
@@ -38,13 +40,15 @@ final mutualMatchesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) a
 });
 
 // Messages for a specific match (one-time fetch)
-final messagesProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, matchId) async {
+final messagesProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, String>(
+        (ref, matchId) async {
   final repository = ref.watch(messageRepositoryProvider);
   return await repository.getMessages(matchId);
 });
 
 // Real-time messages stream for a specific match
-final messagesStreamProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, matchId) {
+final messagesStreamProvider =
+    StreamProvider.family<List<Map<String, dynamic>>, String>((ref, matchId) {
   return BarkDateMessageService.streamMessages(matchId);
 });
-
