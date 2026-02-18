@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:barkdate/services/places_service.dart';
 import 'package:barkdate/services/checkin_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
@@ -215,7 +214,7 @@ class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: _getCategoryColor(widget.place.category)
-                        .withOpacity(0.1),
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -313,7 +312,7 @@ class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   offset: const Offset(0, -4),
                   blurRadius: 10,
                 ),

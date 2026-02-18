@@ -118,7 +118,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ),
         );
       }
-      print('Sign up error: $e');
+      debugPrint('Sign up error: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

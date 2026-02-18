@@ -144,10 +144,10 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
               radius: 24,
               backgroundImage:
                   avatarUrl != null ? NetworkImage(avatarUrl) : null,
+              backgroundColor: Colors.grey[300],
               child: avatarUrl == null
                   ? const Icon(Icons.person, color: Colors.white)
                   : null,
-              backgroundColor: Colors.grey[300],
             ),
             title: Text(
               userName,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:barkdate/services/places_service.dart';
 
 class UnifiedMapService {
   static Future<Map<String, dynamic>?> showLocationPicker({
@@ -30,12 +29,12 @@ class LocationPickerSheet extends StatefulWidget {
   final double? initialLongitude;
 
   const LocationPickerSheet({
-    Key? key,
+    super.key,
     required this.title,
     this.initialLocation,
     this.initialLatitude,
     this.initialLongitude,
-  }) : super(key: key);
+  });
 
   @override
   State<LocationPickerSheet> createState() => _LocationPickerSheetState();
@@ -241,7 +240,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
                               backgroundColor: Theme.of(context)
                                   .colorScheme
                                   .primary
-                                  .withOpacity(0.1),
+                                  .withValues(alpha: 0.1),
                               child: Icon(
                                 Icons.location_on,
                                 color: Theme.of(context).colorScheme.primary,

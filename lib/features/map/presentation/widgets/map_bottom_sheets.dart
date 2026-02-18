@@ -7,7 +7,6 @@ import 'package:barkdate/services/places_service.dart';
 import 'package:barkdate/services/gemini_service.dart';
 import 'package:barkdate/services/checkin_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/widgets/checkin_button.dart';
 import 'package:barkdate/models/event.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -331,9 +330,9 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -353,7 +352,7 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
+                color: color.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -439,7 +438,7 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 blurRadius: 10,
                 offset: const Offset(0, -2),
               ),
@@ -549,7 +548,8 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF4CAF50).withOpacity(0.15),
+                            color:
+                                const Color(0xFF4CAF50).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -884,7 +884,7 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, -4),
               ),
@@ -914,7 +914,7 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
                         color: Theme.of(context)
                             .colorScheme
                             .primary
-                            .withOpacity(0.1),
+                            .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -1193,7 +1193,7 @@ class _AnimatedCheckInButtonState extends State<AnimatedCheckInButton> {
     final buttonColor =
         _isCheckedIn ? const Color(0xFFF44336) : const Color(0xFF4CAF50);
 
-    return Container(
+    return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: _isLoading ? null : _toggleCheckIn,

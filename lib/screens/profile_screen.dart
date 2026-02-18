@@ -87,7 +87,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Single edit navigation function - unified for all editing
   Future<void> _editProfile({
     required EditMode mode,
-    String? title,
   }) async {
     final result = await Navigator.push(
       context,

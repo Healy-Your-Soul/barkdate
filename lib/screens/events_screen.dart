@@ -3,12 +3,10 @@ import 'package:barkdate/models/event.dart';
 import 'package:barkdate/services/event_service.dart';
 import 'package:barkdate/services/cache_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/widgets/event_card.dart';
 import 'package:barkdate/screens/create_event_screen.dart';
 import 'package:barkdate/screens/event_detail_screen.dart';
 import 'package:barkdate/widgets/app_section_header.dart';
-import 'package:barkdate/widgets/app_bottom_sheet.dart';
 import 'package:barkdate/widgets/app_button.dart';
 import 'package:barkdate/widgets/app_empty_state.dart';
 
@@ -91,11 +89,13 @@ class _EventsScreenState extends State<EventsScreen>
           cachedMyEvents != null ||
           cachedHostingEvents != null) {
         setState(() {
-          if (cachedAllEvents != null)
+          if (cachedAllEvents != null) {
             _allEvents = cachedAllEvents.cast<Event>();
+          }
           if (cachedMyEvents != null) _myEvents = cachedMyEvents.cast<Event>();
-          if (cachedHostingEvents != null)
+          if (cachedHostingEvents != null) {
             _hostingEvents = cachedHostingEvents.cast<Event>();
+          }
           _isLoading = false;
         });
       }

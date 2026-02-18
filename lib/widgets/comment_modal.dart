@@ -83,8 +83,9 @@ class _CommentModalState extends State<CommentModal> {
   }
 
   Future<void> _addComment() async {
-    if (_commentController.text.trim().isEmpty || _currentUserId == null)
+    if (_commentController.text.trim().isEmpty || _currentUserId == null) {
       return;
+    }
 
     setState(() => _isPosting = true);
 

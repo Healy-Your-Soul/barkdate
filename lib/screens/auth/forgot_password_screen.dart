@@ -43,7 +43,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         );
       }
-      print('Password reset error: $e');
+      debugPrint('Password reset error: $e');
       setState(() => _isLoading = false);
     }
   }

@@ -1,5 +1,5 @@
 // This file should only be imported on web via conditional import
-// ignore: avoid_web_libraries_in_flutter
+// ignore: avoid_web_libraries_in_flutter, uri_does_not_exist
 import 'dart:js_util' as js_util;
 
 void registerMapsApiReadyCallback(void Function() onReady) {

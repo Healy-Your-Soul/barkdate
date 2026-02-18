@@ -35,7 +35,7 @@ class _PlaydateRequestModalState extends State<PlaydateRequestModal> {
   bool _isLoading = false;
 
   Dog? _myDog;
-  List<String> _suggestedLocations = [
+  final List<String> _suggestedLocations = [
     'Central Park',
     'Riverside Dog Park',
     'Greenfield Park',

@@ -4,7 +4,6 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:barkdate/services/selected_image.dart';
 import 'package:barkdate/widgets/app_card.dart';
 import 'package:barkdate/widgets/app_button.dart';
@@ -32,8 +31,8 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
   bool _shareToFeed = false;
   bool _isSubmitting = false;
 
-  List<SelectedImage> _selectedImages = [];
-  List<String> _uploadedImageUrls = [];
+  final List<SelectedImage> _selectedImages = [];
+  final List<String> _uploadedImageUrls = [];
   List<Map<String, dynamic>> _participatingDogs = [];
   Set<String> _taggedDogIds = {};
 

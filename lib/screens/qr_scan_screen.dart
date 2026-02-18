@@ -177,11 +177,11 @@ class QrScannerOverlayShape extends ShapeBorder {
 
   @override
   Path getOuterPath(Rect rect, {TextDirection? textDirection}) {
-    Path _getRectPath(Rect rect) {
+    Path getRectPath(Rect rect) {
       return Path()..addRect(rect);
     }
 
-    Path _getCutoutPath(Rect rect) {
+    Path getCutoutPath(Rect rect) {
       return Path()
         ..addRRect(
           RRect.fromRectAndRadius(
@@ -197,8 +197,8 @@ class QrScannerOverlayShape extends ShapeBorder {
 
     return Path.combine(
       PathOperation.difference,
-      _getRectPath(rect),
-      _getCutoutPath(rect),
+      getRectPath(rect),
+      getCutoutPath(rect),
     );
   }
 
@@ -208,8 +208,7 @@ class QrScannerOverlayShape extends ShapeBorder {
     final borderWidthSize = width / 2;
     final height = rect.height;
     final borderOffset = borderWidth / 2;
-    final _cutOutSize = cutOutSize;
-    final _cutOutBottomOffset = cutOutBottomOffset;
+    final cutOutSize = this.cutOutSize;
 
     final backgroundPaint = Paint()
       ..color = overlayColor
@@ -226,8 +225,8 @@ class QrScannerOverlayShape extends ShapeBorder {
 
     final cutOutRect = Rect.fromCenter(
       center: rect.center,
-      width: _cutOutSize,
-      height: _cutOutSize,
+      width: cutOutSize,
+      height: cutOutSize,
     );
 
     canvas.drawPath(

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
-import 'package:barkdate/features/playdates/presentation/screens/playdate_details_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
 import 'package:barkdate/design_system/app_typography.dart';
@@ -68,10 +67,12 @@ class _PlaydatesScreenState extends ConsumerState<PlaydatesScreen> {
                     // Always hide cancelled unless explicitly showing Past
                     if (status == 'cancelled') return false;
                     if (_selectedFilter == 'All') return true;
-                    if (_selectedFilter == 'Pending')
+                    if (_selectedFilter == 'Pending') {
                       return status == 'pending';
-                    if (_selectedFilter == 'Upcoming')
+                    }
+                    if (_selectedFilter == 'Upcoming') {
                       return status == 'confirmed';
+                    }
                     if (_selectedFilter == 'Past') return status == 'completed';
                     return true;
                   }).toList();
@@ -175,7 +176,7 @@ class _PlaydatesScreenState extends ConsumerState<PlaydatesScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(status).withOpacity(0.1),
+                    color: _getStatusColor(status).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(

@@ -5,9 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
-import 'package:barkdate/services/photo_upload_service.dart';
 // import 'package:barkdate/screens/main_navigation.dart'; // Removed unused import to fix circular dependency
-import 'package:barkdate/widgets/enhanced_image_picker.dart';
 import 'package:barkdate/services/selected_image.dart';
 import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 import 'package:barkdate/services/dog_breed_service.dart';
@@ -425,7 +423,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           ),
         );
       }
-      print('Profile creation error: $e');
+      debugPrint('Profile creation error: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -895,7 +893,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
           // Relationship Status Dropdown
           DropdownButtonFormField<String>(
-            value: _relationshipStatus,
+            initialValue: _relationshipStatus,
             decoration: InputDecoration(
               labelText: 'Human Connection Status',
               helperText: 'Optional: Let others know your vibe',
@@ -1157,7 +1155,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               color: Theme.of(context)
                   .colorScheme
                   .surfaceContainerHighest
-                  .withOpacity(0.3),
+                  .withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -1191,7 +1189,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                 Switch(
                   value: _isPublic,
                   onChanged: (value) => setState(() => _isPublic = value),
-                  activeColor: Colors.green,
+                  activeThumbColor: Colors.green,
                 ),
               ],
             ),

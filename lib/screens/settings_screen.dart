@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:barkdate/screens/help_screen.dart';
 import 'package:barkdate/screens/auth/sign_in_screen.dart';

@@ -1,6 +1,7 @@
 /// Stub implementations of dart:js_util functions for native platforms.
 /// These will be used on Android/iOS where JS interop doesn't exist.
 /// The actual Places API calls should be wrapped in kIsWeb checks.
+library;
 
 // Stub for globalThis - only available on web
 Object get globalThis => throw UnsupportedError(

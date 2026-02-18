@@ -26,7 +26,7 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   GoogleMapController? _mapController;
-  Location _location = Location();
+  final Location _location = Location();
   LatLng? _currentLocation;
   bool _loading = true;
   List<Map<String, dynamic>> _nearbyParks = [];
@@ -436,8 +436,9 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _loadMoreResults() async {
-    if (_currentLocation == null || _nextPageToken == null || _isLoadingMore)
+    if (_currentLocation == null || _nextPageToken == null || _isLoadingMore) {
       return;
+    }
 
     setState(() => _isLoadingMore = true);
 
@@ -749,8 +750,9 @@ class _MapScreenState extends State<MapScreen> {
                               items: _radiusOptions.map((radius) {
                                 return DropdownMenuItem<int>(
                                   value: radius,
-                                  child: Text(
-                                      '${radius >= 1000 ? (radius ~/ 1000).toString() + "km" : "$radius m"}'),
+                                  child: Text(radius >= 1000
+                                      ? "${radius ~/ 1000}km"
+                                      : "$radius m"),
                                 );
                               }).toList(),
                               onChanged: (value) {

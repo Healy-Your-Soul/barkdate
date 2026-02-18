@@ -23,7 +23,7 @@ class MapFilterChips extends ConsumerWidget {
                 child: ChoiceChip(
                   label: const Text('All'),
                   selected: filters.category == 'all',
-                  selectedColor: greenColor.withOpacity(0.2),
+                  selectedColor: greenColor.withValues(alpha: 0.2),
                   checkmarkColor: greenColor,
                   labelStyle: TextStyle(
                     color:
@@ -42,7 +42,7 @@ class MapFilterChips extends ConsumerWidget {
                 child: ChoiceChip(
                   label: const Text('Cafes'),
                   selected: filters.category == 'cafe',
-                  selectedColor: greenColor.withOpacity(0.2),
+                  selectedColor: greenColor.withValues(alpha: 0.2),
                   checkmarkColor: greenColor,
                   labelStyle: TextStyle(
                     color: filters.category == 'cafe'
@@ -62,7 +62,7 @@ class MapFilterChips extends ConsumerWidget {
                 child: ChoiceChip(
                   label: const Text('Parks'),
                   selected: filters.category == 'park',
-                  selectedColor: greenColor.withOpacity(0.2),
+                  selectedColor: greenColor.withValues(alpha: 0.2),
                   checkmarkColor: greenColor,
                   labelStyle: TextStyle(
                     color: filters.category == 'park'
@@ -82,7 +82,7 @@ class MapFilterChips extends ConsumerWidget {
                 child: ChoiceChip(
                   label: const Text('Stores'),
                   selected: filters.category == 'store',
-                  selectedColor: greenColor.withOpacity(0.2),
+                  selectedColor: greenColor.withValues(alpha: 0.2),
                   checkmarkColor: greenColor,
                   labelStyle: TextStyle(
                     color: filters.category == 'store'
@@ -114,7 +114,7 @@ class MapFilterChips extends ConsumerWidget {
             FilterChip(
               label: const Text('Dog Water Bowls'),
               selected: filters.amenities.contains('Dog Water Bowls'),
-              selectedColor: greenColor.withOpacity(0.2),
+              selectedColor: greenColor.withValues(alpha: 0.2),
               checkmarkColor: greenColor,
               onSelected: (_) {
                 ref
@@ -125,7 +125,7 @@ class MapFilterChips extends ConsumerWidget {
             FilterChip(
               label: const Text('Shaded Areas'),
               selected: filters.amenities.contains('Shaded Areas'),
-              selectedColor: greenColor.withOpacity(0.2),
+              selectedColor: greenColor.withValues(alpha: 0.2),
               checkmarkColor: greenColor,
               onSelected: (_) {
                 ref
@@ -150,7 +150,7 @@ class MapFilterChips extends ConsumerWidget {
               onChanged: (value) {
                 ref.read(mapFiltersProvider.notifier).setShowEvents(value);
               },
-              activeColor: greenColor,
+              activeThumbColor: greenColor,
             ),
           ],
         ),

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/screens/chat_detail_screen.dart';
 import 'package:barkdate/screens/report_screen.dart';
-import 'package:barkdate/services/dog_sharing_service.dart';
 import 'package:barkdate/features/profile/presentation/widgets/share_dog_sheet.dart';
 
 class DogProfileDetail extends StatefulWidget {
@@ -185,7 +183,7 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
       body: Stack(
         children: [
           // Photo carousel
-          Container(
+          SizedBox(
             height: MediaQuery.of(context).size.height * 0.6,
             child: PageView.builder(
               controller: _pageController,

@@ -248,7 +248,7 @@ class PlacesService {
 
       String? keywordLower;
       if (hasKeyword) {
-        keywordLower = trimmedKeyword!.toLowerCase();
+        keywordLower = trimmedKeyword.toLowerCase();
       }
 
       // 3. Call the selected Place search method, which returns a Promise.

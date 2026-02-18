@@ -105,7 +105,7 @@ class MapFilterChips extends ConsumerWidget {
               onChanged: (value) {
                 ref.read(mapFiltersProvider.notifier).setShowEvents(value);
               },
-              activeColor: Theme.of(context).colorScheme.primary,
+              activeThumbColor: Theme.of(context).colorScheme.primary,
             ),
           ],
         ),

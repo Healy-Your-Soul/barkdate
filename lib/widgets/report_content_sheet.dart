@@ -202,7 +202,7 @@ class _ReportContentSheetState extends State<ReportContentSheet> {
                           horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? Colors.orange.withOpacity(0.1)
+                            ? Colors.orange.withValues(alpha: 0.1)
                             : Colors.grey[50],
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(

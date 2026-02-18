@@ -157,7 +157,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     } catch (e) {
-      print('Error loading messages: $e');
+      debugPrint('Error loading messages: $e');
       setState(() {
         _isLoading = false;
       });
@@ -435,7 +435,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       // Message will appear via real-time subscription
       _scrollToBottom();
     } catch (e) {
-      print('Error sending message: $e');
+      debugPrint('Error sending message: $e');
 
       // Show error and restore message
       if (mounted) {

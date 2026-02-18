@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart'; // Using the shared provider file
 import 'package:barkdate/models/message.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/widgets/app_button.dart';
-import 'package:barkdate/design_system/app_styles.dart';
 
 import 'package:intl/intl.dart' as intl;
 
@@ -183,7 +181,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     : Theme.of(context)
                         .colorScheme
                         .primaryContainer
-                        .withOpacity(0.3),
+                        .withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(16).copyWith(
                   bottomLeft: Radius.circular(isMe ? 16 : 4),
                   bottomRight: Radius.circular(isMe ? 4 : 16),
@@ -234,7 +232,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 fillColor: Theme.of(context)
                     .colorScheme
                     .surfaceContainerHighest
-                    .withOpacity(0.5),
+                    .withValues(alpha: 0.5),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),

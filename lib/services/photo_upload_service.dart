@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -38,7 +37,7 @@ class PhotoUploadService {
         format: CompressFormat.jpeg,
       );
 
-      return compressedBytes ?? bytes;
+      return compressedBytes;
     } catch (e) {
       debugPrint('Error compressing image: $e');
       return bytes;

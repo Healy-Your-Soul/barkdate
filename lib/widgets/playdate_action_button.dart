@@ -156,11 +156,12 @@ class _PlaydateActionButtonState extends State<PlaydateActionButton> {
         _loading = false;
       });
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _state = 'none';
           _loading = false;
         });
+      }
     }
   }
 

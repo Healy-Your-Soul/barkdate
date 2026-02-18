@@ -4,8 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:barkdate/features/auth/presentation/screens/sign_in_screen.dart';
 // import 'package:barkdate/screens/main_navigation.dart';
 import 'package:barkdate/screens/onboarding/welcome_screen.dart';
-import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
-import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/preload_service.dart';
 import 'package:barkdate/widgets/dog_loading_widget.dart';
 

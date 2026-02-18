@@ -84,12 +84,10 @@ class BarkDateUserService {
 
             // Delete all files in the user's folder
             for (final file in files) {
-              if (file.name != null) {
-                await SupabaseConfig.client.storage
-                    .from(bucket)
-                    .remove(['$userId/${file.name}']);
-                debugPrint('Deleted file: $bucket/$userId/${file.name}');
-              }
+              await SupabaseConfig.client.storage
+                  .from(bucket)
+                  .remove(['$userId/${file.name}']);
+              debugPrint('Deleted file: $bucket/$userId/${file.name}');
             }
           }
         } catch (e) {
@@ -549,8 +547,7 @@ class BarkDateMatchService {
       }
 
       final dogs = List<Map<String, dynamic>>.from(
-        (response as List)
-            .map((item) => Map<String, dynamic>.from(item as Map)),
+        (response).map((item) => Map<String, dynamic>.from(item as Map)),
       );
 
       debugPrint('✅ Nearby dogs fetched: ${dogs.length}');
@@ -820,12 +817,16 @@ class BarkDateMessageService {
             bool involvesUser = false;
             if (newRecord.isNotEmpty) {
               if (newRecord['sender_id'] == userId ||
-                  newRecord['receiver_id'] == userId) involvesUser = true;
+                  newRecord['receiver_id'] == userId) {
+                involvesUser = true;
+              }
             }
             // For deletes, we might only have oldRecord
             if (!involvesUser && oldRecord.isNotEmpty) {
               if (oldRecord['sender_id'] == userId ||
-                  oldRecord['receiver_id'] == userId) involvesUser = true;
+                  oldRecord['receiver_id'] == userId) {
+                involvesUser = true;
+              }
             }
 
             if (involvesUser) {

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/models/dog.dart';
-import 'package:barkdate/theme.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/playdate_action_popup.dart';
 import 'package:barkdate/widgets/content_options_menu.dart';
@@ -279,8 +278,8 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
                 child: InkWell(
                   onTap: _hasBarked ? null : _handleBarkPressed,
                   borderRadius: BorderRadius.circular(16),
-                  splashColor: Colors.white.withOpacity(0.4),
-                  highlightColor: Colors.white.withOpacity(0.2),
+                  splashColor: Colors.white.withValues(alpha: 0.4),
+                  highlightColor: Colors.white.withValues(alpha: 0.2),
                   child: Center(
                     child: Text(
                       _hasBarked ? 'Barked!' : 'Bark',
@@ -544,7 +543,7 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
               // Subtle options menu (Report/Block)
               ContentOptionsMenu(
                 contentType: 'dog_profile',
-                contentId: dog.id ?? '',
+                contentId: dog.id,
                 ownerId: dog.ownerId,
                 ownerName: dog.ownerName,
               ),

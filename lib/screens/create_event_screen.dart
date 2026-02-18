@@ -60,7 +60,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   final Map<String, DogFriendOption> _friendOptionLookup = {};
   bool _loadingFriends = false;
   bool _isLoadingMapLocation = false; // For map picker button loading
-  List<Dog> _invitedDogs = []; // For invite-only with DogSearchSheet
+  final List<Dog> _invitedDogs = []; // For invite-only with DogSearchSheet
 
   final List<Map<String, dynamic>> _categories = [
     {'id': 'birthday', 'name': 'Birthday Party', 'icon': '🎂'},
@@ -294,7 +294,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     const SizedBox(width: 8),
                     Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        color: Theme.of(context)
+                            .primaryColor
+                            .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: _isLoadingMapLocation
@@ -417,8 +419,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                       label: const Text('Invite only'),
                       selected: _visibility == 'invite_only',
                       onSelected: (selected) {
-                        if (selected)
+                        if (selected) {
                           setState(() => _visibility = 'invite_only');
+                        }
                       },
                     ),
                   ],

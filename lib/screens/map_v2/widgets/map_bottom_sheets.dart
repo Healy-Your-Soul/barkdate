@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:barkdate/screens/map_v2/providers/map_selection_provider.dart';
 import 'package:barkdate/screens/map_v2/providers/map_viewport_provider.dart';
 import 'package:barkdate/services/places_service.dart';
-import 'package:barkdate/services/events_service.dart';
 import 'package:barkdate/services/gemini_service.dart';
 import 'package:barkdate/services/checkin_service.dart';
 import 'package:barkdate/widgets/checkin_button.dart';
@@ -223,7 +222,7 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -631,11 +630,13 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.98),
+            color: Theme.of(context)
+                .scaffoldBackgroundColor
+                .withValues(alpha: 0.98),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 20,
                 offset: const Offset(0, -4),
               ),
@@ -649,7 +650,10 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

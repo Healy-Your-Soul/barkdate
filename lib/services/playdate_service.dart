@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 import '../models/playdate.dart';
 import '../models/enhanced_dog.dart';
 
@@ -29,7 +30,7 @@ class PlaydateService {
       final List<dynamic> data = response;
       return data.map((item) => _parsePlaydateFromResponse(item)).toList();
     } catch (e) {
-      print('Error fetching user playdates: $e');
+      debugPrint('Error fetching user playdates: $e');
       return [];
     }
   }
@@ -53,7 +54,7 @@ class PlaydateService {
       final List<dynamic> data = response;
       return data.map((item) => PlaydateRequest.fromJson(item)).toList();
     } catch (e) {
-      print('Error fetching playdate requests: $e');
+      debugPrint('Error fetching playdate requests: $e');
       return [];
     }
   }
@@ -104,7 +105,7 @@ class PlaydateService {
       // Fetch the complete playdate with participants
       return await getPlaydateById(playdateId);
     } catch (e) {
-      print('Error creating playdate: $e');
+      debugPrint('Error creating playdate: $e');
       return null;
     }
   }
@@ -136,7 +137,7 @@ class PlaydateService {
 
       return true;
     } catch (e) {
-      print('Error joining playdate: $e');
+      debugPrint('Error joining playdate: $e');
       return false;
     }
   }
@@ -158,7 +159,7 @@ class PlaydateService {
 
       return true;
     } catch (e) {
-      print('Error leaving playdate: $e');
+      debugPrint('Error leaving playdate: $e');
       return false;
     }
   }
@@ -172,7 +173,7 @@ class PlaydateService {
           .update({'status': status.value}).eq('id', playdateId);
       return true;
     } catch (e) {
-      print('Error updating playdate status: $e');
+      debugPrint('Error updating playdate status: $e');
       return false;
     }
   }
@@ -188,7 +189,7 @@ class PlaydateService {
       }).eq('id', playdateId);
       return true;
     } catch (e) {
-      print('Error rescheduling playdate: $e');
+      debugPrint('Error rescheduling playdate: $e');
       return false;
     }
   }
@@ -212,7 +213,7 @@ class PlaydateService {
       });
       return true;
     } catch (e) {
-      print('Error sending playdate request: $e');
+      debugPrint('Error sending playdate request: $e');
       return false;
     }
   }
@@ -239,7 +240,7 @@ class PlaydateService {
 
       return true;
     } catch (e) {
-      print('Error responding to playdate request: $e');
+      debugPrint('Error responding to playdate request: $e');
       return false;
     }
   }
@@ -279,7 +280,7 @@ class PlaydateService {
 
       return true;
     } catch (e) {
-      print('Error counter-proposing playdate: $e');
+      debugPrint('Error counter-proposing playdate: $e');
       return false;
     }
   }
@@ -313,7 +314,7 @@ class PlaydateService {
       final List<dynamic> data = response;
       return data.map((item) => _parsePlaydateFromResponse(item)).toList();
     } catch (e) {
-      print('Error fetching nearby playdates: $e');
+      debugPrint('Error fetching nearby playdates: $e');
       return [];
     }
   }
@@ -336,7 +337,7 @@ class PlaydateService {
 
       return _parsePlaydateFromResponse(response);
     } catch (e) {
-      print('Error fetching playdate: $e');
+      debugPrint('Error fetching playdate: $e');
       return null;
     }
   }
@@ -444,7 +445,7 @@ class PlaydateService {
 
       return dogs;
     } catch (e) {
-      print('Error fetching user dogs: $e');
+      debugPrint('Error fetching user dogs: $e');
       return [];
     }
   }

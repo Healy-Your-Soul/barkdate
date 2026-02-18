@@ -25,11 +25,9 @@ class AppTheme {
         primary: primary,
         secondary: secondary,
         surface: surfaceLight,
-        background: backgroundLight,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
         onSurface: textPrimaryLight,
-        onBackground: textPrimaryLight,
         outline: Color(0xFFDDDDDD),
       ),
       scaffoldBackgroundColor: backgroundLight,
@@ -71,7 +69,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: surfaceLight,
         elevation: 4,
-        shadowColor: Colors.black.withOpacity(0.1),
+        shadowColor: Colors.black.withValues(alpha: 0.1),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       dividerTheme: const DividerThemeData(
@@ -99,11 +97,9 @@ class AppTheme {
         primary: primary,
         secondary: secondary,
         surface: surfaceDark,
-        background: backgroundDark,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
         onSurface: textPrimaryDark,
-        onBackground: textPrimaryDark,
         outline: Color(0xFF444444),
       ),
       scaffoldBackgroundColor: backgroundDark,
@@ -144,7 +140,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: surfaceDark,
         elevation: 4,
-        shadowColor: Colors.black.withOpacity(0.3),
+        shadowColor: Colors.black.withValues(alpha: 0.3),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       dividerTheme: const DividerThemeData(

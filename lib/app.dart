@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/core/router/app_router.dart';
 import 'package:barkdate/design_system/app_theme.dart';
-import 'package:barkdate/services/settings_service.dart';
 import 'package:barkdate/services/realtime_service.dart';
 import 'package:barkdate/widgets/achievement_toast.dart';
 import 'package:barkdate/supabase/supabase_config.dart';

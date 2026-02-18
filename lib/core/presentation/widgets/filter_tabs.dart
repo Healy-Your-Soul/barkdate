@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:barkdate/design_system/app_typography.dart';
 
 class FilterTabs extends StatelessWidget {
   final List<String> tabs;

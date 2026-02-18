@@ -342,8 +342,9 @@ class PlaydateRequestService {
       };
 
       if (message != null) updateData['message'] = message;
-      if (counterProposal != null)
+      if (counterProposal != null) {
         updateData['counter_proposal'] = counterProposal.toString();
+      }
 
       await SupabaseConfig.client
           .from('playdate_requests')
@@ -671,11 +672,13 @@ class PlaydateRequestService {
 
       if (title != null) updateData['title'] = title;
       if (location != null) updateData['location'] = location;
-      if (scheduledAt != null)
+      if (scheduledAt != null) {
         updateData['scheduled_at'] = scheduledAt.toIso8601String();
+      }
       if (description != null) updateData['description'] = description;
-      if (durationMinutes != null)
+      if (durationMinutes != null) {
         updateData['duration_minutes'] = durationMinutes;
+      }
       if (latitude != null) updateData['latitude'] = latitude;
       if (longitude != null) updateData['longitude'] = longitude;
 
@@ -864,12 +867,14 @@ class PlaydateManagementService {
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      if (newScheduledAt != null)
+      if (newScheduledAt != null) {
         updateData['scheduled_at'] = newScheduledAt.toIso8601String();
+      }
       if (newLocation != null) updateData['location'] = newLocation;
       if (newDescription != null) updateData['description'] = newDescription;
-      if (newDurationMinutes != null)
+      if (newDurationMinutes != null) {
         updateData['duration_minutes'] = newDurationMinutes;
+      }
       if (newLatitude != null) updateData['latitude'] = newLatitude;
       if (newLongitude != null) updateData['longitude'] = newLongitude;
 
@@ -1247,8 +1252,7 @@ class PlaydateQueryService {
       final participantIds =
           participantRows.map((r) => r['playdate_id']).toList();
       final organizerIds = organizerRows.map((r) => r['id']).toList();
-      final playdateIds = [...participantIds, ...organizerIds]
-          .toSet()
+      final playdateIds = <dynamic>{...participantIds, ...organizerIds}
           .toList(); // Remove duplicates
 
       if (playdateIds.isEmpty) {

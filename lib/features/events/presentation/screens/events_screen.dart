@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barkdate/features/events/presentation/providers/event_provider.dart';
-import 'package:barkdate/features/events/presentation/screens/event_details_screen.dart';
 import 'package:barkdate/models/event.dart';
 import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
 import 'package:barkdate/design_system/app_typography.dart';

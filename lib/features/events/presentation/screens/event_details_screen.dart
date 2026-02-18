@@ -205,8 +205,14 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                      Theme.of(context).colorScheme.secondary.withOpacity(0.8),
+                      Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.8),
+                      Theme.of(context)
+                          .colorScheme
+                          .secondary
+                          .withValues(alpha: 0.8),
                     ],
                   ),
                 ),
@@ -219,7 +225,7 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -324,7 +330,7 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurface
-                                        .withOpacity(0.7),
+                                        .withValues(alpha: 0.7),
                                   ),
                             ),
                           ],
@@ -372,7 +378,7 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    widget.event.description ?? 'No description provided.',
+                    widget.event.description,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
 
@@ -465,7 +471,7 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
         Icon(
           icon,
           size: 20,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -478,7 +484,7 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
-                          .withOpacity(0.6),
+                          .withValues(alpha: 0.6),
                     ),
               ),
               Text(
@@ -498,9 +504,9 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         label,

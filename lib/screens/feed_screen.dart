@@ -5,8 +5,6 @@ import 'package:barkdate/widgets/dog_card.dart';
 import 'package:barkdate/widgets/filter_sheet.dart';
 import 'package:barkdate/screens/catch_screen.dart';
 import 'package:barkdate/screens/notifications_screen.dart';
-import 'package:barkdate/widgets/photo_gallery.dart';
-import 'package:barkdate/screens/playdates_screen.dart';
 import 'package:barkdate/screens/social_feed_screen.dart';
 import 'package:barkdate/screens/dog_profile_detail.dart';
 import 'package:barkdate/screens/settings_screen.dart';
@@ -23,15 +21,12 @@ import 'package:barkdate/widgets/app_card.dart';
 import 'package:barkdate/widgets/app_button.dart';
 import 'package:barkdate/widgets/app_section_header.dart';
 import 'package:barkdate/design_system/app_responsive.dart';
-import 'package:barkdate/design_system/app_spacing.dart';
-import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/widgets/dog_loading_widget.dart';
 // Events feature
 import 'package:barkdate/services/event_service.dart';
 import 'package:barkdate/models/event.dart';
 // Cache service
 import 'package:barkdate/services/cache_service.dart';
-import 'package:barkdate/services/preload_service.dart';
 import 'package:barkdate/services/feed_service.dart';
 import 'package:barkdate/services/feed_filter_service.dart';
 
@@ -141,20 +136,27 @@ class _FeedScreenState extends State<FeedScreen> {
       if (dog.distanceKm > _filterOptions.maxDistance) return false;
 
       // Age filter
-      if (dog.age < _filterOptions.minAge || dog.age > _filterOptions.maxAge)
+      if (dog.age < _filterOptions.minAge || dog.age > _filterOptions.maxAge) {
         return false;
+      }
 
       // Size filter
       if (_filterOptions.sizes.isNotEmpty &&
-          !_filterOptions.sizes.contains(dog.size)) return false;
+          !_filterOptions.sizes.contains(dog.size)) {
+        return false;
+      }
 
       // Gender filter
       if (_filterOptions.genders.isNotEmpty &&
-          !_filterOptions.genders.contains(dog.gender)) return false;
+          !_filterOptions.genders.contains(dog.gender)) {
+        return false;
+      }
 
       // Breed filter
       if (_filterOptions.breeds.isNotEmpty &&
-          !_filterOptions.breeds.contains(dog.breed)) return false;
+          !_filterOptions.breeds.contains(dog.breed)) {
+        return false;
+      }
 
       return true;
     }).toList();
@@ -712,9 +714,9 @@ class _FeedScreenState extends State<FeedScreen> {
 
       if (mounted) {
         setState(() {
-          _upcomingPlaydates = results[0] as int;
-          _unreadNotifications = results[1] as int;
-          _mutualBarks = results[2] as int;
+          _upcomingPlaydates = results[0];
+          _unreadNotifications = results[1];
+          _mutualBarks = results[2];
         });
       }
     } catch (e) {
@@ -793,14 +795,14 @@ class _FeedScreenState extends State<FeedScreen> {
         }),
         (myDogId != null
                 ? EventService.getRecommendedEvents(
-                    dogId: myDogId!, dogAge: '3', dogSize: 'medium')
+                    dogId: myDogId, dogAge: '3', dogSize: 'medium')
                 : EventService.getUpcomingEvents(limit: 8))
             .catchError((e) {
           debugPrint('Error loading suggested events: $e');
           return <Event>[];
         }),
         (myDogId != null
-                ? DogFriendshipService.getDogFriends(myDogId!)
+                ? DogFriendshipService.getDogFriends(myDogId)
                 : Future.value(<Map<String, dynamic>>[]))
             .catchError((e) {
           debugPrint('Error loading friends: $e');

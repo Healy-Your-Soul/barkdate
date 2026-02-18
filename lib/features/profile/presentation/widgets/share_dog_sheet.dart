@@ -163,10 +163,11 @@ class _ShareDogSheetState extends ConsumerState<ShareDogSheet> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                  color: theme.colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                      color: theme.colorScheme.outline.withOpacity(0.5)),
+                      color: theme.colorScheme.outline.withValues(alpha: 0.5)),
                 ),
                 child: Column(
                   children: [
@@ -191,7 +192,8 @@ class _ShareDogSheetState extends ConsumerState<ShareDogSheet> {
                         color: theme.colorScheme.surface,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                            color: theme.colorScheme.primary.withOpacity(0.5)),
+                            color: theme.colorScheme.primary
+                                .withValues(alpha: 0.5)),
                       ),
                       child: Text(
                         _shareResult!.shareCode,
@@ -261,13 +263,13 @@ class _ShareDogSheetState extends ConsumerState<ShareDogSheet> {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isSelected
-              ? theme.colorScheme.primary.withOpacity(0.1)
+              ? theme.colorScheme.primary.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
                 ? theme.colorScheme.primary
-                : theme.colorScheme.outline.withOpacity(0.5),
+                : theme.colorScheme.outline.withValues(alpha: 0.5),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -277,7 +279,7 @@ class _ShareDogSheetState extends ConsumerState<ShareDogSheet> {
               icon,
               color: isSelected
                   ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurface.withOpacity(0.6),
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -297,7 +299,7 @@ class _ShareDogSheetState extends ConsumerState<ShareDogSheet> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],

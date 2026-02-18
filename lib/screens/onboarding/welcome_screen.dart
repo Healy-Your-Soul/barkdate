@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
-import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/screens/onboarding/location_permission_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
