@@ -13,7 +13,7 @@ class ChatDetailScreen extends StatefulWidget {
   final String? recipientId; // For real messaging
 
   const ChatDetailScreen({
-    super.key, 
+    super.key,
     required this.recipientName,
     this.dogName,
     this.matchId,
@@ -27,7 +27,7 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+
   List<Message> _messages = [];
   bool _isLoading = true;
   bool _isSending = false;
@@ -101,22 +101,26 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             id: 'sample_1',
             senderId: widget.recipientId ?? 'other_user',
             receiverId: _currentUserId ?? 'current_user',
-            text: 'Hey! How\'s it going? Ready for our doggy playdate tomorrow?',
+            text:
+                'Hey! How\'s it going? Ready for our doggy playdate tomorrow?',
             timestamp: DateTime.now().subtract(const Duration(hours: 2)),
           ),
           Message(
             id: 'sample_2',
             senderId: _currentUserId ?? 'current_user',
             receiverId: widget.recipientId ?? 'other_user',
-            text: 'Hi ${widget.recipientName}! Yes, we\'re super excited! What time were you thinking?',
-            timestamp: DateTime.now().subtract(const Duration(hours: 1, minutes: 45)),
+            text:
+                'Hi ${widget.recipientName}! Yes, we\'re super excited! What time were you thinking?',
+            timestamp:
+                DateTime.now().subtract(const Duration(hours: 1, minutes: 45)),
           ),
           Message(
             id: 'sample_3',
             senderId: widget.recipientId ?? 'other_user',
             receiverId: _currentUserId ?? 'current_user',
             text: 'How about 10 AM at the park? It\'s supposed to be sunny!',
-            timestamp: DateTime.now().subtract(const Duration(hours: 1, minutes: 30)),
+            timestamp:
+                DateTime.now().subtract(const Duration(hours: 1, minutes: 30)),
           ),
         ];
         _isLoading = false;
@@ -127,8 +131,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     try {
       // Load real messages from database! 💬
-      final messageData = await BarkDateMessageService.getMessages(widget.matchId!);
-      
+      final messageData =
+          await BarkDateMessageService.getMessages(widget.matchId!);
+
       final messages = messageData.map((data) {
         return Message(
           id: data['id'] as String,
@@ -146,7 +151,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
       // Mark messages as read
       if (_currentUserId != null) {
-        await BarkDateMessageService.markMessagesAsRead(widget.matchId!, _currentUserId!);
+        await BarkDateMessageService.markMessagesAsRead(
+            widget.matchId!, _currentUserId!);
       }
 
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
@@ -164,132 +170,141 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundImage: const NetworkImage('https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=200'),
-              onBackgroundImageError: (exception, stackTrace) {},
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
-            const SizedBox(width: 12),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundImage: const NetworkImage(
+                    'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=200'),
+                onBackgroundImageError: (exception, stackTrace) {},
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  widget.recipientName,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          elevation: 0,
+        ),
+        body: Column(
+          children: [
+            // Messages list
             Expanded(
-              child: Text(
-                widget.recipientName,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final message = _messages[index];
+                        final isMe = message.senderId ==
+                            (_currentUserId ?? 'current_user');
+                        return _buildMessageBubble(context, message, isMe);
+                      },
+                    ),
+            ),
+            // Quick replies
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildQuickReplyChip(context, 'On my way! 🚗'),
+                    const SizedBox(width: 8),
+                    _buildQuickReplyChip(context, 'Running late 🕐'),
+                    const SizedBox(width: 8),
+                    _buildQuickReplyChip(context, 'See you soon 🐾'),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          // Messages list
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      final message = _messages[index];
-                      final isMe = message.senderId == (_currentUserId ?? 'current_user');
-                      return _buildMessageBubble(context, message, isMe);
-                    },
+            // Message input
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                border: Border(
+                  top: BorderSide(
+                    color: Theme.of(context).dividerColor,
+                    width: 0.5,
                   ),
-          ),
-          // Quick replies
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+                ),
+              ),
               child: Row(
                 children: [
-                  _buildQuickReplyChip(context, 'On my way! 🚗'),
+                  AppIconButton(
+                    icon: Icons.camera_alt_outlined,
+                    onPressed: () {},
+                    hasBorder: true,
+                  ),
                   const SizedBox(width: 8),
-                  _buildQuickReplyChip(context, 'Running late 🕐'),
+                  AppIconButton(
+                    icon: Icons.photo_outlined,
+                    onPressed: () {},
+                    hasBorder: true,
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: InputDecoration(
+                        hintText: 'Message ${widget.recipientName}...',
+                        hintStyle: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.5),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: AppStyles.borderRadiusSM,
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: Theme.of(context)
+                            .colorScheme
+                            .primaryContainer
+                            .withValues(alpha: 0.3),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                  ),
                   const SizedBox(width: 8),
-                  _buildQuickReplyChip(context, 'See you soon 🐾'),
+                  _isSending
+                      ? SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        )
+                      : AppIconButton(
+                          icon: Icons.send,
+                          color: Theme.of(context).colorScheme.primary,
+                          onPressed: _sendMessage,
+                        ),
                 ],
               ),
             ),
-          ),
-          // Message input
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border(
-                top: BorderSide(
-                  color: Theme.of(context).dividerColor,
-                  width: 0.5,
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                AppIconButton(
-                  icon: Icons.camera_alt_outlined,
-                  onPressed: () {},
-                  hasBorder: true,
-                ),
-                const SizedBox(width: 8),
-                AppIconButton(
-                  icon: Icons.photo_outlined,
-                  onPressed: () {},
-                  hasBorder: true,
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: 'Message ${widget.recipientName}...',
-                      hintStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: AppStyles.borderRadiusSM,
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _isSending
-                    ? SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      )
-                    : AppIconButton(
-                        icon: Icons.send,
-                        color: Theme.of(context).colorScheme.primary,
-                        onPressed: _sendMessage,
-                      ),
-              ],
-            ),
-          ),
-        ],
+          ],
         ),
       ),
     );
@@ -299,13 +314,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment:
+            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isMe) ...[
             CircleAvatar(
               radius: 16,
-              backgroundImage: const NetworkImage('https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=200'),
+              backgroundImage: const NetworkImage(
+                  'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=200'),
               onBackgroundImageError: (exception, stackTrace) {},
             ),
             const SizedBox(width: 8),
@@ -316,19 +333,25 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               decoration: BoxDecoration(
                 color: isMe
                     ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(AppStyles.radiusLG).copyWith(
-                  bottomLeft: Radius.circular(isMe ? AppStyles.radiusLG : AppStyles.radiusXS),
-                  bottomRight: Radius.circular(isMe ? AppStyles.radiusXS : AppStyles.radiusLG),
+                    : Theme.of(context)
+                        .colorScheme
+                        .primaryContainer
+                        .withValues(alpha: 0.3),
+                borderRadius:
+                    BorderRadius.circular(AppStyles.radiusLG).copyWith(
+                  bottomLeft: Radius.circular(
+                      isMe ? AppStyles.radiusLG : AppStyles.radiusXS),
+                  bottomRight: Radius.circular(
+                      isMe ? AppStyles.radiusXS : AppStyles.radiusLG),
                 ),
               ),
               child: Text(
                 message.text,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: isMe 
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : Theme.of(context).colorScheme.onSurface,
-                ),
+                      color: isMe
+                          ? Theme.of(context).colorScheme.onPrimary
+                          : Theme.of(context).colorScheme.onSurface,
+                    ),
               ),
             ),
           ),
@@ -355,7 +378,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+          color: Theme.of(context)
+              .colorScheme
+              .primaryContainer
+              .withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
@@ -364,9 +390,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         child: Text(
           text,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.primary,
-            fontWeight: FontWeight.w500,
-          ),
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
         ),
       ),
     );
@@ -374,11 +400,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   Future<void> _sendMessage() async {
     if (_messageController.text.trim().isEmpty || _isSending) return;
-    
+
     final messageText = _messageController.text.trim();
     _messageController.clear();
 
-    if (widget.matchId == null || widget.recipientId == null || _currentUserId == null) {
+    if (widget.matchId == null ||
+        widget.recipientId == null ||
+        _currentUserId == null) {
       // For demo mode, just add to local list
       setState(() {
         _messages.add(Message(
@@ -408,7 +436,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       _scrollToBottom();
     } catch (e) {
       print('Error sending message: $e');
-      
+
       // Show error and restore message
       if (mounted) {
         _messageController.text = messageText;

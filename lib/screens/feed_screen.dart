@@ -45,7 +45,7 @@ class FeedScreen extends StatefulWidget {
 class _FeedScreenState extends State<FeedScreen> {
   // Static flag to prevent multiple FeedScreen instances from loading simultaneously
   static bool _isGloballyLoading = false;
-  
+
   FilterOptions _filterOptions = FilterOptions();
   bool _isRefreshing = false;
   bool _isLoading = true;
@@ -128,7 +128,6 @@ class _FeedScreenState extends State<FeedScreen> {
     super.dispose();
   }
 
-
   @override
   void didUpdateWidget(FeedScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -140,27 +139,33 @@ class _FeedScreenState extends State<FeedScreen> {
     return _nearbyDogs.where((dog) {
       // Distance filter
       if (dog.distanceKm > _filterOptions.maxDistance) return false;
-      
+
       // Age filter
-      if (dog.age < _filterOptions.minAge || dog.age > _filterOptions.maxAge) return false;
-      
+      if (dog.age < _filterOptions.minAge || dog.age > _filterOptions.maxAge)
+        return false;
+
       // Size filter
-      if (_filterOptions.sizes.isNotEmpty && !_filterOptions.sizes.contains(dog.size)) return false;
-      
+      if (_filterOptions.sizes.isNotEmpty &&
+          !_filterOptions.sizes.contains(dog.size)) return false;
+
       // Gender filter
-      if (_filterOptions.genders.isNotEmpty && !_filterOptions.genders.contains(dog.gender)) return false;
-      
+      if (_filterOptions.genders.isNotEmpty &&
+          !_filterOptions.genders.contains(dog.gender)) return false;
+
       // Breed filter
-      if (_filterOptions.breeds.isNotEmpty && !_filterOptions.breeds.contains(dog.breed)) return false;
-      
+      if (_filterOptions.breeds.isNotEmpty &&
+          !_filterOptions.breeds.contains(dog.breed)) return false;
+
       return true;
     }).toList();
   }
 
   Dog _mapDogFromRaw(Map<String, dynamic> data) {
     final userData = data['users'] as Map<String, dynamic>?;
-    final photosRaw = data['photo_urls'] ?? data['photos'] ?? data['photoUrls'] ?? [];
-    final ownerNameValue = data['owner_name'] ?? userData?['name'] ?? 'Unknown Owner';
+    final photosRaw =
+        data['photo_urls'] ?? data['photos'] ?? data['photoUrls'] ?? [];
+    final ownerNameValue =
+        data['owner_name'] ?? userData?['name'] ?? 'Unknown Owner';
     final ownerIdValue = data['user_id'] ?? userData?['id'] ?? '';
     final distance = (data['distance_km'] ?? data['distanceKm']) as num?;
 
@@ -278,7 +283,8 @@ class _FeedScreenState extends State<FeedScreen> {
         upcomingLimit: _playdatesPageSize,
         upcomingOffset: offset,
       );
-      final upcoming = (data['upcoming'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final upcoming =
+          (data['upcoming'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
       setState(() {
         _upcomingFeedPlaydates.addAll(upcoming);
@@ -288,7 +294,8 @@ class _FeedScreenState extends State<FeedScreen> {
       });
 
       if (upcoming.isNotEmpty) {
-        CacheService().cachePlaydateList(user.id, 'upcoming', _upcomingFeedPlaydates);
+        CacheService()
+            .cachePlaydateList(user.id, 'upcoming', _upcomingFeedPlaydates);
       }
     } catch (e) {
       debugPrint('Error loading more playdates: $e');
@@ -449,35 +456,26 @@ class _FeedScreenState extends State<FeedScreen> {
         .map((item) => Map<String, dynamic>.from(item))
         .toList();
 
-    final myEvents = myEventsRaw
-        .whereType<Map>()
-        .map((item) {
-          final map = Map<String, dynamic>.from(item);
-          map['organizer_type'] = map['organizer_type'] ?? 'user';
-          return Event.fromJson(map);
-        })
-        .toList();
+    final myEvents = myEventsRaw.whereType<Map>().map((item) {
+      final map = Map<String, dynamic>.from(item);
+      map['organizer_type'] = map['organizer_type'] ?? 'user';
+      return Event.fromJson(map);
+    }).toList();
 
-    final suggestedEvents = suggestedRaw
-        .whereType<Map>()
-        .map((item) {
-          final map = Map<String, dynamic>.from(item);
-          map['organizer_type'] = map['organizer_type'] ?? 'user';
-          return Event.fromJson(map);
-        })
-        .toList();
+    final suggestedEvents = suggestedRaw.whereType<Map>().map((item) {
+      final map = Map<String, dynamic>.from(item);
+      map['organizer_type'] = map['organizer_type'] ?? 'user';
+      return Event.fromJson(map);
+    }).toList();
 
-    final friends = friendsRaw
-        .whereType<Map>()
-        .map((item) {
-          final map = Map<String, dynamic>.from(item);
-          final friendDog = map['friend_dog'];
-          if (friendDog is Map) {
-            map['friend_dog'] = Map<String, dynamic>.from(friendDog);
-          }
-          return map;
-        })
-        .toList();
+    final friends = friendsRaw.whereType<Map>().map((item) {
+      final map = Map<String, dynamic>.from(item);
+      final friendDog = map['friend_dog'];
+      if (friendDog is Map) {
+        map['friend_dog'] = Map<String, dynamic>.from(friendDog);
+      }
+      return map;
+    }).toList();
 
     nearbyDogs = FeedFilterService.applyFeedFilters(
       nearbyDogs: nearbyDogs,
@@ -512,11 +510,17 @@ class _FeedScreenState extends State<FeedScreen> {
         _suggestedEventsPage = 0;
         _friendsPage = 0;
 
-        _upcomingPlaydates = (counters['upcoming_playdates'] as num?)?.toInt() ?? _upcomingPlaydates;
-        _unreadNotifications = (counters['unread_notifications'] as num?)?.toInt() ?? _unreadNotifications;
-        _mutualBarks = (counters['mutual_barks'] as num?)?.toInt() ?? _mutualBarks;
+        _upcomingPlaydates =
+            (counters['upcoming_playdates'] as num?)?.toInt() ??
+                _upcomingPlaydates;
+        _unreadNotifications =
+            (counters['unread_notifications'] as num?)?.toInt() ??
+                _unreadNotifications;
+        _mutualBarks =
+            (counters['mutual_barks'] as num?)?.toInt() ?? _mutualBarks;
         _hasActiveCheckIn = checkin['has_active'] == true;
-        _myPrimaryDogId = snapshot['primary_dog_id']?.toString() ?? _myPrimaryDogId;
+        _myPrimaryDogId =
+            snapshot['primary_dog_id']?.toString() ?? _myPrimaryDogId;
 
         if (fromCache) {
           _isInitialLoading = false;
@@ -535,7 +539,7 @@ class _FeedScreenState extends State<FeedScreen> {
       debugPrint('WARNING: Skipping double load - already loaded once');
       return;
     }
-    
+
     // Prevent multiple FeedScreen instances from loading simultaneously
     if (_isGloballyLoading) {
       debugPrint('WARNING: Skipping load - already in progress');
@@ -546,16 +550,16 @@ class _FeedScreenState extends State<FeedScreen> {
 
     try {
       final user = SupabaseAuth.currentUser;
-        if (user == null) {
-          _loadSampleFeedData();
-          if (mounted) {
-            setState(() {
-              _nearbyDogs = SampleData.nearbyDogs;
-              _isInitialLoading = false;
-              _isLoading = false;
-            });
-          }
-          return;
+      if (user == null) {
+        _loadSampleFeedData();
+        if (mounted) {
+          setState(() {
+            _nearbyDogs = SampleData.nearbyDogs;
+            _isInitialLoading = false;
+            _isLoading = false;
+          });
+        }
+        return;
       }
 
       if (mounted) {
@@ -608,7 +612,8 @@ class _FeedScreenState extends State<FeedScreen> {
 
     final cachedSnapshot = CacheService().getCachedFeedSnapshot(user.id);
     if (cachedSnapshot != null && cachedSnapshot.isNotEmpty) {
-      _applyFeedSnapshot(Map<String, dynamic>.from(cachedSnapshot), fromCache: true);
+      _applyFeedSnapshot(Map<String, dynamic>.from(cachedSnapshot),
+          fromCache: true);
       return;
     }
 
@@ -657,7 +662,9 @@ class _FeedScreenState extends State<FeedScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemBuilder: (_, __) => Container(
               width: 90,
-              decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                  color: Colors.white10,
+                  borderRadius: BorderRadius.circular(12)),
             ),
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemCount: 5,
@@ -669,13 +676,17 @@ class _FeedScreenState extends State<FeedScreen> {
           child: Container(height: 20, width: 180, color: Colors.white10),
         ),
         const SizedBox(height: 12),
-        ...List.generate(4, (_) => Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Container(
-                height: 110,
-                decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(12)),
-              ),
-            )),
+        ...List.generate(
+            4,
+            (_) => Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Container(
+                    height: 110,
+                    decoration: BoxDecoration(
+                        color: Colors.white10,
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                )),
       ],
     );
   }
@@ -742,17 +753,20 @@ class _FeedScreenState extends State<FeedScreen> {
       List<Map<String, dynamic>> friends = [];
 
       // Check cache first for quick initial display
-      final cachedPlaydates = CacheService().getCachedPlaydateList(user.id, 'upcoming');
+      final cachedPlaydates =
+          CacheService().getCachedPlaydateList(user.id, 'upcoming');
       if (cachedPlaydates != null) {
         playdates = cachedPlaydates;
       }
-      
-      final cachedEvents = CacheService().getCachedEventList('suggested_${user.id}');
+
+      final cachedEvents =
+          CacheService().getCachedEventList('suggested_${user.id}');
       if (cachedEvents != null) {
         suggestedEvents = cachedEvents.cast<Event>();
       }
 
-      final cachedFriends = CacheService().getCachedFriendList('user_${user.id}');
+      final cachedFriends =
+          CacheService().getCachedFriendList('user_${user.id}');
       if (cachedFriends != null) {
         friends = cachedFriends;
       }
@@ -773,21 +787,21 @@ class _FeedScreenState extends State<FeedScreen> {
           debugPrint('Error loading playdates: $e');
           return {'upcoming': <Map<String, dynamic>>[]};
         }),
-        EventService.getUserParticipatingEvents(user.id)
-            .catchError((e) {
+        EventService.getUserParticipatingEvents(user.id).catchError((e) {
           debugPrint('Error loading my events: $e');
           return <Event>[];
         }),
-        (myDogId != null 
-            ? EventService.getRecommendedEvents(dogId: myDogId!, dogAge: '3', dogSize: 'medium')
-            : EventService.getUpcomingEvents(limit: 8))
+        (myDogId != null
+                ? EventService.getRecommendedEvents(
+                    dogId: myDogId!, dogAge: '3', dogSize: 'medium')
+                : EventService.getUpcomingEvents(limit: 8))
             .catchError((e) {
           debugPrint('Error loading suggested events: $e');
           return <Event>[];
         }),
-        (myDogId != null 
-            ? DogFriendshipService.getDogFriends(myDogId!)
-            : Future.value(<Map<String, dynamic>>[]))
+        (myDogId != null
+                ? DogFriendshipService.getDogFriends(myDogId!)
+                : Future.value(<Map<String, dynamic>>[]))
             .catchError((e) {
           debugPrint('Error loading friends: $e');
           return <Map<String, dynamic>>[];
@@ -795,11 +809,12 @@ class _FeedScreenState extends State<FeedScreen> {
       ]);
 
       // Update cache with fresh data
-      playdates = (results[0] as Map)['upcoming'] as List<Map<String, dynamic>>? ?? [];
+      playdates =
+          (results[0] as Map)['upcoming'] as List<Map<String, dynamic>>? ?? [];
       CacheService().cachePlaydateList(user.id, 'upcoming', playdates);
-      
+
       myEvents = results[1] as List<Event>;
-      
+
       suggestedEvents = results[2] as List<Event>;
       CacheService().cacheEventList('suggested_${user.id}', suggestedEvents);
 
@@ -817,7 +832,6 @@ class _FeedScreenState extends State<FeedScreen> {
           _friendDogs = friends;
         });
       }
-
     } catch (e) {
       debugPrint('Error loading feed sections: $e');
       if (mounted) {
@@ -830,7 +844,7 @@ class _FeedScreenState extends State<FeedScreen> {
 
   void _loadSampleFeedData() {
     final now = DateTime.now();
-    
+
     setState(() {
       _hasMoreNearbyDogs = false;
       _hasMorePlaydates = false;
@@ -849,13 +863,15 @@ class _FeedScreenState extends State<FeedScreen> {
           'id': 'sample-pd-1',
           'title': 'Morning Walk at Central Park',
           'location': 'Central Park Dog Run',
-          'scheduled_at': now.add(const Duration(days: 1, hours: 10)).toIso8601String(),
+          'scheduled_at':
+              now.add(const Duration(days: 1, hours: 10)).toIso8601String(),
         },
         {
           'id': 'sample-pd-2',
           'title': 'Beach Playdate',
           'location': 'Crissy Field Beach',
-          'scheduled_at': now.add(const Duration(days: 3, hours: 14)).toIso8601String(),
+          'scheduled_at':
+              now.add(const Duration(days: 3, hours: 14)).toIso8601String(),
         },
       ];
 
@@ -997,14 +1013,16 @@ class _FeedScreenState extends State<FeedScreen> {
                   content: Text(data['title'] as String? ?? 'New notification'),
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                   action: SnackBarAction(
                     label: 'View',
                     textColor: Colors.white,
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                        MaterialPageRoute(
+                            builder: (context) => const NotificationsScreen()),
                       );
                     },
                   ),
@@ -1114,9 +1132,9 @@ class _FeedScreenState extends State<FeedScreen> {
           title: Text(
             'Nearby Friends',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
-            ),
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
           ),
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
           elevation: 0,
@@ -1124,15 +1142,15 @@ class _FeedScreenState extends State<FeedScreen> {
         body: _buildFeedSkeleton(),
       );
     }
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
           'Nearby Friends',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
         ),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         elevation: 0,
@@ -1158,7 +1176,8 @@ class _FeedScreenState extends State<FeedScreen> {
             ),
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const NotificationsScreen()),
             ),
           ),
         ],
@@ -1207,7 +1226,7 @@ class _FeedScreenState extends State<FeedScreen> {
             // Friends section
             if (_friendDogs.isNotEmpty)
               SliverToBoxAdapter(child: _buildFriendsSection()),
-            
+
             // Distance filter chips - quick access
             SliverToBoxAdapter(
               child: Padding(
@@ -1223,7 +1242,7 @@ class _FeedScreenState extends State<FeedScreen> {
                 ),
               ),
             ),
-            
+
             // Dogs list header
             SliverToBoxAdapter(
               child: Padding(
@@ -1234,20 +1253,23 @@ class _FeedScreenState extends State<FeedScreen> {
                     Text(
                       'Nearby Dogs',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     Text(
                       '${_filteredDogs.length} found',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.7),
+                          ),
                     ),
                   ],
                 ),
               ),
             ),
-            
+
             // Dogs list
             if (_filteredDogs.isEmpty)
               SliverToBoxAdapter(child: _buildEmptyState())
@@ -1263,7 +1285,8 @@ class _FeedScreenState extends State<FeedScreen> {
                         child: DogCard(
                           dog: dog,
                           onBarkPressed: () => _onBarkPressed(context, dog),
-                          onPlaydatePressed: () => _onPlaydatePressed(context, dog),
+                          onPlaydatePressed: () =>
+                              _onPlaydatePressed(context, dog),
                         ),
                       ),
                     );
@@ -1315,7 +1338,8 @@ class _FeedScreenState extends State<FeedScreen> {
               content: Text('Woof! I barked at ${dog.name}! 🐕'),
               backgroundColor: Theme.of(context).colorScheme.primary,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
           );
         } else {
@@ -1324,7 +1348,8 @@ class _FeedScreenState extends State<FeedScreen> {
               content: Text('I already barked at ${dog.name} recently'),
               backgroundColor: Theme.of(context).colorScheme.error,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
           );
         }
@@ -1333,7 +1358,8 @@ class _FeedScreenState extends State<FeedScreen> {
       debugPrint('Error sending bark: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to send bark. Please try again.')),
+          const SnackBar(
+              content: Text('Failed to send bark. Please try again.')),
         );
       }
     }
@@ -1367,7 +1393,9 @@ class _FeedScreenState extends State<FeedScreen> {
       debugPrint('Error showing playdate modal: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to open playdate request. Please try again.')),
+          const SnackBar(
+              content:
+                  Text('Failed to open playdate request. Please try again.')),
         );
       }
     }
@@ -1390,7 +1418,7 @@ class _FeedScreenState extends State<FeedScreen> {
       tablet: 90,
       desktop: 100,
     );
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1423,10 +1451,12 @@ class _FeedScreenState extends State<FeedScreen> {
                     icon: Icons.notifications,
                     title: 'Alerts',
                     color: Colors.orange,
-                    badge: _unreadNotifications > 0 ? _unreadNotifications : null,
+                    badge:
+                        _unreadNotifications > 0 ? _unreadNotifications : null,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const NotificationsScreen()),
                     ).then((_) => _loadDashboardData()),
                   );
                 case 2:
@@ -1434,7 +1464,9 @@ class _FeedScreenState extends State<FeedScreen> {
                     icon: _hasActiveCheckIn ? Icons.pets : Icons.location_on,
                     title: 'Check In',
                     color: _hasActiveCheckIn ? Colors.green : Colors.orange,
-                    onTap: _hasActiveCheckIn ? _showCheckOutOptions : () => MainNavigation.switchTab(context, 1),
+                    onTap: _hasActiveCheckIn
+                        ? _showCheckOutOptions
+                        : () => MainNavigation.switchTab(context, 1),
                   );
                 case 3:
                   return _buildCompactActionCard(
@@ -1444,7 +1476,8 @@ class _FeedScreenState extends State<FeedScreen> {
                     badge: _mutualBarks > 0 ? _mutualBarks : null,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const CatchScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const CatchScreen()),
                     ).then((_) => _loadDashboardData()),
                   );
                 case 4:
@@ -1452,7 +1485,10 @@ class _FeedScreenState extends State<FeedScreen> {
                     icon: Icons.photo_library,
                     title: 'Social',
                     color: Colors.green,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SocialFeedScreen())),
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const SocialFeedScreen())),
                   );
                 default:
                   return const SizedBox.shrink();
@@ -1477,9 +1513,10 @@ class _FeedScreenState extends State<FeedScreen> {
       context.isSmallMobile ? 85 : 95,
     );
     final iconSize = AppResponsive.iconSize(context, 20);
-    final iconContainerSize = AppResponsive.iconSize(context, 34); // Reduced from 36
+    final iconContainerSize =
+        AppResponsive.iconSize(context, 34); // Reduced from 36
     final padding = AppResponsive.cardPadding(context);
-    
+
     return SizedBox(
       width: cardWidth,
       child: AppCard(
@@ -1510,7 +1547,8 @@ class _FeedScreenState extends State<FeedScreen> {
                         color: Colors.red,
                         shape: BoxShape.circle,
                       ),
-                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      constraints:
+                          const BoxConstraints(minWidth: 16, minHeight: 16),
                       child: Center(
                         child: Text(
                           badge.toString(),
@@ -1526,16 +1564,17 @@ class _FeedScreenState extends State<FeedScreen> {
               ],
             ),
             const SizedBox(height: 2), // Reduced spacing to prevent overflow
-            Flexible( // Allow text to shrink if needed
+            Flexible(
+              // Allow text to shrink if needed
               child: Text(
-              title,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                fontSize: AppResponsive.fontSize(context, 11),
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+                title,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: AppResponsive.fontSize(context, 11),
+                    ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -1558,15 +1597,18 @@ class _FeedScreenState extends State<FeedScreen> {
           Text(
             'No dogs found',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+                  fontWeight: FontWeight.w600,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Try adjusting your filters or expanding your search radius.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -1596,7 +1638,10 @@ class _FeedScreenState extends State<FeedScreen> {
           child: Text(
             'No more dogs nearby within your current radius.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
           ),
         ),
@@ -1656,7 +1701,7 @@ class _FeedScreenState extends State<FeedScreen> {
       mobile: 165,
       tablet: 190,
     );
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Column(
@@ -1664,7 +1709,8 @@ class _FeedScreenState extends State<FeedScreen> {
         children: [
           Padding(
             padding: AppResponsive.screenPadding(context),
-            child: const Text('Upcoming Playdates', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            child: const Text('Upcoming Playdates',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -1674,10 +1720,15 @@ class _FeedScreenState extends State<FeedScreen> {
               scrollDirection: Axis.horizontal,
               itemBuilder: (context, index) {
                 final pd = _upcomingFeedPlaydates[index];
-                final title = (pd['title'] as String?)?.isNotEmpty == true ? pd['title'] : 'Playdate';
+                final title = (pd['title'] as String?)?.isNotEmpty == true
+                    ? pd['title']
+                    : 'Playdate';
                 final location = pd['location'] as String? ?? '';
-                final dt = DateTime.tryParse(pd['scheduled_at']?.toString() ?? '');
-                final dateText = dt != null ? '${dt.month}/${dt.day} • ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}' : '';
+                final dt =
+                    DateTime.tryParse(pd['scheduled_at']?.toString() ?? '');
+                final dateText = dt != null
+                    ? '${dt.month}/${dt.day} • ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}'
+                    : '';
 
                 return SizedBox(
                   width: cardWidth,
@@ -1690,24 +1741,32 @@ class _FeedScreenState extends State<FeedScreen> {
                       children: [
                         Text(
                           title ?? 'Playdate',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            fontSize: AppResponsive.fontSize(context, 16),
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                fontSize: AppResponsive.fontSize(context, 16),
+                              ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         SizedBox(height: context.isSmallMobile ? 4 : 6),
                         Row(
                           children: [
-                            Icon(Icons.schedule, size: AppResponsive.iconSize(context, 16)),
+                            Icon(Icons.schedule,
+                                size: AppResponsive.iconSize(context, 16)),
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
                                 dateText,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontSize: AppResponsive.fontSize(context, 12),
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontSize:
+                                          AppResponsive.fontSize(context, 12),
+                                    ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -1716,14 +1775,19 @@ class _FeedScreenState extends State<FeedScreen> {
                         SizedBox(height: context.isSmallMobile ? 4 : 6),
                         Row(
                           children: [
-                            Icon(Icons.location_on, size: AppResponsive.iconSize(context, 16)),
+                            Icon(Icons.location_on,
+                                size: AppResponsive.iconSize(context, 16)),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
                                 location,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontSize: AppResponsive.fontSize(context, 12),
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontSize:
+                                          AppResponsive.fontSize(context, 12),
+                                    ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1775,7 +1839,7 @@ class _FeedScreenState extends State<FeedScreen> {
       mobile: 240,
       tablet: 260,
     );
-    
+
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 8),
       child: Column(
@@ -1783,7 +1847,9 @@ class _FeedScreenState extends State<FeedScreen> {
         children: [
           Padding(
             padding: AppResponsive.screenPadding(context),
-            child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            child: Text(title,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -1805,10 +1871,13 @@ class _FeedScreenState extends State<FeedScreen> {
                         // Title
                         Text(
                           event.title,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            fontSize: AppResponsive.fontSize(context, 16),
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                fontSize: AppResponsive.fontSize(context, 16),
+                              ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1816,14 +1885,19 @@ class _FeedScreenState extends State<FeedScreen> {
                         // Date & time
                         Row(
                           children: [
-                            Icon(Icons.schedule, size: AppResponsive.iconSize(context, 16)),
+                            Icon(Icons.schedule,
+                                size: AppResponsive.iconSize(context, 16)),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
                                 event.formattedDate,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontSize: AppResponsive.fontSize(context, 12),
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontSize:
+                                          AppResponsive.fontSize(context, 12),
+                                    ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -1833,14 +1907,19 @@ class _FeedScreenState extends State<FeedScreen> {
                         // Location
                         Row(
                           children: [
-                            Icon(Icons.location_on, size: AppResponsive.iconSize(context, 16)),
+                            Icon(Icons.location_on,
+                                size: AppResponsive.iconSize(context, 16)),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
                                 event.location,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontSize: AppResponsive.fontSize(context, 12),
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontSize:
+                                          AppResponsive.fontSize(context, 12),
+                                    ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1853,16 +1932,21 @@ class _FeedScreenState extends State<FeedScreen> {
                           children: [
                             Text(
                               event.isFree ? 'Free' : event.formattedPrice,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                fontSize: AppResponsive.fontSize(context, 14),
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize:
+                                        AppResponsive.fontSize(context, 14),
+                                  ),
                             ),
                             AppButton(
                               text: 'Details',
                               size: AppButtonSize.small,
                               type: AppButtonType.outline,
-                              onPressed: () => MainNavigation.switchTab(context, 2),
+                              onPressed: () =>
+                                  MainNavigation.switchTab(context, 2),
                             ),
                           ],
                         ),
@@ -1897,9 +1981,9 @@ class _FeedScreenState extends State<FeedScreen> {
     final cardHeight = AppResponsive.horizontalCardHeight(
       context,
       mobile: 120, // Increased from 96 to fit vertical buttons
-      tablet: 140,  // Increased from 116
+      tablet: 140, // Increased from 116
     );
-    
+
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 8),
       child: Column(
@@ -1907,7 +1991,8 @@ class _FeedScreenState extends State<FeedScreen> {
         children: [
           Padding(
             padding: AppResponsive.screenPadding(context),
-            child: const Text('Friends & Barks', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            child: const Text('Friends & Barks',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -1920,22 +2005,29 @@ class _FeedScreenState extends State<FeedScreen> {
                 final dog = friend['friend_dog'] ?? friend['dog'] ?? {};
                 final dogName = dog['name']?.toString() ?? 'Friend';
                 final photo = dog['main_photo_url']?.toString();
-                
+
                 return SizedBox(
                   width: cardWidth,
                   child: AppCard(
-                    padding: EdgeInsets.all(AppResponsive.cardPadding(context).left * 0.6), // Tighter padding
+                    padding: EdgeInsets.all(
+                        AppResponsive.cardPadding(context).left *
+                            0.6), // Tighter padding
                     child: Row(
                       children: [
                         CircleAvatar(
-                          radius: AppResponsive.avatarRadius(context, 14), // Slightly smaller
-                          backgroundImage: photo != null && photo.isNotEmpty ? NetworkImage(photo) : null,
-                          child: (photo == null || photo.isEmpty) 
-                              ? Icon(Icons.pets, size: AppResponsive.iconSize(context, 14)) 
+                          radius: AppResponsive.avatarRadius(
+                              context, 14), // Slightly smaller
+                          backgroundImage: photo != null && photo.isNotEmpty
+                              ? NetworkImage(photo)
+                              : null,
+                          child: (photo == null || photo.isEmpty)
+                              ? Icon(Icons.pets,
+                                  size: AppResponsive.iconSize(context, 14))
                               : null,
                         ),
                         const SizedBox(width: 6),
-                        Expanded( // Use Expanded instead of Flexible
+                        Expanded(
+                          // Use Expanded instead of Flexible
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -1943,10 +2035,14 @@ class _FeedScreenState extends State<FeedScreen> {
                             children: [
                               Text(
                                 dogName,
-                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: AppResponsive.fontSize(context, 12), // Slightly smaller
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: AppResponsive.fontSize(
+                                          context, 12), // Slightly smaller
+                                    ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1970,7 +2066,8 @@ class _FeedScreenState extends State<FeedScreen> {
                                       text: 'Invite',
                                       size: AppButtonSize.small,
                                       type: AppButtonType.outline,
-                                      onPressed: () => MainNavigation.switchTab(context, 3),
+                                      onPressed: () =>
+                                          MainNavigation.switchTab(context, 3),
                                     ),
                                   ),
                                 ],
@@ -2025,7 +2122,8 @@ class _FeedScreenState extends State<FeedScreen> {
                 });
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Checked out successfully! See you next time! 🐾'),
+                    content:
+                        Text('Checked out successfully! See you next time! 🐾'),
                     backgroundColor: Colors.green,
                   ),
                 );

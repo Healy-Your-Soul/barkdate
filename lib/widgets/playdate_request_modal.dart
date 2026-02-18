@@ -27,12 +27,13 @@ class _PlaydateRequestModalState extends State<PlaydateRequestModal> {
   final _titleController = TextEditingController();
   final _locationController = TextEditingController();
   final _messageController = TextEditingController();
-  
+
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
-  TimeOfDay _selectedTime = const TimeOfDay(hour: 14, minute: 0); // 2 PM default
+  TimeOfDay _selectedTime =
+      const TimeOfDay(hour: 14, minute: 0); // 2 PM default
   int _durationMinutes = 60;
   bool _isLoading = false;
-  
+
   Dog? _myDog;
   List<String> _suggestedLocations = [
     'Central Park',
@@ -48,7 +49,8 @@ class _PlaydateRequestModalState extends State<PlaydateRequestModal> {
     _loadMyDog();
     _titleController.text = 'Playdate at the park';
     _locationController.text = _suggestedLocations.first;
-    _messageController.text = 'Hi! Would love to arrange a playdate between our pups! 🐕';
+    _messageController.text =
+        'Hi! Would love to arrange a playdate between our pups! 🐕';
   }
 
   @override
@@ -158,7 +160,8 @@ class _PlaydateRequestModalState extends State<PlaydateRequestModal> {
       return;
     }
 
-    if (_titleController.text.trim().isEmpty || _locationController.text.trim().isEmpty) {
+    if (_titleController.text.trim().isEmpty ||
+        _locationController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all required fields')),
       );
@@ -179,7 +182,8 @@ class _PlaydateRequestModalState extends State<PlaydateRequestModal> {
         title: _titleController.text.trim(),
         location: _locationController.text.trim(),
         scheduledAt: _combinedDateTime,
-        description: 'Playdate between ${_myDog!.name} and ${widget.targetDog.name}',
+        description:
+            'Playdate between ${_myDog!.name} and ${widget.targetDog.name}',
         message: _messageController.text.trim(),
         durationMinutes: _durationMinutes,
       );
@@ -199,19 +203,23 @@ class _PlaydateRequestModalState extends State<PlaydateRequestModal> {
             debugPrint('Failed to send notification: $e');
             // Don't fail the whole flow if notification fails
           }
-          
+
           Navigator.pop(context, true); // Return success
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Playdate request sent to ${widget.targetDog.ownerName}! 🎉'),
+              content: Text(
+                  'Playdate request sent to ${widget.targetDog.ownerName}! 🎉'),
               backgroundColor: Theme.of(context).colorScheme.primary,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to send playdate request. Please check permissions and network.')),
+            const SnackBar(
+                content: Text(
+                    'Failed to send playdate request. Please check permissions and network.')),
           );
         }
       }
@@ -234,300 +242,341 @@ class _PlaydateRequestModalState extends State<PlaydateRequestModal> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        constraints: const BoxConstraints(maxHeight: 600, maxWidth: 400),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundImage: widget.targetDog.photos.isNotEmpty 
-                        ? NetworkImage(widget.targetDog.photos.first)
-                        : null,
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    child: widget.targetDog.photos.isEmpty
-                        ? Icon(
-                            Icons.pets,
-                            color: Theme.of(context).colorScheme.onPrimary,
-                            size: 20,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Invite ${widget.targetDog.name}',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onPrimaryContainer,
-                          ),
-                        ),
-                        Text(
-                          'Plan a playdate',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(
-                      Icons.close,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Content
-            Flexible(
-              child: SingleChildScrollView(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxHeight: 600, maxWidth: 400),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
                 padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Row(
                   children: [
-                    // Title field
-                    TextField(
-                      controller: _titleController,
-                      decoration: InputDecoration(
-                        labelText: 'Playdate Title',
-                        hintText: 'e.g., Morning walk at the park',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        prefixIcon: const Icon(Icons.title),
-                      ),
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundImage: widget.targetDog.photos.isNotEmpty
+                          ? NetworkImage(widget.targetDog.photos.first)
+                          : null,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      child: widget.targetDog.photos.isEmpty
+                          ? Icon(
+                              Icons.pets,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                              size: 20,
+                            )
+                          : null,
                     ),
-
-                    const SizedBox(height: 16),
-
-                    // Date and Time selection
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: _selectDate,
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.calendar_today,
-                                    color: Theme.of(context).colorScheme.primary,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                                      style: Theme.of(context).textTheme.bodyMedium,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: _selectTime,
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.access_time,
-                                    color: Theme.of(context).colorScheme.primary,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _selectedTime.format(context),
-                                      style: Theme.of(context).textTheme.bodyMedium,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Duration selection
-                    Text(
-                      'Duration',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      children: [30, 60, 90, 120].map((minutes) {
-                        final isSelected = _durationMinutes == minutes;
-                        return ChoiceChip(
-                          label: Text('${minutes}min'),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() => _durationMinutes = minutes);
-                            }
-                          },
-                        );
-                      }).toList(),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Location field with suggestions
-                    TextField(
-                      controller: _locationController,
-                      decoration: InputDecoration(
-                        labelText: 'Location',
-                        hintText: 'Where should you meet?',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        prefixIcon: const Icon(Icons.location_on),
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Location suggestions
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: _suggestedLocations.map((location) {
-                        return ActionChip(
-                          label: Text(
-                            location,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          onPressed: () {
-                            _locationController.text = location;
-                          },
-                          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        );
-                      }).toList(),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Message field
-                    TextField(
-                      controller: _messageController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        labelText: 'Message (Optional)',
-                        hintText: 'Add a personal message...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        prefixIcon: const Icon(Icons.message),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Summary card
-                    AppCard(
+                    const SizedBox(width: 12),
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Playdate Summary',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _formatDateTime(),
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
-                            ),
+                            'Invite ${widget.targetDog.name}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer,
+                                ),
                           ),
                           Text(
-                            '${_durationMinutes}min at ${_locationController.text}',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                            ),
+                            'Plan a playdate',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer
+                                      .withValues(alpha: 0.8),
+                                ),
                           ),
                         ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(
+                        Icons.close,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
 
-            // Actions
-            Container(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: AppButton(
-                      text: 'Cancel',
-                      type: AppButtonType.outline,
-                      onPressed: _isLoading ? null : () => Navigator.pop(context),
-                    ),
+              // Content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Title field
+                      TextField(
+                        controller: _titleController,
+                        decoration: InputDecoration(
+                          labelText: 'Playdate Title',
+                          hintText: 'e.g., Morning walk at the park',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          prefixIcon: const Icon(Icons.title),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Date and Time selection
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: _selectDate,
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .outline
+                                        .withValues(alpha: 0.5),
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.calendar_today,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: _selectTime,
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .outline
+                                        .withValues(alpha: 0.5),
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.access_time,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        _selectedTime.format(context),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Duration selection
+                      Text(
+                        'Duration',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: [30, 60, 90, 120].map((minutes) {
+                          final isSelected = _durationMinutes == minutes;
+                          return ChoiceChip(
+                            label: Text('${minutes}min'),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              if (selected) {
+                                setState(() => _durationMinutes = minutes);
+                              }
+                            },
+                          );
+                        }).toList(),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Location field with suggestions
+                      TextField(
+                        controller: _locationController,
+                        decoration: InputDecoration(
+                          labelText: 'Location',
+                          hintText: 'Where should you meet?',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          prefixIcon: const Icon(Icons.location_on),
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Location suggestions
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: _suggestedLocations.map((location) {
+                          return ActionChip(
+                            label: Text(
+                              location,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            onPressed: () {
+                              _locationController.text = location;
+                            },
+                            backgroundColor: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                          );
+                        }).toList(),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Message field
+                      TextField(
+                        controller: _messageController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          labelText: 'Message (Optional)',
+                          hintText: 'Add a personal message...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          prefixIcon: const Icon(Icons.message),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Summary card
+                      AppCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Playdate Summary',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _formatDateTime(),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                            ),
+                            Text(
+                              '${_durationMinutes}min at ${_locationController.text}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: AppButton(
-                      text: _isLoading ? 'Sending...' : 'Send Invitation',
-                      icon: Icons.send,
-                      isLoading: _isLoading,
-                      onPressed: _isLoading ? null : _sendPlaydateRequest,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+
+              // Actions
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: AppButton(
+                        text: 'Cancel',
+                        type: AppButtonType.outline,
+                        onPressed:
+                            _isLoading ? null : () => Navigator.pop(context),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: AppButton(
+                        text: _isLoading ? 'Sending...' : 'Send Invitation',
+                        icon: Icons.send,
+                        isLoading: _isLoading,
+                        onPressed: _isLoading ? null : _sendPlaydateRequest,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ), // Close GestureDetector
     );
   }

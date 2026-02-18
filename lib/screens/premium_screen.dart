@@ -10,9 +10,9 @@ class PremiumScreen extends StatelessWidget {
         title: Text(
           'Go Premium',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
         ),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         elevation: 0,
@@ -36,7 +36,10 @@ class PremiumScreen extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    Theme.of(context)
+                        .colorScheme
+                        .primaryContainer
+                        .withValues(alpha: 0.3),
                     Theme.of(context).colorScheme.surface,
                   ],
                 ),
@@ -67,24 +70,27 @@ class PremiumScreen extends StatelessWidget {
                   Text(
                     'Upgrade for More',
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'Get the most out of BarkDate with premium features designed for serious dog lovers',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                    ),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.8),
+                        ),
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Features list
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -94,74 +100,80 @@ class PremiumScreen extends StatelessWidget {
                   Text(
                     'Premium Features',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                   ),
                   const SizedBox(height: 24),
-                  
                   _buildFeatureItem(
                     context,
                     icon: Icons.all_inclusive,
                     title: 'Unlimited Playdates',
-                    description: 'Schedule as many playdates as you want with no restrictions',
+                    description:
+                        'Schedule as many playdates as you want with no restrictions',
                     gradient: [Colors.blue, Colors.cyan],
                   ),
-                  
                   _buildFeatureItem(
                     context,
                     icon: Icons.tune,
                     title: 'Advanced Search Filters',
-                    description: 'Find the perfect playmates with detailed breed, age, and personality filters',
+                    description:
+                        'Find the perfect playmates with detailed breed, age, and personality filters',
                     gradient: [Colors.purple, Colors.pink],
                   ),
-                  
                   _buildFeatureItem(
                     context,
                     icon: Icons.event_available,
                     title: 'Exclusive Events',
-                    description: 'Access to premium dog meetups and special community events',
+                    description:
+                        'Access to premium dog meetups and special community events',
                     gradient: [Colors.orange, Colors.red],
                   ),
-                  
                   _buildFeatureItem(
                     context,
                     icon: Icons.support_agent,
                     title: 'Priority Support',
-                    description: 'Get help when you need it with dedicated premium customer support',
+                    description:
+                        'Get help when you need it with dedicated premium customer support',
                     gradient: [Colors.green, Colors.teal],
                   ),
-                  
                   _buildFeatureItem(
                     context,
                     icon: Icons.visibility_off,
                     title: 'Ad-Free Experience',
-                    description: 'Enjoy BarkDate without any interruptions or advertisements',
+                    description:
+                        'Enjoy BarkDate without any interruptions or advertisements',
                     gradient: [Colors.indigo, Colors.blue],
                   ),
-                  
                   _buildFeatureItem(
                     context,
                     icon: Icons.insights,
                     title: 'Profile Insights',
-                    description: 'See who viewed your dog\'s profile and get detailed interaction stats',
+                    description:
+                        'See who viewed your dog\'s profile and get detailed interaction stats',
                     gradient: [Colors.amber, Colors.orange],
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Pricing section
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 24),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.2),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primaryContainer
+                    .withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.3),
                   width: 2,
                 ),
               ),
@@ -172,16 +184,21 @@ class PremiumScreen extends StatelessWidget {
                     children: [
                       Text(
                         '\$9.99',
-                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.headlineLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                       ),
                       Text(
                         '/month',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.7),
+                                ),
                       ),
                     ],
                   ),
@@ -189,18 +206,21 @@ class PremiumScreen extends StatelessWidget {
                   Text(
                     'Cancel anytime',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
+                        ),
                   ),
                   const SizedBox(height: 24),
-                  
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () => _handleUpgrade(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onPrimary,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -208,16 +228,17 @@ class PremiumScreen extends StatelessWidget {
                       ),
                       child: Text(
                         'Start Your Premium Journey',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
                       ),
                     ),
                   ),
-                  
                   const SizedBox(height: 16),
-                  
                   TextButton(
                     onPressed: () => _showFreeTrialDialog(context),
                     child: Text(
@@ -231,9 +252,9 @@ class PremiumScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Testimonials section
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -243,31 +264,31 @@ class PremiumScreen extends StatelessWidget {
                   Text(
                     'What Premium Users Say',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                   ),
                   const SizedBox(height: 16),
-                  
                   _buildTestimonial(
                     context,
                     name: 'Sarah & Buddy',
-                    text: 'Premium filters helped us find the perfect playmates. Worth every penny!',
+                    text:
+                        'Premium filters helped us find the perfect playmates. Worth every penny!',
                     rating: 5,
                   ),
-                  
                   _buildTestimonial(
                     context,
                     name: 'Mike & Cooper',
-                    text: 'The exclusive events are amazing. My dog has made so many new friends!',
+                    text:
+                        'The exclusive events are amazing. My dog has made so many new friends!',
                     rating: 5,
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Footer
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -275,11 +296,14 @@ class PremiumScreen extends StatelessWidget {
                 'Terms and conditions apply. Subscription automatically renews unless canceled.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
               ),
             ),
-            
+
             const SizedBox(height: 32),
           ],
         ),
@@ -323,16 +347,19 @@ class PremiumScreen extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   description,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
+                      ),
                 ),
               ],
             ),
@@ -375,8 +402,8 @@ class PremiumScreen extends StatelessWidget {
               Text(
                 name,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
             ],
           ),
@@ -384,9 +411,12 @@ class PremiumScreen extends StatelessWidget {
           Text(
             '"$text"',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-              fontStyle: FontStyle.italic,
-            ),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.8),
+                  fontStyle: FontStyle.italic,
+                ),
           ),
         ],
       ),
@@ -398,7 +428,8 @@ class PremiumScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Upgrade to Premium'),
-        content: const Text('This would normally handle the payment process. For this demo, we\'ll just show this dialog.'),
+        content: const Text(
+            'This would normally handle the payment process. For this demo, we\'ll just show this dialog.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -413,7 +444,8 @@ class PremiumScreen extends StatelessWidget {
                   content: const Text('Welcome to Premium! 🌟'),
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
               );
             },
@@ -429,7 +461,8 @@ class PremiumScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('7-Day Free Trial'),
-        content: const Text('Start your free trial and experience all premium features. No commitment required!'),
+        content: const Text(
+            'Start your free trial and experience all premium features. No commitment required!'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -441,10 +474,12 @@ class PremiumScreen extends StatelessWidget {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text('Free trial started! Enjoy premium features 🎉'),
+                  content: const Text(
+                      'Free trial started! Enjoy premium features 🎉'),
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
               );
             },

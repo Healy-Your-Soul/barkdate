@@ -16,19 +16,21 @@ final dogRepositoryProvider = Provider<DogRepository>((ref) {
 final unreadNotificationCountProvider = StreamProvider<int>((ref) {
   final user = SupabaseConfig.auth.currentUser;
   if (user == null) return Stream.value(0);
-  
-  return NotificationService.streamUserNotifications(user.id)
-      .map((notifications) => notifications.where((n) => n['is_read'] == false).length);
+
+  return NotificationService.streamUserNotifications(user.id).map(
+      (notifications) =>
+          notifications.where((n) => n['is_read'] == false).length);
 });
 
 /// Real-time pending friend requests (for the primary dog)
-final pendingFriendRequestsProvider = StreamProvider<List<Map<String, dynamic>>>((ref) async* {
+final pendingFriendRequestsProvider =
+    StreamProvider<List<Map<String, dynamic>>>((ref) async* {
   final user = SupabaseConfig.auth.currentUser;
   if (user == null) {
     yield [];
     return;
   }
-  
+
   // Get user's dogs to know which dog ID to listen for
   // We'll use the first dog as primary for now
   final dogs = await BarkDateUserService.getUserDogs(user.id);
@@ -36,9 +38,9 @@ final pendingFriendRequestsProvider = StreamProvider<List<Map<String, dynamic>>>
     yield [];
     return;
   }
-  
+
   final primaryDogId = dogs.first['id'];
-  
+
   yield* DogFriendshipService.streamPendingBarksReceived(primaryDogId);
 });
 
@@ -51,7 +53,8 @@ class FeedFilter {
   final List<String> sizes;
   final List<String> genders;
   final List<String> breeds;
-  final bool showPackOnly; // Filter to show only pack members (accepted friends)
+  final bool
+      showPackOnly; // Filter to show only pack members (accepted friends)
 
   FeedFilter({
     this.maxDistance = 50.0,
@@ -62,7 +65,7 @@ class FeedFilter {
     this.breeds = const [],
     this.showPackOnly = false, // Default to showing all dogs
   });
-  
+
   FeedFilter copyWith({
     double? maxDistance,
     int? minAge,
@@ -94,26 +97,27 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
   // Get current user's dog for friendship checks
   final myDogs = await BarkDateUserService.getUserDogs(user.id);
   final myDogId = myDogs.isNotEmpty ? myDogs.first['id'] as String? : null;
-  
+
   // If showing pack only, fetch friends directly (bypassing nearby pagination limits)
   if (filter.showPackOnly) {
     if (myDogId == null) return [];
-    
+
     final friends = await DogFriendshipService.getFriends(myDogId);
-    
+
     return friends.map((f) {
       // Determine which dog object is the friend
-      final friendDogMap = f['friend_dog']['id'] == myDogId 
+      final friendDogMap = f['friend_dog']['id'] == myDogId
           ? f['dog'] as Map<String, dynamic>
           : f['friend_dog'] as Map<String, dynamic>;
-          
+
       // Ensure photos is list
-      final photosRaw = friendDogMap['photo_urls'] ?? friendDogMap['photos'] ?? [];
+      final photosRaw =
+          friendDogMap['photo_urls'] ?? friendDogMap['photos'] ?? [];
       final photos = (photosRaw as List).map((e) => e.toString()).toList();
       if (photos.isEmpty && friendDogMap['main_photo_url'] != null) {
         photos.add(friendDogMap['main_photo_url']);
       }
-      
+
       // Map to Dog object
       return Dog(
         id: friendDogMap['id'] ?? '',
@@ -138,7 +142,7 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
     limit: 20,
     offset: 0,
   );
-  
+
   // Get friend IDs to mark them in the list
   Set<String> friendDogIds = {};
   if (myDogId != null) {
@@ -159,9 +163,12 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
   return dogs.where((dog) {
     if (dog.distanceKm > filter.maxDistance) return false;
     if (dog.age < filter.minAge || dog.age > filter.maxAge) return false;
-    if (filter.sizes.isNotEmpty && !filter.sizes.contains(dog.size)) return false;
-    if (filter.genders.isNotEmpty && !filter.genders.contains(dog.gender)) return false;
-    if (filter.breeds.isNotEmpty && !filter.breeds.contains(dog.breed)) return false;
+    if (filter.sizes.isNotEmpty && !filter.sizes.contains(dog.size))
+      return false;
+    if (filter.genders.isNotEmpty && !filter.genders.contains(dog.gender))
+      return false;
+    if (filter.breeds.isNotEmpty && !filter.breeds.contains(dog.breed))
+      return false;
     return true;
   }).map((dog) {
     // Return copy with updated friend status
@@ -170,5 +177,3 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
     );
   }).toList();
 });
-
-

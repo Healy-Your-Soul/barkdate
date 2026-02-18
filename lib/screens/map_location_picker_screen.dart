@@ -34,7 +34,8 @@ class MapLocationPickerScreen extends StatefulWidget {
   });
 
   @override
-  State<MapLocationPickerScreen> createState() => _MapLocationPickerScreenState();
+  State<MapLocationPickerScreen> createState() =>
+      _MapLocationPickerScreenState();
 }
 
 class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
@@ -51,7 +52,8 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
   List<PlaceAutocomplete> _suggestions = [];
   bool _isSearching = false;
 
-  static const LatLng _defaultLatLng = LatLng(37.7749, -122.4194); // San Francisco fallback
+  static const LatLng _defaultLatLng =
+      LatLng(37.7749, -122.4194); // San Francisco fallback
 
   @override
   void initState() {
@@ -96,14 +98,16 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
   void _onMapTap(LatLng position) {
     setState(() {
       _selectedLatLng = position;
-      _selectedAddress = '${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
+      _selectedAddress =
+          '${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
       _selectedPlaceName = null;
     });
   }
 
   void _onSearchChanged(String value) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 350), () => _performAutocomplete(value));
+    _debounce = Timer(
+        const Duration(milliseconds: 350), () => _performAutocomplete(value));
   }
 
   Future<void> _performAutocomplete(String query) async {
@@ -165,14 +169,17 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
     PlacesSessionTokenManager.resetToken();
 
     try {
-      final details = await PlacesService.getPlaceDetailsByPlaceId(suggestion.placeId);
+      final details =
+          await PlacesService.getPlaceDetailsByPlaceId(suggestion.placeId);
       if (details != null) {
         final geometry = details['geometry']?['location'];
         if (geometry != null) {
           final lat = (geometry['lat'] as num).toDouble();
           final lng = (geometry['lng'] as num).toDouble();
-          final address = details['formatted_address'] as String? ?? suggestion.description;
-          final placeName = details['name'] as String? ?? suggestion.structuredFormatting.mainText;
+          final address =
+              details['formatted_address'] as String? ?? suggestion.description;
+          final placeName = details['name'] as String? ??
+              suggestion.structuredFormatting.mainText;
 
           final target = LatLng(lat, lng);
           setState(() {
@@ -181,13 +188,15 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
             _selectedPlaceName = placeName;
           });
 
-          await _mapController?.animateCamera(CameraUpdate.newLatLngZoom(target, 15));
+          await _mapController
+              ?.animateCamera(CameraUpdate.newLatLngZoom(target, 15));
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load place details: ${e.toString()}')),
+          SnackBar(
+              content: Text('Failed to load place details: ${e.toString()}')),
         );
       }
     }
@@ -220,164 +229,173 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-      appBar: AppBar(
-        title: const Text('Select Event Location'),
-        actions: [
-          TextButton(
-            onPressed: _confirmSelection,
-            child: const Text('Use this place'),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          if (_initializing)
-            const Center(child: CircularProgressIndicator())
-          else
-            GoogleMap(
-              key: const ValueKey('event_location_picker_map'),
-              onMapCreated: _onMapCreated,
-              initialCameraPosition: CameraPosition(
-                target: _selectedLatLng ?? _defaultLatLng,
-                zoom: 13,
-              ),
-              myLocationEnabled: !kIsWeb,
-              myLocationButtonEnabled: true,
-              onTap: _onMapTap,
-              markers: {
-                if (_selectedLatLng != null)
-                  Marker(
-                    markerId: const MarkerId('selected_location'),
-                    position: _selectedLatLng!,
-                    infoWindow: InfoWindow(
-                      title: _selectedPlaceName ?? 'Event location',
-                      snippet: _selectedAddress,
-                    ),
-                  ),
-              },
+        appBar: AppBar(
+          title: const Text('Select Event Location'),
+          actions: [
+            TextButton(
+              onPressed: _confirmSelection,
+              child: const Text('Use this place'),
             ),
-          Positioned(
-            top: 16,
-            left: 16,
-            right: 16,
-            child: Column(
-              children: [
-                Material(
-                  elevation: 4,
-                  borderRadius: BorderRadius.circular(16),
-                  child: TextField(
-                    controller: _searchController,
-                    focusNode: _searchFocus,
-                    onChanged: _onSearchChanged,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _isSearching
-                          ? const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            )
-                          : (_searchController.text.isEmpty
-                              ? null
-                              : IconButton(
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _suggestions = []);
-                                  },
-                                )),
-                      hintText: 'Search for parks, venues, dog-friendly spots',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                    ),
-                  ),
+          ],
+        ),
+        body: Stack(
+          children: [
+            if (_initializing)
+              const Center(child: CircularProgressIndicator())
+            else
+              GoogleMap(
+                key: const ValueKey('event_location_picker_map'),
+                onMapCreated: _onMapCreated,
+                initialCameraPosition: CameraPosition(
+                  target: _selectedLatLng ?? _defaultLatLng,
+                  zoom: 13,
                 ),
-                if (_suggestions.isNotEmpty)
-                  Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          blurRadius: 8,
-                          color: Colors.black.withOpacity(0.1),
-                        ),
-                      ],
+                myLocationEnabled: !kIsWeb,
+                myLocationButtonEnabled: true,
+                onTap: _onMapTap,
+                markers: {
+                  if (_selectedLatLng != null)
+                    Marker(
+                      markerId: const MarkerId('selected_location'),
+                      position: _selectedLatLng!,
+                      infoWindow: InfoWindow(
+                        title: _selectedPlaceName ?? 'Event location',
+                        snippet: _selectedAddress,
+                      ),
                     ),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _suggestions.length,
-                      itemBuilder: (context, index) {
-                        final suggestion = _suggestions[index];
-                        return ListTile(
-                          leading: const Icon(Icons.place_outlined),
-                          title: Text(suggestion.structuredFormatting.mainText),
-                          subtitle: Text(suggestion.structuredFormatting.secondaryText),
-                          onTap: () => _onSuggestionSelected(suggestion),
-                        );
-                      },
+                },
+              ),
+            Positioned(
+              top: 16,
+              left: 16,
+              right: 16,
+              child: Column(
+                children: [
+                  Material(
+                    elevation: 4,
+                    borderRadius: BorderRadius.circular(16),
+                    child: TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocus,
+                      onChanged: _onSearchChanged,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _isSearching
+                            ? const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              )
+                            : (_searchController.text.isEmpty
+                                ? null
+                                : IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _suggestions = []);
+                                    },
+                                  )),
+                        hintText:
+                            'Search for parks, venues, dog-friendly spots',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                      ),
                     ),
                   ),
-              ],
-            ),
-          ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 24,
-            child: Card(
-              elevation: 6,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Selected location',
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    if (_selectedLatLng != null)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (_selectedPlaceName != null)
-                            Text(_selectedPlaceName!, style: theme.textTheme.titleLarge),
-                          if (_selectedAddress != null)
-                            Text(_selectedAddress!, style: theme.textTheme.bodyMedium),
-                          Text(
-                            '${_selectedLatLng!.latitude.toStringAsFixed(5)}, ${_selectedLatLng!.longitude.toStringAsFixed(5)}',
-                            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                  if (_suggestions.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            blurRadius: 8,
+                            color: Colors.black.withOpacity(0.1),
                           ),
                         ],
-                      )
-                    else
-                      Text(
-                        'Tap on the map to choose where your event will happen.',
-                        style: theme.textTheme.bodyMedium,
                       ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: _confirmSelection,
-                      icon: const Icon(Icons.check),
-                      label: const Text('Use this location'),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _suggestions.length,
+                        itemBuilder: (context, index) {
+                          final suggestion = _suggestions[index];
+                          return ListTile(
+                            leading: const Icon(Icons.place_outlined),
+                            title:
+                                Text(suggestion.structuredFormatting.mainText),
+                            subtitle: Text(
+                                suggestion.structuredFormatting.secondaryText),
+                            onTap: () => _onSuggestionSelected(suggestion),
+                          );
+                        },
+                      ),
                     ),
-                  ],
+                ],
+              ),
+            ),
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 24,
+              child: Card(
+                elevation: 6,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Selected location',
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_selectedLatLng != null)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_selectedPlaceName != null)
+                              Text(_selectedPlaceName!,
+                                  style: theme.textTheme.titleLarge),
+                            if (_selectedAddress != null)
+                              Text(_selectedAddress!,
+                                  style: theme.textTheme.bodyMedium),
+                            Text(
+                              '${_selectedLatLng!.latitude.toStringAsFixed(5)}, ${_selectedLatLng!.longitude.toStringAsFixed(5)}',
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(color: theme.colorScheme.outline),
+                            ),
+                          ],
+                        )
+                      else
+                        Text(
+                          'Tap on the map to choose where your event will happen.',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        onPressed: _confirmSelection,
+                        icon: const Icon(Icons.check),
+                        label: const Text('Use this location'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ), // Close GestureDetector
     );
   }

@@ -35,7 +35,8 @@ class MapBottomSheets extends ConsumerWidget {
         place: selection.selectedPlace!,
         dogCount: dogCount,
         events: events
-            .where((e) => e.latitude == selection.selectedPlace!.latitude &&
+            .where((e) =>
+                e.latitude == selection.selectedPlace!.latitude &&
                 e.longitude == selection.selectedPlace!.longitude)
             .toList(),
         onCheckInSuccess: onCheckInSuccess,
@@ -87,7 +88,8 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
   Future<void> _loadActiveCheckIns() async {
     setState(() => _isLoadingCheckIns = true);
     try {
-      final checkIns = await CheckInService.getActiveCheckInsAtPlace(widget.place.placeId);
+      final checkIns =
+          await CheckInService.getActiveCheckInsAtPlace(widget.place.placeId);
       if (mounted) {
         setState(() {
           _activeCheckIns = checkIns;
@@ -158,11 +160,14 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                           itemCount: _activeCheckIns.length,
                           itemBuilder: (context, index) {
                             final checkIn = _activeCheckIns[index];
-                            final user = checkIn['user'] as Map<String, dynamic>?;
+                            final user =
+                                checkIn['user'] as Map<String, dynamic>?;
                             final dog = checkIn['dog'] as Map<String, dynamic>?;
-                            final checkedInAt = DateTime.parse(checkIn['checked_in_at']);
-                            final duration = DateTime.now().difference(checkedInAt);
-                            
+                            final checkedInAt =
+                                DateTime.parse(checkIn['checked_in_at']);
+                            final duration =
+                                DateTime.now().difference(checkedInAt);
+
                             String timeAgo;
                             if (duration.inMinutes < 1) {
                               timeAgo = 'Just now';
@@ -193,7 +198,8 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                               trailing: user?['username'] != null
                                   ? Text(
                                       '@${user!['username']}',
-                                      style: Theme.of(context).textTheme.bodySmall,
+                                      style:
+                                          Theme.of(context).textTheme.bodySmall,
                                     )
                                   : null,
                             );
@@ -245,8 +251,8 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                   child: Text(
                     widget.place.name,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
                 IconButton(
@@ -293,7 +299,7 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                   const SizedBox(height: 16),
 
                   // 6. PHOTO (if available)
-                  if (widget.place.photoReference != null && 
+                  if (widget.place.photoReference != null &&
                       widget.place.photoReference!.isNotEmpty) ...[
                     _buildPlacePhoto(),
                     const SizedBox(height: 16),
@@ -363,7 +369,8 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: widget.place.isOpen ? Colors.green.shade50 : Colors.red.shade50,
+            color:
+                widget.place.isOpen ? Colors.green.shade50 : Colors.red.shade50,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: widget.place.isOpen ? Colors.green : Colors.red,
@@ -372,7 +379,9 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
           child: Text(
             widget.place.isOpen ? 'Open Now' : 'Closed',
             style: TextStyle(
-              color: widget.place.isOpen ? Colors.green.shade700 : Colors.red.shade700,
+              color: widget.place.isOpen
+                  ? Colors.green.shade700
+                  : Colors.red.shade700,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -418,10 +427,14 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: widget.place.isDogFriendly ? Colors.green.shade50 : Colors.orange.shade50,
+        color: widget.place.isDogFriendly
+            ? Colors.green.shade50
+            : Colors.orange.shade50,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: widget.place.isDogFriendly ? Colors.green.shade300 : Colors.orange.shade300,
+          color: widget.place.isDogFriendly
+              ? Colors.green.shade300
+              : Colors.orange.shade300,
         ),
       ),
       child: Row(
@@ -429,16 +442,22 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
           Icon(
             widget.place.isDogFriendly ? Icons.pets : Icons.help_outline,
             size: 20,
-            color: widget.place.isDogFriendly ? Colors.green.shade700 : Colors.orange.shade700,
+            color: widget.place.isDogFriendly
+                ? Colors.green.shade700
+                : Colors.orange.shade700,
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              widget.place.isDogFriendly ? 'Dog Friendly' : 'Call ahead to confirm dogs welcome',
+              widget.place.isDogFriendly
+                  ? 'Dog Friendly'
+                  : 'Call ahead to confirm dogs welcome',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
-                color: widget.place.isDogFriendly ? Colors.green.shade800 : Colors.orange.shade800,
+                color: widget.place.isDogFriendly
+                    ? Colors.green.shade800
+                    : Colors.orange.shade800,
               ),
             ),
           ),
@@ -454,11 +473,13 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
         height: 140,
         width: double.infinity,
         child: Image.network(
-          PlacesService.getPhotoUrl(widget.place.photoReference!, maxWidth: 600),
+          PlacesService.getPhotoUrl(widget.place.photoReference!,
+              maxWidth: 600),
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) => Container(
             color: Colors.grey.shade200,
-            child: Center(child: Icon(Icons.park, size: 48, color: Colors.grey.shade400)),
+            child: Center(
+                child: Icon(Icons.park, size: 48, color: Colors.grey.shade400)),
           ),
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
@@ -466,7 +487,8 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 value: loadingProgress.expectedTotalBytes != null
-                    ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
                     : null,
               ),
             );
@@ -483,7 +505,8 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
         onPressed: () async {
           final lat = widget.place.latitude;
           final lng = widget.place.longitude;
-          final url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+          final url = Uri.parse(
+              'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
           if (await canLaunchUrl(url)) {
             await launchUrl(url, mode: LaunchMode.externalApplication);
           }
@@ -492,7 +515,8 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
         label: const Text('Get Directions'),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
@@ -508,20 +532,21 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
         ),
         const SizedBox(height: 12),
         ...widget.events.map((event) => Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Text(event.categoryIcon),
-            ),
-            title: Text(event.title),
-            subtitle: Text(event.formattedDate),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              ref.read(mapSelectionProvider.notifier).selectEvent(event);
-            },
-          ),
-        )),
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor:
+                      Theme.of(context).colorScheme.primaryContainer,
+                  child: Text(event.categoryIcon),
+                ),
+                title: Text(event.title),
+                subtitle: Text(event.formattedDate),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  ref.read(mapSelectionProvider.notifier).selectEvent(event);
+                },
+              ),
+            )),
       ],
     );
   }
@@ -654,7 +679,9 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
                     IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () {
-                        ref.read(mapSelectionProvider.notifier).clearSelection();
+                        ref
+                            .read(mapSelectionProvider.notifier)
+                            .clearSelection();
                       },
                     ),
                   ],

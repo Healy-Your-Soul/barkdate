@@ -21,15 +21,17 @@ class ProfileRepositoryImpl implements ProfileRepository {
   @override
   Future<Map<String, int>> getUserStats(String userId) async {
     try {
-      final response = await SupabaseConfig.client.rpc('get_dashboard_stats', params: {
+      final response =
+          await SupabaseConfig.client.rpc('get_dashboard_stats', params: {
         'p_user_id': userId,
       });
-      
+
       if (response != null) {
         return {
           'friends': response['barks'] as int? ?? 0,
           'playdates': response['playdates'] as int? ?? 0,
-          'barks': response['barks'] as int? ?? 0, // Barks usually means friends/connections
+          'barks': response['barks'] as int? ??
+              0, // Barks usually means friends/connections
           'alerts': response['alerts'] as int? ?? 0,
         };
       }
@@ -46,7 +48,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
   }
 
   @override
-  Future<void> updateUserProfile(String userId, Map<String, dynamic> data) async {
+  Future<void> updateUserProfile(
+      String userId, Map<String, dynamic> data) async {
     await BarkDateUserService.updateUserProfile(userId, data);
   }
 

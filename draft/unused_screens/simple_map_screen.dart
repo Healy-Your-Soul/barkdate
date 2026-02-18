@@ -17,7 +17,7 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
   bool _loading = true;
   bool _isCheckedIn = false;
   final Set<Marker> _markers = {};
-  
+
   final List<ParkLocation> _parkLocations = [
     ParkLocation(
       id: '1',
@@ -31,7 +31,7 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
     ParkLocation(
       id: '2',
       name: 'Riverside Dog Park',
-      address: '456 River Street', 
+      address: '456 River Street',
       activeDogs: 12,
       distance: 1.2,
       latitude: 40.7489,
@@ -64,7 +64,8 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
     LocationData locationData = await _location.getLocation();
     if (locationData.latitude != null && locationData.longitude != null) {
       setState(() {
-        _currentLocation = LatLng(locationData.latitude!, locationData.longitude!);
+        _currentLocation =
+            LatLng(locationData.latitude!, locationData.longitude!);
         _loading = false;
       });
       _updateMarkers();
@@ -73,7 +74,7 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
 
   void _updateMarkers() {
     _markers.clear();
-    
+
     // Add current location marker
     if (_currentLocation != null) {
       _markers.add(
@@ -85,7 +86,7 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
         ),
       );
     }
-    
+
     // Add park markers
     for (final park in _parkLocations) {
       _markers.add(
@@ -96,7 +97,8 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
             title: park.name,
             snippet: '${park.activeDogs} dogs • ${park.distance}km away',
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           onTap: () => _showParkDetails(park),
         ),
       );
@@ -138,7 +140,8 @@ class _SimpleMapScreenState extends State<SimpleMapScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_isCheckedIn ? 'Checked in successfully!' : 'Checked out'),
+        content:
+            Text(_isCheckedIn ? 'Checked in successfully!' : 'Checked out'),
         backgroundColor: _isCheckedIn ? Colors.green : Colors.orange,
       ),
     );

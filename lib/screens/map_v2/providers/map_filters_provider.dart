@@ -11,7 +11,8 @@ class MapFilters {
 
   const MapFilters({
     this.searchQuery = '',
-    this.category = 'park', // Default to Parks as it's the most important feature
+    this.category =
+        'park', // Default to Parks as it's the most important feature
     this.openNow = false,
     this.showEvents = true,
     this.amenities = const [],
@@ -59,7 +60,14 @@ class MapFilters {
       case 'veterinary':
         return ['veterinary_care'];
       default:
-        return ['dog_park', 'park', 'pet_store', 'veterinary_care', 'cafe', 'restaurant'];
+        return [
+          'dog_park',
+          'park',
+          'pet_store',
+          'veterinary_care',
+          'cafe',
+          'restaurant'
+        ];
     }
   }
 }
@@ -112,12 +120,12 @@ class MapAmenities {
   static const String patio = 'dog-friendly patio';
 
   static List<String> get all => [
-    waterBowls,
-    shadedAreas,
-    offLeash,
-    parking,
-    patio,
-  ];
+        waterBowls,
+        shadedAreas,
+        offLeash,
+        parking,
+        patio,
+      ];
 }
 
 /// Available category filters

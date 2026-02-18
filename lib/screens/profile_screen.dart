@@ -33,11 +33,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
+
     // Only load once when screen becomes visible
     if (!_hasInitialized) {
       _hasInitialized = true;
-      
+
       // Use post-frame callback to ensure screen is ready
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadProfileData();
@@ -64,7 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _dogProfile = dogs.isNotEmpty ? dogs.first : null;
         _isLoading = false;
       });
-      
+
       // Debug logging
       debugPrint('=== PROFILE SCREEN DEBUG ===');
       debugPrint('User profile data: ${userProfile?.toString()}');
@@ -98,7 +98,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
-    
+
     if (result == true) {
       _loadProfileData(); // Refresh data
     }
@@ -117,9 +117,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: Text(
           'Profile',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
         ),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         elevation: 0,
@@ -146,7 +146,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 case 'settings':
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                    MaterialPageRoute(
+                        builder: (context) => const SettingsScreen()),
                   );
                   break;
               }
@@ -226,7 +227,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: AppButton(
                     text: _dogProfile == null ? 'Add Dog' : 'Edit Dog',
                     size: AppButtonSize.small,
-                    onPressed: () => _editProfile(mode: _dogProfile != null ? EditMode.editDog : EditMode.createProfile),
+                    onPressed: () => _editProfile(
+                        mode: _dogProfile != null
+                            ? EditMode.editDog
+                            : EditMode.createProfile),
                   ),
                 ),
                 child: Container(
@@ -247,10 +251,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       Text(
                         _dogProfile?['name'] ?? 'Add Your Dog',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -278,14 +283,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // My Human section
             _buildMyHumanSection(context),
-            
+
             const SizedBox(height: 24),
-            
+
             // Menu items
             _buildMenuItem(
               context,
@@ -294,7 +299,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               subtitle: 'Manage your upcoming and past playdates',
               onTap: () => Navigator.push(
                 context,
-                                MaterialPageRoute(builder: (context) => const PlaydatesScreen()),
+                MaterialPageRoute(
+                    builder: (context) => const PlaydatesScreen()),
               ),
             ),
             _buildMenuItem(
@@ -304,7 +310,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               subtitle: 'Your posts and community updates',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const SocialFeedScreen()),
+                MaterialPageRoute(
+                    builder: (context) => const SocialFeedScreen()),
               ),
             ),
             _buildMenuItem(
@@ -314,7 +321,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               subtitle: 'View your badges and milestones',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const AchievementsScreen()),
+                MaterialPageRoute(
+                    builder: (context) => const AchievementsScreen()),
               ),
             ),
             _buildMenuItem(
@@ -342,7 +350,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               subtitle: 'Read our privacy policy',
               onTap: () {},
             ),
-            
+
             const SizedBox(height: 32),
           ],
         ),
@@ -358,17 +366,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Text(
           value,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 4),
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-          ),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
+              ),
           textAlign: TextAlign.center,
         ),
       ],
@@ -389,8 +400,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   'My Human',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
                 Row(
                   children: [
@@ -416,7 +427,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Please create a dog profile first to share'),
+                              content: Text(
+                                  'Please create a dog profile first to share'),
                             ),
                           );
                         }
@@ -440,22 +452,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  backgroundImage: _userProfile?['avatar_url'] != null && 
-                                  _userProfile!['avatar_url'].toString().isNotEmpty &&
-                                  !_userProfile!['avatar_url'].toString().contains('placeholder')
+                  backgroundColor:
+                      Theme.of(context).colorScheme.primaryContainer,
+                  backgroundImage: _userProfile?['avatar_url'] != null &&
+                          _userProfile!['avatar_url'].toString().isNotEmpty &&
+                          !_userProfile!['avatar_url']
+                              .toString()
+                              .contains('placeholder')
                       ? NetworkImage(_userProfile!['avatar_url'])
                       : null,
-                  onBackgroundImageError: _userProfile?['avatar_url'] != null && 
-                                         _userProfile!['avatar_url'].toString().isNotEmpty &&
-                                         !_userProfile!['avatar_url'].toString().contains('placeholder')
+                  onBackgroundImageError: _userProfile?['avatar_url'] != null &&
+                          _userProfile!['avatar_url'].toString().isNotEmpty &&
+                          !_userProfile!['avatar_url']
+                              .toString()
+                              .contains('placeholder')
                       ? (exception, stackTrace) {
                           debugPrint('Error loading owner avatar: $exception');
                         }
                       : null,
-                  child: _userProfile?['avatar_url'] == null || 
-                         _userProfile!['avatar_url'].toString().isEmpty ||
-                         _userProfile!['avatar_url'].toString().contains('placeholder')
+                  child: _userProfile?['avatar_url'] == null ||
+                          _userProfile!['avatar_url'].toString().isEmpty ||
+                          _userProfile!['avatar_url']
+                              .toString()
+                              .contains('placeholder')
                       ? Icon(
                           Icons.person,
                           size: 30,
@@ -470,23 +489,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       Text(
                         _userProfile?['name'] ?? 'My human\'s info coming soon',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         _userProfile?['location'] ?? 'Location not set',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                        ),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.7),
+                            ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         _userProfile?['bio'] ?? 'Dog lover & adventure seeker',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.6),
+                            ),
                       ),
                     ],
                   ),
@@ -519,8 +545,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               height: 48,
               decoration: BoxDecoration(
                 color: isPremium
-                    ? Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.2)
-                    : Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                    ? Theme.of(context)
+                        .colorScheme
+                        .tertiary
+                        .withValues(alpha: 0.2)
+                    : Theme.of(context)
+                        .colorScheme
+                        .primaryContainer
+                        .withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -546,7 +578,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Text(
                     subtitle,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
                         ),
                   ),
                 ],

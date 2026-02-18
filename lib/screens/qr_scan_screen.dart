@@ -25,7 +25,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
   Future<void> _handleScan(BarcodeCapture capture) async {
     if (_isProcessing) return;
-    
+
     final barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
 
@@ -178,8 +178,7 @@ class QrScannerOverlayShape extends ShapeBorder {
   @override
   Path getOuterPath(Rect rect, {TextDirection? textDirection}) {
     Path _getRectPath(Rect rect) {
-      return Path()
-        ..addRect(rect);
+      return Path()..addRect(rect);
     }
 
     Path _getCutoutPath(Rect rect) {

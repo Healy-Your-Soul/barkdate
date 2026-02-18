@@ -4,7 +4,9 @@ class PlaydatesScreenMinimal extends StatefulWidget {
   final int? initialTabIndex;
   final String? highlightPlaydateId;
 
-  const PlaydatesScreenMinimal({Key? key, this.initialTabIndex, this.highlightPlaydateId}) : super(key: key);
+  const PlaydatesScreenMinimal(
+      {Key? key, this.initialTabIndex, this.highlightPlaydateId})
+      : super(key: key);
 
   @override
   State<PlaydatesScreenMinimal> createState() => _PlaydatesScreenMinimalState();

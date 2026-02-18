@@ -25,15 +25,16 @@ class Message {
     DateTime? timestamp,
     bool? isRead,
     MessageType? type,
-  }) => Message(
-    id: id ?? this.id,
-    senderId: senderId ?? this.senderId,
-    receiverId: receiverId ?? this.receiverId,
-    text: text ?? this.text,
-    timestamp: timestamp ?? this.timestamp,
-    isRead: isRead ?? this.isRead,
-    type: type ?? this.type,
-  );
+  }) =>
+      Message(
+        id: id ?? this.id,
+        senderId: senderId ?? this.senderId,
+        receiverId: receiverId ?? this.receiverId,
+        text: text ?? this.text,
+        timestamp: timestamp ?? this.timestamp,
+        isRead: isRead ?? this.isRead,
+        type: type ?? this.type,
+      );
 }
 
 enum MessageType { text, image, quickReply }

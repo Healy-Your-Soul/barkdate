@@ -49,7 +49,8 @@ class _EnhancedImagePickerState extends State<EnhancedImagePicker> {
           return;
         }
 
-        final files = await context.showMultiImagePicker(maxImages: availableSlots);
+        final files =
+            await context.showMultiImagePicker(maxImages: availableSlots);
         if (files != null && files.isNotEmpty) {
           setState(() {
             _selectedImages.addAll(files);
@@ -116,8 +117,8 @@ class _EnhancedImagePickerState extends State<EnhancedImagePicker> {
           Text(
             widget.title!,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+                  fontWeight: FontWeight.w600,
+                ),
           ),
           const SizedBox(height: 12),
         ],
@@ -185,7 +186,7 @@ class _EnhancedImagePickerState extends State<EnhancedImagePicker> {
               fit: BoxFit.cover,
             ),
           ),
-          
+
           // Delete button
           Positioned(
             top: 8,
@@ -236,7 +237,7 @@ class _EnhancedImagePickerState extends State<EnhancedImagePicker> {
               fit: BoxFit.cover,
             ),
           ),
-          
+
           // Delete button
           Positioned(
             top: 4,
@@ -257,7 +258,7 @@ class _EnhancedImagePickerState extends State<EnhancedImagePicker> {
               ),
             ),
           ),
-          
+
           // Reorder handle
           if (widget.allowMultiple)
             const Positioned(
@@ -288,22 +289,22 @@ class _EnhancedImagePickerState extends State<EnhancedImagePicker> {
             borderRadius: BorderRadius.circular(12),
           ),
           side: BorderSide(
-            color: canAddMore 
-                ? Theme.of(context).colorScheme.primary 
+            color: canAddMore
+                ? Theme.of(context).colorScheme.primary
                 : Colors.grey[300]!,
           ),
         ),
         icon: Icon(
           hasImages ? Icons.add_photo_alternate : Icons.camera_alt,
-          color: canAddMore 
-              ? Theme.of(context).colorScheme.primary 
+          color: canAddMore
+              ? Theme.of(context).colorScheme.primary
               : Colors.grey[500],
         ),
         label: Text(
           _getButtonText(),
           style: TextStyle(
-            color: canAddMore 
-                ? Theme.of(context).colorScheme.primary 
+            color: canAddMore
+                ? Theme.of(context).colorScheme.primary
                 : Colors.grey[500],
           ),
         ),
@@ -315,16 +316,16 @@ class _EnhancedImagePickerState extends State<EnhancedImagePicker> {
     if (_selectedImages.isEmpty) {
       return widget.allowMultiple ? 'Add Photos' : 'Add Photo';
     }
-    
+
     if (!widget.allowMultiple) {
       return 'Change Photo';
     }
-    
+
     final remaining = widget.maxImages - _selectedImages.length;
     if (remaining <= 0) {
       return 'Maximum ${widget.maxImages} photos selected';
     }
-    
+
     return 'Add More Photos (${_selectedImages.length}/${widget.maxImages})';
   }
 }
@@ -363,7 +364,6 @@ class ImageThumbnail extends StatelessWidget {
             ),
           ),
         ),
-        
         if (showDeleteButton && onDelete != null)
           Positioned(
             top: -2,

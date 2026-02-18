@@ -36,202 +36,216 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. Header OR Search Bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-              child: _isSearching
-                  ? Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            autofocus: true,
-                            decoration: InputDecoration(
-                              hintText: 'Search messages...',
-                              prefixIcon: const Icon(Icons.search, size: 20),
-                              suffixIcon: _searchQuery.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear, size: 20),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                        setState(() => _searchQuery = '');
-                                      },
-                                    )
-                                  : null,
-                              filled: true,
-                              fillColor: Colors.grey.shade100,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Header OR Search Bar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                child: _isSearching
+                    ? Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              autofocus: true,
+                              decoration: InputDecoration(
+                                hintText: 'Search messages...',
+                                prefixIcon: const Icon(Icons.search, size: 20),
+                                suffixIcon: _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear, size: 20),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          setState(() => _searchQuery = '');
+                                        },
+                                      )
+                                    : null,
+                                filled: true,
+                                fillColor: Colors.grey.shade100,
+                                contentPadding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
                               ),
+                              onChanged: (value) =>
+                                  setState(() => _searchQuery = value),
                             ),
-                            onChanged: (value) => setState(() => _searchQuery = value),
+                          ),
+                          const SizedBox(width: 12),
+                          TextButton(
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _isSearching = false;
+                                _searchQuery = '';
+                              });
+                            },
+                            child: const Text('Cancel'),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Messages',
+                            style: AppTypography.h1().copyWith(fontSize: 32),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.search),
+                            onPressed: () =>
+                                setState(() => _isSearching = true),
+                          ),
+                        ],
+                      ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // 2. Filter Tabs - using shared component for consistency
+              FilterTabs(
+                tabs: _filters,
+                selectedTab: _filters[_selectedFilterIndex],
+                onTabSelected: (tab) {
+                  setState(() => _selectedFilterIndex = _filters.indexOf(tab));
+                },
+              ),
+
+              const SizedBox(height: 24),
+
+              // 3. Messages List
+              Expanded(
+                child: conversationsAsync.when(
+                  data: (conversations) {
+                    // Apply filters
+                    var filteredConversations = conversations.where((c) {
+                      // Apply category filter
+                      if (_selectedFilterIndex == 1) {
+                        // Playdates - filter by is_playdate or has playdate_id
+                        final isPlaydate = c['is_playdate'] == true ||
+                            c['playdate_id'] != null;
+                        if (!isPlaydate) return false;
+                      } else if (_selectedFilterIndex == 2) {
+                        // General - exclude playdates
+                        final isPlaydate = c['is_playdate'] == true ||
+                            c['playdate_id'] != null;
+                        if (isPlaydate) return false;
+                      }
+
+                      // Apply search filter
+                      if (_searchQuery.isNotEmpty) {
+                        final content =
+                            (c['content'] as String? ?? '').toLowerCase();
+                        final sender = c['sender'] as Map<String, dynamic>?;
+                        final receiver = c['receiver'] as Map<String, dynamic>?;
+                        final senderName =
+                            (sender?['name'] as String? ?? '').toLowerCase();
+                        final receiverName =
+                            (receiver?['name'] as String? ?? '').toLowerCase();
+                        final query = _searchQuery.toLowerCase();
+
+                        if (!content.contains(query) &&
+                            !senderName.contains(query) &&
+                            !receiverName.contains(query)) {
+                          return false;
+                        }
+                      }
+
+                      return true;
+                    }).toList();
+
+                    if (filteredConversations.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32.0),
+                          child: CuteEmptyState(
+                            icon: Icons.chat_bubble_outline,
+                            title: _selectedFilterIndex == 0
+                                ? 'No messages yet'
+                                : _selectedFilterIndex == 1
+                                    ? 'No playdate messages'
+                                    : 'No general messages',
+                            message:
+                                'Start matching with other dogs to get the conversation started!',
+                            actionLabel: 'Find Friends',
+                            onAction: () {
+                              context.go('/home');
+                            },
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        TextButton(
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              _isSearching = false;
-                              _searchQuery = '';
-                            });
-                          },
-                          child: const Text('Cancel'),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Messages',
-                          style: AppTypography.h1().copyWith(fontSize: 32),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.search),
-                          onPressed: () => setState(() => _isSearching = true),
-                        ),
-                      ],
-                    ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // 2. Filter Tabs - using shared component for consistency
-            FilterTabs(
-              tabs: _filters,
-              selectedTab: _filters[_selectedFilterIndex],
-              onTabSelected: (tab) {
-                setState(() => _selectedFilterIndex = _filters.indexOf(tab));
-              },
-            ),
-
-            const SizedBox(height: 24),
-
-            // 3. Messages List
-            Expanded(
-              child: conversationsAsync.when(
-                data: (conversations) {
-                  // Apply filters
-                  var filteredConversations = conversations.where((c) {
-                    // Apply category filter
-                    if (_selectedFilterIndex == 1) {
-                      // Playdates - filter by is_playdate or has playdate_id
-                      final isPlaydate = c['is_playdate'] == true || c['playdate_id'] != null;
-                      if (!isPlaydate) return false;
-                    } else if (_selectedFilterIndex == 2) {
-                      // General - exclude playdates
-                      final isPlaydate = c['is_playdate'] == true || c['playdate_id'] != null;
-                      if (isPlaydate) return false;
+                      );
                     }
-                    
-                    // Apply search filter
-                    if (_searchQuery.isNotEmpty) {
-                      final content = (c['content'] as String? ?? '').toLowerCase();
-                      final sender = c['sender'] as Map<String, dynamic>?;
-                      final receiver = c['receiver'] as Map<String, dynamic>?;
-                      final senderName = (sender?['name'] as String? ?? '').toLowerCase();
-                      final receiverName = (receiver?['name'] as String? ?? '').toLowerCase();
-                      final query = _searchQuery.toLowerCase();
-                      
-                      if (!content.contains(query) && 
-                          !senderName.contains(query) && 
-                          !receiverName.contains(query)) {
-                        return false;
-                      }
-                    }
-                    
-                    return true;
-                  }).toList();
-                  
-                  if (filteredConversations.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32.0),
-                        child: CuteEmptyState(
-                          icon: Icons.chat_bubble_outline,
-                          title: _selectedFilterIndex == 0 
-                              ? 'No messages yet' 
-                              : _selectedFilterIndex == 1 
-                                  ? 'No playdate messages'
-                                  : 'No general messages',
-                          message: 'Start matching with other dogs to get the conversation started!',
-                          actionLabel: 'Find Friends',
-                          onAction: () {
-                            context.go('/home');
-                          },
-                        ),
-                      ),
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      itemCount: filteredConversations.length,
+                      separatorBuilder: (context, index) =>
+                          const Divider(height: 32, thickness: 0.5),
+                      itemBuilder: (context, index) {
+                        final conversation = filteredConversations[index];
+                        return _buildConversationTile(context, conversation);
+                      },
                     );
-                  }
-
-                  return ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    itemCount: filteredConversations.length,
-                    separatorBuilder: (context, index) => const Divider(height: 32, thickness: 0.5),
-                    itemBuilder: (context, index) {
-                      final conversation = filteredConversations[index];
-                      return _buildConversationTile(context, conversation);
-                    },
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(child: Text('Error: $error')),
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, stack) => Center(child: Text('Error: $error')),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ), // Close GestureDetector
     );
   }
 
-  Widget _buildConversationTile(BuildContext context, Map<String, dynamic> conversation) {
+  Widget _buildConversationTile(
+      BuildContext context, Map<String, dynamic> conversation) {
     // Determine other user
     final currentUserId = SupabaseConfig.auth.currentUser?.id;
     final sender = conversation['sender'] as Map<String, dynamic>?;
     final receiver = conversation['receiver'] as Map<String, dynamic>?;
-    
+
     final senderId = conversation['sender_id'];
-    
+
     // If I am the sender, show receiver. If I am receiver, show sender.
     final otherUser = (senderId == currentUserId) ? receiver : sender;
-    
+
     final userName = otherUser?['name'] ?? 'Unknown User';
     final dogName = conversation['other_user_dog_name'];
     // Format as "Username (DogName's human)" if dog name is available
-    final displayName = dogName != null 
-        ? "$userName ($dogName's human)" 
-        : userName;
+    final displayName =
+        dogName != null ? "$userName ($dogName's human)" : userName;
     final avatarUrl = otherUser?['avatar_url'];
     final content = conversation['content'] ?? '';
     final createdAt = DateTime.parse(conversation['created_at']);
-    final isRead = conversation['is_read'] ?? false; // Note: logic for read status needs refinement based on user
+    final isRead = conversation['is_read'] ??
+        false; // Note: logic for read status needs refinement based on user
 
     return InkWell(
       onTap: () {
-         final matchId = conversation['match_id'];
-         final recipientId = otherUser?['id']; // We need ID in the user object
-         
-         // Fallback if ID is not in the embedded object (it usually isn't by default unless selected)
-         // But we can infer it from sender_id/receiver_id
-         final targetId = (senderId == currentUserId) ? conversation['receiver_id'] : conversation['sender_id'];
+        final matchId = conversation['match_id'];
+        final recipientId = otherUser?['id']; // We need ID in the user object
 
-         if (matchId != null && targetId != null) {
-           context.push('/chat', extra: {
-             'matchId': matchId,
-             'recipientId': targetId,
-             'recipientName': displayName,
-             'recipientAvatarUrl': avatarUrl,
-           });
-         }
+        // Fallback if ID is not in the embedded object (it usually isn't by default unless selected)
+        // But we can infer it from sender_id/receiver_id
+        final targetId = (senderId == currentUserId)
+            ? conversation['receiver_id']
+            : conversation['sender_id'];
+
+        if (matchId != null && targetId != null) {
+          context.push('/chat', extra: {
+            'matchId': matchId,
+            'recipientId': targetId,
+            'recipientName': displayName,
+            'recipientAvatarUrl': avatarUrl,
+          });
+        }
       },
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,7 +254,9 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
             radius: 28,
             backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
             backgroundColor: Colors.grey[200],
-            child: avatarUrl == null ? const Icon(Icons.person, color: Colors.grey) : null,
+            child: avatarUrl == null
+                ? const Icon(Icons.person, color: Colors.grey)
+                : null,
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -277,7 +293,8 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey[600], // Always grey for preview in Airbnb style
+                    color: Colors
+                        .grey[600], // Always grey for preview in Airbnb style
                     fontWeight: FontWeight.normal,
                   ),
                 ),

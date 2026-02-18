@@ -22,7 +22,7 @@ class PlaydateActionPopup extends StatelessWidget {
     final size = MediaQuery.of(context).size;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
@@ -82,7 +82,7 @@ class PlaydateActionPopup extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Content
             Padding(
               padding: const EdgeInsets.all(24),
@@ -102,7 +102,7 @@ class PlaydateActionPopup extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  
+
                   // Time
                   Row(
                     children: [
@@ -116,7 +116,7 @@ class PlaydateActionPopup extends StatelessWidget {
                       ),
                     ],
                   ),
-                  
+
                   if (playdate['description'] != null) ...[
                     const SizedBox(height: 12),
                     Row(
@@ -136,7 +136,7 @@ class PlaydateActionPopup extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Action buttons
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
@@ -163,9 +163,9 @@ class PlaydateActionPopup extends StatelessWidget {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 12),
-                  
+
                   // Secondary actions
                   Row(
                     children: [
@@ -197,26 +197,30 @@ class PlaydateActionPopup extends StatelessWidget {
 
   String _formatDateTime(String? dateTimeStr) {
     if (dateTimeStr == null) return 'Time TBD';
-    
+
     try {
       final dateTime = DateTime.parse(dateTimeStr);
       final now = DateTime.now();
       final tomorrow = now.add(const Duration(days: 1));
-      
+
       String dateStr;
-      if (dateTime.year == now.year && dateTime.month == now.month && dateTime.day == now.day) {
+      if (dateTime.year == now.year &&
+          dateTime.month == now.month &&
+          dateTime.day == now.day) {
         dateStr = 'Today';
-      } else if (dateTime.year == tomorrow.year && dateTime.month == tomorrow.month && dateTime.day == tomorrow.day) {
+      } else if (dateTime.year == tomorrow.year &&
+          dateTime.month == tomorrow.month &&
+          dateTime.day == tomorrow.day) {
         dateStr = 'Tomorrow';
       } else {
         dateStr = '${dateTime.month}/${dateTime.day}/${dateTime.year}';
       }
-      
+
       final hour = dateTime.hour;
       final minute = dateTime.minute.toString().padLeft(2, '0');
       final period = hour >= 12 ? 'PM' : 'AM';
       final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-      
+
       return '$dateStr at $displayHour:$minute $period';
     } catch (e) {
       return dateTimeStr;

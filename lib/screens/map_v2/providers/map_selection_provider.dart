@@ -28,7 +28,8 @@ class MapSelection {
     );
   }
 
-  bool get hasSelection => selectedPlace != null || selectedEvent != null || showAiAssistant;
+  bool get hasSelection =>
+      selectedPlace != null || selectedEvent != null || showAiAssistant;
 
   void clear() {
     // This is handled by the controller

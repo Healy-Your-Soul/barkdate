@@ -36,16 +36,17 @@ class _LocationSettingsWidgetState extends State<LocationSettingsWidget> {
 
       // Check if location is enabled in database
       final enabled = await LocationService.isLocationEnabled(user.id);
-      
+
       // Check permission status
       final permissionInfo = await LocationService.checkPermissionStatus();
-      
+
       // Get current location if available
       String? locationText;
       if (enabled) {
         final location = await LocationService.getUserLocation(user.id);
         if (location != null) {
-          locationText = '${location['latitude']!.toStringAsFixed(4)}, ${location['longitude']!.toStringAsFixed(4)}';
+          locationText =
+              '${location['latitude']!.toStringAsFixed(4)}, ${location['longitude']!.toStringAsFixed(4)}';
         }
       }
 
@@ -87,18 +88,20 @@ class _LocationSettingsWidgetState extends State<LocationSettingsWidget> {
     try {
       // Check permission first
       final permissionInfo = await LocationService.checkPermissionStatus();
-      
+
       if (permissionInfo.status == LocationStatus.permissionDenied) {
         // Request permission
         final granted = await LocationService.requestPermission();
         if (!granted) {
           if (mounted) {
-            _showError('Location permission is required to find nearby dogs and events.');
+            _showError(
+                'Location permission is required to find nearby dogs and events.');
           }
           setState(() => _isSyncing = false);
           return;
         }
-      } else if (permissionInfo.status == LocationStatus.permissionDeniedForever) {
+      } else if (permissionInfo.status ==
+          LocationStatus.permissionDeniedForever) {
         // Need to open settings
         if (mounted) {
           final shouldOpen = await _showSettingsDialog(
@@ -128,7 +131,7 @@ class _LocationSettingsWidgetState extends State<LocationSettingsWidget> {
 
       // Get current location and save it
       final success = await LocationService.syncLocation(user.id);
-      
+
       if (success) {
         await _loadLocationStatus();
         widget.onLocationChanged?.call();
@@ -197,7 +200,7 @@ class _LocationSettingsWidgetState extends State<LocationSettingsWidget> {
       await LocationService.disableLocation(user.id);
       await _loadLocationStatus();
       widget.onLocationChanged?.call();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -226,7 +229,7 @@ class _LocationSettingsWidgetState extends State<LocationSettingsWidget> {
 
     try {
       final success = await LocationService.syncLocation(user.id);
-      
+
       if (success) {
         await _loadLocationStatus();
         widget.onLocationChanged?.call();
@@ -240,7 +243,8 @@ class _LocationSettingsWidgetState extends State<LocationSettingsWidget> {
         }
       } else {
         if (mounted) {
-          _showError('Failed to update location. Please check your permissions.');
+          _showError(
+              'Failed to update location. Please check your permissions.');
         }
       }
     } catch (e) {
@@ -345,7 +349,6 @@ class _LocationSettingsWidgetState extends State<LocationSettingsWidget> {
                   ),
               ],
             ),
-            
             if (_permissionInfo != null) ...[
               const SizedBox(height: 16),
               Container(
@@ -378,7 +381,6 @@ class _LocationSettingsWidgetState extends State<LocationSettingsWidget> {
                 ),
               ),
             ],
-            
             if (_isEnabled && _currentLocation != null) ...[
               const SizedBox(height: 16),
               Row(
@@ -405,7 +407,6 @@ class _LocationSettingsWidgetState extends State<LocationSettingsWidget> {
                 ],
               ),
             ],
-            
             if (!_isEnabled) ...[
               const SizedBox(height: 16),
               Container(
@@ -447,7 +448,7 @@ class _LocationSettingsWidgetState extends State<LocationSettingsWidget> {
 
   Color _getStatusColor() {
     if (_permissionInfo == null) return Colors.grey;
-    
+
     switch (_permissionInfo!.status) {
       case LocationStatus.enabled:
         return Colors.green;
@@ -464,7 +465,7 @@ class _LocationSettingsWidgetState extends State<LocationSettingsWidget> {
 
   IconData _getStatusIcon() {
     if (_permissionInfo == null) return Icons.help_outline;
-    
+
     switch (_permissionInfo!.status) {
       case LocationStatus.enabled:
         return Icons.check_circle;

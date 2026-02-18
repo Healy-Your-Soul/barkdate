@@ -46,12 +46,12 @@ class _MapScreenState extends State<MapScreen> {
   bool _showSearchSuggestions = false;
   final FocusNode _searchFocusNode = FocusNode();
   PlaceCategory? _selectedCategory; // null means "All"
-  
+
   // Pagination
   String? _nextPageToken;
   bool _isLoadingMore = false;
   String? _lastSearchQuery;
-  
+
   // Smart search suggestions
   final List<String> _searchSuggestions = [
     'dog parks near me',
@@ -82,14 +82,15 @@ class _MapScreenState extends State<MapScreen> {
     _searchFocusNode.dispose();
     super.dispose();
   }
-  
+
   void _setupSearchListener() {
     _searchFocusNode.addListener(() {
       setState(() {
-        _showSearchSuggestions = _searchFocusNode.hasFocus && _searchController.text.isEmpty;
+        _showSearchSuggestions =
+            _searchFocusNode.hasFocus && _searchController.text.isEmpty;
       });
     });
-    
+
     _searchController.addListener(() {
       if (_searchFocusNode.hasFocus) {
         setState(() {
@@ -102,9 +103,11 @@ class _MapScreenState extends State<MapScreen> {
   void _setupScrollListener() {
     _scrollController.addListener(() {
       // Show FAB when scrolling up, hide when scrolling down
-      if (_scrollController.position.userScrollDirection == ScrollDirection.reverse) {
+      if (_scrollController.position.userScrollDirection ==
+          ScrollDirection.reverse) {
         if (_showFAB) setState(() => _showFAB = false);
-      } else if (_scrollController.position.userScrollDirection == ScrollDirection.forward) {
+      } else if (_scrollController.position.userScrollDirection ==
+          ScrollDirection.forward) {
         if (!_showFAB) setState(() => _showFAB = true);
       }
     });
@@ -112,8 +115,8 @@ class _MapScreenState extends State<MapScreen> {
 
   void _setupRealTimeDogCounts() {
     try {
-      _dogCountSubscription = BarkDateUserService.getDogCountUpdates()
-          .listen((counts) {
+      _dogCountSubscription =
+          BarkDateUserService.getDogCountUpdates().listen((counts) {
         if (mounted) {
           setState(() {
             _dogCounts = counts;
@@ -149,7 +152,8 @@ class _MapScreenState extends State<MapScreen> {
 
       final locationData = await _location.getLocation();
       if (locationData.latitude != null && locationData.longitude != null) {
-        _currentLocation = LatLng(locationData.latitude!, locationData.longitude!);
+        _currentLocation =
+            LatLng(locationData.latitude!, locationData.longitude!);
       } else {
         _setDefaultLocation();
       }
@@ -194,8 +198,9 @@ class _MapScreenState extends State<MapScreen> {
     if (_currentLocation == null) return;
 
     try {
-      debugPrint('🔍 Loading dog-friendly places from PlacesService (via Maps API)...');
-      
+      debugPrint(
+          '🔍 Loading dog-friendly places from PlacesService (via Maps API)...');
+
       // Use the existing PlacesService which works on web
       // It uses the Google Maps JavaScript API already loaded
       final result = await PlacesService.searchDogFriendlyPlaces(
@@ -203,40 +208,44 @@ class _MapScreenState extends State<MapScreen> {
         longitude: _currentLocation!.longitude,
         radius: _selectedRadius, // Use selected radius
       );
-      
+
       final googlePlaces = result.places;
       debugPrint('✅ Found ${googlePlaces.length} dog-friendly places');
-      
+
       // Convert to map format
-      final placesData = googlePlaces.map((place) => {
-        'id': place.placeId,
-        'name': place.name,
-        'latitude': place.latitude,
-        'longitude': place.longitude,
-        'description': '',
-        'address': place.address,
-        'rating': place.rating,
-        'source': 'google_places',
-        'distance': place.distance,
-      }).toList();
-      
+      final placesData = googlePlaces
+          .map((place) => {
+                'id': place.placeId,
+                'name': place.name,
+                'latitude': place.latitude,
+                'longitude': place.longitude,
+                'description': '',
+                'address': place.address,
+                'rating': place.rating,
+                'source': 'google_places',
+                'distance': place.distance,
+              })
+          .toList();
+
       // Also load featured parks from database (as backup/favorites)
       final featuredData = await ParkService.getFeaturedParks();
-      final featured = featuredData.map((park) => {
-        'id': park.id,
-        'name': park.name,
-        'latitude': park.latitude,
-        'longitude': park.longitude,
-        'description': park.description,
-        'amenities': park.amenities,
-        'rating': park.rating,
-        'address': park.address,
-        'source': 'database',
-      }).toList();
-      
+      final featured = featuredData
+          .map((park) => {
+                'id': park.id,
+                'name': park.name,
+                'latitude': park.latitude,
+                'longitude': park.longitude,
+                'description': park.description,
+                'amenities': park.amenities,
+                'rating': park.rating,
+                'address': park.address,
+                'source': 'database',
+              })
+          .toList();
+
       // Combine Google Places results with database parks
       final allPlaces = [...placesData, ...featured];
-      
+
       // Get current dog counts from database
       Map<String, int> counts = {};
       try {
@@ -260,34 +269,39 @@ class _MapScreenState extends State<MapScreen> {
 
   void _updateMarkers() {
     _markers.clear();
-    
+
     if (_showingSearchResults) {
       // Show search results with correct iconography
       for (int i = 0; i < _searchResults.length; i++) {
         final place = _searchResults[i];
-        
+
         // Apply category filter
         if (_selectedCategory != null && place.category != _selectedCategory) {
           continue;
         }
-        
+
         BitmapDescriptor markerIcon;
         switch (place.category) {
           case PlaceCategory.park:
-            markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+            markerIcon = BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueGreen);
             break;
           case PlaceCategory.petStore:
-            markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+            markerIcon = BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueAzure);
             break;
           case PlaceCategory.veterinary:
-            markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+            markerIcon =
+                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
             break;
           case PlaceCategory.restaurant:
-            markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet);
+            markerIcon = BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueViolet);
             break;
           case PlaceCategory.other:
           default:
-            markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+            markerIcon =
+                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
         }
         _markers.add(Marker(
           markerId: MarkerId('search_$i'),
@@ -304,39 +318,47 @@ class _MapScreenState extends State<MapScreen> {
       // Show regular parks and other places with correct iconography
       for (final park in _nearbyParks) {
         // Apply category filter
-        if (_selectedCategory != null && park['category'] != _selectedCategory) {
+        if (_selectedCategory != null &&
+            park['category'] != _selectedCategory) {
           continue;
         }
-        
+
         final dogCount = _dogCounts[park['id']] ?? 0;
         BitmapDescriptor markerIcon;
         if (park['source'] == 'google_places' && park['category'] != null) {
           switch (park['category']) {
             case PlaceCategory.park:
-              markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+              markerIcon = BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueGreen);
               break;
             case PlaceCategory.petStore:
-              markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+              markerIcon = BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueAzure);
               break;
             case PlaceCategory.veterinary:
-              markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+              markerIcon = BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueRed);
               break;
             case PlaceCategory.restaurant:
-              markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet);
+              markerIcon = BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueViolet);
               break;
             case PlaceCategory.other:
             default:
-              markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+              markerIcon = BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueBlue);
           }
         } else {
-          markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+          markerIcon =
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
         }
         _markers.add(Marker(
           markerId: MarkerId('park_${park['id']}'),
           position: LatLng(park['latitude'], park['longitude']),
           infoWindow: InfoWindow(
             title: park['name'],
-            snippet: dogCount > 0 ? '$dogCount dogs active' : 'No dogs currently',
+            snippet:
+                dogCount > 0 ? '$dogCount dogs active' : 'No dogs currently',
           ),
           icon: markerIcon,
           onTap: () => _showParkDetails(park),
@@ -346,10 +368,11 @@ class _MapScreenState extends State<MapScreen> {
       // Featured parks - only show if no category filter or if they match the filter
       for (final park in _featuredParks) {
         // Apply category filter (featured parks are typically parks)
-        if (_selectedCategory != null && _selectedCategory != PlaceCategory.park) {
+        if (_selectedCategory != null &&
+            _selectedCategory != PlaceCategory.park) {
           continue;
         }
-        
+
         final dogCount = _dogCounts[park['id']] ?? 0;
         _markers.add(Marker(
           markerId: MarkerId('featured_${park['id']}'),
@@ -358,27 +381,28 @@ class _MapScreenState extends State<MapScreen> {
             title: '⭐ ${park['name']}',
             snippet: dogCount > 0 ? '$dogCount dogs active' : 'Featured park',
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
           onTap: () => _showFeaturedParkDetails(park),
         ));
       }
     }
-    
+
     if (mounted) setState(() {});
   }
 
   Future<void> _searchPlaces(String query) async {
     if (_currentLocation == null || query.trim().isEmpty) return;
-    
+
     setState(() {
       _isSearching = true;
       _lastSearchQuery = query;
       _nextPageToken = null; // Reset pagination for new search
     });
-    
+
     try {
       debugPrint('🔍 Searching for: "$query"');
-      
+
       // Use the existing PlacesService (works on web via Google Maps JS API)
       final result = await PlacesService.searchDogFriendlyPlaces(
         latitude: _currentLocation!.latitude,
@@ -386,10 +410,10 @@ class _MapScreenState extends State<MapScreen> {
         keyword: query,
         radius: _selectedRadius, // Use selected radius
       );
-      
+
       debugPrint('✅ Found ${result.places.length} places for "$query"');
       debugPrint('📄 Has more pages: ${result.hasMore}');
-      
+
       setState(() {
         _searchResults = result.places;
         _showingSearchResults = true;
@@ -412,13 +436,14 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _loadMoreResults() async {
-    if (_currentLocation == null || _nextPageToken == null || _isLoadingMore) return;
-    
+    if (_currentLocation == null || _nextPageToken == null || _isLoadingMore)
+      return;
+
     setState(() => _isLoadingMore = true);
-    
+
     try {
       debugPrint('📄 Loading more results (page token: $_nextPageToken)...');
-      
+
       final result = await PlacesService.searchDogFriendlyPlaces(
         latitude: _currentLocation!.latitude,
         longitude: _currentLocation!.longitude,
@@ -426,10 +451,10 @@ class _MapScreenState extends State<MapScreen> {
         radius: _selectedRadius,
         pageToken: _nextPageToken,
       );
-      
+
       debugPrint('✅ Loaded ${result.places.length} more places');
       debugPrint('📄 Has more pages: ${result.hasMore}');
-      
+
       setState(() {
         _searchResults.addAll(result.places);
         _nextPageToken = result.nextPageToken;
@@ -460,7 +485,7 @@ class _MapScreenState extends State<MapScreen> {
     });
     _updateMarkers();
   }
-  
+
   void _applyFilter() {
     // When a filter is applied, we should trigger a new search for that category
     // if we are not already showing search results for that specific category.
@@ -485,7 +510,7 @@ class _MapScreenState extends State<MapScreen> {
         shouldSearch = false; // Don't trigger a new search, just clear filters
         break;
     }
-    
+
     // If "All" is selected, clear the search results and show the default parks
     if (_selectedCategory == null) {
       _clearSearch();
@@ -493,7 +518,9 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     // Only trigger a new search if the keyword is different from the last one
-    if (shouldSearch && categoryKeyword.isNotEmpty && _lastSearchQuery != categoryKeyword) {
+    if (shouldSearch &&
+        categoryKeyword.isNotEmpty &&
+        _lastSearchQuery != categoryKeyword) {
       _searchController.text = categoryKeyword; // Update search bar text
       _searchPlaces(categoryKeyword);
     } else {
@@ -506,19 +533,22 @@ class _MapScreenState extends State<MapScreen> {
     if (_mapController == null) return;
     final bounds = await _mapController!.getVisibleRegion();
     // Use the center of bounds and radius as the diagonal distance
-    final centerLat = (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
-    final centerLng = (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
+    final centerLat =
+        (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
+    final centerLng =
+        (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
     final diagonalMeters = Geolocator.distanceBetween(
-      bounds.northeast.latitude, bounds.northeast.longitude,
-      bounds.southwest.latitude, bounds.southwest.longitude,
+      bounds.northeast.latitude,
+      bounds.northeast.longitude,
+      bounds.southwest.latitude,
+      bounds.southwest.longitude,
     );
     final calculatedRadius = (diagonalMeters / 2).clamp(500, 50000).toInt();
-    
+
     // Find the closest valid radius option
-    int closestRadius = _radiusOptions.reduce((a, b) => 
-      (a - calculatedRadius).abs() < (b - calculatedRadius).abs() ? a : b
-    );
-    
+    int closestRadius = _radiusOptions.reduce((a, b) =>
+        (a - calculatedRadius).abs() < (b - calculatedRadius).abs() ? a : b);
+
     setState(() {
       _currentLocation = LatLng(centerLat, centerLng);
       _selectedRadius = closestRadius;
@@ -541,7 +571,7 @@ class _MapScreenState extends State<MapScreen> {
       });
       return;
     }
-    
+
     final apiKey = DefaultFirebaseOptions.web.apiKey;
     double? lat;
     double? lng;
@@ -549,7 +579,7 @@ class _MapScreenState extends State<MapScreen> {
       lat = _currentLocation!.latitude;
       lng = _currentLocation!.longitude;
     }
-    
+
     try {
       final suggestions = await PlacesService.getAutocompleteSuggestions(
         input: query,
@@ -558,7 +588,7 @@ class _MapScreenState extends State<MapScreen> {
         longitude: lng,
         types: 'establishment',
       );
-      
+
       if (mounted) {
         setState(() {
           _showSearchSuggestions = suggestions.isNotEmpty;
@@ -582,7 +612,7 @@ class _MapScreenState extends State<MapScreen> {
   List<String> _generateSuggestions(String query) {
     final lowerQuery = query.toLowerCase().trim();
     final suggestions = <String>[];
-    
+
     // Predefined smart suggestions (Google-style)
     final predefinedSuggestions = [
       'dog park near me',
@@ -596,14 +626,14 @@ class _MapScreenState extends State<MapScreen> {
       'dog grooming',
       'puppy training classes',
     ];
-    
+
     // Add matching predefined suggestions
     for (final suggestion in predefinedSuggestions) {
       if (suggestion.toLowerCase().contains(lowerQuery)) {
         suggestions.add(suggestion);
       }
     }
-    
+
     // Add suggestions based on loaded places (if available)
     for (final place in _searchResults) {
       if (place.name.toLowerCase().contains(lowerQuery)) {
@@ -612,7 +642,7 @@ class _MapScreenState extends State<MapScreen> {
         }
       }
     }
-    
+
     // If no suggestions, add helpful defaults
     if (suggestions.isEmpty) {
       if (lowerQuery.length >= 2) {
@@ -623,7 +653,7 @@ class _MapScreenState extends State<MapScreen> {
         ]);
       }
     }
-    
+
     // Limit to 8 suggestions (Google-like)
     return suggestions.take(8).toList();
   }
@@ -637,7 +667,8 @@ class _MapScreenState extends State<MapScreen> {
         foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
         actions: [
           IconButton(
-            icon: Icon(Icons.my_location, color: Theme.of(context).colorScheme.onPrimaryContainer),
+            icon: Icon(Icons.my_location,
+                color: Theme.of(context).colorScheme.onPrimaryContainer),
             onPressed: _centerOnMyLocation,
             tooltip: 'My location',
           ),
@@ -664,7 +695,10 @@ class _MapScreenState extends State<MapScreen> {
                       // Search bar and radius selector
                       Container(
                         padding: const EdgeInsets.all(16.0),
-                        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.15),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primaryContainer
+                            .withValues(alpha: 0.15),
                         child: Row(
                           children: [
                             Expanded(
@@ -672,304 +706,351 @@ class _MapScreenState extends State<MapScreen> {
                                 controller: _searchController,
                                 focusNode: _searchFocusNode,
                                 decoration: InputDecoration(
-                                  hintText: 'Search dog parks, cafes, stores...',
+                                  hintText:
+                                      'Search dog parks, cafes, stores...',
                                   prefixIcon: const Icon(Icons.search),
-                                suffixIcon: _isSearching
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
-                                      )
-                                    : _searchController.text.isNotEmpty
-                                        ? IconButton(
-                                            icon: const Icon(Icons.clear),
-                                            onPressed: _clearSearch,
-                                          )
-                                        : null,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  suffixIcon: _isSearching
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2),
+                                        )
+                                      : _searchController.text.isNotEmpty
+                                          ? IconButton(
+                                              icon: const Icon(Icons.clear),
+                                              onPressed: _clearSearch,
+                                            )
+                                          : null,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
                                 ),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                onChanged: (value) {
+                                  debugPrint(
+                                      '🔍 Search text changed: "$value"');
+                                  if (value.isEmpty) {
+                                    setState(() {
+                                      _showSearchSuggestions = false;
+                                      _searchSuggestions.clear();
+                                    });
+                                  } else if (value.length >= 2) {
+                                    _fetchLiveSuggestions(value);
+                                  }
+                                },
+                                onSubmitted: _searchPlaces,
                               ),
+                            ),
+                            const SizedBox(width: 8),
+                            DropdownButton<int>(
+                              value: _selectedRadius,
+                              items: _radiusOptions.map((radius) {
+                                return DropdownMenuItem<int>(
+                                  value: radius,
+                                  child: Text(
+                                      '${radius >= 1000 ? (radius ~/ 1000).toString() + "km" : "$radius m"}'),
+                                );
+                              }).toList(),
                               onChanged: (value) {
-                                debugPrint('🔍 Search text changed: "$value"');
-                                if (value.isEmpty) {
+                                if (value != null) {
                                   setState(() {
-                                    _showSearchSuggestions = false;
-                                    _searchSuggestions.clear();
+                                    _selectedRadius = value;
                                   });
-                                } else if (value.length >= 2) {
-                                  _fetchLiveSuggestions(value);
+                                  // Reload parks with new radius
+                                  _loadParksData();
                                 }
                               },
-                              onSubmitted: _searchPlaces,
+                              underline: Container(),
+                              style: Theme.of(context).textTheme.bodyMedium,
+                              icon: const Icon(Icons.circle, size: 16),
+                              dropdownColor:
+                                  Theme.of(context).colorScheme.surface,
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          DropdownButton<int>(
-                            value: _selectedRadius,
-                            items: _radiusOptions.map((radius) {
-                              return DropdownMenuItem<int>(
-                                value: radius,
-                                child: Text('${radius >= 1000 ? (radius ~/ 1000).toString() + "km" : "$radius m"}'),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              if (value != null) {
+                            const SizedBox(width: 8),
+                            AppButton(
+                              text: 'Search',
+                              onPressed: _isSearching
+                                  ? null
+                                  : () => _searchPlaces(_searchController.text),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Filter chips for place categories
+                      Container(
+                        height: 50,
+                        padding: const EdgeInsets.symmetric(vertical: 6.0),
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          children: [
+                            FilterChip(
+                              label: const Text('All',
+                                  style: TextStyle(fontSize: 13)),
+                              selected: _selectedCategory == null,
+                              onSelected: (selected) {
                                 setState(() {
-                                  _selectedRadius = value;
+                                  _selectedCategory = null;
                                 });
-                                // Reload parks with new radius
-                                _loadParksData();
-                              }
-                            },
-                            underline: Container(),
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            icon: const Icon(Icons.circle, size: 16),
-                            dropdownColor: Theme.of(context).colorScheme.surface,
-                          ),
-                          const SizedBox(width: 8),
-                          AppButton(
-                            text: 'Search',
-                            onPressed: _isSearching ? null : () => _searchPlaces(_searchController.text),
-                          ),
-                        ],
-                      ),
-                    ),
-                // Filter chips for place categories
-                Container(
-                  height: 50,
-                  padding: const EdgeInsets.symmetric(vertical: 6.0),
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    children: [
-                      FilterChip(
-                        label: const Text('All', style: TextStyle(fontSize: 13)),
-                        selected: _selectedCategory == null,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedCategory = null;
-                          });
-                          _applyFilter();
-                        },
-                        showCheckmark: false,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      ),
-                      const SizedBox(width: 8),
-                      FilterChip(
-                        label: Text(
-                          '${PlaceCategory.park.icon} Parks',
-                          style: const TextStyle(fontSize: 13),
+                                _applyFilter();
+                              },
+                              showCheckmark: false,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                            ),
+                            const SizedBox(width: 8),
+                            FilterChip(
+                              label: Text(
+                                '${PlaceCategory.park.icon} Parks',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              selected: _selectedCategory == PlaceCategory.park,
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedCategory = PlaceCategory.park;
+                                });
+                                _applyFilter();
+                              },
+                              showCheckmark: false,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                            ),
+                            const SizedBox(width: 8),
+                            FilterChip(
+                              label: Text(
+                                '${PlaceCategory.restaurant.icon} Cafes',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              selected:
+                                  _selectedCategory == PlaceCategory.restaurant,
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedCategory = PlaceCategory.restaurant;
+                                });
+                                _applyFilter();
+                              },
+                              showCheckmark: false,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                            ),
+                            const SizedBox(width: 8),
+                            FilterChip(
+                              label: Text(
+                                '${PlaceCategory.petStore.icon} Stores',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              selected:
+                                  _selectedCategory == PlaceCategory.petStore,
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedCategory = PlaceCategory.petStore;
+                                });
+                                _applyFilter();
+                              },
+                              showCheckmark: false,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                            ),
+                            const SizedBox(width: 8),
+                            FilterChip(
+                              label: Text(
+                                '${PlaceCategory.veterinary.icon} Vets',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              selected:
+                                  _selectedCategory == PlaceCategory.veterinary,
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedCategory = PlaceCategory.veterinary;
+                                });
+                                _applyFilter();
+                              },
+                              showCheckmark: false,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                            ),
+                          ],
                         ),
-                        selected: _selectedCategory == PlaceCategory.park,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedCategory = PlaceCategory.park;
-                          });
-                          _applyFilter();
-                        },
-                        showCheckmark: false,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       ),
-                      const SizedBox(width: 8),
-                      FilterChip(
-                        label: Text(
-                          '${PlaceCategory.restaurant.icon} Cafes',
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        selected: _selectedCategory == PlaceCategory.restaurant,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedCategory = PlaceCategory.restaurant;
-                          });
-                          _applyFilter();
-                        },
-                        showCheckmark: false,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      ),
-                      const SizedBox(width: 8),
-                      FilterChip(
-                        label: Text(
-                          '${PlaceCategory.petStore.icon} Stores',
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        selected: _selectedCategory == PlaceCategory.petStore,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedCategory = PlaceCategory.petStore;
-                          });
-                          _applyFilter();
-                        },
-                        showCheckmark: false,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      ),
-                      const SizedBox(width: 8),
-                      FilterChip(
-                        label: Text(
-                          '${PlaceCategory.veterinary.icon} Vets',
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        selected: _selectedCategory == PlaceCategory.veterinary,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedCategory = PlaceCategory.veterinary;
-                          });
-                          _applyFilter();
-                        },
-                        showCheckmark: false,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      ),
-                    ],
-                  ),
-                ),
-                // Map with overlaid "Search this area" button
-                SizedBox(
-                  height: 300,
-                  child: Stack(
-                    children: [
-                      GoogleMap(
-                        initialCameraPosition: CameraPosition(
-                          target: _currentLocation ?? const LatLng(40.7829, -73.9654),
-                          zoom: 12,
-                        ),
-                        myLocationEnabled: true,
-                        myLocationButtonEnabled: false,
-                        markers: _markers,
-                        onMapCreated: (GoogleMapController controller) {
-                          _mapController = controller;
-                        },
-                      ),
-                      // "Search this area" button overlaid on map
-                      Positioned(
-                        top: 16,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: Material(
-                            elevation: 4,
-                            borderRadius: BorderRadius.circular(24),
-                            child: InkWell(
-                              onTap: _searchInArea,
-                              borderRadius: BorderRadius.circular(24),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.surface,
+                      // Map with overlaid "Search this area" button
+                      SizedBox(
+                        height: 300,
+                        child: Stack(
+                          children: [
+                            GoogleMap(
+                              initialCameraPosition: CameraPosition(
+                                target: _currentLocation ??
+                                    const LatLng(40.7829, -73.9654),
+                                zoom: 12,
+                              ),
+                              myLocationEnabled: true,
+                              myLocationButtonEnabled: false,
+                              markers: _markers,
+                              onMapCreated: (GoogleMapController controller) {
+                                _mapController = controller;
+                              },
+                            ),
+                            // "Search this area" button overlaid on map
+                            Positioned(
+                              top: 16,
+                              left: 0,
+                              right: 0,
+                              child: Center(
+                                child: Material(
+                                  elevation: 4,
                                   borderRadius: BorderRadius.circular(24),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.explore, size: 18, color: Theme.of(context).colorScheme.primary),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Search this area',
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: Theme.of(context).colorScheme.primary,
-                                        fontWeight: FontWeight.w600,
+                                  child: InkWell(
+                                    onTap: _searchInArea,
+                                    borderRadius: BorderRadius.circular(24),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .surface,
+                                        borderRadius: BorderRadius.circular(24),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.explore,
+                                              size: 18,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Search this area',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
+                                                ?.copyWith(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primary,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
+                      ),
+                      // Parks list
+                      Expanded(
+                        child: _showingSearchResults
+                            ? _buildSearchResultsList()
+                            : _buildParksList(),
                       ),
                     ],
                   ),
-                ),
-                    // Parks list
-                    Expanded(
-                      child: _showingSearchResults 
-                          ? _buildSearchResultsList() 
-                          : _buildParksList(),
-                    ),
-                  ],
-                ),
-                // Smart search suggestions overlay - positioned absolutely on top
-                if (_showSearchSuggestions)
-                  Positioned(
-                    top: 130, // Below search bar (CheckInBanner ~50 + SearchBar ~80)
-                    left: 16,
-                    right: 16,
-                    child: Material(
-                      elevation: 8,
-                      borderRadius: BorderRadius.circular(12),
-                      color: Theme.of(context).colorScheme.surface,
-                      child: Container(
-                        constraints: const BoxConstraints(maxHeight: 400),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-                            width: 1,
+                  // Smart search suggestions overlay - positioned absolutely on top
+                  if (_showSearchSuggestions)
+                    Positioned(
+                      top:
+                          130, // Below search bar (CheckInBanner ~50 + SearchBar ~80)
+                      left: 16,
+                      right: 16,
+                      child: Material(
+                        elevation: 8,
+                        borderRadius: BorderRadius.circular(12),
+                        color: Theme.of(context).colorScheme.surface,
+                        child: Container(
+                          constraints: const BoxConstraints(maxHeight: 400),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .outline
+                                  .withValues(alpha: 0.2),
+                              width: 1,
+                            ),
                           ),
-                        ),
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          padding: EdgeInsets.zero,
-                          itemCount: _searchSuggestions.length,
-                          itemBuilder: (context, index) {
-                            final suggestion = _searchSuggestions[index];
-                            return Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  debugPrint('🔍 Suggestion tapped: $suggestion');
-                                  setState(() {
-                                    _searchController.text = suggestion;
-                                    _showSearchSuggestions = false;
-                                  });
-                                  _searchFocusNode.unfocus();
-                                  _searchPlaces(suggestion);
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-                                  decoration: BoxDecoration(
-                                    border: index < _searchSuggestions.length - 1
-                                        ? Border(
-                                            bottom: BorderSide(
-                                              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
-                                              width: 1,
-                                            ),
-                                          )
-                                        : null,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.search,
-                                        size: 20,
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          suggestion,
-                                          style: Theme.of(context).textTheme.bodyMedium,
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            padding: EdgeInsets.zero,
+                            itemCount: _searchSuggestions.length,
+                            itemBuilder: (context, index) {
+                              final suggestion = _searchSuggestions[index];
+                              return Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    debugPrint(
+                                        '🔍 Suggestion tapped: $suggestion');
+                                    setState(() {
+                                      _searchController.text = suggestion;
+                                      _showSearchSuggestions = false;
+                                    });
+                                    _searchFocusNode.unfocus();
+                                    _searchPlaces(suggestion);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16.0, vertical: 14.0),
+                                    decoration: BoxDecoration(
+                                      border:
+                                          index < _searchSuggestions.length - 1
+                                              ? Border(
+                                                  bottom: BorderSide(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .outline
+                                                        .withValues(alpha: 0.1),
+                                                    width: 1,
+                                                  ),
+                                                )
+                                              : null,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.search,
+                                          size: 20,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
                                         ),
-                                      ),
-                                      Icon(
-                                        Icons.arrow_forward,
-                                        size: 16,
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            suggestion,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium,
+                                          ),
+                                        ),
+                                        Icon(
+                                          Icons.arrow_forward,
+                                          size: 16,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant
+                                              .withValues(alpha: 0.5),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-      floatingActionButton: _activeCheckIn == null 
+      floatingActionButton: _activeCheckIn == null
           ? AnimatedSlide(
               duration: const Duration(milliseconds: 200),
               offset: _showFAB ? Offset.zero : const Offset(0, 2),
@@ -1022,14 +1103,23 @@ class _MapScreenState extends State<MapScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(park['name'] ?? 'Unknown Park',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                        Text(
+                          park['name'] ?? 'Unknown Park',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 2),
-                        Text(park['address'] ?? '',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
+                        Text(
+                          park['address'] ?? '',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
+                                  ),
                         ),
                       ],
                     ),
@@ -1056,7 +1146,7 @@ class _MapScreenState extends State<MapScreen> {
       setState(() {
         _activeCheckIn = checkIn;
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Woof! I\'m checked in at ${park['name']}! 🐕'),
@@ -1065,7 +1155,7 @@ class _MapScreenState extends State<MapScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
-      
+
       // Refresh dog counts
       _loadParksData();
     } else {
@@ -1080,7 +1170,7 @@ class _MapScreenState extends State<MapScreen> {
 
   Widget _buildParksList() {
     final allParks = [..._featuredParks, ..._nearbyParks];
-    
+
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.all(16),
@@ -1089,12 +1179,13 @@ class _MapScreenState extends State<MapScreen> {
         final park = allParks[index];
         final isFeatured = index < _featuredParks.length;
         final dogCount = _dogCounts[park['id']] ?? 0;
-        
+
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: isFeatured ? Colors.orange : const Color(0xFF2E7D32),
+              backgroundColor:
+                  isFeatured ? Colors.orange : const Color(0xFF2E7D32),
               child: Icon(
                 isFeatured ? Icons.star : Icons.park,
                 color: Colors.white,
@@ -1108,11 +1199,13 @@ class _MapScreenState extends State<MapScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (park['distance'] != null)
-                  Text('${(park['distance'] as double).toStringAsFixed(1)} km away'),
+                  Text(
+                      '${(park['distance'] as double).toStringAsFixed(1)} km away'),
                 if (dogCount > 0)
                   Container(
                     margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -1129,7 +1222,9 @@ class _MapScreenState extends State<MapScreen> {
               ],
             ),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => isFeatured ? _showFeaturedParkDetails(park) : _showParkDetails(park),
+            onTap: () => isFeatured
+                ? _showFeaturedParkDetails(park)
+                : _showParkDetails(park),
           ),
         );
       },
@@ -1140,12 +1235,15 @@ class _MapScreenState extends State<MapScreen> {
     // Filter results based on selected category
     final filteredResults = _selectedCategory == null
         ? _searchResults
-        : _searchResults.where((place) => place.category == _selectedCategory).toList();
-    
+        : _searchResults
+            .where((place) => place.category == _selectedCategory)
+            .toList();
+
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.all(16),
-      itemCount: filteredResults.length + (_nextPageToken != null ? 1 : 0), // +1 for Load More button
+      itemCount: filteredResults.length +
+          (_nextPageToken != null ? 1 : 0), // +1 for Load More button
       itemBuilder: (context, index) {
         // Load More button at the end
         if (index == filteredResults.length) {
@@ -1157,15 +1255,17 @@ class _MapScreenState extends State<MapScreen> {
                   : ElevatedButton.icon(
                       onPressed: _loadMoreResults,
                       icon: const Icon(Icons.expand_more),
-                      label: Text('Load More (${_searchResults.length} of up to 60)'),
+                      label: Text(
+                          'Load More (${_searchResults.length} of up to 60)'),
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
                       ),
                     ),
             ),
           );
         }
-        
+
         final place = filteredResults[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -1242,7 +1342,8 @@ class _MapScreenState extends State<MapScreen> {
                           radius: 28,
                           child: Text(
                             place.category.icon,
-                            style: const TextStyle(fontSize: 24, color: Colors.white),
+                            style: const TextStyle(
+                                fontSize: 24, color: Colors.white),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1252,32 +1353,39 @@ class _MapScreenState extends State<MapScreen> {
                             children: [
                               Text(
                                 place.name,
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 place.category.displayName,
-                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                  color: Colors.blue,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelMedium
+                                    ?.copyWith(
+                                      color: Colors.blue,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
                             ],
                           ),
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Rating and status row
                     Row(
                       children: [
                         if (place.rating > 0) ...[
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
                               color: Colors.amber.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20),
@@ -1285,19 +1393,24 @@ class _MapScreenState extends State<MapScreen> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.star, color: Colors.amber, size: 18),
+                                const Icon(Icons.star,
+                                    color: Colors.amber, size: 18),
                                 const SizedBox(width: 4),
                                 Text(
                                   place.rating.toStringAsFixed(1),
-                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleSmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                 ),
                                 if (place.userRatingsTotal > 0) ...[
                                   const SizedBox(width: 4),
                                   Text(
                                     '(${place.userRatingsTotal})',
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
                                   ),
                                 ],
                               ],
@@ -1306,16 +1419,21 @@ class _MapScreenState extends State<MapScreen> {
                           const SizedBox(width: 12),
                         ],
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: place.isOpen ? Colors.green.withValues(alpha: 0.15) : Colors.red.withValues(alpha: 0.15),
+                            color: place.isOpen
+                                ? Colors.green.withValues(alpha: 0.15)
+                                : Colors.red.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                place.isOpen ? Icons.check_circle : Icons.cancel,
+                                place.isOpen
+                                    ? Icons.check_circle
+                                    : Icons.cancel,
                                 color: place.isOpen ? Colors.green : Colors.red,
                                 size: 16,
                               ),
@@ -1323,7 +1441,8 @@ class _MapScreenState extends State<MapScreen> {
                               Text(
                                 place.isOpen ? 'Open Now' : 'Closed',
                                 style: TextStyle(
-                                  color: place.isOpen ? Colors.green : Colors.red,
+                                  color:
+                                      place.isOpen ? Colors.green : Colors.red,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 13,
                                 ),
@@ -1333,11 +1452,11 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 20),
                     const Divider(),
                     const SizedBox(height: 16),
-                    
+
                     // Address section
                     _buildInfoRow(
                       context,
@@ -1345,9 +1464,9 @@ class _MapScreenState extends State<MapScreen> {
                       'Address',
                       place.address,
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Distance section
                     _buildInfoRow(
                       context,
@@ -1355,9 +1474,9 @@ class _MapScreenState extends State<MapScreen> {
                       'Distance',
                       place.distanceText,
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Opening hours (mock data for now)
                     _buildInfoRow(
                       context,
@@ -1365,9 +1484,9 @@ class _MapScreenState extends State<MapScreen> {
                       'Hours',
                       'Mon-Fri: 8:00 AM - 6:00 PM\nSat-Sun: 9:00 AM - 5:00 PM',
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Phone (mock data)
                     InkWell(
                       onTap: () {
@@ -1382,9 +1501,9 @@ class _MapScreenState extends State<MapScreen> {
                         isLink: true,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Website (mock data)
                     InkWell(
                       onTap: () {
@@ -1399,20 +1518,20 @@ class _MapScreenState extends State<MapScreen> {
                         isLink: true,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 24),
                     const Divider(),
                     const SizedBox(height: 16),
-                    
+
                     // Reviews section
                     Text(
                       'Reviews',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     const SizedBox(height: 12),
-                    
+
                     // Mock reviews
                     _buildReviewCard(
                       context,
@@ -1429,9 +1548,9 @@ class _MapScreenState extends State<MapScreen> {
                       'Nice place, good atmosphere. Would recommend for dog owners!',
                       '1 week ago',
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Action buttons
                     Row(
                       children: [
@@ -1440,7 +1559,8 @@ class _MapScreenState extends State<MapScreen> {
                             onPressed: () {
                               Navigator.pop(context);
                               _checkInAtPark({
-                                'id': 'place_${place.latitude}_${place.longitude}',
+                                'id':
+                                    'place_${place.latitude}_${place.longitude}',
                                 'name': place.name,
                                 'latitude': place.latitude,
                                 'longitude': place.longitude,
@@ -1460,7 +1580,8 @@ class _MapScreenState extends State<MapScreen> {
                             onPressed: () {
                               final uri = Uri.parse(
                                   'https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}');
-                              launchUrl(uri, mode: LaunchMode.externalApplication);
+                              launchUrl(uri,
+                                  mode: LaunchMode.externalApplication);
                             },
                             icon: const Icon(Icons.directions),
                             label: const Text('Directions'),
@@ -1481,8 +1602,10 @@ class _MapScreenState extends State<MapScreen> {
       },
     );
   }
-  
-  Widget _buildInfoRow(BuildContext context, IconData icon, String label, String value, {bool isLink = false}) {
+
+  Widget _buildInfoRow(
+      BuildContext context, IconData icon, String label, String value,
+      {bool isLink = false}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1495,17 +1618,18 @@ class _MapScreenState extends State<MapScreen> {
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
               const SizedBox(height: 4),
               Text(
                 value,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: isLink ? Theme.of(context).colorScheme.primary : null,
-                  decoration: isLink ? TextDecoration.underline : null,
-                ),
+                      color:
+                          isLink ? Theme.of(context).colorScheme.primary : null,
+                      decoration: isLink ? TextDecoration.underline : null,
+                    ),
               ),
             ],
           ),
@@ -1513,12 +1637,16 @@ class _MapScreenState extends State<MapScreen> {
       ],
     );
   }
-  
-  Widget _buildReviewCard(BuildContext context, String author, int rating, String text, String time) {
+
+  Widget _buildReviewCard(BuildContext context, String author, int rating,
+      String text, String time) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        color: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -1531,7 +1659,8 @@ class _MapScreenState extends State<MapScreen> {
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 child: Text(
                   author[0],
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1542,8 +1671,8 @@ class _MapScreenState extends State<MapScreen> {
                     Text(
                       author,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                     Row(
                       children: [
@@ -1557,9 +1686,12 @@ class _MapScreenState extends State<MapScreen> {
                         const SizedBox(width: 8),
                         Text(
                           time,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
                         ),
                       ],
                     ),
@@ -1587,7 +1719,7 @@ class _MapScreenState extends State<MapScreen> {
       ),
       builder: (context) {
         final dogCount = _dogCounts[park['id']] ?? 0;
-        
+
         return Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -1612,9 +1744,10 @@ class _MapScreenState extends State<MapScreen> {
                         const SizedBox(height: 4),
                         Text(
                           'Dog Park',
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: const Color(0xFF2E7D32),
-                          ),
+                          style:
+                              Theme.of(context).textTheme.labelMedium?.copyWith(
+                                    color: const Color(0xFF2E7D32),
+                                  ),
                         ),
                       ],
                     ),
@@ -1630,7 +1763,6 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -1642,7 +1774,7 @@ class _MapScreenState extends State<MapScreen> {
                     const Icon(Icons.pets, color: Color(0xFF2E7D32)),
                     const SizedBox(width: 8),
                     Text(
-                      dogCount > 0 
+                      dogCount > 0
                           ? '$dogCount dogs currently active at this park'
                           : 'No dogs currently at this park',
                       style: const TextStyle(color: Color(0xFF2E7D32)),
@@ -1650,9 +1782,7 @@ class _MapScreenState extends State<MapScreen> {
                   ],
                 ),
               ),
-              
               const SizedBox(height: 24),
-              
               Row(
                 children: [
                   Expanded(
@@ -1700,7 +1830,7 @@ class _MapScreenState extends State<MapScreen> {
       ),
       builder: (context) {
         final dogCount = _dogCounts[park['id']] ?? 0;
-        
+
         return DraggableScrollableSheet(
           initialChildSize: 0.6,
           maxChildSize: 0.9,
@@ -1732,9 +1862,12 @@ class _MapScreenState extends State<MapScreen> {
                             const SizedBox(height: 4),
                             Text(
                               'Featured Dog Park',
-                              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                color: Colors.orange,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelMedium
+                                  ?.copyWith(
+                                    color: Colors.orange,
+                                  ),
                             ),
                           ],
                         ),
@@ -1749,9 +1882,9 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Rating and info
                   if (park['rating'] != null) ...[
                     Row(
@@ -1766,7 +1899,7 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                     const SizedBox(width: 16),
                   ],
-                  
+
                   // Dog count
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -1779,7 +1912,7 @@ class _MapScreenState extends State<MapScreen> {
                         const Icon(Icons.pets, color: Color(0xFF2E7D32)),
                         const SizedBox(width: 8),
                         Text(
-                          dogCount > 0 
+                          dogCount > 0
                               ? '$dogCount dogs currently active'
                               : 'No dogs currently at this park',
                           style: const TextStyle(color: Color(0xFF2E7D32)),
@@ -1787,7 +1920,7 @@ class _MapScreenState extends State<MapScreen> {
                       ],
                     ),
                   ),
-                  
+
                   // Description
                   if (park['description'] != null) ...[
                     const SizedBox(height: 16),
@@ -1801,9 +1934,10 @@ class _MapScreenState extends State<MapScreen> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
-                  
+
                   // Amenities
-                  if (park['amenities'] != null && (park['amenities'] as List).isNotEmpty) ...[
+                  if (park['amenities'] != null &&
+                      (park['amenities'] as List).isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Text(
                       'Amenities',
@@ -1815,11 +1949,15 @@ class _MapScreenState extends State<MapScreen> {
                       runSpacing: 8,
                       children: (park['amenities'] as List<dynamic>)
                           .map((amenity) => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                                  color: const Color(0xFF2E7D32)
+                                      .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: const Color(0xFF2E7D32).withValues(alpha: 0.3)),
+                                  border: Border.all(
+                                      color: const Color(0xFF2E7D32)
+                                          .withValues(alpha: 0.3)),
                                 ),
                                 child: Text(
                                   amenity.toString(),
@@ -1833,9 +1971,9 @@ class _MapScreenState extends State<MapScreen> {
                           .toList(),
                     ),
                   ],
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Action buttons
                   Row(
                     children: [
@@ -1851,7 +1989,8 @@ class _MapScreenState extends State<MapScreen> {
                           onPressed: () {
                             final uri = Uri.parse(
                                 'https://www.google.com/maps/search/?api=1&query=${park['latitude']},${park['longitude']}');
-                            launchUrl(uri, mode: LaunchMode.externalApplication);
+                            launchUrl(uri,
+                                mode: LaunchMode.externalApplication);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF2E7D32),

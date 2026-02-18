@@ -33,14 +33,16 @@ class EventFilters {
   }
 }
 
-final eventFiltersProvider = StateProvider<EventFilters>((ref) => EventFilters());
+final eventFiltersProvider =
+    StateProvider<EventFilters>((ref) => EventFilters());
 
 // Provider for fetching events based on map viewport (reusing map viewport for now, or could use user location)
 // For the list view, we might want events near the user, not just in the map viewport.
 // But let's assume we want events near the user.
 final nearbyEventsProvider = FutureProvider<List<Event>>((ref) async {
   final repository = ref.watch(eventRepositoryProvider);
-  final viewport = ref.watch(mapViewportProvider); // Use map viewport as a proxy for "nearby" if map is centered on user
+  final viewport = ref.watch(
+      mapViewportProvider); // Use map viewport as a proxy for "nearby" if map is centered on user
   final filters = ref.watch(eventFiltersProvider);
 
   if (viewport.bounds == null) {

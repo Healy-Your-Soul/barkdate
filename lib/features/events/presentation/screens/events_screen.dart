@@ -53,10 +53,12 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                               maxWidth: MediaQuery.of(context).size.width,
                             ),
                             shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                              borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(20)),
                             ),
                             builder: (context) => Container(
-                              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                              padding:
+                                  const EdgeInsets.fromLTRB(24, 24, 24, 32),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,18 +74,29 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 24),
-                                  const Text('Filter Events', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                  const Text('Filter Events',
+                                      style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold)),
                                   const SizedBox(height: 16),
                                   Wrap(
                                     spacing: 8,
                                     runSpacing: 8,
-                                    children: ['All', 'This Weekend', 'Nearby', 'Free', 'My Events'].map((filter) {
-                                      final isSelected = _selectedFilter == filter;
+                                    children: [
+                                      'All',
+                                      'This Weekend',
+                                      'Nearby',
+                                      'Free',
+                                      'My Events'
+                                    ].map((filter) {
+                                      final isSelected =
+                                          _selectedFilter == filter;
                                       return ChoiceChip(
                                         label: Text(filter),
                                         selected: isSelected,
                                         onSelected: (selected) {
-                                          setState(() => _selectedFilter = filter);
+                                          setState(
+                                              () => _selectedFilter = filter);
                                           Navigator.pop(context);
                                         },
                                       );
@@ -109,7 +122,13 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
             ),
             const SizedBox(height: 24),
             FilterTabs(
-              tabs: const ['All', 'This Weekend', 'Nearby', 'Free', 'My Events'],
+              tabs: const [
+                'All',
+                'This Weekend',
+                'Nearby',
+                'Free',
+                'My Events'
+              ],
               selectedTab: _selectedFilter,
               onTabSelected: (tab) {
                 setState(() => _selectedFilter = tab);
@@ -121,23 +140,29 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                 data: (events) {
                   // Apply filter logic based on selected tab
                   List<Event> filteredEvents = events;
-                  
+
                   switch (_selectedFilter) {
                     case 'This Weekend':
                       final now = DateTime.now();
-                      final saturday = now.add(Duration(days: DateTime.saturday - now.weekday));
-                      final weekendStart = DateTime(saturday.year, saturday.month, saturday.day);
-                      final weekendEnd = weekendStart.add(const Duration(days: 2));
-                      filteredEvents = events.where((e) =>
-                        e.startTime.isAfter(weekendStart.subtract(const Duration(days: 1))) &&
-                        e.startTime.isBefore(weekendEnd)
-                      ).toList();
+                      final saturday = now
+                          .add(Duration(days: DateTime.saturday - now.weekday));
+                      final weekendStart =
+                          DateTime(saturday.year, saturday.month, saturday.day);
+                      final weekendEnd =
+                          weekendStart.add(const Duration(days: 2));
+                      filteredEvents = events
+                          .where((e) =>
+                              e.startTime.isAfter(weekendStart
+                                  .subtract(const Duration(days: 1))) &&
+                              e.startTime.isBefore(weekendEnd))
+                          .toList();
                       break;
                     case 'Nearby':
                       // For now, show events that have coordinates (would need user location for proper distance calc)
-                      filteredEvents = events.where((e) => 
-                        e.latitude != null && e.longitude != null
-                      ).toList();
+                      filteredEvents = events
+                          .where(
+                              (e) => e.latitude != null && e.longitude != null)
+                          .toList();
                       break;
                     case 'Free':
                       filteredEvents = events.where((e) => e.isFree).toList();
@@ -145,7 +170,9 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                     case 'My Events':
                       final userId = SupabaseConfig.auth.currentUser?.id;
                       if (userId != null) {
-                        filteredEvents = events.where((e) => e.organizerId == userId).toList();
+                        filteredEvents = events
+                            .where((e) => e.organizerId == userId)
+                            .toList();
                       } else {
                         filteredEvents = [];
                       }
@@ -153,7 +180,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                     case 'All':
                     default:
                       filteredEvents = events;
-                  } 
+                  }
 
                   if (filteredEvents.isEmpty) {
                     return Center(
@@ -162,7 +189,8 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                         child: CuteEmptyState(
                           icon: Icons.event_busy,
                           title: 'No upcoming events',
-                          message: 'There are no events happening nearby right now. Be the first to create one!',
+                          message:
+                              'There are no events happening nearby right now. Be the first to create one!',
                           actionLabel: 'Create New Event',
                           onAction: () {
                             context.push('/create-event');
@@ -218,7 +246,8 @@ class EventCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 color: Colors.grey[200],
                 image: const DecorationImage(
-                  image: NetworkImage('https://via.placeholder.com/400x200'), // Placeholder
+                  image: NetworkImage(
+                      'https://via.placeholder.com/400x200'), // Placeholder
                   fit: BoxFit.cover,
                 ),
               ),
@@ -247,7 +276,7 @@ class EventCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            
+
             // Header Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -260,33 +289,39 @@ class EventCard extends StatelessWidget {
                   children: [
                     const Icon(Icons.star, size: 14, color: Colors.black),
                     const SizedBox(width: 4),
-                    Text('4.8', style: AppTypography.bodySmall().copyWith(fontWeight: FontWeight.bold)),
-                    Text(' (24)', style: AppTypography.bodySmall().copyWith(color: Colors.grey[600])),
+                    Text('4.8',
+                        style: AppTypography.bodySmall()
+                            .copyWith(fontWeight: FontWeight.bold)),
+                    Text(' (24)',
+                        style: AppTypography.bodySmall()
+                            .copyWith(color: Colors.grey[600])),
                   ],
                 ),
               ],
             ),
             const SizedBox(height: 4),
-            
+
             // Details
             Text(
               '${event.formattedDate} · ${event.category}',
-              style: AppTypography.bodyMedium().copyWith(color: Colors.grey[600]),
+              style:
+                  AppTypography.bodyMedium().copyWith(color: Colors.grey[600]),
             ),
             const SizedBox(height: 4),
             Text(
               'Location details unavailable', // TODO: Fetch place name
-              style: AppTypography.bodyMedium().copyWith(color: Colors.grey[600]),
+              style:
+                  AppTypography.bodyMedium().copyWith(color: Colors.grey[600]),
             ),
             const SizedBox(height: 8),
-            
+
             // Price/Action
             RichText(
               text: TextSpan(
                 style: AppTypography.bodyMedium().copyWith(color: Colors.black),
                 children: [
                   TextSpan(
-                    text: 'Free', 
+                    text: 'Free',
                     style: AppTypography.h3().copyWith(fontSize: 16),
                   ),
                   const TextSpan(text: ' entry'),

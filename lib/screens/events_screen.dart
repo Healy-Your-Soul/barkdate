@@ -48,11 +48,11 @@ class _EventsScreenState extends State<EventsScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
+
     // Only load once when screen becomes visible
     if (!_hasInitialized) {
       _hasInitialized = true;
-      
+
       // Use post-frame callback to ensure screen is ready
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadEvents();
@@ -82,24 +82,30 @@ class _EventsScreenState extends State<EventsScreen>
 
       // Check cache first and show immediately (Option A)
       final cachedAllEvents = CacheService().getCachedEventList('all_events');
-      final cachedMyEvents = CacheService().getCachedEventList('my_events_${user.id}');
-      final cachedHostingEvents = CacheService().getCachedEventList('hosting_events_${user.id}');
-      
-      if (cachedAllEvents != null || cachedMyEvents != null || cachedHostingEvents != null) {
+      final cachedMyEvents =
+          CacheService().getCachedEventList('my_events_${user.id}');
+      final cachedHostingEvents =
+          CacheService().getCachedEventList('hosting_events_${user.id}');
+
+      if (cachedAllEvents != null ||
+          cachedMyEvents != null ||
+          cachedHostingEvents != null) {
         setState(() {
-          if (cachedAllEvents != null) _allEvents = cachedAllEvents.cast<Event>();
+          if (cachedAllEvents != null)
+            _allEvents = cachedAllEvents.cast<Event>();
           if (cachedMyEvents != null) _myEvents = cachedMyEvents.cast<Event>();
-          if (cachedHostingEvents != null) _hostingEvents = cachedHostingEvents.cast<Event>();
+          if (cachedHostingEvents != null)
+            _hostingEvents = cachedHostingEvents.cast<Event>();
           _isLoading = false;
         });
       }
 
       // Load all events
       final allEvents = await EventService.getUpcomingEvents();
-      
+
       // Load user's participating events
       final myEvents = await EventService.getUserParticipatingEvents(user.id);
-      
+
       // Load user's hosting events
       final hostingEvents = await EventService.getUserOrganizedEvents(user.id);
 
@@ -131,7 +137,8 @@ class _EventsScreenState extends State<EventsScreen>
         Event(
           id: 'sample-1',
           title: 'Puppy Playtime at Central Park',
-          description: 'Join us for an energetic play session designed specifically for puppies under 1 year old. Great for socialization!',
+          description:
+              'Join us for an energetic play session designed specifically for puppies under 1 year old. Great for socialization!',
           organizerId: 'sample-organizer-1',
           organizerType: 'user',
           organizerName: 'Sarah Johnson',
@@ -155,7 +162,8 @@ class _EventsScreenState extends State<EventsScreen>
         Event(
           id: 'sample-2',
           title: 'Basic Obedience Training Class',
-          description: 'Learn fundamental commands like sit, stay, come, and heel. Perfect for dogs of all ages.',
+          description:
+              'Learn fundamental commands like sit, stay, come, and heel. Perfect for dogs of all ages.',
           organizerId: 'sample-organizer-2',
           organizerType: 'professional',
           organizerName: 'Pawsitive Training Center',
@@ -179,7 +187,8 @@ class _EventsScreenState extends State<EventsScreen>
         Event(
           id: 'sample-3',
           title: 'Luna\'s 3rd Birthday Bash!',
-          description: 'Come celebrate Luna\'s birthday with cake, treats, and lots of playtime! All dogs welcome.',
+          description:
+              'Come celebrate Luna\'s birthday with cake, treats, and lots of playtime! All dogs welcome.',
           organizerId: 'sample-organizer-3',
           organizerType: 'user',
           organizerName: 'Mike Chen',
@@ -211,9 +220,10 @@ class _EventsScreenState extends State<EventsScreen>
     if (_selectedCategory == null || _selectedCategory == 'All') {
       return _allEvents;
     }
-    return _allEvents.where((event) => 
-      event.category.toLowerCase() == _selectedCategory!.toLowerCase()
-    ).toList();
+    return _allEvents
+        .where((event) =>
+            event.category.toLowerCase() == _selectedCategory!.toLowerCase())
+        .toList();
   }
 
   @override
@@ -223,9 +233,9 @@ class _EventsScreenState extends State<EventsScreen>
         title: Text(
           'Events',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
         ),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         elevation: 0,
@@ -244,7 +254,8 @@ class _EventsScreenState extends State<EventsScreen>
             ),
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const CreateEventScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const CreateEventScreen()),
             ).then((_) => _loadEvents()),
           ),
         ],
@@ -309,7 +320,7 @@ class _EventsScreenState extends State<EventsScreen>
                     itemBuilder: (context, index) {
                       final category = _categories[index];
                       final isSelected = _selectedCategory == category;
-                      
+
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: FilterChip(
@@ -328,7 +339,7 @@ class _EventsScreenState extends State<EventsScreen>
               ],
             ),
           ),
-          
+
           // Events list
           Expanded(
             child: ListView.builder(
@@ -369,21 +380,25 @@ class _EventsScreenState extends State<EventsScreen>
             Icon(
               Icons.event_busy,
               size: 64,
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Text(
               'No events yet',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               'Browse events and join some fun activities!',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
+                  ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -488,15 +503,18 @@ class _EventsScreenState extends State<EventsScreen>
           Text(
             'Failed to load events',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+                  fontWeight: FontWeight.w600,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             _error ?? 'Unknown error occurred',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -542,8 +560,8 @@ class _EventsScreenState extends State<EventsScreen>
             Text(
               'Filter Events',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             // Filter chips

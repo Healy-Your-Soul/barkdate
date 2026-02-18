@@ -24,7 +24,8 @@ class _FeedFilterSheetState extends ConsumerState<FeedFilterSheet> {
     super.initState();
     final currentFilter = ref.read(feedFilterProvider);
     _maxDistance = currentFilter.maxDistance;
-    _ageRange = RangeValues(currentFilter.minAge.toDouble(), currentFilter.maxAge.toDouble());
+    _ageRange = RangeValues(
+        currentFilter.minAge.toDouble(), currentFilter.maxAge.toDouble());
     _selectedSizes = List.from(currentFilter.sizes);
     _selectedGenders = List.from(currentFilter.genders);
   }
@@ -52,7 +53,7 @@ class _FeedFilterSheetState extends ConsumerState<FeedFilterSheet> {
   @override
   Widget build(BuildContext context) {
     const greenColor = Color(0xFF4CAF50);
-    
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: const BoxDecoration(
@@ -98,7 +99,8 @@ class _FeedFilterSheetState extends ConsumerState<FeedFilterSheet> {
                 width: 60,
                 child: Text(
                   '${_maxDistance.toInt()} km',
-                  style: AppTypography.bodyMedium().copyWith(fontWeight: FontWeight.w600),
+                  style: AppTypography.bodyMedium()
+                      .copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -128,7 +130,8 @@ class _FeedFilterSheetState extends ConsumerState<FeedFilterSheet> {
                 width: 60,
                 child: Text(
                   '${_ageRange.start.toInt()}-${_ageRange.end.toInt()} yrs',
-                  style: AppTypography.bodySmall().copyWith(fontWeight: FontWeight.w600),
+                  style: AppTypography.bodySmall()
+                      .copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
             ],

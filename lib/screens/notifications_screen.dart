@@ -37,7 +37,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final currentUser = SupabaseConfig.auth.currentUser;
     if (currentUser == null) return;
 
-    _notifStream = notif_service.NotificationService.streamUserNotifications(currentUser.id);
+    _notifStream = notif_service.NotificationService.streamUserNotifications(
+        currentUser.id);
     _notifStream!.listen((rows) {
       if (!mounted) return;
       final fresh = rows.map((m) => BarkDateNotification.fromMap(m)).toList();
@@ -62,9 +63,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         title: Text(
           'Notifications',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
         ),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         elevation: 0,
@@ -176,12 +177,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
 
       // Load real notifications from database
-      final allNotificationsData = await notif_service.NotificationService.getAllNotifications(currentUser.id);
-      
+      final allNotificationsData =
+          await notif_service.NotificationService.getAllNotifications(
+              currentUser.id);
+
       // Convert to BarkDateNotification objects
-      final notifications = allNotificationsData.map((data) => 
-        BarkDateNotification.fromMap(data)
-      ).toList();
+      final notifications = allNotificationsData
+          .map((data) => BarkDateNotification.fromMap(data))
+          .toList();
 
       // Only add sample notifications if there are no real ones
       if (notifications.isEmpty) {
@@ -247,8 +250,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           'organizer_dog_id': 'dog_max',
           'organizer_dog_name': 'Gigi',
           'location': 'Central Park Dog Run',
-          'scheduled_at': DateTime.now().add(const Duration(days: 1)).toIso8601String(),
-          'description': 'Let\'s have a fun playdate in the park! Our dogs can run around and play together.',
+          'scheduled_at':
+              DateTime.now().add(const Duration(days: 1)).toIso8601String(),
+          'description':
+              'Let\'s have a fun playdate in the park! Our dogs can run around and play together.',
         },
         isRead: false,
         createdAt: DateTime.now().subtract(const Duration(hours: 2)),
@@ -330,8 +335,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             Text(
               _error!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -352,7 +360,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             Icon(
               Icons.notifications_none,
               size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Text(
@@ -363,8 +374,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             Text(
               'When you get barks, playdate requests, or messages, they\'ll appear here!',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
+                  ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -374,7 +388,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     // Filter notifications based on selected view
     final filteredNotifications = _getFilteredNotifications();
-    
+
     switch (_selectedView) {
       case 'grouped':
         return _buildGroupedView();
@@ -396,7 +410,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           return NotificationTile(
             notification: notification,
             onTap: () => _handleNotificationTap(notification),
-            onActionPressed: (action) => _handleNotificationAction(notification, action),
+            onActionPressed: (action) =>
+                _handleNotificationAction(notification, action),
           );
         },
       ),
@@ -405,7 +420,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Widget _buildUnreadView(List<BarkDateNotification> notifications) {
     final unreadNotifications = notifications.where((n) => !n.isRead).toList();
-    
+
     if (unreadNotifications.isEmpty) {
       return Center(
         child: Column(
@@ -414,7 +429,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             Icon(
               Icons.mark_email_read,
               size: 64,
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Text(
@@ -425,8 +441,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             Text(
               'No unread notifications',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
+                  ),
             ),
           ],
         ),
@@ -443,7 +462,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           return NotificationTile(
             notification: notification,
             onTap: () => _handleNotificationTap(notification),
-            onActionPressed: (action) => _handleNotificationAction(notification, action),
+            onActionPressed: (action) =>
+                _handleNotificationAction(notification, action),
           );
         },
       ),
@@ -482,14 +502,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               Text(
                 group.title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
               ),
               const Spacer(),
               if (group.hasUnread)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primary,
                     borderRadius: BorderRadius.circular(12),
@@ -497,25 +518,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   child: Text(
                     '${group.unreadCount}',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                 ),
             ],
           ),
         ),
-        
+
         // Group notifications
-        ...group.notifications.map((notification) => 
-          NotificationTile(
+        ...group.notifications.map(
+          (notification) => NotificationTile(
             notification: notification,
             onTap: () => _handleNotificationTap(notification),
-            onActionPressed: (action) => _handleNotificationAction(notification, action),
+            onActionPressed: (action) =>
+                _handleNotificationAction(notification, action),
             showActions: true,
           ),
         ),
-        
+
         const SizedBox(height: 24),
       ],
     );
@@ -549,28 +571,32 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  List<NotificationGroup> _groupNotifications(List<BarkDateNotification> notifications) {
+  List<NotificationGroup> _groupNotifications(
+      List<BarkDateNotification> notifications) {
     final Map<String, List<BarkDateNotification>> grouped = {};
-    
+
     for (final notification in notifications) {
       final groupKey = _getNotificationGroupKey(notification.type);
       grouped.putIfAbsent(groupKey, () => []);
       grouped[groupKey]!.add(notification);
     }
-    
+
     // Sort each group by creation time (newest first)
     for (final group in grouped.values) {
       group.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     }
-    
+
     // Convert to NotificationGroup objects
-    return grouped.entries.map((entry) => 
-      NotificationGroup(
-        title: entry.key,
-        notifications: entry.value,
-      ),
-    ).toList()
-      ..sort((a, b) => b.notifications.first.createdAt.compareTo(a.notifications.first.createdAt));
+    return grouped.entries
+        .map(
+          (entry) => NotificationGroup(
+            title: entry.key,
+            notifications: entry.value,
+          ),
+        )
+        .toList()
+      ..sort((a, b) => b.notifications.first.createdAt
+          .compareTo(a.notifications.first.createdAt));
   }
 
   String _getNotificationGroupKey(NotificationType type) {
@@ -599,15 +625,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (currentUser != null) {
         await notif_service.NotificationService.markAllAsRead(currentUser.id);
       }
-      
+
       // Update local state
       setState(() {
-        _notifications = _notifications.map((notification) => 
-          notification.copyWith(isRead: true)
-        ).toList();
+        _notifications = _notifications
+            .map((notification) => notification.copyWith(isRead: true))
+            .toList();
         _notificationGroups = _groupNotifications(_notifications);
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -635,7 +661,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Clear All Notifications?'),
-        content: const Text('This will permanently delete all your notifications. This action cannot be undone.'),
+        content: const Text(
+            'This will permanently delete all your notifications. This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -661,13 +688,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             .delete()
             .eq('user_id', currentUser.id);
       }
-      
+
       // Update local state
       setState(() {
         _notifications = [];
         _notificationGroups = [];
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -701,20 +728,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case NotificationType.message:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => ChatDetailScreen(
-            recipientName: notification.metadata?['sender_name'] ?? 'Unknown',
-            dogName: 'Unknown',
-          )),
+          MaterialPageRoute(
+              builder: (_) => ChatDetailScreen(
+                    recipientName:
+                        notification.metadata?['sender_name'] ?? 'Unknown',
+                    dogName: 'Unknown',
+                  )),
         );
         break;
       case NotificationType.playdate:
         // Open Upcoming tab and attempt to highlight the playdate
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => PlaydatesScreen(
-            initialTabIndex: 1,
-            highlightPlaydateId: notification.relatedId,
-          )),
+          MaterialPageRoute(
+              builder: (_) => PlaydatesScreen(
+                    initialTabIndex: 1,
+                    highlightPlaydateId: notification.relatedId,
+                  )),
         );
         break;
       case NotificationType.social:
@@ -729,14 +759,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  Future<void> _openDogFromNotification(BarkDateNotification notification) async {
+  Future<void> _openDogFromNotification(
+      BarkDateNotification notification) async {
     try {
-      final dogId = notification.metadata?['from_dog_id'] ?? notification.relatedId;
+      final dogId =
+          notification.metadata?['from_dog_id'] ?? notification.relatedId;
       if (dogId == null) return;
 
       final row = await SupabaseConfig.client
           .from('dogs')
-          .select('id, name, breed, age, size, gender, bio, photo_urls, user_id, users(name)')
+          .select(
+              'id, name, breed, age, size, gender, bio, photo_urls, user_id, users(name)')
           .eq('id', dogId)
           .maybeSingle();
 
@@ -746,7 +779,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         id: row['id'],
         name: row['name'] ?? 'Dog',
         breed: row['breed'] ?? '',
-        age: (row['age'] is int) ? row['age'] as int : int.tryParse('${row['age'] ?? 0}') ?? 0,
+        age: (row['age'] is int)
+            ? row['age'] as int
+            : int.tryParse('${row['age'] ?? 0}') ?? 0,
         size: row['size'] ?? '',
         gender: row['gender'] ?? '',
         bio: row['bio'] ?? '',
@@ -768,7 +803,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  Future<void> _handleNotificationAction(BarkDateNotification notification, String action) async {
+  Future<void> _handleNotificationAction(
+      BarkDateNotification notification, String action) async {
     try {
       switch (action) {
         case 'accept_playdate':
@@ -779,19 +815,25 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         case 'reply_message':
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => ChatDetailScreen(
-              recipientName: notification.metadata?['sender_name'] ?? 'Unknown',
-              dogName: 'Unknown',
-            )),
+            MaterialPageRoute(
+                builder: (_) => ChatDetailScreen(
+                      recipientName:
+                          notification.metadata?['sender_name'] ?? 'Unknown',
+                      dogName: 'Unknown',
+                    )),
           );
           break;
         case 'start_chat':
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => ChatDetailScreen(
-              recipientName: notification.metadata?['other_user_name'] ?? 'Unknown',
-              dogName: notification.metadata?['other_dog_name'] ?? 'Unknown',
-            )),
+            MaterialPageRoute(
+                builder: (_) => ChatDetailScreen(
+                      recipientName:
+                          notification.metadata?['other_user_name'] ??
+                              'Unknown',
+                      dogName:
+                          notification.metadata?['other_dog_name'] ?? 'Unknown',
+                    )),
           );
           break;
         case 'schedule_playdate':
@@ -817,7 +859,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  Future<void> _showPlaydateResponseBottomSheet(BarkDateNotification notification) async {
+  Future<void> _showPlaydateResponseBottomSheet(
+      BarkDateNotification notification) async {
     final currentUser = SupabaseConfig.auth.currentUser;
     if (currentUser == null) return;
 
@@ -858,7 +901,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           },
         ),
       );
-      
     } catch (e) {
       debugPrint('Error showing playdate response: $e');
       if (mounted) {
@@ -872,13 +914,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  Future<void> _markNotificationAsRead(BarkDateNotification notification) async {
+  Future<void> _markNotificationAsRead(
+      BarkDateNotification notification) async {
     try {
       final currentUser = SupabaseConfig.auth.currentUser;
       if (currentUser != null) {
         await notif_service.NotificationService.markAsRead(notification.id);
       }
-      
+
       // Update local state
       setState(() {
         final index = _notifications.indexWhere((n) => n.id == notification.id);

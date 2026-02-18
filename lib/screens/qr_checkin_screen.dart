@@ -52,7 +52,8 @@ class _QrCheckInScreenState extends State<QrCheckInScreen> {
 
     // Validate and process the check-in
     final result = await QrCheckInService.processQrCheckIn(
-      qrData: 'https://barkdate.app/checkin?park=${widget.parkId}&code=${widget.code}',
+      qrData:
+          'https://barkdate.app/checkin?park=${widget.parkId}&code=${widget.code}',
     );
 
     if (mounted) {

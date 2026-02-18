@@ -19,7 +19,9 @@ class PlaydatesScreen extends StatefulWidget {
   final int? initialTabIndex; // 0=Requests, 1=Upcoming, 2=Past
   final String? highlightPlaydateId;
 
-  const PlaydatesScreen({Key? key, this.initialTabIndex, this.highlightPlaydateId}) : super(key: key);
+  const PlaydatesScreen(
+      {Key? key, this.initialTabIndex, this.highlightPlaydateId})
+      : super(key: key);
 
   @override
   State<PlaydatesScreen> createState() => _PlaydatesScreenState();
@@ -31,8 +33,10 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
   List<Map<String, dynamic>> _upcomingPlaydates = [];
   List<Map<String, dynamic>> _pastPlaydates = [];
   List<Map<String, dynamic>> _cancelledPlaydates = [];
-  List<Map<String, dynamic>> _pendingRequests = []; // Incoming requests (where user is invitee)
-  List<Map<String, dynamic>> _sentRequests = []; // Outgoing requests (where user is requester)
+  List<Map<String, dynamic>> _pendingRequests =
+      []; // Incoming requests (where user is invitee)
+  List<Map<String, dynamic>> _sentRequests =
+      []; // Outgoing requests (where user is requester)
   bool _isLoading = true;
   StreamSubscription? _subPlaydatesOrganizer;
   StreamSubscription? _subPlaydatesParticipant;
@@ -45,7 +49,9 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    if (widget.initialTabIndex != null && widget.initialTabIndex! >= 0 && widget.initialTabIndex! < 4) {
+    if (widget.initialTabIndex != null &&
+        widget.initialTabIndex! >= 0 &&
+        widget.initialTabIndex! < 4) {
       _tabController.index = widget.initialTabIndex!;
     }
     _highlightId = widget.highlightPlaydateId;
@@ -57,7 +63,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
   Future<void> _loadPlaydates() async {
     try {
       setState(() => _isLoading = true);
-      
+
       final user = SupabaseAuth.currentUser;
       if (user == null) {
         debugPrint('=== NO USER, LOADING SAMPLE DATA ===');
@@ -68,9 +74,10 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
       debugPrint('=== LOADING PLAYDATES FOR USER: ${user.id} ===');
 
       // Check cache first and show immediately (Option A)
-      final cachedUpcoming = CacheService().getCachedPlaydateList(user.id, 'upcoming');
+      final cachedUpcoming =
+          CacheService().getCachedPlaydateList(user.id, 'upcoming');
       final cachedPast = CacheService().getCachedPlaydateList(user.id, 'past');
-      
+
       if (cachedUpcoming != null || cachedPast != null) {
         if (mounted) {
           setState(() {
@@ -84,11 +91,13 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
       // Aggregated loading (multi-owner) – legacy direct queries removed
       // Multi-owner aware aggregated query (participants pivot)
       debugPrint('=== GETTING AGGREGATED PLAYDATES (multi-owner) ===');
-      final aggregated = await PlaydateQueryService.getUserPlaydatesAggregated(user.id);
+      final aggregated =
+          await PlaydateQueryService.getUserPlaydatesAggregated(user.id);
       final upcoming = aggregated['upcoming'] ?? [];
       final past = aggregated['past'] ?? [];
       final cancelled = aggregated['cancelled'] ?? [];
-      debugPrint('=== FOUND ${upcoming.length} UPCOMING / ${past.length} PAST / ${cancelled.length} CANCELLED (AGGREGATED) ===');
+      debugPrint(
+          '=== FOUND ${upcoming.length} UPCOMING / ${past.length} PAST / ${cancelled.length} CANCELLED (AGGREGATED) ===');
 
       // Cache the fresh data
       CacheService().cachePlaydateList(user.id, 'upcoming', upcoming);
@@ -96,11 +105,14 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
 
       // Get both incoming and outgoing requests
       debugPrint('=== GETTING INCOMING REQUESTS (Chen is invitee) ===');
-      final incomingRequests = await PlaydateRequestService.getPendingRequests(user.id);
-      debugPrint('=== RECEIVED ${incomingRequests.length} INCOMING REQUESTS ===');
-      
+      final incomingRequests =
+          await PlaydateRequestService.getPendingRequests(user.id);
+      debugPrint(
+          '=== RECEIVED ${incomingRequests.length} INCOMING REQUESTS ===');
+
       debugPrint('=== GETTING SENT REQUESTS (Chen is requester) ===');
-      final sentRequests = await PlaydateRequestService.getSentRequests(user.id);
+      final sentRequests =
+          await PlaydateRequestService.getSentRequests(user.id);
       debugPrint('=== RECEIVED ${sentRequests.length} SENT REQUESTS ===');
 
       if (mounted) {
@@ -116,8 +128,9 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
 
       final totalRequests = _pendingRequests.length + _sentRequests.length;
       final totalPlaydates = _upcomingPlaydates.length + _pastPlaydates.length;
-      debugPrint('=== FINAL STATE: $totalRequests total requests, $totalPlaydates total playdates ===');
-      
+      debugPrint(
+          '=== FINAL STATE: $totalRequests total requests, $totalPlaydates total playdates ===');
+
       // No fallback to sample data - always use real Supabase data
       _tryScrollToHighlight();
     } catch (e) {
@@ -134,7 +147,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
   void _loadSampleDataWithRequests() {
     debugPrint('=== LOADING ENHANCED SAMPLE DATA ===');
     final now = DateTime.now();
-    
+
     final samplePending = [
       {
         'id': 'sample-incoming-1',
@@ -150,7 +163,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
         'created_at': now.subtract(const Duration(hours: 2)).toIso8601String(),
       }
     ];
-    
+
     final sampleSent = [
       {
         'id': 'sample-sent-1',
@@ -196,7 +209,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
         'created_at': now.subtract(const Duration(hours: 6)).toIso8601String(),
       }
     ];
-    
+
     setState(() {
       _upcomingPlaydates = sampleUpcoming;
       _pastPlaydates = [];
@@ -204,8 +217,9 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
       _sentRequests = sampleSent; // Sent requests
       _isLoading = false;
     });
-    
-    debugPrint('=== SAMPLE DATA LOADED: ${_pendingRequests.length} incoming + ${_sentRequests.length} sent ===');
+
+    debugPrint(
+        '=== SAMPLE DATA LOADED: ${_pendingRequests.length} incoming + ${_sentRequests.length} sent ===');
   }
 
   void _initRealtime() {
@@ -213,32 +227,37 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     if (user == null) return;
 
     // Listen for changes to both incoming and outgoing requests
-  // Listen to requests involving user both as requester & invitee
-  // Supabase Dart client stream doesn't support .or; subscribe twice
-  final requesterStream = SupabaseConfig.client
-    .from('playdate_requests')
-    .stream(primaryKey: ['id'])
-    .eq('requester_id', user.id)
-    .listen((_) { if (mounted) _loadPlaydates(); });
-  final inviteeStream = SupabaseConfig.client
-    .from('playdate_requests')
-    .stream(primaryKey: ['id'])
-    .eq('invitee_id', user.id)
-    .listen((_) { if (mounted) _loadPlaydates(); });
-  // Store one subscription handle; others tracked separately
-  _subRequests = requesterStream;
-  _subParticipants = inviteeStream;
+    // Listen to requests involving user both as requester & invitee
+    // Supabase Dart client stream doesn't support .or; subscribe twice
+    final requesterStream = SupabaseConfig.client
+        .from('playdate_requests')
+        .stream(primaryKey: ['id'])
+        .eq('requester_id', user.id)
+        .listen((_) {
+          if (mounted) _loadPlaydates();
+        });
+    final inviteeStream = SupabaseConfig.client
+        .from('playdate_requests')
+        .stream(primaryKey: ['id'])
+        .eq('invitee_id', user.id)
+        .listen((_) {
+          if (mounted) _loadPlaydates();
+        });
+    // Store one subscription handle; others tracked separately
+    _subRequests = requesterStream;
+    _subParticipants = inviteeStream;
 
-  // Listen to participant changes for live updates (join/leave)
-  _subParticipants = SupabaseConfig.client
-    .from('playdate_participants')
-    .stream(primaryKey: ['id'])
-    .listen((_) { if (mounted) _loadPlaydates(); });
+    // Listen to participant changes for live updates (join/leave)
+    _subParticipants = SupabaseConfig.client
+        .from('playdate_participants')
+        .stream(primaryKey: ['id']).listen((_) {
+      if (mounted) _loadPlaydates();
+    });
   }
 
   void _tryScrollToHighlight() {
     if (_highlightId == null) return;
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final key = _playdateKeys[_highlightId];
       if (key?.currentContext != null) {
@@ -305,7 +324,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
 
     // Create a single combined list
     List<Widget> allWidgets = [];
-    
+
     // Add incoming requests section if any
     if (_pendingRequests.isNotEmpty) {
       allWidgets.add(
@@ -316,12 +335,12 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
           title: 'Incoming Requests (${_pendingRequests.length})',
         ),
       );
-      
+
       for (var request in _pendingRequests) {
         allWidgets.add(_buildIncomingRequestCard(request));
       }
     }
-    
+
     // Add sent requests section if any
     if (_sentRequests.isNotEmpty) {
       allWidgets.add(
@@ -332,7 +351,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
           title: 'Sent Requests (${_sentRequests.length})',
         ),
       );
-      
+
       for (var request in _sentRequests) {
         allWidgets.add(_buildSentRequestCard(request));
       }
@@ -349,7 +368,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     final requester = request['requester'];
     final inviteeDog = request['invitee_dog'];
     final status = request['status'] ?? 'pending';
-    
+
     return AppCard(
       margin: EdgeInsets.symmetric(
         horizontal: AppResponsive.screenPadding(context).left,
@@ -380,17 +399,17 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                     Text(
                       'Playdate Invitation!',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: AppResponsive.fontSize(context, 16),
-                      ),
+                            fontWeight: FontWeight.bold,
+                            fontSize: AppResponsive.fontSize(context, 16),
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       'From: ${inviteeDog?['name'] ?? 'Unknown Dog'} (human: ${requester?['name'] ?? 'Unknown'})',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: AppResponsive.fontSize(context, 14),
-                      ),
+                            fontSize: AppResponsive.fontSize(context, 14),
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -398,8 +417,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                       Text(
                         'For: ${inviteeDog['name']} (${inviteeDog['breed'] ?? 'Mixed'})',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: AppResponsive.fontSize(context, 12),
-                        ),
+                              fontSize: AppResponsive.fontSize(context, 12),
+                            ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -413,9 +432,9 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: InkWell(
-                  onTap: status == 'accepted' && playdate != null 
-                    ? () => _showPlaydatePopup(playdate)
-                    : null,
+                  onTap: status == 'accepted' && playdate != null
+                      ? () => _showPlaydatePopup(playdate)
+                      : null,
                   child: Text(
                     status == 'accepted' ? 'SET' : status.toUpperCase(),
                     style: TextStyle(
@@ -442,8 +461,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                   child: Text(
                     playdate['location'] ?? 'No location',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: AppResponsive.fontSize(context, 14),
-                    ),
+                          fontSize: AppResponsive.fontSize(context, 14),
+                        ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -463,8 +482,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                   child: Text(
                     _formatDateTime(playdate['scheduled_at']),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: AppResponsive.fontSize(context, 14),
-                    ),
+                          fontSize: AppResponsive.fontSize(context, 14),
+                        ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -476,8 +495,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
               Text(
                 playdate['description'],
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: AppResponsive.fontSize(context, 14),
-                ),
+                      fontSize: AppResponsive.fontSize(context, 14),
+                    ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -520,7 +539,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     final invitee = request['invitee'];
     final inviteeDog = request['invitee_dog'];
     final status = request['status'] ?? 'pending';
-    
+
     return AppCard(
       margin: EdgeInsets.symmetric(
         horizontal: AppResponsive.screenPadding(context).left,
@@ -551,17 +570,17 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                     Text(
                       'Sent to ${inviteeDog?['name'] ?? 'Unknown Dog'}!',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: AppResponsive.fontSize(context, 16),
-                      ),
+                            fontWeight: FontWeight.bold,
+                            fontSize: AppResponsive.fontSize(context, 16),
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       'Human: ${invitee?['name'] ?? 'Unknown'}',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: AppResponsive.fontSize(context, 14),
-                      ),
+                            fontSize: AppResponsive.fontSize(context, 14),
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -569,8 +588,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                       Text(
                         inviteeDog['breed'],
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: AppResponsive.fontSize(context, 12),
-                        ),
+                              fontSize: AppResponsive.fontSize(context, 12),
+                            ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -584,9 +603,9 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: InkWell(
-                  onTap: status == 'accepted' && playdate != null 
-                    ? () => _showPlaydatePopup(playdate)
-                    : null,
+                  onTap: status == 'accepted' && playdate != null
+                      ? () => _showPlaydatePopup(playdate)
+                      : null,
                   child: Text(
                     status == 'accepted' ? 'SET' : status.toUpperCase(),
                     style: TextStyle(
@@ -613,8 +632,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                   child: Text(
                     playdate['location'] ?? 'No location',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: AppResponsive.fontSize(context, 14),
-                    ),
+                          fontSize: AppResponsive.fontSize(context, 14),
+                        ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -634,8 +653,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                   child: Text(
                     _formatDateTime(playdate['scheduled_at']),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: AppResponsive.fontSize(context, 14),
-                    ),
+                          fontSize: AppResponsive.fontSize(context, 14),
+                        ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -647,8 +666,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
               Text(
                 playdate['description'],
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: AppResponsive.fontSize(context, 14),
-                ),
+                      fontSize: AppResponsive.fontSize(context, 14),
+                    ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -698,7 +717,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
       final dateTime = DateTime.parse(dateTimeStr);
       final now = DateTime.now();
       final difference = dateTime.difference(now).inDays;
-      
+
       if (difference == 0) {
         return 'Today ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
       } else if (difference == 1) {
@@ -712,7 +731,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
   }
 
   Widget _buildUpcomingTab() {
-    debugPrint('=== BUILDING UPCOMING TAB WITH ${_upcomingPlaydates.length} PLAYDATES ===');
+    debugPrint(
+        '=== BUILDING UPCOMING TAB WITH ${_upcomingPlaydates.length} PLAYDATES ===');
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -731,13 +751,16 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
       onRefresh: _loadPlaydates,
       child: ListView.builder(
         controller: _upcomingController,
-        padding: AppResponsive.screenPadding(context).copyWith(top: 12, bottom: 12),
+        padding:
+            AppResponsive.screenPadding(context).copyWith(top: 12, bottom: 12),
         itemCount: _upcomingPlaydates.length,
         itemBuilder: (context, index) {
           final playdate = _upcomingPlaydates[index];
           _playdateKeys[playdate['id']] = GlobalKey();
           return Container(
-            key: playdate['id'] == _highlightId ? _playdateKeys[playdate['id']] : null,
+            key: playdate['id'] == _highlightId
+                ? _playdateKeys[playdate['id']]
+                : null,
             margin: const EdgeInsets.only(bottom: 12),
             child: AppCard(
               padding: AppResponsive.cardPadding(context),
@@ -764,19 +787,28 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                           children: [
                             Text(
                               playdate['title'] ?? 'Playdate',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontSize: AppResponsive.fontSize(context, 16),
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize:
+                                        AppResponsive.fontSize(context, 16),
+                                  ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (playdate['organizer'] != null || playdate['participant'] != null)
+                            if (playdate['organizer'] != null ||
+                                playdate['participant'] != null)
                               Text(
                                 'With: ${_getOtherPartyName(playdate)} and their human',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontSize: AppResponsive.fontSize(context, 14),
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      fontSize:
+                                          AppResponsive.fontSize(context, 14),
+                                    ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -788,7 +820,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                         size: AppButtonSize.small,
                         type: AppButtonType.outline,
                         onPressed: () {
-                          debugPrint('=== EDIT BUTTON CLICKED FOR PLAYDATE: ${playdate['id']} ===');
+                          debugPrint(
+                              '=== EDIT BUTTON CLICKED FOR PLAYDATE: ${playdate['id']} ===');
                           _showPlaydatePopup(playdate);
                         },
                       ),
@@ -806,9 +839,12 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                       Expanded(
                         child: Text(
                           playdate['location'] ?? 'Location TBD',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: AppResponsive.fontSize(context, 14),
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                fontSize: AppResponsive.fontSize(context, 14),
+                              ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -827,9 +863,12 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                       Expanded(
                         child: Text(
                           _formatDateTime(playdate['scheduled_at']),
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: AppResponsive.fontSize(context, 14),
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                fontSize: AppResponsive.fontSize(context, 14),
+                              ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -841,8 +880,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                     Text(
                       playdate['description'],
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: AppResponsive.fontSize(context, 14),
-                      ),
+                            fontSize: AppResponsive.fontSize(context, 14),
+                          ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -874,7 +913,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     return RefreshIndicator(
       onRefresh: _loadPlaydates,
       child: ListView.builder(
-        padding: AppResponsive.screenPadding(context).copyWith(top: 12, bottom: 12),
+        padding:
+            AppResponsive.screenPadding(context).copyWith(top: 12, bottom: 12),
         itemCount: _pastPlaydates.length,
         itemBuilder: (context, index) {
           final playdate = _pastPlaydates[index];
@@ -899,18 +939,24 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                       children: [
                         Text(
                           playdate['location'] ?? 'Unknown location',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontSize: AppResponsive.fontSize(context, 16),
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                fontSize: AppResponsive.fontSize(context, 16),
+                              ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           _formatDateTime(playdate['scheduled_at']),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: AppResponsive.fontSize(context, 12),
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                fontSize: AppResponsive.fontSize(context, 12),
+                              ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -948,7 +994,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     return RefreshIndicator(
       onRefresh: _loadPlaydates,
       child: ListView.builder(
-        padding: AppResponsive.screenPadding(context).copyWith(top: 12, bottom: 12),
+        padding:
+            AppResponsive.screenPadding(context).copyWith(top: 12, bottom: 12),
         itemCount: _cancelledPlaydates.length,
         itemBuilder: (context, index) {
           final playdate = _cancelledPlaydates[index];
@@ -979,21 +1026,27 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                       children: [
                         Text(
                           playdate['title'] ?? 'Playdate',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontSize: AppResponsive.fontSize(context, 16),
-                            decoration: TextDecoration.lineThrough,
-                            color: Colors.grey,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                fontSize: AppResponsive.fontSize(context, 16),
+                                decoration: TextDecoration.lineThrough,
+                                color: Colors.grey,
+                              ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '${playdate['location'] ?? 'No location'} • ${_formatDateTime(playdate['scheduled_at'])}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: AppResponsive.fontSize(context, 12),
-                            color: Colors.grey,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                fontSize: AppResponsive.fontSize(context, 12),
+                                color: Colors.grey,
+                              ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1001,7 +1054,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.red[50],
                       borderRadius: BorderRadius.circular(8),
@@ -1024,11 +1078,12 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     );
   }
 
-  Future<void> _respondToRequest(Map<String, dynamic> request, String response) async {
+  Future<void> _respondToRequest(
+      Map<String, dynamic> request, String response) async {
     try {
       final requestId = request['id'] as String?;
       final userId = SupabaseConfig.auth.currentUser?.id;
-      
+
       if (requestId == null || userId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Unable to respond right now')),
@@ -1040,19 +1095,20 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
         requestId: requestId,
         userId: userId,
         response: response,
-        message: response == 'accepted' 
-          ? 'Looking forward to the playdate!' 
-          : 'Thanks for the invitation, but we can\'t make it this time.',
+        message: response == 'accepted'
+            ? 'Looking forward to the playdate!'
+            : 'Thanks for the invitation, but we can\'t make it this time.',
       );
 
       if (mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(response == 'accepted' 
-                ? 'Playdate accepted! 🎉' 
-                : 'Request declined'),
-              backgroundColor: response == 'accepted' ? Colors.green : Colors.grey,
+              content: Text(response == 'accepted'
+                  ? 'Playdate accepted! 🎉'
+                  : 'Request declined'),
+              backgroundColor:
+                  response == 'accepted' ? Colors.green : Colors.grey,
             ),
           );
           _loadPlaydates(); // Refresh the list
@@ -1168,7 +1224,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Cancel Playdate?'),
-        content: const Text('This will notify the other party that the playdate has been cancelled.'),
+        content: const Text(
+            'This will notify the other party that the playdate has been cancelled.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -1190,11 +1247,14 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
   Future<void> _showRescheduleDialog(Map<String, dynamic> playdate) async {
     DateTime? selectedDate;
     TimeOfDay? selectedTime;
-    final locationController = TextEditingController(text: playdate['location']);
-    final descriptionController = TextEditingController(text: playdate['description'] ?? '');
+    final locationController =
+        TextEditingController(text: playdate['location']);
+    final descriptionController =
+        TextEditingController(text: playdate['description'] ?? '');
 
     final currentScheduledAt = DateTime.parse(playdate['scheduled_at']);
-    selectedDate = DateTime(currentScheduledAt.year, currentScheduledAt.month, currentScheduledAt.day);
+    selectedDate = DateTime(currentScheduledAt.year, currentScheduledAt.month,
+        currentScheduledAt.day);
     selectedTime = TimeOfDay.fromDateTime(currentScheduledAt);
 
     showDialog(
@@ -1209,13 +1269,14 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                 // Date selection
                 ListTile(
                   leading: const Icon(Icons.calendar_today),
-                  title: Text(selectedDate != null 
-                    ? 'Date: ${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
-                    : 'Select Date'),
+                  title: Text(selectedDate != null
+                      ? 'Date: ${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
+                      : 'Select Date'),
                   onTap: () async {
                     final date = await showDatePicker(
                       context: context,
-                      initialDate: selectedDate ?? DateTime.now().add(const Duration(days: 1)),
+                      initialDate: selectedDate ??
+                          DateTime.now().add(const Duration(days: 1)),
                       firstDate: DateTime.now(),
                       lastDate: DateTime.now().add(const Duration(days: 90)),
                     );
@@ -1224,13 +1285,13 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                     }
                   },
                 ),
-                
+
                 // Time selection
                 ListTile(
                   leading: const Icon(Icons.access_time),
-                  title: Text(selectedTime != null 
-                    ? 'Time: ${selectedTime!.format(context)}'
-                    : 'Select Time'),
+                  title: Text(selectedTime != null
+                      ? 'Time: ${selectedTime!.format(context)}'
+                      : 'Select Time'),
                   onTap: () async {
                     final time = await showTimePicker(
                       context: context,
@@ -1241,9 +1302,9 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                     }
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Location
                 TextField(
                   controller: locationController,
@@ -1253,9 +1314,9 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                     border: OutlineInputBorder(),
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Description
                 TextField(
                   controller: descriptionController,
@@ -1276,7 +1337,9 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
             ),
             ElevatedButton(
               onPressed: () async {
-                if (selectedDate != null && selectedTime != null && locationController.text.isNotEmpty) {
+                if (selectedDate != null &&
+                    selectedTime != null &&
+                    locationController.text.isNotEmpty) {
                   final newDateTime = DateTime(
                     selectedDate!.year,
                     selectedDate!.month,
@@ -1284,20 +1347,23 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                     selectedTime!.hour,
                     selectedTime!.minute,
                   );
-                  
+
                   final success = await _reschedulePlaydate(
                     playdate['id'],
                     newDateTime,
                     locationController.text,
-                    descriptionController.text.isEmpty ? null : descriptionController.text,
+                    descriptionController.text.isEmpty
+                        ? null
+                        : descriptionController.text,
                   );
-                  
+
                   if (mounted) {
                     Navigator.of(context).pop();
                     if (success) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Playdate rescheduled successfully! 📅'),
+                          content:
+                              Text('Playdate rescheduled successfully! 📅'),
                           backgroundColor: Colors.green,
                         ),
                       );
@@ -1313,7 +1379,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                   }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill in all required fields')),
+                    const SnackBar(
+                        content: Text('Please fill in all required fields')),
                   );
                 }
               },
@@ -1325,7 +1392,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     );
   }
 
-  Future<bool> _reschedulePlaydate(String playdateId, DateTime newDateTime, String newLocation, String? newDescription) async {
+  Future<bool> _reschedulePlaydate(String playdateId, DateTime newDateTime,
+      String newLocation, String? newDescription) async {
     try {
       final currentUser = SupabaseConfig.auth.currentUser;
       if (currentUser == null) return false;

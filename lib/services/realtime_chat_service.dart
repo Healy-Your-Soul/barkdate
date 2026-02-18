@@ -7,16 +7,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// Based on Supabase UI patterns: https://supabase.com/ui/docs/nextjs/realtime-chat
 class RealtimeChatService {
   static final _client = SupabaseConfig.client;
-  
+
   RealtimeChannel? _channel;
-  final StreamController<ChatMessage> _messageController = StreamController.broadcast();
-  
+  final StreamController<ChatMessage> _messageController =
+      StreamController.broadcast();
+
   /// Stream of incoming messages
   Stream<ChatMessage> get messageStream => _messageController.stream;
-  
+
   /// Current room name
   String? _currentRoom;
-  
+
   /// Join a chat room and start receiving messages
   Future<void> joinRoom({
     required String roomName,
@@ -26,34 +27,34 @@ class RealtimeChatService {
   }) async {
     // Leave existing room first
     await leaveRoom();
-    
+
     _currentRoom = roomName;
-    
+
     _channel = _client.channel('chat:$roomName');
-    
+
     _channel!
-      .onBroadcast(
-        event: 'message',
-        callback: (payload) {
-          try {
-            final message = ChatMessage.fromJson(payload);
-            _messageController.add(message);
-            debugPrint('📩 Received message: ${message.content}');
-          } catch (e) {
-            debugPrint('❌ Error parsing message: $e');
-          }
-        },
-      )
-      .subscribe((status, error) {
-        debugPrint('🔌 Chat channel status: $status');
-        if (error != null) {
-          debugPrint('❌ Chat channel error: $error');
+        .onBroadcast(
+      event: 'message',
+      callback: (payload) {
+        try {
+          final message = ChatMessage.fromJson(payload);
+          _messageController.add(message);
+          debugPrint('📩 Received message: ${message.content}');
+        } catch (e) {
+          debugPrint('❌ Error parsing message: $e');
         }
-      });
-    
+      },
+    )
+        .subscribe((status, error) {
+      debugPrint('🔌 Chat channel status: $status');
+      if (error != null) {
+        debugPrint('❌ Chat channel error: $error');
+      }
+    });
+
     debugPrint('✅ Joined chat room: $roomName');
   }
-  
+
   /// Send a message to the current room
   Future<bool> sendMessage({
     required String content,
@@ -66,7 +67,7 @@ class RealtimeChatService {
       debugPrint('❌ Not connected to a room');
       return false;
     }
-    
+
     final message = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       content: content,
@@ -76,34 +77,34 @@ class RealtimeChatService {
       createdAt: DateTime.now(),
       roomName: _currentRoom!,
     );
-    
+
     try {
       // Broadcast to all clients in real-time
       await _channel!.sendBroadcastMessage(
         event: 'message',
         payload: message.toJson(),
       );
-      
+
       debugPrint('📤 Sent message: $content');
-      
+
       // Optionally store in database for persistence
       if (storeInDatabase) {
         await _storeMessage(message);
       }
-      
+
       return true;
     } catch (e) {
       debugPrint('❌ Error sending message: $e');
       return false;
     }
   }
-  
+
   /// Store message in database for history
   Future<void> _storeMessage(ChatMessage message) async {
     try {
       // Parse room name to get match_id (format: "chat:{matchId}")
       final matchId = _currentRoom?.replaceFirst('chat:', '');
-      
+
       await _client.from('messages').insert({
         'match_id': matchId,
         'sender_id': message.userId,
@@ -111,14 +112,14 @@ class RealtimeChatService {
         'message_type': 'text',
         'created_at': message.createdAt.toIso8601String(),
       });
-      
+
       debugPrint('💾 Message stored in database');
     } catch (e) {
       debugPrint('⚠️ Failed to store message: $e');
       // Don't throw - message was still sent in real-time
     }
   }
-  
+
   /// Leave the current room
   Future<void> leaveRoom() async {
     if (_channel != null) {
@@ -128,7 +129,7 @@ class RealtimeChatService {
       _currentRoom = null;
     }
   }
-  
+
   /// Load message history from database
   Future<List<ChatMessage>> loadHistory({
     required String roomName,
@@ -136,14 +137,14 @@ class RealtimeChatService {
   }) async {
     try {
       final matchId = roomName.replaceFirst('chat:', '');
-      
+
       final data = await _client
           .from('messages')
           .select('*, sender:users!sender_id(id, name, avatar_url)')
           .eq('match_id', matchId)
           .order('created_at', ascending: true)
           .limit(limit);
-      
+
       return (data as List).map((row) {
         final sender = row['sender'] as Map<String, dynamic>?;
         return ChatMessage(
@@ -161,7 +162,7 @@ class RealtimeChatService {
       return [];
     }
   }
-  
+
   /// Dispose resources
   void dispose() {
     leaveRoom();
@@ -178,7 +179,7 @@ class ChatMessage {
   final String? userAvatar;
   final DateTime createdAt;
   final String roomName;
-  
+
   ChatMessage({
     required this.id,
     required this.content,
@@ -188,7 +189,7 @@ class ChatMessage {
     required this.createdAt,
     required this.roomName,
   });
-  
+
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     return ChatMessage(
       id: json['id'] ?? '',
@@ -196,13 +197,13 @@ class ChatMessage {
       userId: json['userId'] ?? '',
       userName: json['userName'] ?? 'Unknown',
       userAvatar: json['userAvatar'],
-      createdAt: json['createdAt'] != null 
+      createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
       roomName: json['roomName'] ?? '',
     );
   }
-  
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

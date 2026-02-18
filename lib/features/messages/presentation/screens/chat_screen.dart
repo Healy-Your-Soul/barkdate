@@ -119,7 +119,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
                   return ListView.builder(
                     controller: _scrollController,
-                    reverse: false, // Messages are usually ordered by created_at ascending
+                    reverse:
+                        false, // Messages are usually ordered by created_at ascending
                     padding: const EdgeInsets.all(16),
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
@@ -153,11 +154,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Widget _buildMessageBubble(BuildContext context, Message message, bool isMe) {
     final isRtl = intl.Bidi.detectRtlDirectionality(message.text);
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment:
+            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isMe) ...[
@@ -178,7 +180,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               decoration: BoxDecoration(
                 color: isMe
                     ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                    : Theme.of(context)
+                        .colorScheme
+                        .primaryContainer
+                        .withOpacity(0.3),
                 borderRadius: BorderRadius.circular(16).copyWith(
                   bottomLeft: Radius.circular(isMe ? 16 : 4),
                   bottomRight: Radius.circular(isMe ? 4 : 16),
@@ -217,7 +222,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           Expanded(
             child: TextField(
               controller: _messageController,
-              textDirection: _isInputRtl ? TextDirection.rtl : TextDirection.ltr,
+              textDirection:
+                  _isInputRtl ? TextDirection.rtl : TextDirection.ltr,
               decoration: InputDecoration(
                 hintText: 'Message...',
                 border: OutlineInputBorder(
@@ -225,8 +231,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                fillColor: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHighest
+                    .withOpacity(0.5),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
             ),
           ),
@@ -240,7 +250,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   )
                 : const Icon(Icons.send),
             color: Theme.of(context).colorScheme.primary,
-            onPressed: _isSending || currentUserId == null ? null : () => _sendMessage(currentUserId),
+            onPressed: _isSending || currentUserId == null
+                ? null
+                : () => _sendMessage(currentUserId),
           ),
         ],
       ),
@@ -255,11 +267,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     try {
       await ref.read(messageRepositoryProvider).sendMessage(
-        matchId: widget.matchId,
-        senderId: currentUserId,
-        receiverId: widget.recipientId,
-        content: text,
-      );
+            matchId: widget.matchId,
+            senderId: currentUserId,
+            receiverId: widget.recipientId,
+            content: text,
+          );
       _messageController.clear();
       // Scroll to bottom after sending
       _scrollToBottom();

@@ -29,7 +29,10 @@ class DogProfileSheet extends StatelessWidget {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -39,21 +42,36 @@ class DogProfileSheet extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 dog.name,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
               Text(
                 '${dog.breed} • ${dog.age} yrs • ${dog.size}',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: Theme.of(context).colorScheme.primary),
               ),
               const SizedBox(height: 6),
               Row(
                 children: [
-                  Icon(Icons.location_on, size: 18, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+                  Icon(Icons.location_on,
+                      size: 18,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7)),
                   const SizedBox(width: 4),
                   Text(
                     '${dog.distanceKm.toStringAsFixed(1)} km away',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7)),
                   ),
                 ],
               ),
@@ -78,7 +96,8 @@ class DogProfileSheet extends StatelessWidget {
                     otherUserId: dog.ownerId,
                     otherUserName: dog.ownerName,
                     otherDogName: dog.name,
-                    otherDogPhoto: dog.photos.isNotEmpty ? dog.photos.first : '',
+                    otherDogPhoto:
+                        dog.photos.isNotEmpty ? dog.photos.first : '',
                     lastMessage: '',
                     lastMessageTime: DateTime.now(),
                   );
@@ -96,7 +115,8 @@ class DogProfileSheet extends StatelessWidget {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const PlaydatesScreen()),
+                    MaterialPageRoute(
+                        builder: (context) => const PlaydatesScreen()),
                   );
                 },
               ),
@@ -126,26 +146,38 @@ class _HeaderPhoto extends StatelessWidget {
               dog.photos.isNotEmpty ? dog.photos.first : '',
               fit: BoxFit.cover,
               errorBuilder: (context, error, stack) => Container(
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                child: Icon(Icons.pets, size: 48, color: Theme.of(context).colorScheme.primary),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primaryContainer
+                    .withValues(alpha: 0.3),
+                child: Icon(Icons.pets,
+                    size: 48, color: Theme.of(context).colorScheme.primary),
               ),
             ),
             Positioned(
               top: 12,
               left: 12,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .surface
+                      .withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.pets, size: 16, color: Theme.of(context).colorScheme.primary),
+                    Icon(Icons.pets,
+                        size: 16, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 6),
                     Text(
                       dog.gender,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+                      style: Theme.of(context)
+                          .textTheme
+                          .labelMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -167,20 +199,34 @@ class _OwnerRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+        color: Theme.of(context)
+            .colorScheme
+            .primaryContainer
+            .withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
           CircleAvatar(
             backgroundColor: Theme.of(context).colorScheme.primary,
-            child: Icon(Icons.person, color: Theme.of(context).colorScheme.onPrimary),
+            child: Icon(Icons.person,
+                color: Theme.of(context).colorScheme.onPrimary),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Owner', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
-              Text(ownerName, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Owner',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6))),
+              Text(ownerName,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600)),
             ]),
           ),
         ],
@@ -193,7 +239,8 @@ class _ActionRow extends StatelessWidget {
   final VoidCallback onBark;
   final VoidCallback onMessage;
   final VoidCallback onInvite;
-  const _ActionRow({required this.onBark, required this.onMessage, required this.onInvite});
+  const _ActionRow(
+      {required this.onBark, required this.onMessage, required this.onInvite});
 
   @override
   Widget build(BuildContext context) {
@@ -202,9 +249,17 @@ class _ActionRow extends StatelessWidget {
         Expanded(
           child: ElevatedButton.icon(
             onPressed: onBark,
-            icon: Icon(Icons.campaign, color: Theme.of(context).colorScheme.onPrimary),
-            label: Text('Bark', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w600)),
-            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            icon: Icon(Icons.campaign,
+                color: Theme.of(context).colorScheme.onPrimary),
+            label: Text('Bark',
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimary,
+                    fontWeight: FontWeight.w600)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12))),
           ),
         ),
         const SizedBox(width: 10),
@@ -213,7 +268,10 @@ class _ActionRow extends StatelessWidget {
             onPressed: onMessage,
             icon: const Icon(Icons.chat_bubble_outline),
             label: const Text('Message'),
-            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12))),
           ),
         ),
         const SizedBox(width: 10),
@@ -222,7 +280,10 @@ class _ActionRow extends StatelessWidget {
             onPressed: onInvite,
             icon: const Icon(Icons.event_available),
             label: const Text('Invite'),
-            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12))),
           ),
         ),
       ],

@@ -10,7 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 // Note: This test is a placeholder. The actual app uses BarkApp from app.dart
 // which requires provider and Supabase initialization.
 void main() {
-  testWidgets('App builds successfully smoke test', (WidgetTester tester) async {
+  testWidgets('App builds successfully smoke test',
+      (WidgetTester tester) async {
     // Placeholder test - actual app requires auth setup
     expect(true, isTrue);
   });

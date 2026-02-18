@@ -65,7 +65,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     _loadCheckInState();
     _loadAmenities();
   }
-  
+
   @override
   void didUpdateWidget(PlaceSheetContent oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -76,8 +76,6 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     }
   }
 
-
-
   Future<void> _loadCheckInState() async {
     final user = SupabaseConfig.auth.currentUser;
     if (user == null) {
@@ -87,8 +85,9 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
 
     try {
       final checkIn = await CheckInService.getActiveCheckIn(user.id);
-      final dogsHere = await CheckInService.getActiveCheckInsAtPlace(widget.place.placeId);
-      
+      final dogsHere =
+          await CheckInService.getActiveCheckInsAtPlace(widget.place.placeId);
+
       if (mounted) {
         setState(() {
           _currentCheckIn = checkIn;
@@ -105,13 +104,14 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
 
   Future<void> _handleCheckIn() async {
     if (_isCheckingInOut) return;
-    
+
     setState(() => _isCheckingInOut = true);
 
     try {
       final isHere = _currentCheckIn?.parkId == widget.place.placeId;
-      debugPrint('🔄 Check-in button tapped. isHere=$isHere, currentCheckIn=${_currentCheckIn?.parkId}');
-      
+      debugPrint(
+          '🔄 Check-in button tapped. isHere=$isHere, currentCheckIn=${_currentCheckIn?.parkId}');
+
       if (isHere) {
         // Check out
         debugPrint('🚪 Attempting to check out...');
@@ -137,19 +137,18 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
           latitude: widget.place.latitude,
           longitude: widget.place.longitude,
         );
-        
+
         if (checkIn != null && mounted) {
           setState(() => _currentCheckIn = checkIn);
           _showMessage('Checked in at ${widget.place.name}! 🐕', Colors.green);
         }
       }
-      
+
       // Refresh dog count AND dog avatars list
       await _loadCheckInState();
-      
+
       // Notify parent of check-in change
       widget.onCheckInChanged?.call();
-      
     } catch (e) {
       debugPrint('Check-in error: $e');
       _showMessage('Something went wrong. Try again.', Colors.red);
@@ -164,7 +163,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
       SnackBar(content: Text(message), backgroundColor: color),
     );
   }
-  
+
   /// Load amenities for this place
   Future<void> _loadAmenities() async {
     try {
@@ -181,45 +180,53 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
       debugPrint('Error loading amenities: $e');
     }
   }
-  
+
   /// Build amenities section with chips
   Widget _buildAmenitiesSection() {
     // Filter to amenities that have been suggested at least once
-    final suggestedAmenities = _amenities.where((a) => (a['suggested_count'] as int? ?? 0) > 0).toList();
-    
+    final suggestedAmenities = _amenities
+        .where((a) => (a['suggested_count'] as int? ?? 0) > 0)
+        .toList();
+
     if (suggestedAmenities.isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Amenities', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
+          Text('Amenities',
+              style: TextStyle(
+                  fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
           const SizedBox(height: 6),
-          Text('No amenities reported yet', style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+          Text('No amenities reported yet',
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
         ],
       );
     }
-    
+
     final displayCount = _showAllAmenities ? suggestedAmenities.length : 4;
     final displayList = suggestedAmenities.take(displayCount).toList();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Amenities', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
+        Text('Amenities',
+            style: TextStyle(
+                fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 6,
           runSpacing: 6,
           children: [
             ...displayList.map((amenity) => Chip(
-              avatar: Text(amenity['icon'] ?? '✓', style: const TextStyle(fontSize: 14)),
-              label: Text(
-                amenity['name'] ?? '',
-                style: const TextStyle(fontSize: 12),
-              ),
-              backgroundColor: Colors.green.shade50,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            )),
+                  avatar: Text(amenity['icon'] ?? '✓',
+                      style: const TextStyle(fontSize: 14)),
+                  label: Text(
+                    amenity['name'] ?? '',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  backgroundColor: Colors.green.shade50,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                )),
             if (suggestedAmenities.length > 4 && !_showAllAmenities)
               ActionChip(
                 label: Text('+${suggestedAmenities.length - 4} more'),
@@ -231,7 +238,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
       ],
     );
   }
-  
+
   /// Show report dialog
   Future<void> _showReportDialog() async {
     final reasons = [
@@ -242,7 +249,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     ];
     String? selectedReason;
     final messageController = TextEditingController();
-    
+
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -255,14 +262,18 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             const SizedBox(height: 12),
             StatefulBuilder(
               builder: (context, setDialogState) => Column(
-                children: reasons.map((reason) => RadioListTile<String>(
-                  title: Text(reason, style: const TextStyle(fontSize: 14)),
-                  value: reason,
-                  groupValue: selectedReason,
-                  onChanged: (v) => setDialogState(() => selectedReason = v),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                )).toList(),
+                children: reasons
+                    .map((reason) => RadioListTile<String>(
+                          title: Text(reason,
+                              style: const TextStyle(fontSize: 14)),
+                          value: reason,
+                          groupValue: selectedReason,
+                          onChanged: (v) =>
+                              setDialogState(() => selectedReason = v),
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                        ))
+                    .toList(),
               ),
             ),
             const SizedBox(height: 8),
@@ -300,7 +311,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     );
     messageController.dispose();
   }
-  
+
   /// Submit the report to database
   Future<void> _submitReport(String reason, String message) async {
     try {
@@ -320,23 +331,26 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
       }
     }
   }
-  
+
   /// Submit dog-friendly vote and notify admins
   Future<void> _submitDogFriendlyVote(bool isDogFriendly) async {
     try {
       // Submit using the same report system with a different type
-      final reportType = isDogFriendly ? 'confirmed_dog_friendly' : 'not_dog_friendly';
+      final reportType =
+          isDogFriendly ? 'confirmed_dog_friendly' : 'not_dog_friendly';
       await SupabaseConfig.client.rpc('submit_place_report', params: {
         'p_place_id': widget.place.placeId,
         'p_place_name': widget.place.name,
         'p_report_type': reportType,
-        'p_message': isDogFriendly ? 'User confirmed as dog-friendly' : 'User marked as not dog-friendly',
+        'p_message': isDogFriendly
+            ? 'User confirmed as dog-friendly'
+            : 'User marked as not dog-friendly',
       });
-      
+
       _showMessage(
-        isDogFriendly 
-          ? 'Thanks! Your feedback helps other dog owners 🐕' 
-          : 'Thanks for letting us know! We\'ll review this.',
+        isDogFriendly
+            ? 'Thanks! Your feedback helps other dog owners 🐕'
+            : 'Thanks for letting us know! We\'ll review this.',
         Colors.green,
       );
     } catch (e) {
@@ -348,7 +362,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
       }
     }
   }
-  
+
   /// Get crowdedness label based on dog count
   String _getCrowdednessLabel(int dogCount) {
     if (dogCount == 0) return 'Empty';
@@ -356,7 +370,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     if (dogCount < 6) return 'Moderate';
     return 'Busy';
   }
-  
+
   /// Get crowdedness color based on dog count
   Color _getCrowdednessColor(int dogCount) {
     if (dogCount == 0) return Colors.grey;
@@ -364,7 +378,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     if (dogCount < 6) return Colors.orange;
     return Colors.red;
   }
-  
+
   /// Get color for category to match marker colors
   Color _getCategoryColor(PlaceCategory category) {
     switch (category) {
@@ -391,36 +405,36 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: ListView(
-        controller: widget.scrollController,
-        primary: false,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(20),
-        children: [
-          // Handle bar removed - wrapper already has one
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: ListView(
+          controller: widget.scrollController,
+          primary: false,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          children: [
+            // Handle bar removed - wrapper already has one
 
-          // Header
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  widget.place.name,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+            // Header
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.place.name,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: widget.onClose ?? () => Navigator.pop(context),
-              ),
-            ],
-          ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: widget.onClose ?? () => Navigator.pop(context),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
 
             // CHECK-IN BUTTON
@@ -433,18 +447,21 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             // DOG COUNT & CROWDEDNESS - Always visible
             Row(
               children: [
-                Icon(Icons.pets, color: _getCrowdednessColor(_dogCount), size: 18),
+                Icon(Icons.pets,
+                    color: _getCrowdednessColor(_dogCount), size: 18),
                 const SizedBox(width: 6),
                 Text(
-                  _dogCount == 0 
-                      ? 'No dogs here right now' 
+                  _dogCount == 0
+                      ? 'No dogs here right now'
                       : '$_dogCount ${_dogCount == 1 ? 'dog' : 'dogs'} here now',
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 13),
                 ),
                 const SizedBox(width: 8),
                 // Crowdedness badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: _getCrowdednessColor(_dogCount).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -475,13 +492,15 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                     final dog = checkIn['dog'] as Map<String, dynamic>?;
                     final user = checkIn['user'] as Map<String, dynamic>?;
                     final checkedInAt = checkIn['checked_in_at'] as String?;
-                    
+
                     // Calculate freshness (green=recent, orange=1h+, red=2h+)
                     Color borderColor = Colors.green;
                     if (checkedInAt != null) {
                       final checkInTime = DateTime.tryParse(checkedInAt);
                       if (checkInTime != null) {
-                        final hoursAgo = DateTime.now().difference(checkInTime).inMinutes / 60.0;
+                        final hoursAgo =
+                            DateTime.now().difference(checkInTime).inMinutes /
+                                60.0;
                         if (hoursAgo >= 2) {
                           borderColor = Colors.red;
                         } else if (hoursAgo >= 1) {
@@ -489,90 +508,99 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                         }
                       }
                     }
-                    
-                    final photoUrl = dog?['main_photo_url'] as String? ?? user?['avatar_url'] as String?;
+
+                    final photoUrl = dog?['main_photo_url'] as String? ??
+                        user?['avatar_url'] as String?;
                     final dogName = dog?['name'] as String? ?? 'Unknown';
-                    
+
                     return GestureDetector(
                       onTap: () {
-                         // Show dog mini card in a dialog
-                         // Calculate time ago string
-                         String timeAgoStr = 'Just now';
-                         if (checkedInAt != null) {
-                           final checkInTime = DateTime.tryParse(checkedInAt);
-                           if (checkInTime != null) {
-                             timeAgoStr = timeago.format(checkInTime);
-                           }
-                         }
+                        // Show dog mini card in a dialog
+                        // Calculate time ago string
+                        String timeAgoStr = 'Just now';
+                        if (checkedInAt != null) {
+                          final checkInTime = DateTime.tryParse(checkedInAt);
+                          if (checkInTime != null) {
+                            timeAgoStr = timeago.format(checkInTime);
+                          }
+                        }
 
-                         showDialog(
-                           context: context,
-                           builder: (context) => Dialog(
-                             backgroundColor: Colors.transparent,
-                             elevation: 0,
-                             child: DogMiniCard(
-                               dogName: dogName,
-                               humanName: user?['name'],
-                               dogPhotoUrl: photoUrl,
-                               timeAgo: timeAgoStr,
-                               isFriend: false, // We check friendship status if available, default false. Ideally fetch this.
-                               isOwnDog: user?['id'] == Supabase.instance.client.auth.currentUser?.id,
-                               onAddToPack: () async {
-                                 // Close dialog first
-                                 // Navigator.pop(context); // Optional: keep open or close? User might want to see success.
-                                 // Let's keep it open and show snackbar on top.
-                                 
-                                 try {
-                                   final currentUser = Supabase.instance.client.auth.currentUser;
-                                   if (currentUser == null) return;
-                                   
-                                   final dogs = await BarkDateUserService.getUserDogs(currentUser.id);
-                                   if (dogs.isEmpty) {
-                                     ScaffoldMessenger.of(context).showSnackBar(
-                                       const SnackBar(content: Text('Please create a dog profile first')),
-                                     );
-                                     return;
-                                   }
-                                   final myDogId = dogs.first['id'] as String;
+                        showDialog(
+                          context: context,
+                          builder: (context) => Dialog(
+                            backgroundColor: Colors.transparent,
+                            elevation: 0,
+                            child: DogMiniCard(
+                              dogName: dogName,
+                              humanName: user?['name'],
+                              dogPhotoUrl: photoUrl,
+                              timeAgo: timeAgoStr,
+                              isFriend:
+                                  false, // We check friendship status if available, default false. Ideally fetch this.
+                              isOwnDog: user?['id'] ==
+                                  Supabase.instance.client.auth.currentUser?.id,
+                              onAddToPack: () async {
+                                // Close dialog first
+                                // Navigator.pop(context); // Optional: keep open or close? User might want to see success.
+                                // Let's keep it open and show snackbar on top.
 
-                                   final targetDogId = dog?['id'] as String?;
-                                   if (targetDogId == null) return;
+                                try {
+                                  final currentUser =
+                                      Supabase.instance.client.auth.currentUser;
+                                  if (currentUser == null) return;
 
-                                   final success = await DogFriendshipService.sendBark(
-                                     fromDogId: myDogId,
-                                     toDogId: targetDogId,
-                                   );
+                                  final dogs =
+                                      await BarkDateUserService.getUserDogs(
+                                          currentUser.id);
+                                  if (dogs.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              'Please create a dog profile first')),
+                                    );
+                                    return;
+                                  }
+                                  final myDogId = dogs.first['id'] as String;
 
-                                   ScaffoldMessenger.of(context).showSnackBar(
-                                     SnackBar(
-                                       content: Text(success 
-                                         ? 'Request sent! 🐾' 
-                                         : 'Could not send request'
-                                       ),
-                                     ),
-                                   );
-                                   
-                                   // Close dialog on success
-                                   if (success) {
-                                     Navigator.pop(context);
-                                   }
-                                 } catch (e) {
-                                   debugPrint('Error sending friend request: $e');
-                                 }
-                               },
-                               onBark: () {
-                                 ScaffoldMessenger.of(context).showSnackBar(
-                                   SnackBar(
-                                     content: Text('🐕 You barked at $dogName!'),
-                                     backgroundColor: Colors.orange,
-                                   ),
-                                 );
-                                 Navigator.pop(context);
-                               },
-                               onClose: () => Navigator.pop(context),
-                             ),
-                           ),
-                         );
+                                  final targetDogId = dog?['id'] as String?;
+                                  if (targetDogId == null) return;
+
+                                  final success =
+                                      await DogFriendshipService.sendBark(
+                                    fromDogId: myDogId,
+                                    toDogId: targetDogId,
+                                  );
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(success
+                                          ? 'Request sent! 🐾'
+                                          : 'Could not send request'),
+                                    ),
+                                  );
+
+                                  // Close dialog on success
+                                  if (success) {
+                                    Navigator.pop(context);
+                                  }
+                                } catch (e) {
+                                  debugPrint(
+                                      'Error sending friend request: $e');
+                                }
+                              },
+                              onBark: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('🐕 You barked at $dogName!'),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                                Navigator.pop(context);
+                              },
+                              onClose: () => Navigator.pop(context),
+                            ),
+                          ),
+                        );
                       },
                       child: Padding(
                         padding: const EdgeInsets.only(right: 8),
@@ -585,9 +613,13 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                             ),
                             child: CircleAvatar(
                               radius: 24,
-                              backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-                              child: photoUrl == null 
-                                  ? Text(dogName[0].toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold))
+                              backgroundImage: photoUrl != null
+                                  ? NetworkImage(photoUrl)
+                                  : null,
+                              child: photoUrl == null
+                                  ? Text(dogName[0].toUpperCase(),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold))
                                   : null,
                             ),
                           ),
@@ -604,9 +636,12 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: widget.place.isOpen ? Colors.green.shade50 : Colors.red.shade50,
+                    color: widget.place.isOpen
+                        ? Colors.green.shade50
+                        : Colors.red.shade50,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: widget.place.isOpen ? Colors.green : Colors.red,
@@ -615,7 +650,9 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                   child: Text(
                     widget.place.isOpen ? 'Open Now' : 'Closed',
                     style: TextStyle(
-                      color: widget.place.isOpen ? Colors.green.shade700 : Colors.red.shade700,
+                      color: widget.place.isOpen
+                          ? Colors.green.shade700
+                          : Colors.red.shade700,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
                     ),
@@ -643,12 +680,15 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: _getCategoryColor(widget.place.category).withOpacity(0.1),
+                color:
+                    _getCategoryColor(widget.place.category).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 widget.place.category.displayName,
-                style: TextStyle(color: _getCategoryColor(widget.place.category), fontSize: 13),
+                style: TextStyle(
+                    color: _getCategoryColor(widget.place.category),
+                    fontSize: 13),
               ),
             ),
             const SizedBox(height: 16),
@@ -657,10 +697,14 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: widget.place.isDogFriendly ? Colors.green.shade50 : Colors.red.shade50,
+                color: widget.place.isDogFriendly
+                    ? Colors.green.shade50
+                    : Colors.red.shade50,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: widget.place.isDogFriendly ? Colors.green.shade200 : Colors.red.shade200,
+                  color: widget.place.isDogFriendly
+                      ? Colors.green.shade200
+                      : Colors.red.shade200,
                 ),
               ),
               child: Column(
@@ -669,8 +713,12 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                   Row(
                     children: [
                       Icon(
-                        widget.place.isDogFriendly ? Icons.check_circle : Icons.help_outline,
-                        color: widget.place.isDogFriendly ? Colors.green : Colors.red.shade700,
+                        widget.place.isDogFriendly
+                            ? Icons.check_circle
+                            : Icons.help_outline,
+                        color: widget.place.isDogFriendly
+                            ? Colors.green
+                            : Colors.red.shade700,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -678,13 +726,17 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              widget.place.isDogFriendly ? 'Dog Friendly' : 'Check if dog-friendly',
-                              style: const TextStyle(fontWeight: FontWeight.w600),
+                              widget.place.isDogFriendly
+                                  ? 'Dog Friendly'
+                                  : 'Check if dog-friendly',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600),
                             ),
                             if (!widget.place.isDogFriendly)
                               Text(
                                 'Call ahead to confirm dogs are welcome',
-                                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                style: TextStyle(
+                                    color: Colors.grey.shade600, fontSize: 12),
                               ),
                           ],
                         ),
@@ -698,7 +750,8 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                       children: [
                         Text(
                           'Is this place dog-friendly?',
-                          style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                          style: TextStyle(
+                              fontSize: 13, color: Colors.grey.shade700),
                         ),
                         const Spacer(),
                         // Yes button
@@ -711,7 +764,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                           constraints: const BoxConstraints(),
                         ),
                         const SizedBox(width: 16),
-                        // No button  
+                        // No button
                         IconButton(
                           onPressed: () => _submitDogFriendlyVote(false),
                           icon: const Icon(Icons.cancel_outlined),
@@ -749,7 +802,8 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  PlacesService.getPhotoUrl(widget.place.photoReference!, maxWidth: 600),
+                  PlacesService.getPhotoUrl(widget.place.photoReference!,
+                      maxWidth: 600),
                   height: 150,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -786,8 +840,8 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
               ),
             ),
             const SizedBox(height: 20),
-        ],
-      ),
+          ],
+        ),
       ), // Close GestureDetector
     );
   }
@@ -798,7 +852,8 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
         onPressed: null,
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: const SizedBox(
           height: 20,
@@ -837,19 +892,24 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: _isCheckingInOut ? null : () async {
-                  setState(() => _isCheckingInOut = true);
-                  await CheckInService.checkOut();
-                  _showMessage('Checked out!', Colors.green);
-                  await _loadCheckInState();
-                  setState(() => _isCheckingInOut = false);
-                },
+                onPressed: _isCheckingInOut
+                    ? null
+                    : () async {
+                        setState(() => _isCheckingInOut = true);
+                        await CheckInService.checkOut();
+                        _showMessage('Checked out!', Colors.green);
+                        await _loadCheckInState();
+                        setState(() => _isCheckingInOut = false);
+                      },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.orange.shade700,
                   side: BorderSide(color: Colors.orange.shade400),
                 ),
                 child: _isCheckingInOut
-                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
                     : const Text('Check Out First'),
               ),
             ),
@@ -870,7 +930,8 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
           ? const SizedBox(
               height: 20,
               width: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Colors.white),
             )
           : Icon(isHere ? Icons.logout : Icons.pets),
       label: Text(

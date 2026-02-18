@@ -12,14 +12,15 @@ class PlaydatesScreen extends StatefulWidget {
   State<PlaydatesScreen> createState() => _PlaydatesScreenState();
 }
 
-class _PlaydatesScreenState extends State<PlaydatesScreen> with TickerProviderStateMixin {
+class _PlaydatesScreenState extends State<PlaydatesScreen>
+    with TickerProviderStateMixin {
   late TabController _tabController;
-  
+
   List<PlaydateRequest> _requests = [];
   List<Playdate> _upcomingPlaydates = [];
   List<Playdate> _pastPlaydates = [];
   List<EnhancedDog> _userDogs = [];
-  
+
   bool _isLoading = true;
   String? _currentUserId;
 
@@ -70,9 +71,9 @@ class _PlaydatesScreenState extends State<PlaydatesScreen> with TickerProviderSt
     final past = <Playdate>[];
 
     for (final playdate in playdates) {
-      if (playdate.scheduledAt.isAfter(now) && 
-          (playdate.status == PlaydateStatus.pending || 
-           playdate.status == PlaydateStatus.confirmed)) {
+      if (playdate.scheduledAt.isAfter(now) &&
+          (playdate.status == PlaydateStatus.pending ||
+              playdate.status == PlaydateStatus.confirmed)) {
         upcoming.add(playdate);
       } else {
         past.add(playdate);
@@ -136,7 +137,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen> with TickerProviderSt
 
   Widget _buildRequestsTab() {
     final pendingRequests = _requests.where((r) => r.isPending).toList();
-    
+
     if (pendingRequests.isEmpty) {
       return const Center(
         child: Column(
@@ -249,7 +250,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen> with TickerProviderSt
 
   Widget _buildRequestCard(PlaydateRequest request) {
     final isIncoming = request.inviteeId == _currentUserId;
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -260,17 +261,18 @@ class _PlaydatesScreenState extends State<PlaydatesScreen> with TickerProviderSt
             Row(
               children: [
                 CircleAvatar(
-                  backgroundImage: isIncoming 
-                      ? (request.requesterAvatarUrl != null 
-                          ? NetworkImage(request.requesterAvatarUrl!) 
+                  backgroundImage: isIncoming
+                      ? (request.requesterAvatarUrl != null
+                          ? NetworkImage(request.requesterAvatarUrl!)
                           : null)
-                      : (request.inviteeAvatarUrl != null 
-                          ? NetworkImage(request.inviteeAvatarUrl!) 
+                      : (request.inviteeAvatarUrl != null
+                          ? NetworkImage(request.inviteeAvatarUrl!)
                           : null),
-                  child: (isIncoming 
-                      ? request.requesterAvatarUrl == null 
-                      : request.inviteeAvatarUrl == null)
-                      ? const Icon(Icons.person) : null,
+                  child: (isIncoming
+                          ? request.requesterAvatarUrl == null
+                          : request.inviteeAvatarUrl == null)
+                      ? const Icon(Icons.person)
+                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -278,7 +280,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen> with TickerProviderSt
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isIncoming 
+                        isIncoming
                             ? '${request.requesterName} invited you'
                             : 'You invited ${request.inviteeName}',
                         style: const TextStyle(fontWeight: FontWeight.bold),
@@ -315,7 +317,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen> with TickerProviderSt
                 const Spacer(),
                 if (request.playdateScheduledAt != null)
                   Text(
-                    DateFormat('MMM d, h:mm a').format(request.playdateScheduledAt!),
+                    DateFormat('MMM d, h:mm a')
+                        .format(request.playdateScheduledAt!),
                     style: TextStyle(color: Colors.grey[600]),
                   ),
               ],
@@ -326,14 +329,16 @@ class _PlaydatesScreenState extends State<PlaydatesScreen> with TickerProviderSt
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => _respondToRequest(request, PlaydateRequestStatus.declined),
+                      onPressed: () => _respondToRequest(
+                          request, PlaydateRequestStatus.declined),
                       child: const Text('Decline'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => _respondToRequest(request, PlaydateRequestStatus.accepted),
+                      onPressed: () => _respondToRequest(
+                          request, PlaydateRequestStatus.accepted),
                       child: const Text('Accept'),
                     ),
                   ),
@@ -348,7 +353,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen> with TickerProviderSt
 
   Widget _buildPlaydateCard(Playdate playdate, {required bool isUpcoming}) {
     final isOrganizer = playdate.userIsOrganizer(_currentUserId ?? '');
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -500,16 +505,18 @@ class _PlaydatesScreenState extends State<PlaydatesScreen> with TickerProviderSt
     );
   }
 
-  Future<void> _respondToRequest(PlaydateRequest request, PlaydateRequestStatus response) async {
-    final success = await PlaydateService.respondToPlaydateRequest(request.id, response);
+  Future<void> _respondToRequest(
+      PlaydateRequest request, PlaydateRequestStatus response) async {
+    final success =
+        await PlaydateService.respondToPlaydateRequest(request.id, response);
     if (success) {
       await _loadData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              response == PlaydateRequestStatus.accepted 
-                  ? 'Playdate request accepted!' 
+              response == PlaydateRequestStatus.accepted
+                  ? 'Playdate request accepted!'
                   : 'Playdate request declined',
             ),
           ),
@@ -543,7 +550,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen> with TickerProviderSt
       newTime.minute,
     );
 
-    final success = await PlaydateService.reschedulePlaydate(playdate.id, newDateTime);
+    final success =
+        await PlaydateService.reschedulePlaydate(playdate.id, newDateTime);
     if (success) {
       await _loadData();
       if (mounted) {
@@ -559,7 +567,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen> with TickerProviderSt
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Cancel Playdate'),
-        content: const Text('Are you sure you want to cancel this playdate? This action cannot be undone.'),
+        content: const Text(
+            'Are you sure you want to cancel this playdate? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -575,7 +584,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen> with TickerProviderSt
     );
 
     if (confirmed == true) {
-      final success = await PlaydateService.updatePlaydateStatus(playdate.id, PlaydateStatus.cancelled);
+      final success = await PlaydateService.updatePlaydateStatus(
+          playdate.id, PlaydateStatus.cancelled);
       if (success) {
         await _loadData();
         if (mounted) {
@@ -608,7 +618,7 @@ class _CreatePlaydateDialogState extends State<CreatePlaydateDialog> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
-  
+
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _selectedTime = const TimeOfDay(hour: 14, minute: 0);
   int _maxDogs = 2;
@@ -630,19 +640,22 @@ class _CreatePlaydateDialogState extends State<CreatePlaydateDialog> {
                 TextFormField(
                   controller: _titleController,
                   decoration: const InputDecoration(labelText: 'Title'),
-                  validator: (value) => value?.isEmpty == true ? 'Required' : null,
+                  validator: (value) =>
+                      value?.isEmpty == true ? 'Required' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _descriptionController,
-                  decoration: const InputDecoration(labelText: 'Description (optional)'),
+                  decoration: const InputDecoration(
+                      labelText: 'Description (optional)'),
                   maxLines: 2,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _locationController,
                   decoration: const InputDecoration(labelText: 'Location'),
-                  validator: (value) => value?.isEmpty == true ? 'Required' : null,
+                  validator: (value) =>
+                      value?.isEmpty == true ? 'Required' : null,
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<EnhancedDog>(
@@ -658,8 +671,8 @@ class _CreatePlaydateDialogState extends State<CreatePlaydateDialog> {
                             backgroundImage: dog.mainPhotoUrl != null
                                 ? NetworkImage(dog.mainPhotoUrl!)
                                 : null,
-                            child: dog.mainPhotoUrl == null 
-                                ? const Icon(Icons.pets, size: 16) 
+                            child: dog.mainPhotoUrl == null
+                                ? const Icon(Icons.pets, size: 16)
                                 : null,
                           ),
                           const SizedBox(width: 8),
@@ -677,7 +690,8 @@ class _CreatePlaydateDialogState extends State<CreatePlaydateDialog> {
                     Expanded(
                       child: ListTile(
                         title: const Text('Date'),
-                        subtitle: Text(DateFormat('MMM d, yyyy').format(_selectedDate)),
+                        subtitle: Text(
+                            DateFormat('MMM d, yyyy').format(_selectedDate)),
                         onTap: _selectDate,
                         contentPadding: EdgeInsets.zero,
                       ),
@@ -718,7 +732,7 @@ class _CreatePlaydateDialogState extends State<CreatePlaydateDialog> {
         ),
         ElevatedButton(
           onPressed: _isLoading ? null : _createPlaydate,
-          child: _isLoading 
+          child: _isLoading
               ? const SizedBox(
                   width: 20,
                   height: 20,
@@ -770,7 +784,9 @@ class _CreatePlaydateDialogState extends State<CreatePlaydateDialog> {
 
     final playdate = await PlaydateService.createPlaydate(
       title: _titleController.text,
-      description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+      description: _descriptionController.text.isEmpty
+          ? null
+          : _descriptionController.text,
       location: _locationController.text,
       scheduledAt: scheduledAt,
       maxDogs: _maxDogs,
@@ -822,13 +838,18 @@ class PlaydateDetailsDialog extends StatelessWidget {
                 const SizedBox(height: 16),
               ],
               _buildDetailRow(Icons.location_on, 'Location', playdate.location),
-              _buildDetailRow(Icons.access_time, 'Date & Time', playdate.formattedDateTime),
-              _buildDetailRow(Icons.pets, 'Dogs', '${playdate.participants.length}/${playdate.maxDogs}'),
-              _buildDetailRow(Icons.info, 'Status', playdate.status.displayName),
+              _buildDetailRow(
+                  Icons.access_time, 'Date & Time', playdate.formattedDateTime),
+              _buildDetailRow(Icons.pets, 'Dogs',
+                  '${playdate.participants.length}/${playdate.maxDogs}'),
+              _buildDetailRow(
+                  Icons.info, 'Status', playdate.status.displayName),
               const SizedBox(height: 16),
-              const Text('Participants:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Participants:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              ...playdate.participants.map((participant) => _buildParticipantTile(participant)),
+              ...playdate.participants
+                  .map((participant) => _buildParticipantTile(participant)),
               if (playdate.canJoin && !isParticipant && !isOrganizer) ...[
                 const SizedBox(height: 16),
                 SizedBox(
@@ -873,9 +894,8 @@ class PlaydateDetailsDialog extends StatelessWidget {
         backgroundImage: participant.userAvatarUrl != null
             ? NetworkImage(participant.userAvatarUrl!)
             : null,
-        child: participant.userAvatarUrl == null 
-            ? const Icon(Icons.person) 
-            : null,
+        child:
+            participant.userAvatarUrl == null ? const Icon(Icons.person) : null,
       ),
       title: Row(
         children: [
@@ -904,7 +924,8 @@ class PlaydateDetailsDialog extends StatelessWidget {
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Join functionality would use enhanced dog selection here'),
+        content:
+            Text('Join functionality would use enhanced dog selection here'),
       ),
     );
   }

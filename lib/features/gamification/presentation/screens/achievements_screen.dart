@@ -9,7 +9,7 @@ class AchievementsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
-    
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -83,9 +83,9 @@ class AchievementsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Achievements grid
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -105,7 +105,7 @@ class AchievementsScreen extends StatelessWidget {
                 },
               ),
             ),
-            
+
             const SizedBox(height: 32),
           ],
         ),
@@ -116,12 +116,12 @@ class AchievementsScreen extends StatelessWidget {
   Widget _buildAchievementCard(BuildContext context, Achievement achievement) {
     final isEarned = achievement.isEarned;
     final primary = Theme.of(context).colorScheme.primary;
-    
+
     // Colors based on earned status
     final Color cardBgColor;
     final Color iconBgColor;
     final Color iconColor;
-    
+
     if (isEarned) {
       // Subtle green for earned
       cardBgColor = const Color(0xFFF0FFF4); // Very subtle mint green
@@ -132,7 +132,7 @@ class AchievementsScreen extends StatelessWidget {
       iconBgColor = Colors.grey.shade100;
       iconColor = Colors.grey.shade400;
     }
-    
+
     return Container(
       decoration: BoxDecoration(
         color: cardBgColor,
@@ -164,9 +164,9 @@ class AchievementsScreen extends StatelessWidget {
                 color: iconColor,
               ),
             ),
-            
+
             const SizedBox(height: 14),
-            
+
             // Title
             Text(
               achievement.title,
@@ -177,9 +177,9 @@ class AchievementsScreen extends StatelessWidget {
                 color: isEarned ? Colors.black87 : Colors.grey[600],
               ),
             ),
-            
+
             const SizedBox(height: 6),
-            
+
             // Description
             Text(
               achievement.description,
@@ -192,9 +192,9 @@ class AchievementsScreen extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // Status indicator
             if (isEarned) ...[
               // Earned badge
@@ -204,9 +204,9 @@ class AchievementsScreen extends StatelessWidget {
                   Icon(Icons.check_circle, size: 14, color: Colors.green[400]),
                   const SizedBox(width: 4),
                   Text(
-                    achievement.earnedDate != null 
-                      ? 'Earned ${_formatTimeAgo(achievement.earnedDate!)}'
-                      : 'Earned',
+                    achievement.earnedDate != null
+                        ? 'Earned ${_formatTimeAgo(achievement.earnedDate!)}'
+                        : 'Earned',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.green[400],
@@ -272,7 +272,7 @@ class AchievementsScreen extends StatelessWidget {
   String _formatTimeAgo(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays > 0) {
       return '${difference.inDays}d ago';
     } else if (difference.inHours > 0) {
@@ -281,7 +281,7 @@ class AchievementsScreen extends StatelessWidget {
       return 'just now';
     }
   }
-  
+
   // Mock progress for demo - would come from real data
   double _getMockProgress(Achievement achievement) {
     switch (achievement.iconName) {
@@ -297,7 +297,7 @@ class AchievementsScreen extends StatelessWidget {
         return 0.3;
     }
   }
-  
+
   String _getMockProgressText(Achievement achievement) {
     switch (achievement.iconName) {
       case 'group':

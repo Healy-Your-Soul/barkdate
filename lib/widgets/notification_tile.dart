@@ -24,23 +24,25 @@ class NotificationTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: notification.isRead 
-          ? theme.colorScheme.surface
-          : theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
+        color: notification.isRead
+            ? theme.colorScheme.surface
+            : theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: notification.isRead
-            ? theme.colorScheme.outline.withValues(alpha: 0.2)
-            : notification.iconColor.withValues(alpha: 0.3),
+              ? theme.colorScheme.outline.withValues(alpha: 0.2)
+              : notification.iconColor.withValues(alpha: 0.3),
           width: notification.isRead ? 1 : 2,
         ),
-        boxShadow: notification.isRead ? null : [
-          BoxShadow(
-            color: notification.iconColor.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: notification.isRead
+            ? null
+            : [
+                BoxShadow(
+                  color: notification.iconColor.withValues(alpha: 0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -73,9 +75,9 @@ class NotificationTile extends StatelessWidget {
                         size: 24,
                       ),
                     ),
-                    
+
                     const SizedBox(width: 16),
-                    
+
                     // Title and subtitle
                     Expanded(
                       child: Column(
@@ -84,7 +86,9 @@ class NotificationTile extends StatelessWidget {
                           Text(
                             notification.title,
                             style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: notification.isRead ? FontWeight.w500 : FontWeight.w600,
+                              fontWeight: notification.isRead
+                                  ? FontWeight.w500
+                                  : FontWeight.w600,
                               color: theme.colorScheme.onSurface,
                             ),
                             maxLines: 1,
@@ -94,7 +98,8 @@ class NotificationTile extends StatelessWidget {
                           Text(
                             notification.subtitle,
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.7),
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -102,7 +107,7 @@ class NotificationTile extends StatelessWidget {
                         ],
                       ),
                     ),
-                    
+
                     // Timestamp and unread indicator
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -110,7 +115,8 @@ class NotificationTile extends StatelessWidget {
                         Text(
                           _formatNotificationTime(notification.createdAt),
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
                           ),
                         ),
                         if (!notification.isRead) ...[
@@ -128,27 +134,31 @@ class NotificationTile extends StatelessWidget {
                     ),
                   ],
                 ),
-                
+
                 // Message body
                 if (notification.body.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       notification.body,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                        color:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.8),
                       ),
                     ),
                   ),
                 ],
-                
+
                 // Action buttons for actionable notifications
-                if (showActions && notification.isActionable && notification.actions.isNotEmpty) ...[
+                if (showActions &&
+                    notification.isActionable &&
+                    notification.actions.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Row(
                     children: notification.actions.map((action) {
@@ -161,7 +171,7 @@ class NotificationTile extends StatelessWidget {
                     }).toList(),
                   ),
                 ],
-                
+
                 // Quick actions for non-actionable notifications
                 if (showActions && !notification.isActionable) ...[
                   const SizedBox(height: 16),
@@ -175,7 +185,8 @@ class NotificationTile extends StatelessWidget {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: theme.colorScheme.primary,
                             side: BorderSide(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                              color: theme.colorScheme.primary
+                                  .withValues(alpha: 0.5),
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 8),
                           ),
@@ -191,7 +202,8 @@ class NotificationTile extends StatelessWidget {
                             style: OutlinedButton.styleFrom(
                               foregroundColor: theme.colorScheme.secondary,
                               side: BorderSide(
-                                color: theme.colorScheme.secondary.withValues(alpha: 0.5),
+                                color: theme.colorScheme.secondary
+                                    .withValues(alpha: 0.5),
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 8),
                             ),
@@ -211,7 +223,7 @@ class NotificationTile extends StatelessWidget {
 
   Widget _buildActionButton(BuildContext context, NotificationAction action) {
     final theme = Theme.of(context);
-    
+
     return ElevatedButton.icon(
       onPressed: () => onActionPressed?.call(action.action),
       icon: Icon(action.icon, size: 16),
@@ -261,7 +273,7 @@ class CompactNotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       leading: Container(

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 /// A wrapper widget that dismisses the keyboard when tapping outside text fields.
-/// 
+///
 /// Wrap any screen or widget hierarchy with this to enable tap-to-dismiss keyboard behavior.
-/// 
+///
 /// Usage:
 /// ```dart
 /// KeyboardDismissible(
@@ -14,23 +14,22 @@ import 'package:flutter/material.dart';
 /// ```
 class KeyboardDismissible extends StatelessWidget {
   final Widget child;
-  
+
   /// Whether to use translucent hit test behavior (allows child gestures to also fire)
   final bool translucent;
-  
+
   const KeyboardDismissible({
     super.key,
     required this.child,
     this.translucent = false,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
-      behavior: translucent 
-          ? HitTestBehavior.translucent 
-          : HitTestBehavior.opaque,
+      behavior:
+          translucent ? HitTestBehavior.translucent : HitTestBehavior.opaque,
       child: child,
     );
   }
@@ -56,7 +55,7 @@ class KeyboardAwareScaffold extends StatelessWidget {
   final Color? backgroundColor;
   final bool extendBody;
   final bool extendBodyBehindAppBar;
-  
+
   const KeyboardAwareScaffold({
     super.key,
     this.appBar,
@@ -69,7 +68,7 @@ class KeyboardAwareScaffold extends StatelessWidget {
     this.extendBody = false,
     this.extendBodyBehindAppBar = false,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -95,13 +94,13 @@ class KeyboardAwareScaffold extends StatelessWidget {
 class KeyboardPadding extends StatelessWidget {
   final Widget child;
   final double extraPadding;
-  
+
   const KeyboardPadding({
     super.key,
     required this.child,
     this.extraPadding = 16.0,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return Padding(

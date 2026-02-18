@@ -21,7 +21,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     const greenColor = Color(0xFF4CAF50);
     const unselectedColor = Color(0xFF9E9E9E);
-    
+
     final navItems = [
       _NavItem(icon: Symbols.home, label: 'Feed'),
       _NavItem(icon: Symbols.map, label: 'Map'),
@@ -30,7 +30,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
       _NavItem(icon: Symbols.chat_bubble, label: 'Messages'),
       _NavItem(icon: Symbols.person, label: 'Profile'),
     ];
-    
+
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: Container(
@@ -51,7 +51,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
               children: List.generate(navItems.length, (index) {
                 final isSelected = navigationShell.currentIndex == index;
                 final item = navItems[index];
-                
+
                 return Expanded(
                   child: GestureDetector(
                     onTap: () => _goBranch(index),
@@ -86,7 +86,8 @@ class ScaffoldWithNavBar extends StatelessWidget {
                           item.label,
                           style: TextStyle(
                             fontSize: 9,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                            fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.w400,
                             color: isSelected ? greenColor : unselectedColor,
                           ),
                         ),
@@ -106,7 +107,6 @@ class ScaffoldWithNavBar extends StatelessWidget {
 class _NavItem {
   final IconData icon;
   final String label;
-  
+
   const _NavItem({required this.icon, required this.label});
 }
-

@@ -7,7 +7,7 @@ class LocationPickerField extends StatefulWidget {
   final String hintText;
   final String? Function(String?)? validator;
   final ValueChanged<PlaceAutocomplete>? onPlaceSelected;
-  
+
   const LocationPickerField({
     super.key,
     required this.controller,
@@ -24,7 +24,7 @@ class _LocationPickerFieldState extends State<LocationPickerField> {
   List<PlaceAutocomplete> _suggestions = [];
   bool _isLoading = false;
   PlaceAutocomplete? _selectedPlace;
-  
+
   final FocusNode _focusNode = FocusNode();
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _overlayEntry;
@@ -164,11 +164,11 @@ class _LocationPickerFieldState extends State<LocationPickerField> {
   void _onSuggestionTap(PlaceAutocomplete suggestion) {
     _hideOverlay();
     _focusNode.unfocus();
-    
+
     widget.controller.text = suggestion.structuredFormatting.mainText;
     setState(() => _selectedPlace = suggestion);
     widget.onPlaceSelected?.call(suggestion);
-    
+
     // COST OPTIMIZATION: Reset session token after selection
     // This ends the current billing session so next search starts fresh
     PlacesSessionTokenManager.resetToken();

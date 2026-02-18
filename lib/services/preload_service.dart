@@ -16,7 +16,8 @@ class PreloadService {
         limit: 20,
         offset: 0,
       );
-      CacheService().cacheNearbyDogs(userId, List<Map<String, dynamic>>.from(nearby));
+      CacheService()
+          .cacheNearbyDogs(userId, List<Map<String, dynamic>>.from(nearby));
       debugPrint('  - Cached ${nearby.length} nearby dogs');
 
       // Fetch first page of playdates (20 playdates)
@@ -25,12 +26,14 @@ class PreloadService {
         upcomingLimit: 20,
         upcomingOffset: 0,
       );
-      final upcoming = (pd['upcoming'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final upcoming =
+          (pd['upcoming'] as List?)?.cast<Map<String, dynamic>>() ?? [];
       CacheService().cachePlaydateList(userId, 'upcoming', upcoming);
       debugPrint('  - Cached ${upcoming.length} upcoming playdates');
 
       // Fetch first page of suggested events (20 events)
-      final suggested = await EventService.getUpcomingEvents(limit: 20, offset: 0);
+      final suggested =
+          await EventService.getUpcomingEvents(limit: 20, offset: 0);
       CacheService().cacheEventList('suggested_$userId', suggested);
       debugPrint('  - Cached ${suggested.length} suggested events');
 
@@ -59,5 +62,3 @@ class PreloadService {
     }
   }
 }
-
-

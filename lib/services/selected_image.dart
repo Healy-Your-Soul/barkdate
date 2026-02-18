@@ -24,5 +24,3 @@ class SelectedImage {
     return bytes;
   }
 }
-
-

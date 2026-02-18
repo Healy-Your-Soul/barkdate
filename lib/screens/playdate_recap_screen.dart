@@ -26,12 +26,12 @@ class PlaydateRecapScreen extends StatefulWidget {
 class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
   final TextEditingController _recapController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
-  
+
   int _experienceRating = 5;
   int _locationRating = 5;
   bool _shareToFeed = false;
   bool _isSubmitting = false;
-  
+
   List<SelectedImage> _selectedImages = [];
   List<String> _uploadedImageUrls = [];
   List<Map<String, dynamic>> _participatingDogs = [];
@@ -63,9 +63,7 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
       setState(() {
         _participatingDogs = participants;
         // Auto-tag all participating dogs
-        _taggedDogIds = participants
-            .map((p) => p['dog_id'] as String)
-            .toSet();
+        _taggedDogIds = participants.map((p) => p['dog_id'] as String).toSet();
       });
     } catch (e) {
       debugPrint('Error loading participants: $e');
@@ -79,7 +77,7 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
         maxHeight: 1080,
         imageQuality: 85,
       );
-      
+
       if (images.isNotEmpty) {
         final List<SelectedImage> selectedImages = [];
         for (final xFile in images) {
@@ -109,7 +107,7 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
         maxHeight: 1080,
         imageQuality: 85,
       );
-      
+
       if (photo != null) {
         final bytes = await photo.readAsBytes();
         final selectedImage = SelectedImage(
@@ -136,26 +134,26 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
 
   Future<List<String>> _uploadImages() async {
     final List<String> urls = [];
-    
+
     for (final image in _selectedImages) {
       try {
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.fileName ?? 'image.jpg'}';
+        final fileName =
+            '${DateTime.now().millisecondsSinceEpoch}_${image.fileName ?? 'image.jpg'}';
         final path = 'playdate-recaps/$fileName';
-        
+
         await SupabaseConfig.client.storage
             .from('photos')
             .uploadBinary(path, image.bytes);
-        
-        final url = SupabaseConfig.client.storage
-            .from('photos')
-            .getPublicUrl(path);
-        
+
+        final url =
+            SupabaseConfig.client.storage.from('photos').getPublicUrl(path);
+
         urls.add(url);
       } catch (e) {
         debugPrint('Error uploading image: $e');
       }
     }
-    
+
     return urls;
   }
 
@@ -175,9 +173,9 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
 
       // Get user's dog
       final userDogs = await BarkDateUserService.getUserDogs(user.id);
-      
+
       if (userDogs.isEmpty) throw Exception('No dog profile found');
-      
+
       final dogId = userDogs.first['id'];
 
       // Upload images if any
@@ -207,13 +205,13 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(_shareToFeed 
-                  ? 'Recap saved and shared to feed! 🎉' 
+              content: Text(_shareToFeed
+                  ? 'Recap saved and shared to feed! 🎉'
                   : 'Playdate recap saved! 🎉'),
               backgroundColor: Colors.green,
             ),
           );
-          
+
           Navigator.pop(context, true);
         } else {
           throw Exception('Failed to save recap');
@@ -252,9 +250,7 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
         'playdate_id': widget.playdateId,
       };
 
-      await SupabaseConfig.client
-          .from('posts')
-          .insert(postData);
+      await SupabaseConfig.client.from('posts').insert(postData);
 
       // Notify tagged dog owners
       for (final taggedDogId in _taggedDogIds) {
@@ -316,13 +312,14 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
                   Text(
                     widget.playdateData['title'] ?? 'Playdate',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.location_on, size: 16, color: Theme.of(context).hintColor),
+                      Icon(Icons.location_on,
+                          size: 16, color: Theme.of(context).hintColor),
                       const SizedBox(width: 4),
                       Text(
                         widget.playdateData['location'] ?? 'Unknown location',
@@ -333,10 +330,12 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.calendar_today, size: 16, color: Theme.of(context).hintColor),
+                      Icon(Icons.calendar_today,
+                          size: 16, color: Theme.of(context).hintColor),
                       const SizedBox(width: 4),
                       Text(
-                        _formatDate(DateTime.parse(widget.playdateData['scheduled_at'])),
+                        _formatDate(DateTime.parse(
+                            widget.playdateData['scheduled_at'])),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
@@ -344,15 +343,15 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Experience rating
             Text(
               'How was the experience?',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             const SizedBox(height: 12),
             Row(
@@ -371,15 +370,15 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
                 );
               }),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Location rating
             Text(
               'How was the location?',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             const SizedBox(height: 12),
             Row(
@@ -398,15 +397,15 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
                 );
               }),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Recap text
             Text(
               'Share your experience',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -418,21 +417,22 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 filled: true,
-                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                fillColor:
+                    Theme.of(context).colorScheme.surfaceContainerHighest,
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Photos section
             Text(
               'Add Photos',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             const SizedBox(height: 12),
-            
+
             // Photo grid
             if (_selectedImages.isNotEmpty) ...[
               GridView.builder(
@@ -480,7 +480,7 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
               ),
               const SizedBox(height: 12),
             ],
-            
+
             // Add photo buttons
             Row(
               children: [
@@ -503,16 +503,16 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Tagged dogs section
             if (_participatingDogs.isNotEmpty) ...[
               Text(
                 'Tag Dogs',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -521,10 +521,10 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
                 children: _participatingDogs.map((participant) {
                   final dog = participant['dog'] as Map<String, dynamic>?;
                   if (dog == null) return const SizedBox.shrink();
-                  
+
                   final dogId = dog['id'] as String;
                   final isTagged = _taggedDogIds.contains(dogId);
-                  
+
                   return FilterChip(
                     label: Text(dog['name'] ?? 'Unknown'),
                     selected: isTagged,
@@ -550,7 +550,7 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
               ),
               const SizedBox(height: 24),
             ],
-            
+
             // Share to feed option
             AppCard(
               child: CheckboxListTile(
@@ -568,9 +568,9 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Submit button
             AppButton(
               text: 'Save Recap',
@@ -579,7 +579,7 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
               isFullWidth: true,
               size: AppButtonSize.large,
             ),
-            
+
             const SizedBox(height: 32),
           ],
         ),
@@ -589,8 +589,18 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
 
   String _formatDate(DateTime date) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }

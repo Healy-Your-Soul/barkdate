@@ -46,24 +46,25 @@ class Dog {
     double? distanceKm,
     bool? isMatched,
     bool? isFriend,
-  }) => Dog(
-    id: id ?? this.id,
-    name: name ?? this.name,
-    breed: breed ?? this.breed,
-    age: age ?? this.age,
-    size: size ?? this.size,
-    gender: gender ?? this.gender,
-    bio: bio ?? this.bio,
-    photos: photos ?? this.photos,
-    ownerId: ownerId ?? this.ownerId,
-    ownerName: ownerName ?? this.ownerName,
-    ownerAvatarUrl: ownerAvatarUrl ?? this.ownerAvatarUrl,
-    distanceKm: distanceKm ?? this.distanceKm,
-    isMatched: isMatched ?? this.isMatched,
-    isFriend: isFriend ?? this.isFriend,
-  );
+  }) =>
+      Dog(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        breed: breed ?? this.breed,
+        age: age ?? this.age,
+        size: size ?? this.size,
+        gender: gender ?? this.gender,
+        bio: bio ?? this.bio,
+        photos: photos ?? this.photos,
+        ownerId: ownerId ?? this.ownerId,
+        ownerName: ownerName ?? this.ownerName,
+        ownerAvatarUrl: ownerAvatarUrl ?? this.ownerAvatarUrl,
+        distanceKm: distanceKm ?? this.distanceKm,
+        isMatched: isMatched ?? this.isMatched,
+        isFriend: isFriend ?? this.isFriend,
+      );
 
-    factory Dog.fromJson(Map<String, dynamic> json) {
+  factory Dog.fromJson(Map<String, dynamic> json) {
     // Handle photos mapping from various possible backend formats
     List<String> photoList = [];
     if (json['photos'] != null) {
@@ -79,7 +80,8 @@ class Dog {
 
     // Handle owner data from various formats (RPC vs direct query)
     final ownerData = json['owner'] ?? json['users'];
-    final ownerId = json['owner_id'] ?? json['user_id'] ?? ownerData?['id'] ?? '';
+    final ownerId =
+        json['owner_id'] ?? json['user_id'] ?? ownerData?['id'] ?? '';
     final ownerName = json['owner_name'] ?? ownerData?['name'] ?? 'Unknown';
     final ownerAvatar = json['owner_avatar_url'] ?? ownerData?['avatar_url'];
 

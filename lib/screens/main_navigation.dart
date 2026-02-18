@@ -29,10 +29,10 @@ class _MainNavigationState extends State<MainNavigation> {
   String? _dogAvatarUrl;
   int _unreadMessageCount = 0;
   StreamSubscription? _messageSubscription;
-  
+
   // Feature flag: set to true to use new map_v2, false for old map
   static const bool _useMapV2 = true;
-  
+
   // Simple direct screen selection - no caching needed
   Widget _getScreen(int index) {
     switch (index) {
@@ -78,8 +78,10 @@ class _MainNavigationState extends State<MainNavigation> {
           if (!mounted) return;
           // Count unread messages (handle null is_read as false/unread if desired, or true/read)
           // Usually is_read is false by default. safely check booleans.
-          final unreadCount = messages.where((m) => m['is_read'] == false).length;
-          debugPrint('📫 Unread messages count: $unreadCount (total matched: ${messages.length})');
+          final unreadCount =
+              messages.where((m) => m['is_read'] == false).length;
+          debugPrint(
+              '📫 Unread messages count: $unreadCount (total matched: ${messages.length})');
           setState(() => _unreadMessageCount = unreadCount);
         }, onError: (error) {
           debugPrint('❌ Error subscribing to messages: $error');
@@ -104,7 +106,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
-    
+
     // Load avatar only when Profile tab (index 5) is first accessed
     if (index == 5 && _dogAvatarUrl == null) {
       _loadDogAvatar();
@@ -114,13 +116,15 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _getScreen(_selectedIndex), // Only create and show the active screen
+      body:
+          _getScreen(_selectedIndex), // Only create and show the active screen
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+        unselectedItemColor:
+            Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         items: [
           BottomNavigationBarItem(
             icon: Icon(Symbols.home, weight: 300),

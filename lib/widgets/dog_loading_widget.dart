@@ -7,7 +7,7 @@ import 'dart:math' as math;
 class DogLoadingWidget extends StatelessWidget {
   final double size;
   final String? message;
-  
+
   const DogLoadingWidget({
     super.key,
     this.size = 120,
@@ -51,7 +51,7 @@ class DogLoadingWidget extends StatelessWidget {
       ],
     );
   }
-  
+
   Widget _buildFallbackAnimation(BuildContext context) {
     // Animated paw print as fallback
     return TweenAnimationBuilder<double>(
@@ -104,7 +104,7 @@ class _PawLoadingIndicatorState extends State<PawLoadingIndicator>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
-    
+
     _scaleAnimation = Tween<double>(
       begin: 0.8,
       end: 1.1,
@@ -112,7 +112,7 @@ class _PawLoadingIndicatorState extends State<PawLoadingIndicator>
       parent: _controller,
       curve: Curves.easeInOut,
     ));
-    
+
     _opacityAnimation = Tween<double>(
       begin: 0.4,
       end: 1.0,
@@ -131,7 +131,7 @@ class _PawLoadingIndicatorState extends State<PawLoadingIndicator>
   @override
   Widget build(BuildContext context) {
     final color = widget.color ?? Theme.of(context).colorScheme.primary;
-    
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -242,7 +242,7 @@ class DogCircularProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progressColor = color ?? Theme.of(context).colorScheme.primary;
-    
+
     return SizedBox(
       width: size,
       height: size,

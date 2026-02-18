@@ -35,7 +35,8 @@ class PlaydateService {
   }
 
   // Get playdate requests for current user
-  static Future<List<PlaydateRequest>> getUserPlaydateRequests(String userId) async {
+  static Future<List<PlaydateRequest>> getUserPlaydateRequests(
+      String userId) async {
     try {
       final response = await _supabase
           .from('playdate_requests')
@@ -109,7 +110,8 @@ class PlaydateService {
   }
 
   // Join a playdate
-  static Future<bool> joinPlaydate(String playdateId, String userId, String dogId) async {
+  static Future<bool> joinPlaydate(
+      String playdateId, String userId, String dogId) async {
     try {
       // Check if playdate is still available
       final playdate = await getPlaydateById(playdateId);
@@ -128,10 +130,8 @@ class PlaydateService {
 
       // Update playdate status to confirmed if it reaches minimum participants
       if (playdate.participants.length + 1 >= 2) {
-        await _supabase
-            .from('playdates')
-            .update({'status': PlaydateStatus.confirmed.value})
-            .eq('id', playdateId);
+        await _supabase.from('playdates').update(
+            {'status': PlaydateStatus.confirmed.value}).eq('id', playdateId);
       }
 
       return true;
@@ -164,12 +164,12 @@ class PlaydateService {
   }
 
   // Update playdate status
-  static Future<bool> updatePlaydateStatus(String playdateId, PlaydateStatus status) async {
+  static Future<bool> updatePlaydateStatus(
+      String playdateId, PlaydateStatus status) async {
     try {
       await _supabase
           .from('playdates')
-          .update({'status': status.value})
-          .eq('id', playdateId);
+          .update({'status': status.value}).eq('id', playdateId);
       return true;
     } catch (e) {
       print('Error updating playdate status: $e');
@@ -178,15 +178,14 @@ class PlaydateService {
   }
 
   // Reschedule playdate
-  static Future<bool> reschedulePlaydate(String playdateId, DateTime newScheduledAt) async {
+  static Future<bool> reschedulePlaydate(
+      String playdateId, DateTime newScheduledAt) async {
     try {
-      await _supabase
-          .from('playdates')
-          .update({
-            'scheduled_at': newScheduledAt.toIso8601String(),
-            'status': PlaydateStatus.pending.value, // Reset to pending for re-confirmation
-          })
-          .eq('id', playdateId);
+      await _supabase.from('playdates').update({
+        'scheduled_at': newScheduledAt.toIso8601String(),
+        'status': PlaydateStatus
+            .pending.value, // Reset to pending for re-confirmation
+      }).eq('id', playdateId);
       return true;
     } catch (e) {
       print('Error rescheduling playdate: $e');
@@ -224,19 +223,17 @@ class PlaydateService {
     PlaydateRequestStatus response,
   ) async {
     try {
-      await _supabase
-          .from('playdate_requests')
-          .update({
-            'status': response.value,
-            'responded_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', requestId);
+      await _supabase.from('playdate_requests').update({
+        'status': response.value,
+        'responded_at': DateTime.now().toIso8601String(),
+      }).eq('id', requestId);
 
       // If accepted, add to playdate participants
       if (response == PlaydateRequestStatus.accepted) {
         final request = await _getPlaydateRequest(requestId);
         if (request != null) {
-          await joinPlaydate(request.playdateId, request.inviteeId, request.dogId);
+          await joinPlaydate(
+              request.playdateId, request.inviteeId, request.dogId);
         }
       }
 
@@ -261,7 +258,7 @@ class PlaydateService {
         'status': PlaydateStatus.pending.value,
         'updated_at': DateTime.now().toIso8601String(),
       };
-      
+
       if (newScheduledAt != null) {
         updateData['scheduled_at'] = newScheduledAt.toIso8601String();
       }
@@ -269,22 +266,16 @@ class PlaydateService {
         updateData['location'] = newLocation;
       }
 
-      await _supabase
-          .from('playdates')
-          .update(updateData)
-          .eq('id', playdateId);
+      await _supabase.from('playdates').update(updateData).eq('id', playdateId);
 
       // Update the request status to counter_proposed
-      await _supabase
-          .from('playdate_requests')
-          .update({
-            'status': PlaydateRequestStatus.counterProposed.value,
-            'counter_message': message,
-            'counter_scheduled_at': newScheduledAt?.toIso8601String(),
-            'counter_location': newLocation,
-            'responded_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', requestId);
+      await _supabase.from('playdate_requests').update({
+        'status': PlaydateRequestStatus.counterProposed.value,
+        'counter_message': message,
+        'counter_scheduled_at': newScheduledAt?.toIso8601String(),
+        'counter_location': newLocation,
+        'responded_at': DateTime.now().toIso8601String(),
+      }).eq('id', requestId);
 
       return true;
     } catch (e) {
@@ -330,9 +321,7 @@ class PlaydateService {
   // Get single playdate by ID
   static Future<Playdate?> getPlaydateById(String playdateId) async {
     try {
-      final response = await _supabase
-          .from('playdates')
-          .select('''
+      final response = await _supabase.from('playdates').select('''
             *,
             participants:playdate_participants(
               id,
@@ -343,9 +332,7 @@ class PlaydateService {
               user:users(id, name, avatar_url),
               dog:dogs(id, name, main_photo_url)
             )
-          ''')
-          .eq('id', playdateId)
-          .single();
+          ''').eq('id', playdateId).single();
 
       return _parsePlaydateFromResponse(response);
     } catch (e) {
@@ -364,7 +351,7 @@ class PlaydateService {
 
       final List<dynamic> data = response;
       if (data.isEmpty) return '';
-      
+
       final ids = data.map((item) => item['playdate_id']).join(',');
       return ids;
     } catch (e) {
@@ -419,12 +406,15 @@ class PlaydateService {
       location: data['location'] ?? '',
       latitude: data['latitude']?.toDouble(),
       longitude: data['longitude']?.toDouble(),
-      scheduledAt: DateTime.parse(data['scheduled_at'] ?? DateTime.now().toIso8601String()),
+      scheduledAt: DateTime.parse(
+          data['scheduled_at'] ?? DateTime.now().toIso8601String()),
       durationMinutes: data['duration_minutes']?.toInt() ?? 60,
       maxDogs: data['max_dogs']?.toInt() ?? 2,
       status: PlaydateStatus.fromString(data['status'] ?? 'pending'),
-      createdAt: DateTime.parse(data['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(data['updated_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+          data['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(
+          data['updated_at'] ?? DateTime.now().toIso8601String()),
       participants: participantsList,
       organizerId: organizer?.userId ?? data['organizer_id'] ?? '',
       organizerName: organizer?.userName ?? '',
@@ -436,17 +426,14 @@ class PlaydateService {
   static Future<List<EnhancedDog>> getUserDogs(String userId) async {
     try {
       // Get dogs where user is owner (many-to-many)
-      final response = await _supabase
-          .from('dog_owners')
-          .select('''
+      final response = await _supabase.from('dog_owners').select('''
             *,
             dog:dogs(*)
-          ''')
-          .eq('user_id', userId);
+          ''').eq('user_id', userId);
 
       final List<dynamic> data = response;
       final dogs = <EnhancedDog>[];
-      
+
       for (final ownershipData in data) {
         final dogData = ownershipData['dog'];
         if (dogData != null) {
@@ -454,7 +441,7 @@ class PlaydateService {
           dogs.add(dog);
         }
       }
-      
+
       return dogs;
     } catch (e) {
       print('Error fetching user dogs: $e');

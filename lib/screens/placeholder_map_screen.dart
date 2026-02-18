@@ -106,7 +106,7 @@ class PlaceholderMapScreen extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Parks list
           Expanded(
             child: ListView.builder(
@@ -135,11 +135,12 @@ class PlaceholderMapScreen extends StatelessWidget {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(Icons.star, color: Colors.amber, size: 16),
+                            const Icon(Icons.star,
+                                color: Colors.amber, size: 16),
                             Text(' ${park.rating}'),
                             const SizedBox(width: 16),
-                            Icon(Icons.directions_walk, 
-                                 color: Colors.grey[600], size: 16),
+                            Icon(Icons.directions_walk,
+                                color: Colors.grey[600], size: 16),
                             Text(' ${(park.distance * 1000).round()}m'),
                           ],
                         ),
@@ -169,14 +170,16 @@ class PlaceholderMapScreen extends StatelessWidget {
                               const SizedBox(height: 8),
                               Text('Rating: ${park.rating} stars'),
                               const SizedBox(height: 8),
-                              Text('Distance: ${(park.distance * 1000).round()}m away'),
+                              Text(
+                                  'Distance: ${(park.distance * 1000).round()}m away'),
                               const SizedBox(height: 8),
                               if (park.amenities.isNotEmpty) ...[
-                                const Text('Amenities:', 
-                                          style: TextStyle(fontWeight: FontWeight.bold)),
+                                const Text('Amenities:',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 4),
-                                ...park.amenities.map((amenity) => 
-                                  Text('• $amenity')),
+                                ...park.amenities
+                                    .map((amenity) => Text('• $amenity')),
                               ],
                             ],
                           ),
@@ -190,7 +193,8 @@ class PlaceholderMapScreen extends StatelessWidget {
                                 Navigator.of(context).pop();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Getting directions to ${park.name}'),
+                                    content: Text(
+                                        'Getting directions to ${park.name}'),
                                     duration: const Duration(seconds: 2),
                                   ),
                                 );

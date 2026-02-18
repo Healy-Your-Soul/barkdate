@@ -9,7 +9,7 @@ class CacheService {
 
   // Cache storage with expiry tracking
   final Map<String, CacheEntry> _cache = {};
-  
+
   // Cache configuration - Extended TTL for better performance
   static const Duration userProfileTTL = Duration(minutes: 15);
   static const Duration dogProfileTTL = Duration(minutes: 15);
@@ -23,13 +23,13 @@ class CacheService {
   T? get<T>(String key) {
     final entry = _cache[key];
     if (entry == null) return null;
-    
+
     // Check if expired
     if (entry.expiresAt.isBefore(DateTime.now())) {
       _cache.remove(key);
       return null;
     }
-    
+
     return entry.value as T?;
   }
 
@@ -77,12 +77,14 @@ class CacheService {
   }
 
   /// Cache playdate list
-  void cachePlaydateList(String userId, String type, List<Map<String, dynamic>> playdates) {
+  void cachePlaydateList(
+      String userId, String type, List<Map<String, dynamic>> playdates) {
     set('playdates_${userId}_$type', playdates, playdateListTTL);
   }
 
   /// Get cached playdate list
-  List<Map<String, dynamic>>? getCachedPlaydateList(String userId, String type) {
+  List<Map<String, dynamic>>? getCachedPlaydateList(
+      String userId, String type) {
     return get<List<Map<String, dynamic>>>('playdates_${userId}_$type');
   }
 
@@ -152,7 +154,7 @@ class CacheService {
 
   /// Start periodic cleanup
   Timer? _cleanupTimer;
-  
+
   void startPeriodicCleanup() {
     _cleanupTimer?.cancel();
     _cleanupTimer = Timer.periodic(const Duration(minutes: 1), (_) {

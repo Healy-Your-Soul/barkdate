@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 
 enum PlaydateStatus {
   pending('pending'),
-  confirmed('confirmed'), 
+  confirmed('confirmed'),
   inProgress('in_progress'),
   completed('completed'),
   cancelled('cancelled'),
@@ -75,7 +75,7 @@ enum PlaydateStatus {
 
 enum AgePreference {
   puppy('puppy'),
-  young('young'), 
+  young('young'),
   adult('adult'),
   senior('senior'),
   any('any');
@@ -154,7 +154,8 @@ class PlaydateParticipant {
       dogId: json['dog_id'] ?? '',
       dogName: json['dog_name'] ?? json['dog']?['name'] ?? '',
       dogPhotoUrl: json['dog_photo_url'] ?? json['dog']?['main_photo_url'],
-      joinedAt: DateTime.parse(json['joined_at'] ?? DateTime.now().toIso8601String()),
+      joinedAt:
+          DateTime.parse(json['joined_at'] ?? DateTime.now().toIso8601String()),
       isOrganizer: json['is_organizer'] ?? false,
     );
   }
@@ -187,10 +188,10 @@ class Playdate {
   final PlaydateStatus status;
   final DateTime createdAt;
   final DateTime updatedAt;
-  
+
   // Participants (many-to-many)
   final List<PlaydateParticipant> participants;
-  
+
   // Organizer info (for easy access)
   final String organizerId;
   final String organizerName;
@@ -216,24 +217,31 @@ class Playdate {
   });
 
   // Helper getters
-  PlaydateParticipant? get organizer => participants.where((p) => p.isOrganizer).firstOrNull;
-  
-  List<PlaydateParticipant> get nonOrganizerParticipants => participants.where((p) => !p.isOrganizer).toList();
-  
+  PlaydateParticipant? get organizer =>
+      participants.where((p) => p.isOrganizer).firstOrNull;
+
+  List<PlaydateParticipant> get nonOrganizerParticipants =>
+      participants.where((p) => !p.isOrganizer).toList();
+
   bool get isFull => participants.length >= maxDogs;
-  
-  bool get isUpcoming => scheduledAt.isAfter(DateTime.now()) && status == PlaydateStatus.confirmed;
-  
-  bool get isPast => scheduledAt.isBefore(DateTime.now()) || status == PlaydateStatus.completed;
-  
+
+  bool get isUpcoming =>
+      scheduledAt.isAfter(DateTime.now()) && status == PlaydateStatus.confirmed;
+
+  bool get isPast =>
+      scheduledAt.isBefore(DateTime.now()) ||
+      status == PlaydateStatus.completed;
+
   bool get canJoin => !isFull && status == PlaydateStatus.pending;
-  
-  bool get canEdit => status == PlaydateStatus.pending || status == PlaydateStatus.confirmed;
-  
-  bool userIsParticipant(String userId) => participants.any((p) => p.userId == userId);
-  
+
+  bool get canEdit =>
+      status == PlaydateStatus.pending || status == PlaydateStatus.confirmed;
+
+  bool userIsParticipant(String userId) =>
+      participants.any((p) => p.userId == userId);
+
   bool userIsOrganizer(String userId) => organizerId == userId;
-  
+
   String get participantsDisplay {
     if (participants.isEmpty) return 'No participants';
     if (participants.length == 1) return participants.first.userName;
@@ -244,7 +252,7 @@ class Playdate {
   String get timeDisplay {
     final now = DateTime.now();
     final difference = scheduledAt.difference(now);
-    
+
     if (difference.inDays > 0) {
       return '${difference.inDays} days';
     } else if (difference.inHours > 0) {
@@ -269,7 +277,8 @@ class Playdate {
     final participantsList = <PlaydateParticipant>[];
     if (json['participants'] != null) {
       final participantsData = json['participants'] as List;
-      participantsList.addAll(participantsData.map((p) => PlaydateParticipant.fromJson(p)));
+      participantsList
+          .addAll(participantsData.map((p) => PlaydateParticipant.fromJson(p)));
     }
 
     // Find organizer for easy access
@@ -282,16 +291,20 @@ class Playdate {
       location: json['location'] ?? '',
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
-      scheduledAt: DateTime.parse(json['scheduled_at'] ?? DateTime.now().toIso8601String()),
+      scheduledAt: DateTime.parse(
+          json['scheduled_at'] ?? DateTime.now().toIso8601String()),
       durationMinutes: json['duration_minutes']?.toInt() ?? 60,
       maxDogs: json['max_dogs']?.toInt() ?? 2,
       status: PlaydateStatus.fromString(json['status'] ?? 'pending'),
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+          json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(
+          json['updated_at'] ?? DateTime.now().toIso8601String()),
       participants: participantsList,
       organizerId: organizer?.userId ?? json['organizer_id'] ?? '',
       organizerName: organizer?.userName ?? json['organizer_name'] ?? '',
-      organizerAvatarUrl: organizer?.userAvatarUrl ?? json['organizer_avatar_url'],
+      organizerAvatarUrl:
+          organizer?.userAvatarUrl ?? json['organizer_avatar_url'],
     );
   }
 
@@ -390,7 +403,7 @@ class PlaydateRequest {
   final PlaydateRequestStatus status;
   final DateTime createdAt;
   final DateTime? respondedAt;
-  
+
   // Associated playdate info
   final String? playdateTitle;
   final String? playdateLocation;
@@ -428,21 +441,29 @@ class PlaydateRequest {
       playdateId: json['playdate_id'] ?? '',
       requesterId: json['requester_id'] ?? '',
       requesterName: json['requester_name'] ?? json['requester']?['name'] ?? '',
-      requesterAvatarUrl: json['requester_avatar_url'] ?? json['requester']?['avatar_url'],
+      requesterAvatarUrl:
+          json['requester_avatar_url'] ?? json['requester']?['avatar_url'],
       inviteeId: json['invitee_id'] ?? '',
       inviteeName: json['invitee_name'] ?? json['invitee']?['name'] ?? '',
-      inviteeAvatarUrl: json['invitee_avatar_url'] ?? json['invitee']?['avatar_url'],
+      inviteeAvatarUrl:
+          json['invitee_avatar_url'] ?? json['invitee']?['avatar_url'],
       dogId: json['dog_id'] ?? '',
       dogName: json['dog_name'] ?? json['dog']?['name'] ?? '',
       dogPhotoUrl: json['dog_photo_url'] ?? json['dog']?['main_photo_url'],
       message: json['message'],
       status: PlaydateRequestStatus.fromString(json['status'] ?? 'pending'),
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
-      respondedAt: json['responded_at'] != null ? DateTime.parse(json['responded_at']) : null,
+      createdAt: DateTime.parse(
+          json['created_at'] ?? DateTime.now().toIso8601String()),
+      respondedAt: json['responded_at'] != null
+          ? DateTime.parse(json['responded_at'])
+          : null,
       playdateTitle: json['playdate_title'] ?? json['playdate']?['title'],
-      playdateLocation: json['playdate_location'] ?? json['playdate']?['location'],
-      playdateScheduledAt: json['playdate_scheduled_at'] != null || json['playdate']?['scheduled_at'] != null
-          ? DateTime.parse(json['playdate_scheduled_at'] ?? json['playdate']['scheduled_at'])
+      playdateLocation:
+          json['playdate_location'] ?? json['playdate']?['location'],
+      playdateScheduledAt: json['playdate_scheduled_at'] != null ||
+              json['playdate']?['scheduled_at'] != null
+          ? DateTime.parse(
+              json['playdate_scheduled_at'] ?? json['playdate']['scheduled_at'])
           : null,
     );
   }
@@ -495,12 +516,13 @@ class Achievement {
     String? iconName,
     bool? isEarned,
     DateTime? earnedDate,
-  }) => Achievement(
-    id: id ?? this.id,
-    title: title ?? this.title,
-    description: description ?? this.description,
-    iconName: iconName ?? this.iconName,
-    isEarned: isEarned ?? this.isEarned,
-    earnedDate: earnedDate ?? this.earnedDate,
-  );
+  }) =>
+      Achievement(
+        id: id ?? this.id,
+        title: title ?? this.title,
+        description: description ?? this.description,
+        iconName: iconName ?? this.iconName,
+        isEarned: isEarned ?? this.isEarned,
+        earnedDate: earnedDate ?? this.earnedDate,
+      );
 }

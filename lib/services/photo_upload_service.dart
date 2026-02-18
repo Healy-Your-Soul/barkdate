@@ -94,7 +94,7 @@ class PhotoUploadService {
 
       // Limit to maxImages
       final limitedImages = images.take(maxImages).toList();
-      
+
       // Convert to Files and compress
       final List<SelectedImage> compressedFiles = [];
       for (final xFile in limitedImages) {
@@ -130,11 +130,9 @@ class PhotoUploadService {
       // Upload to Supabase Storage with progress tracking
       // For avatar updates, use upsert to replace existing files
       // On web we must upload bytes; on mobile we can upload file as well.
-      await SupabaseConfig.client.storage
-          .from(bucketName)
-          .uploadBinary(
-            filePath, 
-            bytes, 
+      await SupabaseConfig.client.storage.from(bucketName).uploadBinary(
+            filePath,
+            bytes,
             fileOptions: const FileOptions(
               contentType: 'image/jpeg',
               upsert: true, // Allow replacing existing files
@@ -142,9 +140,8 @@ class PhotoUploadService {
           );
 
       // Get the public URL
-      final publicUrl = SupabaseConfig.client.storage
-          .from(bucketName)
-          .getPublicUrl(filePath);
+      final publicUrl =
+          SupabaseConfig.client.storage.from(bucketName).getPublicUrl(filePath);
 
       // Simulate progress for now (Supabase doesn't provide real-time progress)
       onProgress?.call(1.0);
@@ -164,23 +161,23 @@ class PhotoUploadService {
     MultiProgressCallback? onProgress,
   }) async {
     final List<String> uploadedUrls = [];
-    
+
     for (int i = 0; i < imageFiles.length; i++) {
       try {
         // Create unique file path for each image
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         final filePath = '${baseFilePath}_${timestamp}_$i.jpg';
-        
+
         final url = await uploadImage(
           bytes: imageFiles[i].bytes,
           bucketName: bucketName,
           filePath: filePath,
         );
-        
+
         if (url != null) {
           uploadedUrls.add(url);
         }
-        
+
         // Update progress
         onProgress?.call(i + 1, imageFiles.length);
       } catch (e) {
@@ -188,7 +185,7 @@ class PhotoUploadService {
         // Continue with other images even if one fails
       }
     }
-    
+
     return uploadedUrls;
   }
 
@@ -301,7 +298,8 @@ class PhotoUploadService {
       return [];
     }
 
-    final baseFilePath = 'events/$userId/event_${DateTime.now().millisecondsSinceEpoch}';
+    final baseFilePath =
+        'events/$userId/event_${DateTime.now().millisecondsSinceEpoch}';
     return await uploadMultipleImages(
       imageFiles: imageFiles,
       bucketName: eventPhotosBucket,
@@ -316,15 +314,13 @@ class PhotoUploadService {
       // Extract file path from URL
       final uri = Uri.parse(imageUrl);
       final pathSegments = uri.pathSegments;
-      
+
       // Find the file path after the bucket name
       final bucketIndex = pathSegments.indexOf(bucketName);
       if (bucketIndex != -1 && bucketIndex < pathSegments.length - 1) {
         final filePath = pathSegments.sublist(bucketIndex + 1).join('/');
-        
-        await SupabaseConfig.client.storage
-            .from(bucketName)
-            .remove([filePath]);
+
+        await SupabaseConfig.client.storage.from(bucketName).remove([filePath]);
       }
     } catch (e) {
       debugPrint('Error deleting image: $e');
@@ -332,7 +328,8 @@ class PhotoUploadService {
   }
 
   /// Show enhanced photo picker dialog
-  static Future<SelectedImage?> showPhotoPickerDialog(BuildContext context) async {
+  static Future<SelectedImage?> showPhotoPickerDialog(
+      BuildContext context) async {
     return await showModalBottomSheet<SelectedImage?>(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -355,15 +352,15 @@ class PhotoUploadService {
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 Text(
                   'Add Photo',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 Row(
                   children: [
                     Expanded(
@@ -372,7 +369,8 @@ class PhotoUploadService {
                         icon: Icons.camera_alt,
                         label: 'Camera',
                         onTap: () async {
-                          final img = await pickImage(source: ImageSource.camera);
+                          final img =
+                              await pickImage(source: ImageSource.camera);
                           if (context.mounted) Navigator.pop(context, img);
                         },
                       ),
@@ -384,7 +382,8 @@ class PhotoUploadService {
                         icon: Icons.photo_library,
                         label: 'Gallery',
                         onTap: () async {
-                          final img = await pickImage(source: ImageSource.gallery);
+                          final img =
+                              await pickImage(source: ImageSource.gallery);
                           if (context.mounted) Navigator.pop(context, img);
                         },
                       ),
@@ -427,21 +426,21 @@ class PhotoUploadService {
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 Text(
                   'Add Photos',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 Text(
                   'Select up to $maxImages photos',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+                        color: Colors.grey[600],
+                      ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 Row(
                   children: [
                     Expanded(
@@ -450,7 +449,8 @@ class PhotoUploadService {
                         icon: Icons.camera_alt,
                         label: 'Camera',
                         onTap: () async {
-                          final img = await pickImage(source: ImageSource.camera);
+                          final img =
+                              await pickImage(source: ImageSource.camera);
                           if (context.mounted && img != null) {
                             Navigator.pop(context, [img]);
                           }
@@ -464,7 +464,8 @@ class PhotoUploadService {
                         icon: Icons.photo_library,
                         label: 'Gallery',
                         onTap: () async {
-                          final imgs = await pickMultipleImages(maxImages: maxImages);
+                          final imgs =
+                              await pickMultipleImages(maxImages: maxImages);
                           if (context.mounted && imgs.isNotEmpty) {
                             Navigator.pop(context, imgs);
                           }
@@ -546,7 +547,7 @@ class PhotoUploadService {
             debugPrint('✅ Created bucket: $bucketName');
           }
         } catch (e) {
-          if (e.toString().contains('already exists') || 
+          if (e.toString().contains('already exists') ||
               e.toString().contains('409')) {
             if (kDebugMode) {
               debugPrint('ℹ️ Bucket already exists: $bucketName');
@@ -572,7 +573,7 @@ class UploadProgress {
   final int total;
   final double percentage;
   final String? currentFileName;
-  
+
   UploadProgress({
     required this.current,
     required this.total,
@@ -589,13 +590,16 @@ extension PhotoPickerExtension on BuildContext {
     return await PhotoUploadService.showPhotoPickerDialog(this);
   }
 
-  Future<List<SelectedImage>?> showMultiImagePicker({int maxImages = 10}) async {
-    return await PhotoUploadService.showMultiImagePickerDialog(this, maxImages: maxImages);
+  Future<List<SelectedImage>?> showMultiImagePicker(
+      {int maxImages = 10}) async {
+    return await PhotoUploadService.showMultiImagePickerDialog(this,
+        maxImages: maxImages);
   }
 }
 
 /// Compress raw bytes (web-safe)
-Future<Uint8List> _compressBytes(Uint8List input, {int maxWidth = 1080, int maxHeight = 1920, int quality = 85}) async {
+Future<Uint8List> _compressBytes(Uint8List input,
+    {int maxWidth = 1080, int maxHeight = 1920, int quality = 85}) async {
   try {
     final result = await FlutterImageCompress.compressWithList(
       input,

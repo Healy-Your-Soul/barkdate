@@ -8,8 +8,8 @@ import 'package:http/http.dart' as http;
 
 // Conditional import for web-only JS interop
 // On native platforms, these functions will throw if called
-import 'places_service_stub.dart'
-    if (dart.library.html) 'dart:js_util' as js_util;
+import 'places_service_stub.dart' if (dart.library.html) 'dart:js_util'
+    as js_util;
 
 // Import globalThis from stub (for native) or js_interop (for web)
 import 'places_service_stub.dart'
@@ -18,19 +18,22 @@ import 'places_service_stub.dart'
 // Re-export the JS util functions with platform checks
 dynamic getProperty(Object o, Object name) => js_util.getProperty(o, name);
 bool hasProperty(Object o, Object name) => js_util.hasProperty(o, name);
-dynamic callMethod(Object o, String method, List<Object?> args) => js_util.callMethod(o, method, args);
-T callConstructor<T>(Object constr, List<Object?>? arguments) => js_util.callConstructor(constr, arguments);
+dynamic callMethod(Object o, String method, List<Object?> args) =>
+    js_util.callMethod(o, method, args);
+T callConstructor<T>(Object constr, List<Object?>? arguments) =>
+    js_util.callConstructor(constr, arguments);
 dynamic jsify(Object? dartObject) => js_util.jsify(dartObject);
-Future<T> promiseToFuture<T>(Object jsPromise) => js_util.promiseToFuture(jsPromise);
+Future<T> promiseToFuture<T>(Object jsPromise) =>
+    js_util.promiseToFuture(jsPromise);
 
 // Get globalThis (only works on web)
 Object get globalThis => js_globals.globalThis;
 
 /// COST OPTIMIZATION: Session Token Manager for Autocomplete
-/// 
+///
 /// Without session tokens: Each keystroke = 1 API request (expensive!)
 /// With session tokens: Entire search session = 1 API request (80% cheaper)
-/// 
+///
 /// Usage:
 /// 1. Call PlacesSessionTokenManager.getToken() when starting autocomplete
 /// 2. Pass the token to all autocomplete requests
@@ -38,24 +41,23 @@ Object get globalThis => js_globals.globalThis;
 class PlacesSessionTokenManager {
   static final Uuid _uuid = Uuid();
   static String? _currentToken;
-  
+
   /// Get current session token, or generate a new one if none exists
   static String getToken() {
     _currentToken ??= _uuid.v4();
     debugPrint('🎫 Session token: $_currentToken');
     return _currentToken!;
   }
-  
+
   /// Reset token after place selection (starts new billing session)
   static void resetToken() {
     debugPrint('🎫 Session token reset (was: $_currentToken)');
     _currentToken = null;
   }
-  
+
   /// Check if a session is active
   static bool get hasActiveSession => _currentToken != null;
 }
-
 
 class PlacesService {
   static const List<String> _defaultPrimaryTypes = [
@@ -85,12 +87,12 @@ class PlacesService {
     try {
       await mapsApiReadyCompleter.future;
 
-      final Object google =
-          _requireJsProperty(globalThis, 'google', 'google namespace not found');
+      final Object google = _requireJsProperty(
+          globalThis, 'google', 'google namespace not found');
       final Object maps =
           _requireJsProperty(google, 'maps', 'google.maps namespace not found');
-      final Object places =
-          _requireJsProperty(maps, 'places', 'google.maps.places namespace not found');
+      final Object places = _requireJsProperty(
+          maps, 'places', 'google.maps.places namespace not found');
       final Object autocompleteStatics = _requireJsProperty(
         places,
         'AutocompleteSuggestion',
@@ -120,13 +122,14 @@ class PlacesService {
 
       // COST OPTIMIZATION: Always use session tokens for autocomplete
       // This bundles all keystrokes in a search into one billable request
-      final effectiveToken = (sessionToken != null && sessionToken.isNotEmpty) 
-          ? sessionToken 
+      final effectiveToken = (sessionToken != null && sessionToken.isNotEmpty)
+          ? sessionToken
           : PlacesSessionTokenManager.getToken();
       request['sessionToken'] = effectiveToken;
 
       final dynamic response = await promiseToFuture(
-        callMethod(autocompleteStatics, 'fetchAutocompleteSuggestions', [jsify(request)]),
+        callMethod(autocompleteStatics, 'fetchAutocompleteSuggestions',
+            [jsify(request)]),
       );
 
       final suggestions = <String>{};
@@ -150,16 +153,18 @@ class PlacesService {
       return [];
     }
   }
-  
+
   /// Search for dog-friendly places using the NEW Google Places API (Place.searchNearby)
-/// Search for dog-friendly places using the NEW Google Places API (Place.searchNearby)
+  /// Search for dog-friendly places using the NEW Google Places API (Place.searchNearby)
   static Future<PlaceSearchResult> searchDogFriendlyPlaces({
     required double latitude,
     required double longitude,
     int radius = 5000,
     String? keyword,
-    List<String>? primaryTypes, // Optional: filter by specific types (e.g., just parks)
-    String? pageToken, // Note: pageToken is not directly supported in the new API in the same way
+    List<String>?
+        primaryTypes, // Optional: filter by specific types (e.g., just parks)
+    String?
+        pageToken, // Note: pageToken is not directly supported in the new API in the same way
   }) async {
     // On native platforms, use HTTP API
     if (!kIsWeb) {
@@ -188,24 +193,26 @@ class PlacesService {
       final completer = Completer<PlaceSearchResult>();
 
       // Resolve the Places namespace from the global Google Maps object.
-      final Object google = _requireJsProperty(globalThis, 'google', 'google namespace not found');
-      final Object maps = _requireJsProperty(google, 'maps', 'google.maps namespace not found');
-      final Object places =
-          _requireJsProperty(maps, 'places', 'google.maps.places namespace not found');
-      final Object placeStatics =
-          _requireJsProperty(places, 'Place', 'google.maps.places.Place is unavailable');
+      final Object google = _requireJsProperty(
+          globalThis, 'google', 'google namespace not found');
+      final Object maps =
+          _requireJsProperty(google, 'maps', 'google.maps namespace not found');
+      final Object places = _requireJsProperty(
+          maps, 'places', 'google.maps.places namespace not found');
+      final Object placeStatics = _requireJsProperty(
+          places, 'Place', 'google.maps.places.Place is unavailable');
 
-  // 1. Define the fields you want the API to return.
+      // 1. Define the fields you want the API to return.
       // COST OPTIMIZATION: Only request BASIC fields (free/cheap)
       // Removed: 'rating', 'userRatingCount', 'photos' (these are Advanced = $$$)
       // See: https://developers.google.com/maps/documentation/places/web-service/usage-and-billing
       final fields = [
-        'id',              // Basic - FREE
-        'displayName',     // Basic - FREE
+        'id', // Basic - FREE
+        'displayName', // Basic - FREE
         'formattedAddress', // Basic - FREE
-        'location',        // Basic - FREE
-        'primaryType',     // Basic - FREE
-        'businessStatus',  // Basic - FREE
+        'location', // Basic - FREE
+        'primaryType', // Basic - FREE
+        'businessStatus', // Basic - FREE
         // DISABLED FOR COST SAVINGS:
         // 'rating',       // Advanced - $0.005/request
         // 'userRatingCount', // Advanced
@@ -226,9 +233,10 @@ class PlacesService {
         'region': 'AU',
         'includedPrimaryTypes': primaryTypes ?? _defaultPrimaryTypes,
       };
-      
+
       // --- THIS IS THE CORRECTED LOGIC ---
-      final bool hasKeyword = trimmedKeyword != null && trimmedKeyword.isNotEmpty;
+      final bool hasKeyword =
+          trimmedKeyword != null && trimmedKeyword.isNotEmpty;
       String methodName = 'searchNearby'; // Always use searchNearby
       Map<String, Object?> request = {
         ...baseRequest, // This includes 'includedPrimaryTypes'
@@ -249,10 +257,11 @@ class PlacesService {
       // 4. Convert the Promise to a Dart Future and process the results.
       promiseToFuture(promise).then((response) {
         debugPrint('📦 Received response from Google Places API');
-        debugPrint('📋 Response has "places" property: ${hasProperty(response, 'places')}');
-        
+        debugPrint(
+            '📋 Response has "places" property: ${hasProperty(response, 'places')}');
+
         final List<PlaceResult> places = [];
-        
+
         // The response object has a 'places' property which is an array.
         if (hasProperty(response, 'places')) {
           final dynamic rawPlaces = getProperty(response, 'places');
@@ -262,11 +271,13 @@ class PlacesService {
           } else if (rawPlaces is Iterable) {
             resultsList = List.from(rawPlaces);
           } else {
-            debugPrint('⚠️ Unexpected places response type: ${rawPlaces.runtimeType}');
+            debugPrint(
+                '⚠️ Unexpected places response type: ${rawPlaces.runtimeType}');
             resultsList = const [];
           }
-          
-          debugPrint('ℹ️ Raw results from Google: ${resultsList.length} places');
+
+          debugPrint(
+              'ℹ️ Raw results from Google: ${resultsList.length} places');
 
           for (var i = 0; i < resultsList.length; i++) {
             try {
@@ -274,9 +285,10 @@ class PlacesService {
               debugPrint('🔍 Processing place ${i + 1}/${resultsList.length}');
 
               // 5. Safely extract data using camelCase properties from the new API response.
-              final name = _extractText(getProperty(place, 'displayName')) ?? 'Unknown';
+              final name =
+                  _extractText(getProperty(place, 'displayName')) ?? 'Unknown';
               debugPrint('  📍 Name: $name');
-              
+
               final location = getProperty(place, 'location');
               if (location == null) {
                 debugPrint('  ⚠️ Skipping: no location data');
@@ -287,7 +299,7 @@ class PlacesService {
               // are accessed via .lat() and .lng() methods, not properties
               double? lat;
               double? lng;
-              
+
               // Try method calls first (new API LatLng object)
               try {
                 final latFn = getProperty(location, 'lat');
@@ -300,16 +312,17 @@ class PlacesService {
               } catch (e) {
                 debugPrint('  ⚠️ Method call failed: $e');
               }
-              
+
               // Fallback to direct property access
               if (lat == null || lng == null) {
                 lat = (getProperty(location, 'latitude') as num?)?.toDouble();
                 lng = (getProperty(location, 'longitude') as num?)?.toDouble();
                 if (lat != null && lng != null) {
-                  debugPrint('  📍 Got coords via latitude/longitude: ($lat, $lng)');
+                  debugPrint(
+                      '  📍 Got coords via latitude/longitude: ($lat, $lng)');
                 }
               }
-              
+
               // Another fallback - try lat/lng as properties
               if (lat == null || lng == null) {
                 lat = (getProperty(location, 'lat') as num?)?.toDouble();
@@ -320,63 +333,71 @@ class PlacesService {
               }
 
               if (lat == null || lng == null) {
-                debugPrint('  ⚠️ Skipping: could not extract coordinates from location object');
+                debugPrint(
+                    '  ⚠️ Skipping: could not extract coordinates from location object');
                 continue;
               }
-              
+
               debugPrint('  ✅ Coordinates: ($lat, $lng)');
 
               final vicinity =
                   _extractText(getProperty(place, 'formattedAddress')) ?? '';
-              
+
               // This is our client-side filter
               if (keywordLower != null) {
                 final combinedText = '$name $vicinity'.toLowerCase();
                 if (!combinedText.contains(keywordLower)) {
-                  debugPrint('  ⚠️ Skipping: does not match keyword "$keywordLower"');
+                  debugPrint(
+                      '  ⚠️ Skipping: does not match keyword "$keywordLower"');
                   continue;
                 }
               }
-              final rating = (getProperty(place, 'rating') as num?)?.toDouble() ?? 0.0;
-              final userRatingsTotal = (getProperty(place, 'userRatingCount') as num?)?.toInt() ?? 0;
+              final rating =
+                  (getProperty(place, 'rating') as num?)?.toDouble() ?? 0.0;
+              final userRatingsTotal =
+                  (getProperty(place, 'userRatingCount') as num?)?.toInt() ?? 0;
               final placeId = getProperty(place, 'id') as String? ?? '';
-              
+
               // The new API returns 'businessStatus' which can be 'OPERATIONAL'.
               // We'll consider it "open" if it's operational. A more detailed check
               // would require a follow-up `fetchFields` call for `openingHours`.
-              final businessStatus = getProperty(place, 'businessStatus') as String?;
+              final businessStatus =
+                  getProperty(place, 'businessStatus') as String?;
               final isOpen = businessStatus == 'OPERATIONAL';
 
               // Calculate distance
-              final distance = Geolocator.distanceBetween(latitude, longitude, lat, lng);
+              final distance =
+                  Geolocator.distanceBetween(latitude, longitude, lat, lng);
 
               // Determine category from primaryType
               PlaceCategory category = PlaceCategory.other;
               final primaryType = getProperty(place, 'primaryType') as String?;
               debugPrint('  🏷️ Primary type: $primaryType');
-              
+
               if (primaryType != null) {
-                 if (primaryType.contains('park')) {
-                    category = PlaceCategory.park;
-                  } else if (primaryType.contains('pet_store')) {
-                    category = PlaceCategory.petStore;
-                  } else if (primaryType.contains('veterinary_care')) {
-                    category = PlaceCategory.veterinary;
-                  } else if (primaryType.contains('restaurant') || primaryType.contains('cafe')) {
-                    category = PlaceCategory.restaurant;
-                  }
+                if (primaryType.contains('park')) {
+                  category = PlaceCategory.park;
+                } else if (primaryType.contains('pet_store')) {
+                  category = PlaceCategory.petStore;
+                } else if (primaryType.contains('veterinary_care')) {
+                  category = PlaceCategory.veterinary;
+                } else if (primaryType.contains('restaurant') ||
+                    primaryType.contains('cafe')) {
+                  category = PlaceCategory.restaurant;
+                }
               }
 
               // Get photo reference if available
               String? photoReference;
-              if (hasProperty(place, 'photos') && getProperty(place, 'photos') != null) {
+              if (hasProperty(place, 'photos') &&
+                  getProperty(place, 'photos') != null) {
                 final photos = getProperty(place, 'photos') as List?;
                 if (photos != null && photos.isNotEmpty) {
                   final firstPhoto = photos[0];
                   // The photo object itself contains the reference in the new API structure
                   if (hasProperty(firstPhoto, 'name')) {
-                     // The 'name' property in the new Photo object holds the resource name needed for getURI
-                     photoReference = getProperty(firstPhoto, 'name') as String?;
+                    // The 'name' property in the new Photo object holds the resource name needed for getURI
+                    photoReference = getProperty(firstPhoto, 'name') as String?;
                   }
                 }
               }
@@ -394,7 +415,7 @@ class PlacesService {
                 distance: distance,
                 photoReference: photoReference,
               ));
-              
+
               debugPrint('  ✅ Added: $name (${category.displayName})');
             } catch (e, stacktrace) {
               debugPrint('⚠️ Error parsing place ${i + 1}: $e');
@@ -405,16 +426,16 @@ class PlacesService {
           debugPrint('❌ Response does not have "places" property');
         }
 
-        debugPrint('✅ Found ${places.length} places from NEW Google Places API');
+        debugPrint(
+            '✅ Found ${places.length} places from NEW Google Places API');
         debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        
+
         // The new API does not use a token-based pagination model for searchNearby.
         // It returns a single list up to `maxResultCount`.
         completer.complete(PlaceSearchResult(
           places: places,
           nextPageToken: null, // No next page token
         ));
-
       }).catchError((error) {
         debugPrint('❌ Google Places search promise error: $error');
         completer.complete(PlaceSearchResult(places: [], nextPageToken: null));
@@ -457,10 +478,14 @@ class PlacesService {
 
       final completer = Completer<PlaceSearchResult>();
 
-      final Object google = _requireJsProperty(globalThis, 'google', 'google namespace not found');
-      final Object maps = _requireJsProperty(google, 'maps', 'google.maps namespace not found');
-      final Object places = _requireJsProperty(maps, 'places', 'google.maps.places namespace not found');
-      final Object placeStatics = _requireJsProperty(places, 'Place', 'google.maps.places.Place is unavailable');
+      final Object google = _requireJsProperty(
+          globalThis, 'google', 'google namespace not found');
+      final Object maps =
+          _requireJsProperty(google, 'maps', 'google.maps namespace not found');
+      final Object places = _requireJsProperty(
+          maps, 'places', 'google.maps.places namespace not found');
+      final Object placeStatics = _requireJsProperty(
+          places, 'Place', 'google.maps.places.Place is unavailable');
 
       final fields = [
         'id',
@@ -490,13 +515,14 @@ class PlacesService {
 
       debugPrint('🧭 Calling Place.searchByText with request: $request');
 
-      final promise = callMethod(placeStatics, 'searchByText', [jsify(request)]);
+      final promise =
+          callMethod(placeStatics, 'searchByText', [jsify(request)]);
 
       promiseToFuture(promise).then((response) {
         debugPrint('📦 Received response from Google Places API (Text Search)');
-        
+
         final List<PlaceResult> places = [];
-        
+
         if (hasProperty(response, 'places')) {
           final dynamic rawPlaces = getProperty(response, 'places');
           List resultsList;
@@ -507,14 +533,15 @@ class PlacesService {
           } else {
             resultsList = const [];
           }
-          
+
           debugPrint('ℹ️ Raw results: ${resultsList.length} places');
 
           for (var i = 0; i < resultsList.length; i++) {
             try {
               final place = resultsList[i];
-              
-              final name = _extractText(getProperty(place, 'displayName')) ?? 'Unknown';
+
+              final name =
+                  _extractText(getProperty(place, 'displayName')) ?? 'Unknown';
               final location = getProperty(place, 'location');
               if (location == null) continue;
 
@@ -541,39 +568,46 @@ class PlacesService {
               }
 
               if (lat == null || lng == null) continue;
-              
-              final vicinity = _extractText(getProperty(place, 'formattedAddress')) ?? '';
-              final rating = (getProperty(place, 'rating') as num?)?.toDouble() ?? 0.0;
-              final userRatingsTotal = (getProperty(place, 'userRatingCount') as num?)?.toInt() ?? 0;
+
+              final vicinity =
+                  _extractText(getProperty(place, 'formattedAddress')) ?? '';
+              final rating =
+                  (getProperty(place, 'rating') as num?)?.toDouble() ?? 0.0;
+              final userRatingsTotal =
+                  (getProperty(place, 'userRatingCount') as num?)?.toInt() ?? 0;
               final placeId = getProperty(place, 'id') as String? ?? '';
-              
-              final businessStatus = getProperty(place, 'businessStatus') as String?;
+
+              final businessStatus =
+                  getProperty(place, 'businessStatus') as String?;
               final isOpen = businessStatus == 'OPERATIONAL';
 
-              final distance = Geolocator.distanceBetween(latitude, longitude, lat, lng);
+              final distance =
+                  Geolocator.distanceBetween(latitude, longitude, lat, lng);
 
               PlaceCategory category = PlaceCategory.other;
               final primaryType = getProperty(place, 'primaryType') as String?;
-              
+
               if (primaryType != null) {
-                 if (primaryType.contains('park')) {
-                    category = PlaceCategory.park;
-                  } else if (primaryType.contains('pet_store')) {
-                    category = PlaceCategory.petStore;
-                  } else if (primaryType.contains('veterinary_care')) {
-                    category = PlaceCategory.veterinary;
-                  } else if (primaryType.contains('restaurant') || primaryType.contains('cafe')) {
-                    category = PlaceCategory.restaurant;
-                  }
+                if (primaryType.contains('park')) {
+                  category = PlaceCategory.park;
+                } else if (primaryType.contains('pet_store')) {
+                  category = PlaceCategory.petStore;
+                } else if (primaryType.contains('veterinary_care')) {
+                  category = PlaceCategory.veterinary;
+                } else if (primaryType.contains('restaurant') ||
+                    primaryType.contains('cafe')) {
+                  category = PlaceCategory.restaurant;
+                }
               }
 
               String? photoReference;
-              if (hasProperty(place, 'photos') && getProperty(place, 'photos') != null) {
+              if (hasProperty(place, 'photos') &&
+                  getProperty(place, 'photos') != null) {
                 final photos = getProperty(place, 'photos') as List?;
                 if (photos != null && photos.isNotEmpty) {
                   final firstPhoto = photos[0];
                   if (hasProperty(firstPhoto, 'name')) {
-                     photoReference = getProperty(firstPhoto, 'name') as String?;
+                    photoReference = getProperty(firstPhoto, 'name') as String?;
                   }
                 }
               }
@@ -601,7 +635,6 @@ class PlacesService {
           places: places,
           nextPageToken: null,
         ));
-
       }).catchError((error) {
         debugPrint('❌ Google Places Text Search error: $error');
         completer.complete(PlaceSearchResult(places: [], nextPageToken: null));
@@ -613,8 +646,6 @@ class PlacesService {
       return PlaceSearchResult(places: [], nextPageToken: null);
     }
   }
-
-
 
   // Get place details - mock for now
   static Future<Map<String, dynamic>?> getPlaceDetails(String placeId) async {
@@ -642,18 +673,21 @@ class PlacesService {
   // Autocomplete using Google Places API (real implementation for web)
   static Future<List<PlaceAutocomplete>> autocomplete(String input) async {
     if (input.isEmpty) return [];
-    
+
     // Use real Google Places API on web
     if (kIsWeb) {
       try {
         await mapsApiReadyCompleter.future;
-        
-        final Object google = _requireJsProperty(globalThis, 'google', 'google not found');
-        final Object maps = _requireJsProperty(google, 'maps', 'google.maps not found');
-        final Object places = _requireJsProperty(maps, 'places', 'google.maps.places not found');
+
+        final Object google =
+            _requireJsProperty(globalThis, 'google', 'google not found');
+        final Object maps =
+            _requireJsProperty(google, 'maps', 'google.maps not found');
+        final Object places =
+            _requireJsProperty(maps, 'places', 'google.maps.places not found');
         final Object autocompleteStatics = _requireJsProperty(
-          places, 
-          'AutocompleteSuggestion', 
+          places,
+          'AutocompleteSuggestion',
           'AutocompleteSuggestion not found',
         );
 
@@ -664,42 +698,53 @@ class PlacesService {
         };
 
         final dynamic response = await promiseToFuture(
-          callMethod(autocompleteStatics, 'fetchAutocompleteSuggestions', [jsify(request)]),
+          callMethod(autocompleteStatics, 'fetchAutocompleteSuggestions',
+              [jsify(request)]),
         );
 
         final results = <PlaceAutocomplete>[];
-        
+
         if (response != null && hasProperty(response, 'suggestions')) {
           final dynamic rawSuggestions = getProperty(response, 'suggestions');
           if (rawSuggestions is List) {
             for (final suggestion in rawSuggestions) {
               try {
-                final placePrediction = getProperty(suggestion, 'placePrediction');
+                final placePrediction =
+                    getProperty(suggestion, 'placePrediction');
                 if (placePrediction != null) {
-                  final placeId = (getProperty(placePrediction, 'placeId') as String?) ?? '';
+                  final placeId =
+                      (getProperty(placePrediction, 'placeId') as String?) ??
+                          '';
                   final textObj = getProperty(placePrediction, 'text');
-                  final description = textObj != null 
-                      ? ((getProperty(textObj, 'text') as String?) ?? '') 
+                  final description = textObj != null
+                      ? ((getProperty(textObj, 'text') as String?) ?? '')
                       : '';
-                  
+
                   // Extract structured formatting
                   String mainText = description.split(',').first.trim();
-                  String secondaryText = description.contains(',') 
-                      ? description.split(',').skip(1).join(',').trim() 
+                  String secondaryText = description.contains(',')
+                      ? description.split(',').skip(1).join(',').trim()
                       : '';
-                  
-                  final structuredFormat = getProperty(placePrediction, 'structuredFormat');
+
+                  final structuredFormat =
+                      getProperty(placePrediction, 'structuredFormat');
                   if (structuredFormat != null) {
-                    final mainTextObj = getProperty(structuredFormat, 'mainText');
-                    final secondaryTextObj = getProperty(structuredFormat, 'secondaryText');
+                    final mainTextObj =
+                        getProperty(structuredFormat, 'mainText');
+                    final secondaryTextObj =
+                        getProperty(structuredFormat, 'secondaryText');
                     if (mainTextObj != null) {
-                      mainText = (getProperty(mainTextObj, 'text') as String?) ?? mainText;
+                      mainText =
+                          (getProperty(mainTextObj, 'text') as String?) ??
+                              mainText;
                     }
                     if (secondaryTextObj != null) {
-                      secondaryText = (getProperty(secondaryTextObj, 'text') as String?) ?? secondaryText;
+                      secondaryText =
+                          (getProperty(secondaryTextObj, 'text') as String?) ??
+                              secondaryText;
                     }
                   }
-                  
+
                   results.add(PlaceAutocomplete(
                     placeId: placeId,
                     description: description,
@@ -715,15 +760,16 @@ class PlacesService {
             }
           }
         }
-        
-        debugPrint('📍 Autocomplete found ${results.length} results for "$input"');
+
+        debugPrint(
+            '📍 Autocomplete found ${results.length} results for "$input"');
         return results;
       } catch (e) {
         debugPrint('❌ Google Autocomplete error: $e');
         // Fall back to mock data
       }
     }
-    
+
     // Fallback mock data for non-web or errors
     return [
       PlaceAutocomplete(
@@ -750,14 +796,18 @@ class PlacesService {
           secondaryText: 'Perth WA, Australia',
         ),
       ),
-    ].where((place) => 
-      place.structuredFormatting.mainText.toLowerCase().contains(input.toLowerCase()) ||
-      place.description.toLowerCase().contains(input.toLowerCase())
-    ).toList();
+    ]
+        .where((place) =>
+            place.structuredFormatting.mainText
+                .toLowerCase()
+                .contains(input.toLowerCase()) ||
+            place.description.toLowerCase().contains(input.toLowerCase()))
+        .toList();
   }
 
   // Get place details by place ID for admin
-  static Future<Map<String, dynamic>?> getPlaceDetailsByPlaceId(String placeId) async {
+  static Future<Map<String, dynamic>?> getPlaceDetailsByPlaceId(
+      String placeId) async {
     // Mock place details based on place ID
     switch (placeId) {
       case 'mock_auto_emerald':
@@ -820,17 +870,17 @@ class PlacesService {
     // For NEW Places API, the photoReference is the full photo resource name
     // Format: places/{place_id}/photos/{photo_id}
     // We need to use the Places Photo API with the new format
-    
+
     // The API key used in index.html
     const apiKey = 'AIzaSyAbZGdAyEUXEkN-1CtVvPCWIsxkAY8_4ss';
-    
+
     // Check if it's a NEW API photo reference (contains 'places/')
     if (photoReference.contains('places/')) {
       // For NEW API, construct the photo URL
       // Format: https://places.googleapis.com/v1/{photoName}/media?maxWidthPx={maxWidth}&key={apiKey}
       return 'https://places.googleapis.com/v1/$photoReference/media?maxWidthPx=$maxWidth&key=$apiKey';
     }
-    
+
     // For legacy Places API photo references
     return 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=$maxWidth&photo_reference=$photoReference&key=$apiKey';
   }
@@ -857,7 +907,7 @@ class PlacesService {
     }
   }
 
-static Object _buildCircleScope({
+  static Object _buildCircleScope({
     required double latitude,
     required double longitude,
     required double radius,
@@ -896,9 +946,10 @@ static Object _buildCircleScope({
       final placePrediction = getProperty(suggestion, 'placePrediction');
 
       if (placePrediction != null) {
-        final structuredFormat = hasProperty(placePrediction, 'structuredFormat')
-            ? getProperty(placePrediction, 'structuredFormat')
-            : null;
+        final structuredFormat =
+            hasProperty(placePrediction, 'structuredFormat')
+                ? getProperty(placePrediction, 'structuredFormat')
+                : null;
 
         if (structuredFormat != null) {
           final mainText = hasProperty(structuredFormat, 'mainText')
@@ -955,7 +1006,8 @@ static Object _buildCircleScope({
     return null;
   }
 
-  static Object _requireJsProperty(Object target, Object propertyName, String errorMessage) {
+  static Object _requireJsProperty(
+      Object target, Object propertyName, String errorMessage) {
     if (!hasProperty(target, propertyName)) {
       throw StateError(errorMessage);
     }
@@ -969,7 +1021,7 @@ static Object _buildCircleScope({
   // =========================================================================
   // NATIVE HTTP API IMPLEMENTATION (Android/iOS)
   // =========================================================================
-  
+
   /// HTTP-based Places Nearby Search for native platforms
   static Future<PlaceSearchResult> _searchDogFriendlyPlacesHttp({
     required double latitude,
@@ -980,14 +1032,16 @@ static Object _buildCircleScope({
     String? pageToken,
   }) async {
     const apiKey = 'AIzaSyAbZGdAyEUXEkN-1CtVvPCWIsxkAY8_4ss';
-    
-    debugPrint('🔍 [HTTP] Places search: lat=$latitude, lng=$longitude, radius=$radius');
-    
+
+    debugPrint(
+        '🔍 [HTTP] Places search: lat=$latitude, lng=$longitude, radius=$radius');
+
     try {
       // Build the request body for Places API (new)
       // Using the Nearby Search (New) API: https://developers.google.com/maps/documentation/places/web-service/nearby-search
-      final includedTypes = primaryTypes ?? ['park', 'dog_park', 'cafe', 'pet_store', 'veterinary_care'];
-      
+      final includedTypes = primaryTypes ??
+          ['park', 'dog_park', 'cafe', 'pet_store', 'veterinary_care'];
+
       final requestBody = {
         'includedTypes': includedTypes,
         'maxResultCount': 20,
@@ -1002,52 +1056,59 @@ static Object _buildCircleScope({
           },
         },
       };
-      
-      final response = await http.post(
-        Uri.parse('https://places.googleapis.com/v1/places:searchNearby'),
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': apiKey,
-          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.businessStatus',
-        },
-        body: jsonEncode(requestBody),
-      ).timeout(const Duration(seconds: 10));
-      
+
+      final response = await http
+          .post(
+            Uri.parse('https://places.googleapis.com/v1/places:searchNearby'),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': apiKey,
+              'X-Goog-FieldMask':
+                  'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.businessStatus',
+            },
+            body: jsonEncode(requestBody),
+          )
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode != 200) {
-        debugPrint('❌ [HTTP] Places API error: ${response.statusCode} - ${response.body}');
+        debugPrint(
+            '❌ [HTTP] Places API error: ${response.statusCode} - ${response.body}');
         return PlaceSearchResult(places: [], nextPageToken: null);
       }
-      
+
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final placesJson = data['places'] as List<dynamic>? ?? [];
-      
+
       debugPrint('✅ [HTTP] Found ${placesJson.length} places');
-      
+
       final List<PlaceResult> places = [];
-      
+
       for (final placeJson in placesJson) {
         try {
           final placeMap = placeJson as Map<String, dynamic>;
           final location = placeMap['location'] as Map<String, dynamic>?;
-          
+
           if (location == null) continue;
-          
+
           final placeLat = (location['latitude'] as num?)?.toDouble() ?? 0;
           final placeLng = (location['longitude'] as num?)?.toDouble() ?? 0;
-          
+
           // Calculate distance
           final distanceMeters = Geolocator.distanceBetween(
-            latitude, longitude, placeLat, placeLng,
+            latitude,
+            longitude,
+            placeLat,
+            placeLng,
           );
-          
+
           // Determine category from primaryType
           final primaryType = placeMap['primaryType'] as String? ?? '';
           final category = _categoryFromType(primaryType);
-          
+
           // Get display name
           final displayName = placeMap['displayName'] as Map<String, dynamic>?;
           final name = displayName?['text'] as String? ?? 'Unknown Place';
-          
+
           places.add(PlaceResult(
             placeId: placeMap['id'] as String? ?? '',
             name: name,
@@ -1065,22 +1126,21 @@ static Object _buildCircleScope({
           debugPrint('⚠️ [HTTP] Error parsing place: $e');
         }
       }
-      
+
       // Sort by distance
       places.sort((a, b) => a.distance.compareTo(b.distance));
-      
+
       return PlaceSearchResult(
         places: places,
         nextPageToken: null, // New API doesn't use page tokens the same way
       );
-      
     } catch (e, stack) {
       debugPrint('❌ [HTTP] Places search error: $e');
       debugPrint(stack.toString());
       return PlaceSearchResult(places: [], nextPageToken: null);
     }
   }
-  
+
   /// Map Google Place type to PlaceCategory
   static PlaceCategory _categoryFromType(String type) {
     switch (type.toLowerCase()) {
@@ -1105,7 +1165,7 @@ static Object _buildCircleScope({
         return PlaceCategory.other;
     }
   }
-  
+
   /// HTTP-based Text Search for native platforms
   static Future<PlaceSearchResult> _searchPlacesByTextHttp({
     required String textQuery,
@@ -1114,9 +1174,10 @@ static Object _buildCircleScope({
     int radius = 5000,
   }) async {
     const apiKey = 'AIzaSyAbZGdAyEUXEkN-1CtVvPCWIsxkAY8_4ss';
-    
-    debugPrint('🔍 [HTTP] Text search: "$textQuery" near lat=$latitude, lng=$longitude');
-    
+
+    debugPrint(
+        '🔍 [HTTP] Text search: "$textQuery" near lat=$latitude, lng=$longitude');
+
     try {
       final requestBody = {
         'textQuery': textQuery,
@@ -1131,49 +1192,56 @@ static Object _buildCircleScope({
           },
         },
       };
-      
-      final response = await http.post(
-        Uri.parse('https://places.googleapis.com/v1/places:searchText'),
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': apiKey,
-          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.businessStatus',
-        },
-        body: jsonEncode(requestBody),
-      ).timeout(const Duration(seconds: 10));
-      
+
+      final response = await http
+          .post(
+            Uri.parse('https://places.googleapis.com/v1/places:searchText'),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': apiKey,
+              'X-Goog-FieldMask':
+                  'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.businessStatus',
+            },
+            body: jsonEncode(requestBody),
+          )
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode != 200) {
-        debugPrint('❌ [HTTP] Text search error: ${response.statusCode} - ${response.body}');
+        debugPrint(
+            '❌ [HTTP] Text search error: ${response.statusCode} - ${response.body}');
         return PlaceSearchResult(places: [], nextPageToken: null);
       }
-      
+
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final placesJson = data['places'] as List<dynamic>? ?? [];
-      
+
       debugPrint('✅ [HTTP] Text search found ${placesJson.length} places');
-      
+
       final List<PlaceResult> places = [];
-      
+
       for (final placeJson in placesJson) {
         try {
           final placeMap = placeJson as Map<String, dynamic>;
           final location = placeMap['location'] as Map<String, dynamic>?;
-          
+
           if (location == null) continue;
-          
+
           final placeLat = (location['latitude'] as num?)?.toDouble() ?? 0;
           final placeLng = (location['longitude'] as num?)?.toDouble() ?? 0;
-          
+
           final distanceMeters = Geolocator.distanceBetween(
-            latitude, longitude, placeLat, placeLng,
+            latitude,
+            longitude,
+            placeLat,
+            placeLng,
           );
-          
+
           final primaryType = placeMap['primaryType'] as String? ?? '';
           final category = _categoryFromType(primaryType);
-          
+
           final displayName = placeMap['displayName'] as Map<String, dynamic>?;
           final name = displayName?['text'] as String? ?? 'Unknown Place';
-          
+
           places.add(PlaceResult(
             placeId: placeMap['id'] as String? ?? '',
             name: name,
@@ -1191,11 +1259,10 @@ static Object _buildCircleScope({
           debugPrint('⚠️ [HTTP] Error parsing place: $e');
         }
       }
-      
+
       places.sort((a, b) => a.distance.compareTo(b.distance));
-      
+
       return PlaceSearchResult(places: places, nextPageToken: null);
-      
     } catch (e, stack) {
       debugPrint('❌ [HTTP] Text search error: $e');
       debugPrint(stack.toString());
@@ -1223,7 +1290,7 @@ extension PlaceCategoryExtension on PlaceCategory {
       case PlaceCategory.veterinary:
         return 'Veterinary';
       case PlaceCategory.restaurant:
-        return 'Cafe';  // Just "Cafe" - verified places show separate badge
+        return 'Cafe'; // Just "Cafe" - verified places show separate badge
       case PlaceCategory.other:
         return 'Other';
     }
@@ -1285,7 +1352,7 @@ class PlaceResult {
     // Restaurants and "other" need verification - not automatically dog-friendly
     return false;
   }
-  
+
   /// Status text for dog-friendliness
   String get dogFriendlyStatus {
     if (isFeaturedPark) return '✓ Verified Dog-Friendly';

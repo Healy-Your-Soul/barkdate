@@ -30,9 +30,10 @@ class _BarkDateAppState extends ConsumerState<BarkDateApp> {
     final userId = SupabaseConfig.auth.currentUser?.id;
     if (userId != null) {
       await RealtimeService().initialize(userId);
-      
+
       // Listen for achievement events
-      _achievementSubscription = RealtimeService().achievementStream.listen((event) {
+      _achievementSubscription =
+          RealtimeService().achievementStream.listen((event) {
         final context = _navigatorKey.currentContext;
         if (context != null) {
           showAchievementToast(
@@ -44,13 +45,15 @@ class _BarkDateAppState extends ConsumerState<BarkDateApp> {
         }
       });
     }
-    
+
     // Listen for auth state changes to re-initialize
     SupabaseConfig.auth.onAuthStateChange.listen((data) async {
-      if (data.event == AuthChangeEvent.signedIn && data.session?.user.id != null) {
+      if (data.event == AuthChangeEvent.signedIn &&
+          data.session?.user.id != null) {
         await RealtimeService().initialize(data.session!.user.id);
         _achievementSubscription?.cancel();
-        _achievementSubscription = RealtimeService().achievementStream.listen((event) {
+        _achievementSubscription =
+            RealtimeService().achievementStream.listen((event) {
           final context = _navigatorKey.currentContext;
           if (context != null) {
             showAchievementToast(

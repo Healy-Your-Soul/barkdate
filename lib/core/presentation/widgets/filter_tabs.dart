@@ -26,7 +26,8 @@ class FilterTabs extends StatelessWidget {
             child: GestureDetector(
               onTap: () => onTabSelected(tab),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected ? Colors.black : Colors.grey[100],
                   borderRadius: BorderRadius.circular(24),

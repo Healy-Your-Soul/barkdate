@@ -16,7 +16,7 @@ class _MapSearchBarState extends ConsumerState<MapSearchBar> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final LayerLink _layerLink = LayerLink();
-  
+
   Timer? _debounceTimer;
   List<String> _suggestions = [];
   bool _isLoadingSuggestions = false;
@@ -108,16 +108,16 @@ class _MapSearchBarState extends ConsumerState<MapSearchBar> {
   void _onSearchChanged(String value) {
     // Clear AI suggestions when user manually searches
     ref.read(mapFiltersProvider.notifier).clearAiSuggestions();
-    
+
     // Cancel previous debounce
     _debounceTimer?.cancel();
-    
+
     if (value.isEmpty) {
       _removeOverlay();
       ref.read(mapFiltersProvider.notifier).setSearchQuery('');
       return;
     }
-    
+
     // Debounce autocomplete requests (300ms)
     _debounceTimer = Timer(const Duration(milliseconds: 300), () {
       _fetchSuggestions(value);
@@ -148,7 +148,7 @@ class _MapSearchBarState extends ConsumerState<MapSearchBar> {
           _suggestions = suggestions;
           _isLoadingSuggestions = false;
         });
-        
+
         if (suggestions.isNotEmpty && _focusNode.hasFocus) {
           _showOverlay();
         } else {

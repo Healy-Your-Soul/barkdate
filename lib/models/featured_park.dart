@@ -40,9 +40,13 @@ class FeaturedPark {
       address: json['address'],
       rating: json['rating']?.toDouble(),
       reviewCount: json['review_count']?.toInt(),
-      photoUrls: json['photo_urls'] != null ? List<String>.from(json['photo_urls']) : null,
+      photoUrls: json['photo_urls'] != null
+          ? List<String>.from(json['photo_urls'])
+          : null,
       isActive: json['is_active'] ?? true,
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : null,
       qrCheckInCode: json['qr_check_in_code'],
     );
   }

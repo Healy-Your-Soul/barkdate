@@ -19,7 +19,7 @@ class DogRepositoryImpl implements DogRepository {
     // but for now we'll use what's available and filter in memory if needed, or update the service later.
     // Based on the old FeedScreen, it fetched then filtered.
     // Ideally, we should push filters to the DB.
-    
+
     final dogData = await BarkDateMatchService.getNearbyDogs(
       userId,
       limit: limit,
@@ -31,8 +31,10 @@ class DogRepositoryImpl implements DogRepository {
 
   Dog _mapDogFromRaw(Map<String, dynamic> data) {
     final userData = data['users'] as Map<String, dynamic>?;
-    final photosRaw = data['photo_urls'] ?? data['photos'] ?? data['photoUrls'] ?? [];
-    final ownerNameValue = data['owner_name'] ?? userData?['name'] ?? 'Unknown Owner';
+    final photosRaw =
+        data['photo_urls'] ?? data['photos'] ?? data['photoUrls'] ?? [];
+    final ownerNameValue =
+        data['owner_name'] ?? userData?['name'] ?? 'Unknown Owner';
     final ownerIdValue = data['user_id'] ?? userData?['id'] ?? '';
     final distance = (data['distance_km'] ?? data['distanceKm']) as num?;
 

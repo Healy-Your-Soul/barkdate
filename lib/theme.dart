@@ -100,181 +100,181 @@ class FontSizes {
 }
 
 ThemeData get lightTheme => ThemeData(
-  useMaterial3: true,
-  colorScheme: ColorScheme.light(
-    primary: LightModeColors.lightPrimary,
-    onPrimary: LightModeColors.lightOnPrimary,
-    primaryContainer: LightModeColors.lightPrimaryContainer,
-    onPrimaryContainer: LightModeColors.lightOnPrimaryContainer,
-    secondary: LightModeColors.lightSecondary,
-    onSecondary: LightModeColors.lightOnSecondary,
-    tertiary: LightModeColors.lightTertiary,
-    onTertiary: LightModeColors.lightOnTertiary,
-    error: LightModeColors.lightError,
-    onError: LightModeColors.lightOnError,
-    errorContainer: LightModeColors.lightErrorContainer,
-    onErrorContainer: LightModeColors.lightOnErrorContainer,
-    inversePrimary: LightModeColors.lightInversePrimary,
-    shadow: LightModeColors.lightShadow,
-    surface: LightModeColors.lightSurface,
-    onSurface: LightModeColors.lightOnSurface,
-  ),
-  brightness: Brightness.light,
-  appBarTheme: AppBarTheme(
-    backgroundColor: LightModeColors.lightAppBarBackground,
-    foregroundColor: LightModeColors.lightOnPrimaryContainer,
-    elevation: 0,
-  ),
-  textTheme: TextTheme(
-    displayLarge: GoogleFonts.inter(
-      fontSize: FontSizes.displayLarge,
-      fontWeight: FontWeight.normal,
-    ),
-    displayMedium: GoogleFonts.inter(
-      fontSize: FontSizes.displayMedium,
-      fontWeight: FontWeight.normal,
-    ),
-    displaySmall: GoogleFonts.inter(
-      fontSize: FontSizes.displaySmall,
-      fontWeight: FontWeight.w600,
-    ),
-    headlineLarge: GoogleFonts.inter(
-      fontSize: FontSizes.headlineLarge,
-      fontWeight: FontWeight.normal,
-    ),
-    headlineMedium: GoogleFonts.inter(
-      fontSize: FontSizes.headlineMedium,
-      fontWeight: FontWeight.w500,
-    ),
-    headlineSmall: GoogleFonts.inter(
-      fontSize: FontSizes.headlineSmall,
-      fontWeight: FontWeight.bold,
-    ),
-    titleLarge: GoogleFonts.inter(
-      fontSize: FontSizes.titleLarge,
-      fontWeight: FontWeight.w500,
-    ),
-    titleMedium: GoogleFonts.inter(
-      fontSize: FontSizes.titleMedium,
-      fontWeight: FontWeight.w500,
-    ),
-    titleSmall: GoogleFonts.inter(
-      fontSize: FontSizes.titleSmall,
-      fontWeight: FontWeight.w500,
-    ),
-    labelLarge: GoogleFonts.inter(
-      fontSize: FontSizes.labelLarge,
-      fontWeight: FontWeight.w500,
-    ),
-    labelMedium: GoogleFonts.inter(
-      fontSize: FontSizes.labelMedium,
-      fontWeight: FontWeight.w500,
-    ),
-    labelSmall: GoogleFonts.inter(
-      fontSize: FontSizes.labelSmall,
-      fontWeight: FontWeight.w500,
-    ),
-    bodyLarge: GoogleFonts.inter(
-      fontSize: FontSizes.bodyLarge,
-      fontWeight: FontWeight.normal,
-    ),
-    bodyMedium: GoogleFonts.inter(
-      fontSize: FontSizes.bodyMedium,
-      fontWeight: FontWeight.normal,
-    ),
-    bodySmall: GoogleFonts.inter(
-      fontSize: FontSizes.bodySmall,
-      fontWeight: FontWeight.normal,
-    ),
-  ),
-);
+      useMaterial3: true,
+      colorScheme: ColorScheme.light(
+        primary: LightModeColors.lightPrimary,
+        onPrimary: LightModeColors.lightOnPrimary,
+        primaryContainer: LightModeColors.lightPrimaryContainer,
+        onPrimaryContainer: LightModeColors.lightOnPrimaryContainer,
+        secondary: LightModeColors.lightSecondary,
+        onSecondary: LightModeColors.lightOnSecondary,
+        tertiary: LightModeColors.lightTertiary,
+        onTertiary: LightModeColors.lightOnTertiary,
+        error: LightModeColors.lightError,
+        onError: LightModeColors.lightOnError,
+        errorContainer: LightModeColors.lightErrorContainer,
+        onErrorContainer: LightModeColors.lightOnErrorContainer,
+        inversePrimary: LightModeColors.lightInversePrimary,
+        shadow: LightModeColors.lightShadow,
+        surface: LightModeColors.lightSurface,
+        onSurface: LightModeColors.lightOnSurface,
+      ),
+      brightness: Brightness.light,
+      appBarTheme: AppBarTheme(
+        backgroundColor: LightModeColors.lightAppBarBackground,
+        foregroundColor: LightModeColors.lightOnPrimaryContainer,
+        elevation: 0,
+      ),
+      textTheme: TextTheme(
+        displayLarge: GoogleFonts.inter(
+          fontSize: FontSizes.displayLarge,
+          fontWeight: FontWeight.normal,
+        ),
+        displayMedium: GoogleFonts.inter(
+          fontSize: FontSizes.displayMedium,
+          fontWeight: FontWeight.normal,
+        ),
+        displaySmall: GoogleFonts.inter(
+          fontSize: FontSizes.displaySmall,
+          fontWeight: FontWeight.w600,
+        ),
+        headlineLarge: GoogleFonts.inter(
+          fontSize: FontSizes.headlineLarge,
+          fontWeight: FontWeight.normal,
+        ),
+        headlineMedium: GoogleFonts.inter(
+          fontSize: FontSizes.headlineMedium,
+          fontWeight: FontWeight.w500,
+        ),
+        headlineSmall: GoogleFonts.inter(
+          fontSize: FontSizes.headlineSmall,
+          fontWeight: FontWeight.bold,
+        ),
+        titleLarge: GoogleFonts.inter(
+          fontSize: FontSizes.titleLarge,
+          fontWeight: FontWeight.w500,
+        ),
+        titleMedium: GoogleFonts.inter(
+          fontSize: FontSizes.titleMedium,
+          fontWeight: FontWeight.w500,
+        ),
+        titleSmall: GoogleFonts.inter(
+          fontSize: FontSizes.titleSmall,
+          fontWeight: FontWeight.w500,
+        ),
+        labelLarge: GoogleFonts.inter(
+          fontSize: FontSizes.labelLarge,
+          fontWeight: FontWeight.w500,
+        ),
+        labelMedium: GoogleFonts.inter(
+          fontSize: FontSizes.labelMedium,
+          fontWeight: FontWeight.w500,
+        ),
+        labelSmall: GoogleFonts.inter(
+          fontSize: FontSizes.labelSmall,
+          fontWeight: FontWeight.w500,
+        ),
+        bodyLarge: GoogleFonts.inter(
+          fontSize: FontSizes.bodyLarge,
+          fontWeight: FontWeight.normal,
+        ),
+        bodyMedium: GoogleFonts.inter(
+          fontSize: FontSizes.bodyMedium,
+          fontWeight: FontWeight.normal,
+        ),
+        bodySmall: GoogleFonts.inter(
+          fontSize: FontSizes.bodySmall,
+          fontWeight: FontWeight.normal,
+        ),
+      ),
+    );
 
 ThemeData get darkTheme => ThemeData(
-  useMaterial3: true,
-  colorScheme: ColorScheme.dark(
-    primary: DarkModeColors.darkPrimary,
-    onPrimary: DarkModeColors.darkOnPrimary,
-    primaryContainer: DarkModeColors.darkPrimaryContainer,
-    onPrimaryContainer: DarkModeColors.darkOnPrimaryContainer,
-    secondary: DarkModeColors.darkSecondary,
-    onSecondary: DarkModeColors.darkOnSecondary,
-    tertiary: DarkModeColors.darkTertiary,
-    onTertiary: DarkModeColors.darkOnTertiary,
-    error: DarkModeColors.darkError,
-    onError: DarkModeColors.darkOnError,
-    errorContainer: DarkModeColors.darkErrorContainer,
-    onErrorContainer: DarkModeColors.darkOnErrorContainer,
-    inversePrimary: DarkModeColors.darkInversePrimary,
-    shadow: DarkModeColors.darkShadow,
-    surface: DarkModeColors.darkSurface,
-    onSurface: DarkModeColors.darkOnSurface,
-  ),
-  brightness: Brightness.dark,
-  appBarTheme: AppBarTheme(
-    backgroundColor: DarkModeColors.darkAppBarBackground,
-    foregroundColor: DarkModeColors.darkOnPrimaryContainer,
-    elevation: 0,
-  ),
-  textTheme: TextTheme(
-    displayLarge: GoogleFonts.inter(
-      fontSize: FontSizes.displayLarge,
-      fontWeight: FontWeight.normal,
-    ),
-    displayMedium: GoogleFonts.inter(
-      fontSize: FontSizes.displayMedium,
-      fontWeight: FontWeight.normal,
-    ),
-    displaySmall: GoogleFonts.inter(
-      fontSize: FontSizes.displaySmall,
-      fontWeight: FontWeight.w600,
-    ),
-    headlineLarge: GoogleFonts.inter(
-      fontSize: FontSizes.headlineLarge,
-      fontWeight: FontWeight.normal,
-    ),
-    headlineMedium: GoogleFonts.inter(
-      fontSize: FontSizes.headlineMedium,
-      fontWeight: FontWeight.w500,
-    ),
-    headlineSmall: GoogleFonts.inter(
-      fontSize: FontSizes.headlineSmall,
-      fontWeight: FontWeight.bold,
-    ),
-    titleLarge: GoogleFonts.inter(
-      fontSize: FontSizes.titleLarge,
-      fontWeight: FontWeight.w500,
-    ),
-    titleMedium: GoogleFonts.inter(
-      fontSize: FontSizes.titleMedium,
-      fontWeight: FontWeight.w500,
-    ),
-    titleSmall: GoogleFonts.inter(
-      fontSize: FontSizes.titleSmall,
-      fontWeight: FontWeight.w500,
-    ),
-    labelLarge: GoogleFonts.inter(
-      fontSize: FontSizes.labelLarge,
-      fontWeight: FontWeight.w500,
-    ),
-    labelMedium: GoogleFonts.inter(
-      fontSize: FontSizes.labelMedium,
-      fontWeight: FontWeight.w500,
-    ),
-    labelSmall: GoogleFonts.inter(
-      fontSize: FontSizes.labelSmall,
-      fontWeight: FontWeight.w500,
-    ),
-    bodyLarge: GoogleFonts.inter(
-      fontSize: FontSizes.bodyLarge,
-      fontWeight: FontWeight.normal,
-    ),
-    bodyMedium: GoogleFonts.inter(
-      fontSize: FontSizes.bodyMedium,
-      fontWeight: FontWeight.normal,
-    ),
-    bodySmall: GoogleFonts.inter(
-      fontSize: FontSizes.bodySmall,
-      fontWeight: FontWeight.normal,
-    ),
-  ),
-);
+      useMaterial3: true,
+      colorScheme: ColorScheme.dark(
+        primary: DarkModeColors.darkPrimary,
+        onPrimary: DarkModeColors.darkOnPrimary,
+        primaryContainer: DarkModeColors.darkPrimaryContainer,
+        onPrimaryContainer: DarkModeColors.darkOnPrimaryContainer,
+        secondary: DarkModeColors.darkSecondary,
+        onSecondary: DarkModeColors.darkOnSecondary,
+        tertiary: DarkModeColors.darkTertiary,
+        onTertiary: DarkModeColors.darkOnTertiary,
+        error: DarkModeColors.darkError,
+        onError: DarkModeColors.darkOnError,
+        errorContainer: DarkModeColors.darkErrorContainer,
+        onErrorContainer: DarkModeColors.darkOnErrorContainer,
+        inversePrimary: DarkModeColors.darkInversePrimary,
+        shadow: DarkModeColors.darkShadow,
+        surface: DarkModeColors.darkSurface,
+        onSurface: DarkModeColors.darkOnSurface,
+      ),
+      brightness: Brightness.dark,
+      appBarTheme: AppBarTheme(
+        backgroundColor: DarkModeColors.darkAppBarBackground,
+        foregroundColor: DarkModeColors.darkOnPrimaryContainer,
+        elevation: 0,
+      ),
+      textTheme: TextTheme(
+        displayLarge: GoogleFonts.inter(
+          fontSize: FontSizes.displayLarge,
+          fontWeight: FontWeight.normal,
+        ),
+        displayMedium: GoogleFonts.inter(
+          fontSize: FontSizes.displayMedium,
+          fontWeight: FontWeight.normal,
+        ),
+        displaySmall: GoogleFonts.inter(
+          fontSize: FontSizes.displaySmall,
+          fontWeight: FontWeight.w600,
+        ),
+        headlineLarge: GoogleFonts.inter(
+          fontSize: FontSizes.headlineLarge,
+          fontWeight: FontWeight.normal,
+        ),
+        headlineMedium: GoogleFonts.inter(
+          fontSize: FontSizes.headlineMedium,
+          fontWeight: FontWeight.w500,
+        ),
+        headlineSmall: GoogleFonts.inter(
+          fontSize: FontSizes.headlineSmall,
+          fontWeight: FontWeight.bold,
+        ),
+        titleLarge: GoogleFonts.inter(
+          fontSize: FontSizes.titleLarge,
+          fontWeight: FontWeight.w500,
+        ),
+        titleMedium: GoogleFonts.inter(
+          fontSize: FontSizes.titleMedium,
+          fontWeight: FontWeight.w500,
+        ),
+        titleSmall: GoogleFonts.inter(
+          fontSize: FontSizes.titleSmall,
+          fontWeight: FontWeight.w500,
+        ),
+        labelLarge: GoogleFonts.inter(
+          fontSize: FontSizes.labelLarge,
+          fontWeight: FontWeight.w500,
+        ),
+        labelMedium: GoogleFonts.inter(
+          fontSize: FontSizes.labelMedium,
+          fontWeight: FontWeight.w500,
+        ),
+        labelSmall: GoogleFonts.inter(
+          fontSize: FontSizes.labelSmall,
+          fontWeight: FontWeight.w500,
+        ),
+        bodyLarge: GoogleFonts.inter(
+          fontSize: FontSizes.bodyLarge,
+          fontWeight: FontWeight.normal,
+        ),
+        bodyMedium: GoogleFonts.inter(
+          fontSize: FontSizes.bodyMedium,
+          fontWeight: FontWeight.normal,
+        ),
+        bodySmall: GoogleFonts.inter(
+          fontSize: FontSizes.bodySmall,
+          fontWeight: FontWeight.normal,
+        ),
+      ),
+    );

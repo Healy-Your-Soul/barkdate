@@ -3,7 +3,7 @@ import 'package:barkdate/services/moderation_service.dart';
 import 'package:barkdate/widgets/report_content_sheet.dart';
 
 /// A subtle ⋮ menu for content options including Report and Block
-/// 
+///
 /// Usage:
 /// ```dart
 /// ContentOptionsMenu(
@@ -22,7 +22,7 @@ class ContentOptionsMenu extends StatelessWidget {
   final bool showAsIcon; // true = icon button, false = popup menu trigger
   final VoidCallback? onBlocked; // Callback after blocking
   final VoidCallback? onReported; // Callback after reporting
-  
+
   const ContentOptionsMenu({
     super.key,
     required this.contentType,
@@ -37,7 +37,7 @@ class ContentOptionsMenu extends StatelessWidget {
 
   Future<void> _handleBlock(BuildContext context) async {
     if (ownerId == null) return;
-    
+
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
@@ -61,16 +61,16 @@ class ContentOptionsMenu extends StatelessWidget {
         ],
       ),
     );
-    
+
     if (confirmed == true && context.mounted) {
       final success = await ModerationService.blockUser(ownerId!);
-      
+
       if (context.mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(ownerName != null 
-                  ? '$ownerName has been blocked' 
+              content: Text(ownerName != null
+                  ? '$ownerName has been blocked'
                   : 'User blocked'),
               backgroundColor: Colors.green,
               action: SnackBarAction(
@@ -103,7 +103,7 @@ class ContentOptionsMenu extends StatelessWidget {
       reportedUserId: ownerId,
       contentPreview: contentPreview,
     );
-    
+
     if (reported == true) {
       onReported?.call();
     }
@@ -112,7 +112,7 @@ class ContentOptionsMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: showAsIcon 
+      icon: showAsIcon
           ? Icon(Icons.more_vert, color: Colors.grey[600], size: 20)
           : null,
       padding: EdgeInsets.zero,
@@ -185,7 +185,7 @@ Future<void> showContentOptionsSheet(
             ),
           ),
           const SizedBox(height: 8),
-          
+
           // Report option
           ListTile(
             leading: Icon(Icons.flag_outlined, color: Colors.orange[700]),
@@ -203,18 +203,18 @@ Future<void> showContentOptionsSheet(
               if (reported == true) onReported?.call();
             },
           ),
-          
+
           // Block option
           if (ownerId != null)
             ListTile(
               leading: Icon(Icons.block, color: Colors.red[400]),
               title: const Text('Block User'),
-              subtitle: Text(ownerName != null 
+              subtitle: Text(ownerName != null
                   ? 'Hide all content from $ownerName'
                   : 'Hide all content from this user'),
               onTap: () async {
                 Navigator.pop(context);
-                
+
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
@@ -231,20 +231,21 @@ Future<void> showContentOptionsSheet(
                       ),
                       TextButton(
                         onPressed: () => Navigator.pop(ctx, true),
-                        style: TextButton.styleFrom(foregroundColor: Colors.red),
+                        style:
+                            TextButton.styleFrom(foregroundColor: Colors.red),
                         child: const Text('Block'),
                       ),
                     ],
                   ),
                 );
-                
+
                 if (confirmed == true && context.mounted) {
                   final success = await ModerationService.blockUser(ownerId);
                   if (success && context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(ownerName != null 
-                            ? '$ownerName has been blocked' 
+                        content: Text(ownerName != null
+                            ? '$ownerName has been blocked'
                             : 'User blocked'),
                         backgroundColor: Colors.green,
                       ),
@@ -254,16 +255,16 @@ Future<void> showContentOptionsSheet(
                 }
               },
             ),
-          
+
           const SizedBox(height: 8),
-          
+
           // Cancel
           ListTile(
             leading: const Icon(Icons.close),
             title: const Text('Cancel'),
             onTap: () => Navigator.pop(context),
           ),
-          
+
           const SizedBox(height: 16),
         ],
       ),

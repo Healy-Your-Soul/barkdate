@@ -9,7 +9,8 @@ class SelectionPlaceSheet extends StatefulWidget {
   final PlaceResult place;
   final ScrollController scrollController;
   final VoidCallback? onClose;
-  final VoidCallback? onSelect; // Callback when "Select This Location" is tapped
+  final VoidCallback?
+      onSelect; // Callback when "Select This Location" is tapped
 
   const SelectionPlaceSheet({
     super.key,
@@ -39,13 +40,13 @@ class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
     try {
       // Load dog count
       final count = await CheckInService.getParkDogCount(widget.place.placeId);
-      
+
       // Load amenities
       final amenitiesData = await SupabaseConfig.client.rpc(
         'get_place_amenities',
         params: {'p_place_id': widget.place.placeId},
       );
-      
+
       if (mounted) {
         setState(() {
           _dogCount = count;
@@ -63,32 +64,37 @@ class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
 
   /// Build amenities section with chips (ReadOnly)
   Widget _buildAmenitiesSection() {
-    final suggestedAmenities = _amenities.where((a) => (a['suggested_count'] as int? ?? 0) > 0).toList();
-    
+    final suggestedAmenities = _amenities
+        .where((a) => (a['suggested_count'] as int? ?? 0) > 0)
+        .toList();
+
     if (suggestedAmenities.isEmpty) return const SizedBox.shrink();
-    
+
     final displayCount = _showAllAmenities ? suggestedAmenities.length : 4;
     final displayList = suggestedAmenities.take(displayCount).toList();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Amenities', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
+        Text('Amenities',
+            style: TextStyle(
+                fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 6,
           runSpacing: 6,
           children: [
             ...displayList.map((amenity) => Chip(
-              avatar: Text(amenity['icon'] ?? '✓', style: const TextStyle(fontSize: 14)),
-              label: Text(
-                amenity['name'] ?? '',
-                style: const TextStyle(fontSize: 12),
-              ),
-              backgroundColor: Colors.green.shade50,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            )),
+                  avatar: Text(amenity['icon'] ?? '✓',
+                      style: const TextStyle(fontSize: 14)),
+                  label: Text(
+                    amenity['name'] ?? '',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  backgroundColor: Colors.green.shade50,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                )),
             if (suggestedAmenities.length > 4 && !_showAllAmenities)
               ActionChip(
                 label: Text('+${suggestedAmenities.length - 4} more'),
@@ -105,11 +111,16 @@ class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
   /// Get color for category
   Color _getCategoryColor(PlaceCategory category) {
     switch (category) {
-      case PlaceCategory.park: return Colors.green;
-      case PlaceCategory.restaurant: return Colors.orange;
-      case PlaceCategory.petStore: return Colors.blue;
-      case PlaceCategory.veterinary: return Colors.red;
-      default: return Colors.purple;
+      case PlaceCategory.park:
+        return Colors.green;
+      case PlaceCategory.restaurant:
+        return Colors.orange;
+      case PlaceCategory.petStore:
+        return Colors.blue;
+      case PlaceCategory.veterinary:
+        return Colors.red;
+      default:
+        return Colors.purple;
     }
   }
 
@@ -125,7 +136,8 @@ class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
           Expanded(
             child: ListView(
               controller: widget.scrollController,
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 100), // Extra padding for fixed button
+              padding: const EdgeInsets.fromLTRB(
+                  20, 20, 20, 100), // Extra padding for fixed button
               children: [
                 // Header
                 Row(
@@ -155,7 +167,8 @@ class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
                       const SizedBox(width: 6),
                       Text(
                         '$_dogCount ${_dogCount == 1 ? 'dog' : 'dogs'} here now',
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                     ],
                   ),
@@ -167,7 +180,8 @@ class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
                   children: [
                     if (widget.place.isOpen)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
                         margin: const EdgeInsets.only(right: 12),
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
@@ -197,14 +211,18 @@ class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
 
                 // CATEGORY
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _getCategoryColor(widget.place.category).withOpacity(0.1),
+                    color: _getCategoryColor(widget.place.category)
+                        .withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     widget.place.category.displayName,
-                    style: TextStyle(color: _getCategoryColor(widget.place.category), fontSize: 13),
+                    style: TextStyle(
+                        color: _getCategoryColor(widget.place.category),
+                        fontSize: 13),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -213,22 +231,32 @@ class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: widget.place.isDogFriendly ? Colors.green.shade50 : Colors.red.shade50,
+                    color: widget.place.isDogFriendly
+                        ? Colors.green.shade50
+                        : Colors.red.shade50,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: widget.place.isDogFriendly ? Colors.green.shade200 : Colors.red.shade200,
+                      color: widget.place.isDogFriendly
+                          ? Colors.green.shade200
+                          : Colors.red.shade200,
                     ),
                   ),
                   child: Row(
                     children: [
                       Icon(
-                        widget.place.isDogFriendly ? Icons.check_circle : Icons.help_outline,
-                        color: widget.place.isDogFriendly ? Colors.green : Colors.red.shade700,
+                        widget.place.isDogFriendly
+                            ? Icons.check_circle
+                            : Icons.help_outline,
+                        color: widget.place.isDogFriendly
+                            ? Colors.green
+                            : Colors.red.shade700,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          widget.place.isDogFriendly ? 'Dog Friendly' : 'Check if dog-friendly',
+                          widget.place.isDogFriendly
+                              ? 'Dog Friendly'
+                              : 'Check if dog-friendly',
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
@@ -244,7 +272,8 @@ class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.network(
-                      PlacesService.getPhotoUrl(widget.place.photoReference!, maxWidth: 600),
+                      PlacesService.getPhotoUrl(widget.place.photoReference!,
+                          maxWidth: 600),
                       height: 150,
                       width: double.infinity,
                       fit: BoxFit.cover,
@@ -262,7 +291,8 @@ class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.location_on_outlined, size: 20, color: Colors.grey),
+                    const Icon(Icons.location_on_outlined,
+                        size: 20, color: Colors.grey),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -275,7 +305,7 @@ class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
               ],
             ),
           ),
-          
+
           // FIXED BOTTOM BAR BUTTON
           Container(
             padding: const EdgeInsets.all(16),
@@ -306,7 +336,8 @@ class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
                   children: [
                     Text(
                       'Select This Location',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     SizedBox(width: 8),
                     Icon(Icons.check_circle_outline),

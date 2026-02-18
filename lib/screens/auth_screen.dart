@@ -39,7 +39,7 @@ class _AuthScreenState extends State<AuthScreen> {
         OAuthProvider.google,
         redirectTo: 'io.supabase.barkdate://login-callback',
       );
-      
+
       if (mounted && response == true) {
         Navigator.of(context).pushReplacementNamed('/home');
       }
@@ -61,16 +61,17 @@ class _AuthScreenState extends State<AuthScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => isLoading = true);
-    
+
     try {
-      print('🔑 Attempting email sign-in with: ${_emailController.text.trim()}');
+      print(
+          '🔑 Attempting email sign-in with: ${_emailController.text.trim()}');
       final response = await Supabase.instance.client.auth.signInWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      
+
       print('✅ Sign-in successful: ${response.user?.email}');
-      
+
       if (mounted && response.user != null) {
         Navigator.of(context).pushReplacementNamed('/home');
       }
@@ -88,7 +89,7 @@ class _AuthScreenState extends State<AuthScreen> {
           default:
             message = e.message;
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
@@ -115,27 +116,29 @@ class _AuthScreenState extends State<AuthScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => isLoading = true);
-    
+
     try {
-      print('🔑 Attempting email registration with: ${_emailController.text.trim()}');
+      print(
+          '🔑 Attempting email registration with: ${_emailController.text.trim()}');
       final response = await Supabase.instance.client.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      
+
       print('✅ Registration successful: ${response.user?.email}');
-      
+
       if (mounted) {
         if (response.user != null && response.user!.emailConfirmedAt == null) {
           // Email verification required
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Please check your email and verify your account before signing in.'),
+              content: const Text(
+                  'Please check your email and verify your account before signing in.'),
               backgroundColor: Theme.of(context).colorScheme.primary,
               duration: const Duration(seconds: 5),
             ),
           );
-          
+
           // Switch to sign in mode
           setState(() => isSignUp = false);
         } else {
@@ -156,7 +159,7 @@ class _AuthScreenState extends State<AuthScreen> {
         } else {
           message = e.message;
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
@@ -179,26 +182,24 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth > 800) {
-              return _buildWideLayout(context, isDark);
-            } else {
-              return _buildNarrowLayout(context, isDark);
-            }
-          },
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 800) {
+                return _buildWideLayout(context, isDark);
+              } else {
+                return _buildNarrowLayout(context, isDark);
+              }
+            },
+          ),
         ),
-      ),
       ), // Close GestureDetector
     );
   }
@@ -214,7 +215,7 @@ class _AuthScreenState extends State<AuthScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: isDark 
+                colors: isDark
                     ? [
                         DarkModeColors.darkPrimaryContainer,
                         DarkModeColors.darkPrimary.withOpacity(0.1),
@@ -244,9 +245,9 @@ class _AuthScreenState extends State<AuthScreen> {
     return SingleChildScrollView(
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          minHeight: MediaQuery.of(context).size.height - 
-                    MediaQuery.of(context).padding.top - 
-                    MediaQuery.of(context).padding.bottom,
+          minHeight: MediaQuery.of(context).size.height -
+              MediaQuery.of(context).padding.top -
+              MediaQuery.of(context).padding.bottom,
         ),
         child: IntrinsicHeight(
           child: Column(
@@ -266,7 +267,8 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  Widget _buildBrandingSection(BuildContext context, bool isDark, {required bool isWide}) {
+  Widget _buildBrandingSection(BuildContext context, bool isDark,
+      {required bool isWide}) {
     return Container(
       padding: EdgeInsets.all(isWide ? 48 : 32),
       child: Column(
@@ -283,7 +285,9 @@ class _AuthScreenState extends State<AuthScreen> {
                 // Fallback while loading or if SVG fails
                 return Container(
                   decoration: BoxDecoration(
-                    color: isDark ? DarkModeColors.darkSurface : LightModeColors.lightSurface,
+                    color: isDark
+                        ? DarkModeColors.darkSurface
+                        : LightModeColors.lightSurface,
                     borderRadius: BorderRadius.circular(isWide ? 30 : 20),
                     boxShadow: [
                       BoxShadow(
@@ -303,7 +307,7 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ),
           SizedBox(height: isWide ? 32 : 16),
-          
+
           // Title - using Joti One font for 'Bark'
           Text(
             'Bark',
@@ -314,18 +318,20 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ),
           SizedBox(height: isWide ? 16 : 8),
-          
+
           // Tagline
           Text(
             'Connect. Play. Grow Together.',
             style: GoogleFonts.poppins(
               fontSize: isWide ? FontSizes.titleLarge : FontSizes.bodyLarge,
               fontWeight: FontWeight.w400,
-              color: isDark ? DarkModeColors.darkSecondary : LightModeColors.lightSecondary,
+              color: isDark
+                  ? DarkModeColors.darkSecondary
+                  : LightModeColors.lightSecondary,
             ),
             textAlign: TextAlign.center,
           ),
-          
+
           if (isWide) ...[
             const SizedBox(height: 32),
             Text(
@@ -333,7 +339,9 @@ class _AuthScreenState extends State<AuthScreen> {
               style: GoogleFonts.poppins(
                 fontSize: FontSizes.bodyLarge,
                 fontWeight: FontWeight.w300,
-                color: isDark ? DarkModeColors.darkSecondary : LightModeColors.lightSecondary,
+                color: isDark
+                    ? DarkModeColors.darkSecondary
+                    : LightModeColors.lightSecondary,
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
@@ -352,209 +360,248 @@ class _AuthScreenState extends State<AuthScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-          // Auth mode toggle
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Flexible(
-                child: TextButton(
-                  onPressed: () => setState(() => isSignUp = false),
-                  child: Text(
-                    'Sign In',
-                    style: GoogleFonts.inter(
-                      fontSize: FontSizes.titleMedium,
-                      fontWeight: isSignUp ? FontWeight.normal : FontWeight.bold,
-                      color: isSignUp 
-                          ? (isDark ? DarkModeColors.darkSecondary : LightModeColors.lightSecondary)
-                          : (isDark ? DarkModeColors.darkPrimary : LightModeColors.lightPrimary),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Flexible(
-                child: TextButton(
-                  onPressed: () => setState(() => isSignUp = true),
-                  child: Text(
-                    'Sign Up',
-                    style: GoogleFonts.inter(
-                      fontSize: FontSizes.titleMedium,
-                      fontWeight: !isSignUp ? FontWeight.normal : FontWeight.bold,
-                      color: !isSignUp 
-                          ? (isDark ? DarkModeColors.darkSecondary : LightModeColors.lightSecondary)
-                          : (isDark ? DarkModeColors.darkPrimary : LightModeColors.lightPrimary),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-
-          // Welcome message
-          Text(
-            isSignUp ? 'Join the Pack!' : 'Welcome Back!',
-            style: GoogleFonts.inter(
-              fontSize: FontSizes.headlineMedium,
-              fontWeight: FontWeight.bold,
-              color: isDark ? DarkModeColors.darkOnSurface : LightModeColors.lightOnSurface,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            isSignUp 
-                ? 'Create your account to start connecting with fellow dog lovers.'
-                : 'Sign in to continue your pawsome journey.',
-            style: GoogleFonts.inter(
-              fontSize: FontSizes.bodyMedium,
-              color: isDark ? DarkModeColors.darkSecondary : LightModeColors.lightSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-
-          // Google Sign In Button
-          _buildGoogleSignInButton(isDark),
-          const SizedBox(height: 24),
-
-          // Divider
-          Row(
-            children: [
-              Expanded(child: Divider(color: isDark ? DarkModeColors.darkSecondary : LightModeColors.lightSecondary)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'or',
-                  style: GoogleFonts.inter(
-                    fontSize: FontSizes.bodySmall,
-                    color: isDark ? DarkModeColors.darkSecondary : LightModeColors.lightSecondary,
-                  ),
-                ),
-              ),
-              Expanded(child: Divider(color: isDark ? DarkModeColors.darkSecondary : LightModeColors.lightSecondary)),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // Email/Password Form
-          Form(
-            key: _formKey,
-            child: Column(
+            // Auth mode toggle
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Email Field
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(
-                      Icons.email_outlined,
-                      color: isDark ? DarkModeColors.darkSecondary : LightModeColors.lightSecondary,
+                Flexible(
+                  child: TextButton(
+                    onPressed: () => setState(() => isSignUp = false),
+                    child: Text(
+                      'Sign In',
+                      style: GoogleFonts.inter(
+                        fontSize: FontSizes.titleMedium,
+                        fontWeight:
+                            isSignUp ? FontWeight.normal : FontWeight.bold,
+                        color: isSignUp
+                            ? (isDark
+                                ? DarkModeColors.darkSecondary
+                                : LightModeColors.lightSecondary)
+                            : (isDark
+                                ? DarkModeColors.darkPrimary
+                                : LightModeColors.lightPrimary),
+                      ),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
                 ),
-                const SizedBox(height: 16),
-
-                // Password Field
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: Icon(
-                      Icons.lock_outlined,
-                      color: isDark ? DarkModeColors.darkSecondary : LightModeColors.lightSecondary,
+                const SizedBox(width: 12),
+                Flexible(
+                  child: TextButton(
+                    onPressed: () => setState(() => isSignUp = true),
+                    child: Text(
+                      'Sign Up',
+                      style: GoogleFonts.inter(
+                        fontSize: FontSizes.titleMedium,
+                        fontWeight:
+                            !isSignUp ? FontWeight.normal : FontWeight.bold,
+                        color: !isSignUp
+                            ? (isDark
+                                ? DarkModeColors.darkSecondary
+                                : LightModeColors.lightSecondary)
+                            : (isDark
+                                ? DarkModeColors.darkPrimary
+                                : LightModeColors.lightPrimary),
+                      ),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    if (isSignUp && value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
                 ),
-                const SizedBox(height: 16),
+              ],
+            ),
+            const SizedBox(height: 32),
 
-                // Confirm Password Field (Sign Up only)
-                if (isSignUp) ...[
+            // Welcome message
+            Text(
+              isSignUp ? 'Join the Pack!' : 'Welcome Back!',
+              style: GoogleFonts.inter(
+                fontSize: FontSizes.headlineMedium,
+                fontWeight: FontWeight.bold,
+                color: isDark
+                    ? DarkModeColors.darkOnSurface
+                    : LightModeColors.lightOnSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isSignUp
+                  ? 'Create your account to start connecting with fellow dog lovers.'
+                  : 'Sign in to continue your pawsome journey.',
+              style: GoogleFonts.inter(
+                fontSize: FontSizes.bodyMedium,
+                color: isDark
+                    ? DarkModeColors.darkSecondary
+                    : LightModeColors.lightSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+
+            // Google Sign In Button
+            _buildGoogleSignInButton(isDark),
+            const SizedBox(height: 24),
+
+            // Divider
+            Row(
+              children: [
+                Expanded(
+                    child: Divider(
+                        color: isDark
+                            ? DarkModeColors.darkSecondary
+                            : LightModeColors.lightSecondary)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'or',
+                    style: GoogleFonts.inter(
+                      fontSize: FontSizes.bodySmall,
+                      color: isDark
+                          ? DarkModeColors.darkSecondary
+                          : LightModeColors.lightSecondary,
+                    ),
+                  ),
+                ),
+                Expanded(
+                    child: Divider(
+                        color: isDark
+                            ? DarkModeColors.darkSecondary
+                            : LightModeColors.lightSecondary)),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Email/Password Form
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  // Email Field
                   TextFormField(
-                    controller: _confirmPasswordController,
-                    obscureText: true,
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
-                      labelText: 'Confirm Password',
+                      labelText: 'Email',
                       prefixIcon: Icon(
-                        Icons.lock_outlined,
-                        color: isDark ? DarkModeColors.darkSecondary : LightModeColors.lightSecondary,
+                        Icons.email_outlined,
+                        color: isDark
+                            ? DarkModeColors.darkSecondary
+                            : LightModeColors.lightSecondary,
                       ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please confirm your password';
+                        return 'Please enter your email';
                       }
-                      if (value != _passwordController.text) {
-                        return 'Passwords do not match';
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                          .hasMatch(value)) {
+                        return 'Please enter a valid email';
                       }
                       return null;
                     },
                   ),
-                  const SizedBox(height: 24),
-                ],
-              ],
-            ),
-          ),
+                  const SizedBox(height: 16),
 
-          // Submit Button
-          ElevatedButton(
-            onPressed: isLoading ? null : (isSignUp ? _signUpWithEmail : _signInWithEmail),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isDark ? DarkModeColors.darkPrimary : LightModeColors.lightPrimary,
-              foregroundColor: isDark ? DarkModeColors.darkOnPrimary : LightModeColors.lightOnPrimary,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                  // Password Field
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: Icon(
+                        Icons.lock_outlined,
+                        color: isDark
+                            ? DarkModeColors.darkSecondary
+                            : LightModeColors.lightSecondary,
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your password';
+                      }
+                      if (isSignUp && value.length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Confirm Password Field (Sign Up only)
+                  if (isSignUp) ...[
+                    TextFormField(
+                      controller: _confirmPasswordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'Confirm Password',
+                        prefixIcon: Icon(
+                          Icons.lock_outlined,
+                          color: isDark
+                              ? DarkModeColors.darkSecondary
+                              : LightModeColors.lightSecondary,
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please confirm your password';
+                        }
+                        if (value != _passwordController.text) {
+                          return 'Passwords do not match';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ],
               ),
             ),
-            child: isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(
-                    isSignUp ? 'Create Account' : 'Sign In',
-                    style: GoogleFonts.inter(
-                      fontSize: FontSizes.labelLarge,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-          ),
-          const SizedBox(height: 32),
 
-          // Footer
-          Text(
-            'By continuing, you agree to our Terms of Service and Privacy Policy.',
-            style: GoogleFonts.inter(
-              fontSize: FontSizes.bodySmall,
-              color: isDark ? DarkModeColors.darkSecondary : LightModeColors.lightSecondary,
+            // Submit Button
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : (isSignUp ? _signUpWithEmail : _signInWithEmail),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDark
+                    ? DarkModeColors.darkPrimary
+                    : LightModeColors.lightPrimary,
+                foregroundColor: isDark
+                    ? DarkModeColors.darkOnPrimary
+                    : LightModeColors.lightOnPrimary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(
+                      isSignUp ? 'Create Account' : 'Sign In',
+                      style: GoogleFonts.inter(
+                        fontSize: FontSizes.labelLarge,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+            const SizedBox(height: 32),
+
+            // Footer
+            Text(
+              'By continuing, you agree to our Terms of Service and Privacy Policy.',
+              style: GoogleFonts.inter(
+                fontSize: FontSizes.bodySmall,
+                color: isDark
+                    ? DarkModeColors.darkSecondary
+                    : LightModeColors.lightSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -564,7 +611,9 @@ class _AuthScreenState extends State<AuthScreen> {
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 16),
         side: BorderSide(
-          color: isDark ? DarkModeColors.darkSecondary : LightModeColors.lightSecondary,
+          color: isDark
+              ? DarkModeColors.darkSecondary
+              : LightModeColors.lightSecondary,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -580,7 +629,13 @@ class _AuthScreenState extends State<AuthScreen> {
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [Colors.red, Colors.orange, Colors.yellow, Colors.green, Colors.blue],
+                colors: [
+                  Colors.red,
+                  Colors.orange,
+                  Colors.yellow,
+                  Colors.green,
+                  Colors.blue
+                ],
               ),
             ),
           ),
@@ -590,7 +645,9 @@ class _AuthScreenState extends State<AuthScreen> {
             style: GoogleFonts.inter(
               fontSize: FontSizes.labelLarge,
               fontWeight: FontWeight.w600,
-              color: isDark ? DarkModeColors.darkOnSurface : LightModeColors.lightOnSurface,
+              color: isDark
+                  ? DarkModeColors.darkOnSurface
+                  : LightModeColors.lightOnSurface,
             ),
           ),
         ],

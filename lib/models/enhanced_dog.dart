@@ -28,7 +28,8 @@ class DogOwner {
       ownershipType: json['ownership_type'] ?? 'owner',
       permissions: List<String>.from(json['permissions'] ?? ['view']),
       isPrimary: json['is_primary'] ?? false,
-      addedAt: DateTime.parse(json['added_at'] ?? DateTime.now().toIso8601String()),
+      addedAt:
+          DateTime.parse(json['added_at'] ?? DateTime.now().toIso8601String()),
     );
   }
 
@@ -62,10 +63,10 @@ class EnhancedDog {
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
-  
+
   // Many-to-many ownership
   final List<DogOwner> owners;
-  
+
   // Backward compatibility
   final String primaryOwnerId;
   final String primaryOwnerName;
@@ -134,8 +135,9 @@ class EnhancedDog {
     }
 
     // Find primary owner for backward compatibility
-    final primaryOwner = ownersList.isNotEmpty 
-        ? ownersList.firstWhere((o) => o.isPrimary, orElse: () => ownersList.first)
+    final primaryOwner = ownersList.isNotEmpty
+        ? ownersList.firstWhere((o) => o.isPrimary,
+            orElse: () => ownersList.first)
         : null;
 
     return EnhancedDog(
@@ -153,8 +155,10 @@ class EnhancedDog {
       neutered: json['neutered'] ?? false,
       weightKg: json['weight_kg']?.toInt(),
       isActive: json['is_active'] ?? true,
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+          json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(
+          json['updated_at'] ?? DateTime.now().toIso8601String()),
       owners: ownersList,
       primaryOwnerId: primaryOwner?.userId ?? '',
       primaryOwnerName: primaryOwner?.userName ?? '',
@@ -164,7 +168,7 @@ class EnhancedDog {
   // Convert back to old Dog model for backward compatibility
   Dog? toOldModel() {
     if (primaryOwnerId.isEmpty) return null;
-    
+
     return Dog(
       id: id,
       name: name,

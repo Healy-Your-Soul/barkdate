@@ -46,7 +46,7 @@ class AppBottomSheetContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenHeight = MediaQuery.of(context).size.height;
-    
+
     return Container(
       height: height ?? screenHeight * 0.75,
       decoration: AppStyles.bottomSheetDecoration(isDark: isDark),
@@ -59,13 +59,13 @@ class AppBottomSheetContent extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: isDark 
+              color: isDark
                   ? Colors.white.withValues(alpha: 0.3)
                   : Colors.black.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
+
           // Title (if provided)
           if (title != null) ...[
             AppSpacing.verticalSpaceLG,
@@ -74,8 +74,8 @@ class AppBottomSheetContent extends StatelessWidget {
               child: Text(
                 title!,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -86,7 +86,7 @@ class AppBottomSheetContent extends StatelessWidget {
             ),
           ] else
             AppSpacing.verticalSpaceMD,
-          
+
           // Content
           Expanded(
             child: child,

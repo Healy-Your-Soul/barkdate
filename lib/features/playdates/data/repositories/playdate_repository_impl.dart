@@ -8,12 +8,14 @@ class PlaydateRepositoryImpl implements PlaydateRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> createPlaydate(Map<String, dynamic> playdateData) async {
+  Future<Map<String, dynamic>> createPlaydate(
+      Map<String, dynamic> playdateData) async {
     return await BarkDatePlaydateService.createPlaydate(playdateData);
   }
 
   @override
-  Future<void> joinPlaydate(String playdateId, String userId, String dogId) async {
+  Future<void> joinPlaydate(
+      String playdateId, String userId, String dogId) async {
     await BarkDatePlaydateService.joinPlaydate(playdateId, userId, dogId);
   }
 

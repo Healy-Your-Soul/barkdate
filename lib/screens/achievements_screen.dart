@@ -12,9 +12,9 @@ class AchievementsScreen extends StatelessWidget {
         title: Text(
           'Achievements',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
         ),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         elevation: 0,
@@ -35,7 +35,10 @@ class AchievementsScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primaryContainer
+                    .withValues(alpha: 0.3),
               ),
               child: Column(
                 children: [
@@ -49,24 +52,27 @@ class AchievementsScreen extends StatelessWidget {
                     'Earn badges for completing activities',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Keep engaging with the BarkDate community!',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
+                        ),
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Achievements grid
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -86,7 +92,7 @@ class AchievementsScreen extends StatelessWidget {
                 },
               ),
             ),
-            
+
             const SizedBox(height: 24),
           ],
         ),
@@ -96,15 +102,15 @@ class AchievementsScreen extends StatelessWidget {
 
   Widget _buildAchievementCard(BuildContext context, Achievement achievement) {
     final isEarned = achievement.isEarned;
-    
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: isEarned 
-            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
-            : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+          color: isEarned
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
+              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
           width: isEarned ? 2 : 1,
         ),
       ),
@@ -112,9 +118,12 @@ class AchievementsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: isEarned 
-            ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1)
-            : Theme.of(context).colorScheme.surface,
+          color: isEarned
+              ? Theme.of(context)
+                  .colorScheme
+                  .primaryContainer
+                  .withValues(alpha: 0.1)
+              : Theme.of(context).colorScheme.surface,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -124,55 +133,71 @@ class AchievementsScreen extends StatelessWidget {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: isEarned 
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                color: isEarned
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context)
+                        .colorScheme
+                        .outline
+                        .withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(30),
               ),
               child: Icon(
                 _getAchievementIcon(achievement.iconName),
                 size: 30,
-                color: isEarned 
-                  ? Theme.of(context).colorScheme.onPrimary
-                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                color: isEarned
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
               ),
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // Title
             Text(
               achievement.title,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: isEarned 
-                  ? Theme.of(context).colorScheme.onSurface
-                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
+                    fontWeight: FontWeight.w600,
+                    color: isEarned
+                        ? Theme.of(context).colorScheme.onSurface
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
+                  ),
             ),
-            
+
             const SizedBox(height: 8),
-            
+
             // Description
             Text(
               achievement.description,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: isEarned 
-                  ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8)
-                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
+                    color: isEarned
+                        ? Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.8)
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.5),
+                  ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // Status
             if (isEarned) ...[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(12),
@@ -189,9 +214,9 @@ class AchievementsScreen extends StatelessWidget {
                     Text(
                       'Earned',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                   ],
                 ),
@@ -201,23 +226,33 @@ class AchievementsScreen extends StatelessWidget {
                 Text(
                   _formatEarnedDate(achievement.earnedDate!),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    fontSize: 10,
-                  ),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                        fontSize: 10,
+                      ),
                 ),
               ],
             ] else
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outline
+                      .withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   'Not earned',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                      ),
                 ),
               ),
           ],
@@ -244,7 +279,7 @@ class AchievementsScreen extends StatelessWidget {
   String _formatEarnedDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays > 0) {
       return 'Earned ${difference.inDays}d ago';
     } else if (difference.inHours > 0) {

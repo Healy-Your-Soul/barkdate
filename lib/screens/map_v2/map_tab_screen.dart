@@ -53,29 +53,31 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   bool _isLoadingPlaces = false;
   Timer? _checkInRefreshTimer;
   Timer? _liveUsersRefreshTimer;
-  
+
   // Live users on map (Phase 5)
   final List<Map<String, dynamic>> _liveUsers = [];
   final List<Marker> _liveUserMarkers = [];
-  
+
   // Selected place for in-stack sheet (not modal)
   PlaceResult? _selectedPlace;
-  PlaceSheetState _placeSheetState = PlaceSheetState.closed; // NEW: Track sheet state
-  bool _isUserCheckedInAtSelectedPlace = false; // NEW: Track if user is checked in here
-  
+  PlaceSheetState _placeSheetState =
+      PlaceSheetState.closed; // NEW: Track sheet state
+  bool _isUserCheckedInAtSelectedPlace =
+      false; // NEW: Track if user is checked in here
+
   // Selected live dog for mini popup (Phase 5)
   Map<String, dynamic>? _selectedLiveDog;
-  
+
   // Selected place for mini popup (tapped marker - shows compact card first)
   PlaceResult? _tappedPlaceMarker;
-  
+
   // Selected event for peek/expanded sheet
   Event? _selectedEvent;
-  
+
   // Current user's check-in status (for top-left floating button)
   CheckIn? _currentUserCheckIn;
   String? _userDogPhotoUrl; // Photo for check-in marker
-  
+
   // Other users' check-ins (for displaying on map)
   final List<Map<String, dynamic>> _otherUsersCheckIns = [];
 
@@ -84,37 +86,36 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     super.initState();
     _getUserLocation();
     _loadUserCheckIn(); // Load user's current check-in status
-    
+
     // Auto-cleanup stale check-ins on startup (4+ hours old)
     CheckInService.autoCheckoutInactiveUsers();
-    
+
     // Auto-refresh check-ins every 30 seconds
     _checkInRefreshTimer = Timer.periodic(
       const Duration(seconds: 30),
       (_) => _refreshCheckInCounts(),
     );
-    
+
     // Auto-refresh live users every 30 seconds
     _liveUsersRefreshTimer = Timer.periodic(
       const Duration(seconds: 30),
       (_) => _refreshLiveUsers(),
     );
-    
+
     // Realtime subscription for check-ins (instant updates)
     _setupCheckinSubscription();
   }
-  
+
   StreamSubscription? _checkinSubscription;
-  
+
   void _setupCheckinSubscription() {
     _checkinSubscription = Supabase.instance.client
-      .from('checkins')
-      .stream(primaryKey: ['id'])
-      .listen((_) {
-        debugPrint('📍 Realtime: Check-in update received');
-        _refreshCheckInCounts();
-        _loadUserCheckIn();
-      });
+        .from('checkins')
+        .stream(primaryKey: ['id']).listen((_) {
+      debugPrint('📍 Realtime: Check-in update received');
+      _refreshCheckInCounts();
+      _loadUserCheckIn();
+    });
   }
 
   @override
@@ -178,15 +179,22 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     // Use map center from viewport for search (where user panned to)
     // Fall back to user position only if viewport center is not available
     final searchCenter = viewport.center;
-    
-    if (searchCenter.latitude == 0 && searchCenter.longitude == 0 && _userPosition == null) {
-      debugPrint('⚠️ _fetchPlacesAndEvents: skipping - no search center available');
+
+    if (searchCenter.latitude == 0 &&
+        searchCenter.longitude == 0 &&
+        _userPosition == null) {
+      debugPrint(
+          '⚠️ _fetchPlacesAndEvents: skipping - no search center available');
       return;
     }
 
     // Determine search coordinates - prefer viewport center (where user panned)
-    final searchLat = searchCenter.latitude != 0 ? searchCenter.latitude : _userPosition!.latitude;
-    final searchLng = searchCenter.longitude != 0 ? searchCenter.longitude : _userPosition!.longitude;
+    final searchLat = searchCenter.latitude != 0
+        ? searchCenter.latitude
+        : _userPosition!.latitude;
+    final searchLng = searchCenter.longitude != 0
+        ? searchCenter.longitude
+        : _userPosition!.longitude;
 
     setState(() => _isLoadingPlaces = true);
 
@@ -194,8 +202,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       // Get primary types based on selected category
       final primaryTypes = filters.primaryTypes;
       debugPrint('🔍 Fetching places with types: $primaryTypes');
-      debugPrint('📍 Search center (map viewport): lat=$searchLat, lng=$searchLng');
-      
+      debugPrint(
+          '📍 Search center (map viewport): lat=$searchLat, lng=$searchLng');
+
       // Fetch places within 5km radius of MAP CENTER (not user position!)
       final placesResult = await PlacesService.searchDogFriendlyPlaces(
         latitude: searchLat,
@@ -227,13 +236,13 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
       // Fetch check-in counts for the places
       await _refreshCheckInCounts();
-      
+
       // Fetch other users' check-ins for map display
       await _refreshOtherUsersCheckIns();
-      
+
       // Fetch live users nearby
       await _refreshLiveUsers();
-      
+
       _updateMarkers();
     } catch (e) {
       debugPrint('❌ Error fetching data: $e');
@@ -247,7 +256,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     try {
       final placeIds = _places.map((p) => p.placeId).toList();
       final counts = await CheckInService.getPlaceDogCounts(placeIds);
-      
+
       if (mounted) {
         setState(() {
           _checkInCounts.clear();
@@ -264,10 +273,11 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   Future<void> _refreshOtherUsersCheckIns() async {
     try {
       final userId = Supabase.instance.client.auth.currentUser?.id;
-      final checkIns = await CheckInService.getAllActiveCheckIns(excludeUserId: userId);
-      
+      final checkIns =
+          await CheckInService.getAllActiveCheckIns(excludeUserId: userId);
+
       debugPrint('📍 Other users check-ins found: ${checkIns.length}');
-      
+
       if (mounted) {
         setState(() {
           _otherUsersCheckIns.clear();
@@ -283,10 +293,10 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   /// Refresh live users on the map (Phase 5)
   Future<void> _refreshLiveUsers() async {
     if (_userPosition == null) return;
-    
+
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
-    
+
     try {
       final liveUsers = await LocationService.getNearbyLiveUsers(
         userId,
@@ -294,26 +304,27 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         _userPosition!.longitude,
         radiusKm: 10.0,
       );
-      
+
       debugPrint('📍 Live users found: ${liveUsers.length}');
-      
+
       // DEBUG: If no other live users, show our own marker so we can see the feature
       if (liveUsers.isEmpty) {
-        debugPrint('🔧 DEBUG: No live users nearby, adding self marker for testing');
+        debugPrint(
+            '🔧 DEBUG: No live users nearby, adding self marker for testing');
         // Get current user's dog info and user name
         final userDogs = await Supabase.instance.client
             .from('dogs')
             .select('name, main_photo_url')
             .eq('user_id', userId)
             .limit(1);
-        
+
         // Get user name
         final userData = await Supabase.instance.client
             .from('users')
             .select('name')
             .eq('id', userId)
             .single();
-        
+
         if (userDogs.isNotEmpty) {
           liveUsers.add({
             'user_id': userId,
@@ -329,7 +340,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           debugPrint('🐕 Added debug marker: ${userDogs[0]['name']}');
         }
       }
-      
+
       if (mounted) {
         setState(() {
           _liveUsers.clear();
@@ -346,17 +357,20 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   /// Generate custom markers for live users with dog photos and colored borders
   Future<void> _updateLiveUserMarkers() async {
     final newMarkers = <Marker>[];
-    
+
     for (final liveUser in _liveUsers) {
       final latitude = liveUser['live_latitude'] as double?;
       final longitude = liveUser['live_longitude'] as double?;
-      final dogName = liveUser['dog_name'] as String? ?? liveUser['user_name'] as String? ?? 'Unknown';
-      final dogPhotoUrl = liveUser['dog_photo_url'] as String? ?? liveUser['avatar_url'] as String?;
+      final dogName = liveUser['dog_name'] as String? ??
+          liveUser['user_name'] as String? ??
+          'Unknown';
+      final dogPhotoUrl = liveUser['dog_photo_url'] as String? ??
+          liveUser['avatar_url'] as String?;
       final isFriend = liveUser['is_friend'] as bool? ?? false;
       final updatedAt = liveUser['live_location_updated_at'] as String?;
-      
+
       if (latitude == null || longitude == null) continue;
-      
+
       // Calculate hours since update
       double hoursAgo = 0;
       if (updatedAt != null) {
@@ -365,10 +379,10 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           hoursAgo = DateTime.now().difference(updateTime).inMinutes / 60.0;
         }
       }
-      
+
       // Get border color based on freshness
       final borderColor = DogMarkerGenerator.getBorderColorForAge(hoursAgo);
-      
+
       // Generate custom marker with dog photo and colored border (42px size)
       final icon = await DogMarkerGenerator.createDogMarker(
         imageUrl: dogPhotoUrl,
@@ -376,7 +390,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         size: 42,
         borderWidth: 3,
       );
-      
+
       newMarkers.add(Marker(
         markerId: MarkerId('live_${liveUser['user_id']}'),
         position: LatLng(latitude, longitude),
@@ -388,7 +402,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         },
       ));
     }
-    
+
     if (mounted) {
       setState(() {
         _liveUserMarkers.clear();
@@ -400,17 +414,20 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   Future<void> _updateMarkers() async {
     final filters = ref.read(mapFiltersProvider);
     final newMarkers = <Marker>{};
-    
-    debugPrint('🗺️ _updateMarkers called: ${_places.length} places, ${_liveUserMarkers.length} live users');
+
+    debugPrint(
+        '🗺️ _updateMarkers called: ${_places.length} places, ${_liveUserMarkers.length} live users');
 
     // Add place markers - BUT skip if Events filter is selected (only show our internal events)
     final isEventsOnlyFilter = filters.category == 'events';
-    
+
     if (!isEventsOnlyFilter) {
       for (final place in _places) {
         // Apply search query filter
         if (filters.searchQuery.isNotEmpty &&
-            !place.name.toLowerCase().contains(filters.searchQuery.toLowerCase())) {
+            !place.name
+                .toLowerCase()
+                .contains(filters.searchQuery.toLowerCase())) {
           continue;
         }
 
@@ -418,7 +435,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         if (filters.openNow && !place.isOpen) {
           continue;
         }
-        
+
         // Apply category filter (client-side to ensure strict matching)
         // Google API returns broader results, so we filter here
         if (filters.category != 'all') {
@@ -461,7 +478,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       }
     }
 
-
     // Add event markers (internal app events only)
     // Show when: Events filter selected OR showEvents toggle is on
     if (isEventsOnlyFilter || filters.showEvents) {
@@ -475,7 +491,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             title: event.title,
             snippet: '${event.categoryIcon} ${event.formattedDate}',
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
           onTap: () {
             // Open event in peek view (same pattern as places)
             setState(() {
@@ -496,9 +513,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       final dog = checkIn['dog'] as Map<String, dynamic>?;
       final user = checkIn['user'] as Map<String, dynamic>?;
       final parkName = checkIn['park_name'] as String? ?? 'Unknown Park';
-      
+
       if (latitude == null || longitude == null) continue;
-      
+
       // Calculate hours since check-in
       double hoursAgo = 0;
       if (checkedInAtStr != null) {
@@ -507,20 +524,23 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           hoursAgo = DateTime.now().difference(checkedInAt).inMinutes / 60.0;
         }
       }
-      
+
       // Skip if older than 4 hours
       if (hoursAgo >= 4) continue;
-      
+
       // Traffic light system: Green <1h, Orange 1-2h, Red 2-3h
-      final borderColor = hoursAgo < 1 ? Colors.green 
-          : hoursAgo < 2 ? Colors.orange 
-          : hoursAgo < 3 ? Colors.red
-          : Colors.grey;
-      
+      final borderColor = hoursAgo < 1
+          ? Colors.green
+          : hoursAgo < 2
+              ? Colors.orange
+              : hoursAgo < 3
+                  ? Colors.red
+                  : Colors.grey;
+
       final dogPhotoUrl = dog?['main_photo_url'] as String?;
       final dogName = dog?['name'] as String? ?? 'Dog';
       final userName = user?['name'] as String? ?? 'Someone';
-      
+
       // Create dog photo marker with colored border
       final icon = await DogMarkerGenerator.createDogMarker(
         imageUrl: dogPhotoUrl,
@@ -528,7 +548,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         size: 42,
         borderWidth: 3,
       );
-      
+
       final userId = checkIn['user_id'] as String?;
       newMarkers.add(Marker(
         markerId: MarkerId('checkin_$userId'),
@@ -542,32 +562,35 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         onTap: () {
           // Show dog mini card popup
           setState(() => _selectedLiveDog = {
-            'user_id': userId,
-            'user_name': userName,
-            'dog_name': dogName,
-            'dog_photo_url': dogPhotoUrl,
-            'park_name': parkName,
-            'hours_ago': hoursAgo,
-          });
+                'user_id': userId,
+                'user_name': userName,
+                'dog_name': dogName,
+                'dog_photo_url': dogPhotoUrl,
+                'park_name': parkName,
+                'hours_ago': hoursAgo,
+              });
         },
       ));
     }
 
     // Add checked-in user marker (dog photo at check-in location)
-    if (_currentUserCheckIn != null && 
-        _currentUserCheckIn!.latitude != null && 
+    if (_currentUserCheckIn != null &&
+        _currentUserCheckIn!.latitude != null &&
         _currentUserCheckIn!.longitude != null) {
       final checkedInAt = _currentUserCheckIn!.checkedInAt;
       final hoursAgo = DateTime.now().difference(checkedInAt).inMinutes / 60.0;
-      
+
       // Only show if within 4 hours
       if (hoursAgo < 4) {
         // Traffic light system: Green <1h, Orange 1-2h, Red 2-3h
-        final borderColor = hoursAgo < 1 ? Colors.green 
-            : hoursAgo < 2 ? Colors.orange 
-            : hoursAgo < 3 ? Colors.red
-            : Colors.grey; // Stale (3-4h)
-        
+        final borderColor = hoursAgo < 1
+            ? Colors.green
+            : hoursAgo < 2
+                ? Colors.orange
+                : hoursAgo < 3
+                    ? Colors.red
+                    : Colors.grey; // Stale (3-4h)
+
         // Create dog photo marker with colored border
         final icon = await DogMarkerGenerator.createDogMarker(
           imageUrl: _userDogPhotoUrl,
@@ -575,7 +598,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           size: 50,
           borderWidth: 4,
         );
-        
+
         newMarkers.add(Marker(
           markerId: const MarkerId('my_checkin'),
           position: LatLng(
@@ -622,7 +645,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       return '${hours}h ago';
     }
   }
-  
+
   /// Calculate hours since location update
   double _calculateHoursAgo(String? updatedAt) {
     if (updatedAt == null) return 0;
@@ -645,7 +668,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         return BitmapDescriptor.hueRose;
     }
   }
-  
+
   /// Load current user's check-in status
   Future<void> _loadUserCheckIn() async {
     final user = Supabase.instance.client.auth.currentUser;
@@ -653,11 +676,11 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       debugPrint('📍 Check-in: No user logged in');
       return;
     }
-    
+
     try {
       final checkIn = await CheckInService.getActiveCheckIn(user.id);
       debugPrint('📍 Check-in loaded: ${checkIn?.parkName ?? "None"}');
-      
+
       // Fetch dog photo for check-in marker
       String? dogPhotoUrl;
       if (checkIn != null) {
@@ -668,7 +691,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             .maybeSingle();
         dogPhotoUrl = dogData?['main_photo_url'] as String?;
       }
-      
+
       if (mounted) {
         setState(() {
           _currentUserCheckIn = checkIn;
@@ -680,32 +703,37 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       debugPrint('Error loading user check-in: $e');
     }
   }
-  
+
   /// Build collapsed filter chips (just category buttons)
   Widget _buildCollapsedFilterChips() {
     final filters = ref.watch(mapFiltersProvider);
-    
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
           _buildFilterChip('All', 'all', filters.category == 'all', null, null),
           const SizedBox(width: 8),
-          _buildFilterChip('Parks', 'park', filters.category == 'park', Icons.park, Colors.green),
+          _buildFilterChip('Parks', 'park', filters.category == 'park',
+              Icons.park, Colors.green),
           const SizedBox(width: 8),
-          _buildFilterChip('Cafes', 'cafe', filters.category == 'cafe', Icons.local_cafe, Colors.orange),
+          _buildFilterChip('Cafes', 'cafe', filters.category == 'cafe',
+              Icons.local_cafe, Colors.orange),
           const SizedBox(width: 8),
-          _buildFilterChip('Events', 'events', filters.category == 'events', Icons.event, Colors.purple),
+          _buildFilterChip('Events', 'events', filters.category == 'events',
+              Icons.event, Colors.purple),
           const SizedBox(width: 8),
-          _buildFilterChip('Stores', 'store', filters.category == 'store', Icons.store, Colors.blue),
+          _buildFilterChip('Stores', 'store', filters.category == 'store',
+              Icons.store, Colors.blue),
         ],
       ),
     );
   }
-  
-  Widget _buildFilterChip(String label, String value, bool selected, IconData? icon, Color? iconColor) {
+
+  Widget _buildFilterChip(String label, String value, bool selected,
+      IconData? icon, Color? iconColor) {
     return ChoiceChip(
-      avatar: icon != null 
+      avatar: icon != null
           ? Icon(icon, size: 16, color: selected ? iconColor : Colors.grey)
           : null,
       label: Text(label),
@@ -713,22 +741,25 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       onSelected: (_) {
         ref.read(mapFiltersProvider.notifier).setCategory(value);
       },
-      selectedColor: iconColor?.withOpacity(0.2) ?? Theme.of(context).colorScheme.primary.withOpacity(0.2),
+      selectedColor: iconColor?.withOpacity(0.2) ??
+          Theme.of(context).colorScheme.primary.withOpacity(0.2),
       labelStyle: TextStyle(
-        color: selected ? (iconColor ?? Theme.of(context).colorScheme.primary) : Colors.grey[700],
+        color: selected
+            ? (iconColor ?? Theme.of(context).colorScheme.primary)
+            : Colors.grey[700],
         fontWeight: selected ? FontWeight.bold : FontWeight.normal,
       ),
     );
   }
-  
+
   /// Build check-in status floating button (top-left)
   Widget _buildCheckInStatusButton() {
     if (_currentUserCheckIn == null) return const SizedBox.shrink();
-    
+
     // Calculate color based on check-in freshness
     final checkedInAt = _currentUserCheckIn!.checkedInAt;
     final hoursAgo = DateTime.now().difference(checkedInAt).inMinutes / 60.0;
-    
+
     // Auto-hide after 4 hours
     if (hoursAgo >= 4) {
       // Schedule clearing the check-in state
@@ -737,7 +768,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       });
       return const SizedBox.shrink();
     }
-    
+
     // Color based on freshness
     Color statusColor;
     if (hoursAgo < 1) {
@@ -747,7 +778,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     } else {
       statusColor = Colors.red;
     }
-    
+
     return GestureDetector(
       onTap: () => _openCheckedInPlace(),
       child: Container(
@@ -786,21 +817,22 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       ),
     );
   }
-  
+
   /// Open the place sheet for the checked-in location
   void _openCheckedInPlace() {
     if (_currentUserCheckIn == null) return;
-    
+
     // Find the place in our list or create a minimal PlaceResult
-    final matchingPlace = _places.where(
-      (p) => p.placeId == _currentUserCheckIn!.parkId
-    ).firstOrNull;
-    
+    final matchingPlace = _places
+        .where((p) => p.placeId == _currentUserCheckIn!.parkId)
+        .firstOrNull;
+
     if (matchingPlace != null) {
       setState(() {
         _selectedPlace = matchingPlace;
         _placeSheetState = PlaceSheetState.expanded;
-        _isUserCheckedInAtSelectedPlace = true; // They're viewing their check-in
+        _isUserCheckedInAtSelectedPlace =
+            true; // They're viewing their check-in
       });
     } else {
       // Create a minimal PlaceResult for the checked-in location
@@ -823,14 +855,13 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       });
     }
   }
-  
+
   /// Check if user is currently checked in at a specific place
   void _checkUserCheckInStatus(String placeId) {
-    _isUserCheckedInAtSelectedPlace = 
-        _currentUserCheckIn != null && 
-        _currentUserCheckIn!.parkId == placeId;
+    _isUserCheckedInAtSelectedPlace =
+        _currentUserCheckIn != null && _currentUserCheckIn!.parkId == placeId;
   }
-  
+
   /// Get icon for place type
   IconData _getPlaceTypeIcon(PlaceCategory category) {
     switch (category) {
@@ -847,7 +878,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         return Icons.place;
     }
   }
-  
+
   /// Get color for place type
   Color _getPlaceTypeColor(PlaceCategory category) {
     switch (category) {
@@ -864,20 +895,20 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         return Colors.grey;
     }
   }
-  
+
   /// Build check-in status banner for bottom panel
   Widget _buildCheckInBanner() {
     if (_currentUserCheckIn == null) return const SizedBox.shrink();
-    
+
     final checkedInAt = _currentUserCheckIn!.checkedInAt;
     final hoursAgo = DateTime.now().difference(checkedInAt).inMinutes / 60.0;
-    
+
     if (hoursAgo >= 4) return const SizedBox.shrink();
-    
+
     // Color and message based on freshness
     Color statusColor;
     String message;
-    
+
     if (hoursAgo < 1) {
       statusColor = Colors.green;
       message = "You're at ${_currentUserCheckIn!.parkName}";
@@ -888,7 +919,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       statusColor = Colors.red;
       message = "Still at ${_currentUserCheckIn!.parkName}? Really? 😄";
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -929,7 +960,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
     ref.read(mapViewportProvider.notifier).attachMapController(controller);
-    
+
     // Auto-load markers when map is ready
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
@@ -947,7 +978,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 1000), () async {
       if (!mounted) return;
-      
+
       final bounds = await _mapController!.getVisibleRegion();
       ref.read(mapViewportProvider.notifier).updateBounds(bounds);
 
@@ -964,8 +995,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   void _recenterMap() {
     if (_userPosition != null) {
       ref.read(mapViewportProvider.notifier).recenter(
-        LatLng(_userPosition!.latitude, _userPosition!.longitude),
-      );
+            LatLng(_userPosition!.latitude, _userPosition!.longitude),
+          );
     }
   }
 
@@ -991,7 +1022,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   Widget build(BuildContext context) {
     final viewport = ref.watch(mapViewportProvider);
     final selection = ref.watch(mapSelectionProvider);
-    
+
     // Listen for filter changes and update markers
     ref.listen(mapFiltersProvider, (previous, next) {
       if (previous?.category != next.category) {
@@ -1048,30 +1079,31 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             )
           else
             GoogleMap(
-            cloudMapId: '745ef4f99c0756c12303e928', // Enables Vector Map & AdvancedMarkerElement
-            onMapCreated: _onMapCreated,
-            onCameraMove: _onCameraMove,
-            onCameraIdle: _onCameraIdle,
-            // NEW: Handle map tap to collapse sheet to peek view
-            onTap: (LatLng position) {
-              if (_placeSheetState == PlaceSheetState.expanded) {
-                // Collapse to peek view instead of closing
-                setState(() => _placeSheetState = PlaceSheetState.peek);
-              } else if (_placeSheetState == PlaceSheetState.peek) {
-                // Second tap on map = close completely
-                setState(() {
-                  _placeSheetState = PlaceSheetState.closed;
-                  _selectedPlace = null;
-                });
-              }
-              // Also clear any mini popups
-              if (_tappedPlaceMarker != null) {
-                setState(() => _tappedPlaceMarker = null);
-              }
-              if (_selectedLiveDog != null) {
-                setState(() => _selectedLiveDog = null);
-              }
-            },
+              cloudMapId:
+                  '745ef4f99c0756c12303e928', // Enables Vector Map & AdvancedMarkerElement
+              onMapCreated: _onMapCreated,
+              onCameraMove: _onCameraMove,
+              onCameraIdle: _onCameraIdle,
+              // NEW: Handle map tap to collapse sheet to peek view
+              onTap: (LatLng position) {
+                if (_placeSheetState == PlaceSheetState.expanded) {
+                  // Collapse to peek view instead of closing
+                  setState(() => _placeSheetState = PlaceSheetState.peek);
+                } else if (_placeSheetState == PlaceSheetState.peek) {
+                  // Second tap on map = close completely
+                  setState(() {
+                    _placeSheetState = PlaceSheetState.closed;
+                    _selectedPlace = null;
+                  });
+                }
+                // Also clear any mini popups
+                if (_tappedPlaceMarker != null) {
+                  setState(() => _tappedPlaceMarker = null);
+                }
+                if (_selectedLiveDog != null) {
+                  setState(() => _selectedLiveDog = null);
+                }
+              },
               initialCameraPosition: CameraPosition(
                 target: viewport.center,
                 zoom: viewport.zoom,
@@ -1102,9 +1134,11 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                     ? const SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.black),
                       )
-                    : const Icon(Icons.refresh, size: 14, color: Colors.black54),
+                    : const Icon(Icons.refresh,
+                        size: 14, color: Colors.black54),
                 label: Text(
                   _isLoadingPlaces ? 'Searching...' : 'Search this area',
                   style: const TextStyle(color: Colors.black87),
@@ -1114,8 +1148,10 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                   foregroundColor: Colors.black87,
                   elevation: 0, // Flat design - no shadow
                   shadowColor: Colors.transparent,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  textStyle: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w500),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                     side: BorderSide(color: Colors.grey.shade300),
@@ -1134,7 +1170,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -1154,7 +1191,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                     width: double.infinity,
                     child: TextButton.icon(
                       onPressed: () {
-                        ref.read(mapSelectionProvider.notifier).showAiAssistant();
+                        ref
+                            .read(mapSelectionProvider.notifier)
+                            .showAiAssistant();
                       },
                       icon: const Icon(Icons.auto_awesome, size: 18),
                       label: const Text('AI Map Assistant (Arriving soon)'),
@@ -1232,7 +1271,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                       size: 20,
                     ),
                     tooltip: 'Zoom In',
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    constraints:
+                        const BoxConstraints(minWidth: 36, minHeight: 36),
                     padding: EdgeInsets.zero,
                   ),
                   Container(
@@ -1248,7 +1288,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                       size: 20,
                     ),
                     tooltip: 'Zoom Out',
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    constraints:
+                        const BoxConstraints(minWidth: 36, minHeight: 36),
                     padding: EdgeInsets.zero,
                   ),
                 ],
@@ -1281,21 +1322,25 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
               right: 16,
               child: Center(
                 child: DogMiniCard(
-                  dogName: _selectedLiveDog!['dog_name'] as String? ?? 
-                           _selectedLiveDog!['user_name'] as String? ?? 
-                           'Unknown',
+                  dogName: _selectedLiveDog!['dog_name'] as String? ??
+                      _selectedLiveDog!['user_name'] as String? ??
+                      'Unknown',
                   humanName: _selectedLiveDog!['user_name'] as String?,
                   dogPhotoUrl: _selectedLiveDog!['dog_photo_url'] as String? ??
-                               _selectedLiveDog!['avatar_url'] as String?,
-                  timeAgo: _formatTimeAgo(_calculateHoursAgo(_selectedLiveDog!['live_location_updated_at'] as String?)),
+                      _selectedLiveDog!['avatar_url'] as String?,
+                  timeAgo: _formatTimeAgo(_calculateHoursAgo(
+                      _selectedLiveDog!['live_location_updated_at']
+                          as String?)),
                   isFriend: _selectedLiveDog!['is_friend'] as bool? ?? false,
                   // Can't bark at yourself!
-                  isOwnDog: _selectedLiveDog!['user_id'] == Supabase.instance.client.auth.currentUser?.id,
+                  isOwnDog: _selectedLiveDog!['user_id'] ==
+                      Supabase.instance.client.auth.currentUser?.id,
                   onBark: () {
                     // TODO: Send bark to user
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('🐕 You barked at ${_selectedLiveDog!['dog_name'] ?? 'this dog'}!'),
+                        content: Text(
+                            '🐕 You barked at ${_selectedLiveDog!['dog_name'] ?? 'this dog'}!'),
                         backgroundColor: Colors.orange,
                       ),
                     );
@@ -1303,14 +1348,18 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                   },
                   onAddToPack: () async {
                     try {
-                      final currentUser = Supabase.instance.client.auth.currentUser;
+                      final currentUser =
+                          Supabase.instance.client.auth.currentUser;
                       if (currentUser == null) return;
-                      
-                      final dogs = await BarkDateUserService.getUserDogs(currentUser.id);
+
+                      final dogs =
+                          await BarkDateUserService.getUserDogs(currentUser.id);
                       if (dogs.isEmpty) {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Please create a dog profile first')),
+                            const SnackBar(
+                                content:
+                                    Text('Please create a dog profile first')),
                           );
                         }
                         return;
@@ -1326,10 +1375,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(success 
-                              ? 'Request sent! 🐾' 
-                              : 'Could not send request'
-                            ),
+                            content: Text(success
+                                ? 'Request sent! 🐾'
+                                : 'Could not send request'),
                           ),
                         );
                       }
@@ -1377,18 +1425,21 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             ),
 
           // Place Sheet - PEEK VIEW (compact bar at bottom)
-          if (_selectedPlace != null && _placeSheetState == PlaceSheetState.peek)
+          if (_selectedPlace != null &&
+              _placeSheetState == PlaceSheetState.peek)
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
               child: PointerInterceptor(
                 child: GestureDetector(
-                  onTap: () => setState(() => _placeSheetState = PlaceSheetState.expanded),
+                  onTap: () => setState(
+                      () => _placeSheetState = PlaceSheetState.expanded),
                   onVerticalDragEnd: (details) {
                     if (details.primaryVelocity! < -200) {
                       // Swipe up = expand
-                      setState(() => _placeSheetState = PlaceSheetState.expanded);
+                      setState(
+                          () => _placeSheetState = PlaceSheetState.expanded);
                     } else if (details.primaryVelocity! > 200) {
                       // Swipe down = close
                       setState(() {
@@ -1403,7 +1454,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             ),
 
           // Place Sheet - EXPANDED VIEW (full details)
-          if (_selectedPlace != null && _placeSheetState == PlaceSheetState.expanded)
+          if (_selectedPlace != null &&
+              _placeSheetState == PlaceSheetState.expanded)
             Positioned(
               left: 0,
               right: 0,
@@ -1415,7 +1467,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                   height: MediaQuery.of(context).size.height * 0.45,
                   decoration: BoxDecoration(
                     color: Theme.of(context).scaffoldBackgroundColor,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(16)),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
@@ -1452,17 +1505,20 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             ),
 
           // Event Sheet - PEEK VIEW (compact bar with event info)
-          if (_selectedEvent != null && _placeSheetState == PlaceSheetState.peek)
+          if (_selectedEvent != null &&
+              _placeSheetState == PlaceSheetState.peek)
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
               child: PointerInterceptor(
                 child: GestureDetector(
-                  onTap: () => setState(() => _placeSheetState = PlaceSheetState.expanded),
+                  onTap: () => setState(
+                      () => _placeSheetState = PlaceSheetState.expanded),
                   onVerticalDragEnd: (details) {
                     if (details.primaryVelocity! < -200) {
-                      setState(() => _placeSheetState = PlaceSheetState.expanded);
+                      setState(
+                          () => _placeSheetState = PlaceSheetState.expanded);
                     } else if (details.primaryVelocity! > 200) {
                       setState(() {
                         _placeSheetState = PlaceSheetState.closed;
@@ -1476,7 +1532,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             ),
 
           // Event Sheet - EXPANDED VIEW (full details)
-          if (_selectedEvent != null && _placeSheetState == PlaceSheetState.expanded)
+          if (_selectedEvent != null &&
+              _placeSheetState == PlaceSheetState.expanded)
             Positioned(
               left: 0,
               right: 0,
@@ -1486,7 +1543,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                   height: MediaQuery.of(context).size.height * 0.45,
                   decoration: BoxDecoration(
                     color: Theme.of(context).scaffoldBackgroundColor,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(16)),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
@@ -1528,7 +1586,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                                   color: Colors.grey.shade200,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(Icons.close, size: 18, color: Colors.grey.shade600),
+                                child: Icon(Icons.close,
+                                    size: 18, color: Colors.grey.shade600),
                               ),
                             ),
                           ),
@@ -1544,15 +1603,19 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                               // Event title
                               Text(
                                 _selectedEvent!.title,
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                               ),
                               const SizedBox(height: 12),
                               // Date & Time
                               Row(
                                 children: [
-                                  Icon(Icons.calendar_today, size: 18, color: Colors.purple.shade600),
+                                  Icon(Icons.calendar_today,
+                                      size: 18, color: Colors.purple.shade600),
                                   const SizedBox(width: 8),
                                   Text(_selectedEvent!.formattedDate),
                                 ],
@@ -1561,12 +1624,15 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                               // Location
                               Row(
                                 children: [
-                                  Icon(Icons.location_on, size: 18, color: Colors.purple.shade600),
+                                  Icon(Icons.location_on,
+                                      size: 18, color: Colors.purple.shade600),
                                   const SizedBox(width: 8),
-                                  Expanded(child: Text(_selectedEvent!.location)),
+                                  Expanded(
+                                      child: Text(_selectedEvent!.location)),
                                 ],
                               ),
-                              if (_selectedEvent!.description != null && _selectedEvent!.description!.isNotEmpty) ...[
+                              if (_selectedEvent!.description != null &&
+                                  _selectedEvent!.description!.isNotEmpty) ...[
                                 const SizedBox(height: 12),
                                 Text(
                                   _selectedEvent!.description!,
@@ -1583,14 +1649,16 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                                         // Navigate to event details screen
                                         Navigator.pushNamed(context, '/events');
                                         setState(() {
-                                          _placeSheetState = PlaceSheetState.closed;
+                                          _placeSheetState =
+                                              PlaceSheetState.closed;
                                           _selectedEvent = null;
                                         });
                                       },
                                       icon: const Icon(Icons.info_outline),
                                       label: const Text('View Event'),
                                       style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 12),
                                       ),
                                     ),
                                   ),
@@ -1599,9 +1667,11 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                                     child: FilledButton.icon(
                                       onPressed: () {
                                         // Join event action
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           SnackBar(
-                                            content: Text('Joined "${_selectedEvent!.title}"! 🎉'),
+                                            content: Text(
+                                                'Joined "${_selectedEvent!.title}"! 🎉'),
                                             backgroundColor: Colors.purple,
                                           ),
                                         );
@@ -1610,7 +1680,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                                       label: const Text('Join'),
                                       style: FilledButton.styleFrom(
                                         backgroundColor: Colors.purple,
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 12),
                                       ),
                                     ),
                                   ),
@@ -1631,7 +1702,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   }
 
   /// Build the place sheet content using PlaceSheetContent widget
-  Widget _buildPlaceSheetContent(PlaceResult place, ScrollController scrollController) {
+  Widget _buildPlaceSheetContent(
+      PlaceResult place, ScrollController scrollController) {
     return PlaceSheetContent(
       place: place,
       scrollController: scrollController,
@@ -1647,7 +1719,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       },
     );
   }
-  
+
   /// Build the compact PEEK VIEW for collapsed place sheet
   Widget _buildPeekView(PlaceResult place) {
     // Calculate distance text
@@ -1665,7 +1737,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         distanceText = '${(distance / 1000).toStringAsFixed(1)} km away';
       }
     }
-    
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -1684,7 +1756,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 60, 16), // Right padding for X button area
+            padding: const EdgeInsets.fromLTRB(
+                16, 12, 60, 16), // Right padding for X button area
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -1703,7 +1776,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                
+
                 // Place info
                 Expanded(
                   child: Column(
@@ -1728,7 +1801,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                         children: [
                           // Dog Friendly badge
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.green.shade50,
                               borderRadius: BorderRadius.circular(4),
@@ -1737,7 +1811,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.pets, size: 10, color: Colors.green.shade700),
+                                Icon(Icons.pets,
+                                    size: 10, color: Colors.green.shade700),
                                 const SizedBox(width: 3),
                                 Text(
                                   'Dog Friendly',
@@ -1763,13 +1838,14 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(width: 16), // 10px more to the right
-                
+
                 // Check In button
                 _isUserCheckedInAtSelectedPlace
                     ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
                           borderRadius: BorderRadius.circular(20),
@@ -1778,7 +1854,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.check_circle, size: 16, color: Colors.green.shade700),
+                            Icon(Icons.check_circle,
+                                size: 16, color: Colors.green.shade700),
                             const SizedBox(width: 4),
                             Text(
                               'Checked In',
@@ -1792,10 +1869,12 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                       )
                     : FilledButton.tonal(
                         onPressed: () {
-                          setState(() => _placeSheetState = PlaceSheetState.expanded);
+                          setState(() =>
+                              _placeSheetState = PlaceSheetState.expanded);
                         },
                         style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                         ),
                         child: const Text('Check In'),
                       ),
@@ -1803,7 +1882,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             ),
           ),
         ),
-        
+
         // X Close button in top-right corner
         Positioned(
           top: 8,
@@ -1833,7 +1912,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       ],
     );
   }
-  
+
   /// Build the compact PEEK VIEW for collapsed event sheet
   Widget _buildEventPeekView(Event event) {
     return Stack(
@@ -1873,7 +1952,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                
+
                 // Event info
                 Expanded(
                   child: Column(
@@ -1894,7 +1973,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                         children: [
                           // Date badge
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.purple.shade50,
                               borderRadius: BorderRadius.circular(6),
@@ -1903,7 +1983,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.schedule, size: 12, color: Colors.purple.shade700),
+                                Icon(Icons.schedule,
+                                    size: 12, color: Colors.purple.shade700),
                                 const SizedBox(width: 4),
                                 Text(
                                   event.formattedDate,
@@ -1921,9 +2002,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(width: 8),
-                
+
                 // Quick Join button
                 FilledButton.tonal(
                   onPressed: () {
@@ -1932,7 +2013,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                   style: FilledButton.styleFrom(
                     backgroundColor: Colors.purple.shade100,
                     foregroundColor: Colors.purple.shade700,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                   child: const Text('View'),
                 ),
@@ -1940,7 +2022,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             ),
           ),
         ),
-        
+
         // X Close button in top-right corner
         Positioned(
           top: 8,

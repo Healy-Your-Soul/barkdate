@@ -22,13 +22,14 @@ class CheckInService {
       if (dogs.isEmpty) {
         throw Exception('Please create a dog profile first');
       }
-      
+
       final dogId = dogs.first['id'] as String;
-      
+
       // Check if user already has an active check-in
       final activeCheckIn = await getActiveCheckIn(user.id);
       if (activeCheckIn != null && !isFutureCheckin) {
-        throw Exception('You already have an active check-in at ${activeCheckIn.parkName}');
+        throw Exception(
+            'You already have an active check-in at ${activeCheckIn.parkName}');
       }
 
       final now = DateTime.now();
@@ -71,7 +72,7 @@ class CheckInService {
 
       final now = DateTime.now();
       debugPrint('🚪 Updating checkins with status=active for user ${user.id}');
-      
+
       final data = await SupabaseConfig.client
           .from('checkins')
           .update({
@@ -84,7 +85,7 @@ class CheckInService {
 
       debugPrint('🚪 Checkout result: ${data.length} rows updated');
       debugPrint('🚪 Data: $data');
-      
+
       return data.isNotEmpty;
     } catch (e) {
       debugPrint('❌ Error checking out: $e');
@@ -96,14 +97,15 @@ class CheckInService {
   static Future<CheckIn?> getActiveCheckIn(String userId) async {
     try {
       // Check-ins older than 4 hours are considered expired
-      final cutoffTime = DateTime.now().subtract(const Duration(hours: 4)).toIso8601String();
-      
+      final cutoffTime =
+          DateTime.now().subtract(const Duration(hours: 4)).toIso8601String();
+
       final data = await SupabaseConfig.client
           .from('checkins')
           .select()
           .eq('user_id', userId)
           .eq('status', 'active')
-          .gte('checked_in_at', cutoffTime)  // Only within last 3 hours
+          .gte('checked_in_at', cutoffTime) // Only within last 3 hours
           .order('checked_in_at', ascending: false)
           .limit(1);
 
@@ -116,7 +118,8 @@ class CheckInService {
   }
 
   /// Get user's check-in history
-  static Future<List<CheckIn>> getCheckInHistory(String userId, {int limit = 20}) async {
+  static Future<List<CheckIn>> getCheckInHistory(String userId,
+      {int limit = 20}) async {
     try {
       final data = await SupabaseConfig.client
           .from('checkins')
@@ -170,13 +173,14 @@ class CheckInService {
   }
 
   /// Get dog counts for multiple specific places (optimized for map viewport)
-  static Future<Map<String, int>> getPlaceDogCounts(List<String> placeIds) async {
+  static Future<Map<String, int>> getPlaceDogCounts(
+      List<String> placeIds) async {
     try {
       if (placeIds.isEmpty) return {};
 
       // Build OR filter for multiple place IDs
       final orFilter = placeIds.map((id) => 'park_id.eq.$id').join(',');
-      
+
       final data = await SupabaseConfig.client
           .from('checkins')
           .select('park_id')
@@ -198,11 +202,13 @@ class CheckInService {
 
   /// Get active check-ins with user details for a specific place
   /// Auto-expires check-ins older than 3 hours
-  static Future<List<Map<String, dynamic>>> getActiveCheckInsAtPlace(String placeId) async {
+  static Future<List<Map<String, dynamic>>> getActiveCheckInsAtPlace(
+      String placeId) async {
     try {
       // Calculate cutoff time (3 hours ago)
-      final cutoffTime = DateTime.now().subtract(const Duration(hours: 3)).toIso8601String();
-      
+      final cutoffTime =
+          DateTime.now().subtract(const Duration(hours: 3)).toIso8601String();
+
       final data = await SupabaseConfig.client
           .from('checkins')
           .select('''
@@ -233,14 +239,14 @@ class CheckInService {
 
   /// Get ALL active check-ins globally with user/dog details (for map markers)
   /// Excludes current user's check-in, auto-expires after 4 hours
-  static Future<List<Map<String, dynamic>>> getAllActiveCheckIns({String? excludeUserId}) async {
+  static Future<List<Map<String, dynamic>>> getAllActiveCheckIns(
+      {String? excludeUserId}) async {
     try {
       // Calculate cutoff time (4 hours ago)
-      final cutoffTime = DateTime.now().subtract(const Duration(hours: 4)).toIso8601String();
-      
-      var query = SupabaseConfig.client
-          .from('checkins')
-          .select('''
+      final cutoffTime =
+          DateTime.now().subtract(const Duration(hours: 4)).toIso8601String();
+
+      var query = SupabaseConfig.client.from('checkins').select('''
             *,
             user:user_id (
               id,
@@ -253,15 +259,13 @@ class CheckInService {
               breed,
               main_photo_url
             )
-          ''')
-          .eq('status', 'active')
-          .gte('checked_in_at', cutoffTime);
-      
+          ''').eq('status', 'active').gte('checked_in_at', cutoffTime);
+
       // Exclude current user if specified
       if (excludeUserId != null) {
         query = query.neq('user_id', excludeUserId);
       }
-      
+
       final data = await query.order('checked_in_at', ascending: false);
 
       return List<Map<String, dynamic>>.from(data);
@@ -281,17 +285,17 @@ class CheckInService {
       // Get nearby parks (this would need to be implemented in your park service)
       // For now, we'll get all parks and calculate dog counts
       final parkCounts = await getAllParkDogCounts();
-      
+
       // This is a simplified version - you'd want to integrate with your actual park service
       final List<Map<String, dynamic>> parksWithCounts = [];
-      
+
       for (final entry in parkCounts.entries) {
         parksWithCounts.add({
           'park_id': entry.key,
           'dog_count': entry.value,
         });
       }
-      
+
       return parksWithCounts;
     } catch (e) {
       debugPrint('Error getting nearby parks with counts: $e');
@@ -353,10 +357,11 @@ class CheckInService {
   }
 
   /// Auto-checkout inactive users (called by background job)
-  static Future<void> autoCheckoutInactiveUsers({Duration maxDuration = const Duration(hours: 4)}) async {
+  static Future<void> autoCheckoutInactiveUsers(
+      {Duration maxDuration = const Duration(hours: 4)}) async {
     try {
       final cutoffTime = DateTime.now().subtract(maxDuration);
-      
+
       await SupabaseConfig.client
           .from('checkins')
           .update({
@@ -374,26 +379,25 @@ class CheckInService {
   static Future<Map<String, dynamic>> getCheckInStats(String userId) async {
     try {
       final history = await getCheckInHistory(userId, limit: 100);
-      
+
       int totalCheckIns = history.length;
       int totalHours = 0;
       String favoritePark = '';
       Map<String, int> parkVisits = {};
-      
+
       for (final checkIn in history) {
         if (checkIn.isCompleted && checkIn.duration != null) {
           totalHours += checkIn.duration!.inHours;
         }
-        
+
         parkVisits[checkIn.parkName] = (parkVisits[checkIn.parkName] ?? 0) + 1;
       }
-      
+
       if (parkVisits.isNotEmpty) {
-        favoritePark = parkVisits.entries
-            .reduce((a, b) => a.value > b.value ? a : b)
-            .key;
+        favoritePark =
+            parkVisits.entries.reduce((a, b) => a.value > b.value ? a : b).key;
       }
-      
+
       return {
         'total_checkins': totalCheckIns,
         'total_hours': totalHours,

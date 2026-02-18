@@ -12,6 +12,7 @@ import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/screens/help_screen.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
+
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -32,7 +33,8 @@ class ProfileScreen extends ConsumerWidget {
             slivers: [
               // 1. Header "Profile"
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0, vertical: 16.0),
                 sliver: SliverToBoxAdapter(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -60,7 +62,9 @@ class ProfileScreen extends ConsumerWidget {
                                 );
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Add a dog first to share!')),
+                                  const SnackBar(
+                                      content:
+                                          Text('Add a dog first to share!')),
                                 );
                               }
                             },
@@ -96,13 +100,15 @@ class ProfileScreen extends ConsumerWidget {
                           }
                           return Center(
                             child: ListView.separated(
-                              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 24.0),
                               scrollDirection: Axis.horizontal,
                               // If single item, center it. If multiple, let them scroll.
-                              shrinkWrap: true, 
+                              shrinkWrap: true,
                               physics: const BouncingScrollPhysics(),
                               itemCount: dogs.length,
-                              separatorBuilder: (context, index) => const SizedBox(width: 16),
+                              separatorBuilder: (context, index) =>
+                                  const SizedBox(width: 16),
                               itemBuilder: (context, index) {
                                 final dog = dogs[index];
                                 return _buildLargeDogCard(context, ref, dog);
@@ -110,7 +116,8 @@ class ProfileScreen extends ConsumerWidget {
                             ),
                           );
                         },
-                        loading: () => const Center(child: CircularProgressIndicator()),
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
                         error: (_, __) => const SizedBox.shrink(),
                       ),
                     ),
@@ -127,9 +134,16 @@ class ProfileScreen extends ConsumerWidget {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surface
+                          .withOpacity(0.5),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.5)),
+                      border: Border.all(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outline
+                              .withOpacity(0.5)),
                     ),
                     child: userProfileAsync.when(
                       data: (profile) {
@@ -143,24 +157,34 @@ class ProfileScreen extends ConsumerWidget {
                                   backgroundImage: profile['avatar_url'] != null
                                       ? NetworkImage(profile['avatar_url'])
                                       : null,
-                                  backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                                  backgroundColor: Theme.of(context)
+                                      .colorScheme
+                                      .surfaceVariant,
                                   child: profile['avatar_url'] == null
-                                      ? const Icon(Icons.person, size: 24, color: Colors.grey)
+                                      ? const Icon(Icons.person,
+                                          size: 24, color: Colors.grey)
                                       : null,
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         profile['name'] ?? 'User',
-                                        style: AppTypography.h3().copyWith(fontSize: 18),
+                                        style: AppTypography.h3()
+                                            .copyWith(fontSize: 18),
                                       ),
                                       Text(
-                                        profile['relationship_status'] ?? 'Human',
-                                        style: AppTypography.bodySmall().copyWith(
-                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                        profile['relationship_status'] ??
+                                            'Human',
+                                        style:
+                                            AppTypography.bodySmall().copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.6),
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
@@ -168,71 +192,89 @@ class ProfileScreen extends ConsumerWidget {
                                   ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.edit, size: 20, color: Colors.grey),
+                                  icon: const Icon(Icons.edit,
+                                      size: 20, color: Colors.grey),
                                   onPressed: () {
-                                    context.push('/create-profile', extra: {'editMode': EditMode.editOwner});
+                                    context.push('/create-profile', extra: {
+                                      'editMode': EditMode.editOwner
+                                    });
                                   },
                                 ),
                               ],
                             ),
                             const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  // Add Dog Button
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: () {
-                                        context.push('/create-profile', extra: {'editMode': EditMode.addNewDog});
-                                      },
-                                      icon: const Icon(Icons.add, size: 16),
-                                      label: const Text('Add Dog', style: TextStyle(fontSize: 12)),
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                      ),
+                            Row(
+                              children: [
+                                // Add Dog Button
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () {
+                                      context.push('/create-profile', extra: {
+                                        'editMode': EditMode.addNewDog
+                                      });
+                                    },
+                                    icon: const Icon(Icons.add, size: 16),
+                                    label: const Text('Add Dog',
+                                        style: TextStyle(fontSize: 12)),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  // Share Dog Button
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        // Get the first dog to share (for now, simplistic approach)
-                                        // In a real app with multiple dogs, we'd show a picker or share specific dog
-                                        final dogs = userDogsAsync.valueOrNull;
-                                        if (dogs != null && dogs.isNotEmpty) {
-                                          final dog = dogs.first;
-                                          showModalBottomSheet(
-                                            context: context,
-                                            isScrollControlled: true,
-                                            backgroundColor: Colors.transparent,
-                                            builder: (context) => ShareDogSheet(
-                                              dogId: dog.id,
-                                              dogName: dog.name,
-                                            ),
-                                          );
-                                        } else {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Add a dog first to share!')),
-                                          );
-                                        }
-                                      },
-                                      icon: const Icon(Icons.share, size: 16),
-                                      label: const Text('Share Dog', style: TextStyle(fontSize: 12)),
-                                      style: ElevatedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                        backgroundColor: Colors.black, // Airbnb style primary action
-                                        foregroundColor: Colors.white,
-                                      ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Share Dog Button
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      // Get the first dog to share (for now, simplistic approach)
+                                      // In a real app with multiple dogs, we'd show a picker or share specific dog
+                                      final dogs = userDogsAsync.valueOrNull;
+                                      if (dogs != null && dogs.isNotEmpty) {
+                                        final dog = dogs.first;
+                                        showModalBottomSheet(
+                                          context: context,
+                                          isScrollControlled: true,
+                                          backgroundColor: Colors.transparent,
+                                          builder: (context) => ShareDogSheet(
+                                            dogId: dog.id,
+                                            dogName: dog.name,
+                                          ),
+                                        );
+                                      } else {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                              content: Text(
+                                                  'Add a dog first to share!')),
+                                        );
+                                      }
+                                    },
+                                    icon: const Icon(Icons.share, size: 16),
+                                    label: const Text('Share Dog',
+                                        style: TextStyle(fontSize: 12)),
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      backgroundColor: Colors
+                                          .black, // Airbnb style primary action
+                                      foregroundColor: Colors.white,
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
+                            ),
                           ],
                         );
                       },
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
                       error: (_, __) => const SizedBox.shrink(),
                     ),
                   ),
@@ -240,8 +282,6 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
-
-
 
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
@@ -275,7 +315,8 @@ class ProfileScreen extends ConsumerWidget {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const HelpScreen()),
+                          MaterialPageRoute(
+                              builder: (context) => const HelpScreen()),
                         );
                       },
                     ),
@@ -335,7 +376,9 @@ class ProfileScreen extends ConsumerWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           image: DecorationImage(
-            image: NetworkImage(dog.photos.isNotEmpty ? dog.photos.first : 'https://via.placeholder.com/150'),
+            image: NetworkImage(dog.photos.isNotEmpty
+                ? dog.photos.first
+                : 'https://via.placeholder.com/150'),
             fit: BoxFit.cover,
           ),
         ),
@@ -398,7 +441,8 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ],
         image: DecorationImage(
-          image: NetworkImage(dog.dogPhotoUrl ?? 'https://via.placeholder.com/150'),
+          image: NetworkImage(
+              dog.dogPhotoUrl ?? 'https://via.placeholder.com/150'),
           fit: BoxFit.cover,
         ),
       ),
@@ -455,8 +499,6 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-
-
   Widget _buildLargeDogCard(BuildContext context, WidgetRef ref, dynamic dog) {
     return GestureDetector(
       onTap: () {
@@ -486,7 +528,8 @@ class ProfileScreen extends ConsumerWidget {
                 icon: const Icon(Icons.more_vert, size: 24, color: Colors.grey),
                 onSelected: (value) async {
                   if (value == 'edit') {
-                    final result = await context.push<bool>('/create-profile', extra: {
+                    final result =
+                        await context.push<bool>('/create-profile', extra: {
                       'editMode': EditMode.editDog,
                       'dogId': dog.id,
                     });
@@ -501,7 +544,8 @@ class ProfileScreen extends ConsumerWidget {
                       context: context,
                       builder: (context) => AlertDialog(
                         title: const Text('Delete Dog Profile'),
-                        content: Text('Are you sure you want to delete ${dog.name}\'s profile? This action cannot be undone.'),
+                        content: Text(
+                            'Are you sure you want to delete ${dog.name}\'s profile? This action cannot be undone.'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
@@ -509,7 +553,8 @@ class ProfileScreen extends ConsumerWidget {
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(context, true),
-                            style: TextButton.styleFrom(foregroundColor: Colors.red),
+                            style: TextButton.styleFrom(
+                                foregroundColor: Colors.red),
                             child: const Text('Delete'),
                           ),
                         ],
@@ -521,19 +566,18 @@ class ProfileScreen extends ConsumerWidget {
                         final dogId = dog is Map ? dog['id'] : dog.id;
                         debugPrint('🗑️ Deleting dog with ID: $dogId');
                         debugPrint('🗑️ Dog type: ${dog.runtimeType}');
-                        
+
                         if (dogId == null) {
                           throw Exception('Dog ID is null');
                         }
-                        
+
                         // Soft delete - set is_active to false
                         await SupabaseConfig.client
                             .from('dogs')
-                            .update({'is_active': false})
-                            .eq('id', dogId);
-                        
+                            .update({'is_active': false}).eq('id', dogId);
+
                         debugPrint('✅ Dog marked as inactive');
-                        
+
                         // Clean up related records that reference this dog
                         try {
                           // Remove from playdate_participants
@@ -541,25 +585,28 @@ class ProfileScreen extends ConsumerWidget {
                               .from('playdate_participants')
                               .delete()
                               .eq('dog_id', dogId);
-                          debugPrint('✅ Removed dog from playdate_participants');
-                          
+                          debugPrint(
+                              '✅ Removed dog from playdate_participants');
+
                           // Remove from playdate_requests (where this dog was invited)
                           await SupabaseConfig.client
                               .from('playdate_requests')
                               .delete()
                               .eq('invitee_dog_id', dogId);
-                          debugPrint('✅ Removed dog from playdate_requests (invitee)');
-                          
+                          debugPrint(
+                              '✅ Removed dog from playdate_requests (invitee)');
+
                           // Also clean up requester_dog_id if exists
                           await SupabaseConfig.client
                               .from('playdate_requests')
                               .delete()
                               .eq('requester_dog_id', dogId);
-                          debugPrint('✅ Removed dog from playdate_requests (requester)');
+                          debugPrint(
+                              '✅ Removed dog from playdate_requests (requester)');
                         } catch (cleanupError) {
                           debugPrint('⚠️ Cleanup warning: $cleanupError');
                         }
-                        
+
                         // Clear cache and refresh
                         final userId = SupabaseConfig.auth.currentUser?.id;
                         if (userId != null) {
@@ -569,21 +616,25 @@ class ProfileScreen extends ConsumerWidget {
                         ref.invalidate(userProfileProvider);
                         ref.invalidate(userStatsProvider);
                         ref.invalidate(profileRepositoryProvider);
-                        ref.invalidate(userPlaydatesProvider); // Also refresh playdates
-                        
+                        ref.invalidate(
+                            userPlaydatesProvider); // Also refresh playdates
+
                         debugPrint('✅ Cache cleared and providers invalidated');
-                        
+
                         if (context.mounted) {
                           final dogName = dog is Map ? dog['name'] : dog.name;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("$dogName's profile deleted")),
+                            SnackBar(
+                                content: Text("$dogName's profile deleted")),
                           );
                         }
                       } catch (e) {
                         debugPrint('❌ Error deleting dog: $e');
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error deleting: $e'), backgroundColor: Colors.red),
+                            SnackBar(
+                                content: Text('Error deleting: $e'),
+                                backgroundColor: Colors.red),
                           );
                         }
                       }
@@ -614,7 +665,7 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            
+
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
@@ -629,7 +680,9 @@ class ProfileScreen extends ConsumerWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           image: DecorationImage(
-                            image: NetworkImage(dog.photos.isNotEmpty ? dog.photos.first : 'https://via.placeholder.com/150'),
+                            image: NetworkImage(dog.photos.isNotEmpty
+                                ? dog.photos.first
+                                : 'https://via.placeholder.com/150'),
                             fit: BoxFit.cover,
                           ),
                           boxShadow: [
@@ -660,7 +713,7 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // 2. Name
                   Text(
                     dog.name,
@@ -674,11 +727,11 @@ class ProfileScreen extends ConsumerWidget {
                       fontSize: 14,
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24),
                   const Divider(height: 1),
                   const SizedBox(height: 24),
-                  
+
                   // 3. Stats Row with dynamic pack count
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -754,7 +807,8 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildAddDogCard(BuildContext context, {bool isLarge = false}) {
     return GestureDetector(
       onTap: () {
-        context.push('/create-profile', extra: {'editMode': EditMode.createProfile});
+        context.push('/create-profile',
+            extra: {'editMode': EditMode.createProfile});
       },
       child: Container(
         width: isLarge ? 160 : 120,
@@ -766,7 +820,10 @@ class ProfileScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_circle_outline, size: isLarge ? 40 : 32, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
+            Icon(Icons.add_circle_outline,
+                size: isLarge ? 40 : 32,
+                color:
+                    Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
             const SizedBox(height: 8),
             Text(
               'Add Dog',

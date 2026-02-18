@@ -40,14 +40,14 @@ class CreateProfileScreen extends StatefulWidget {
 class _CreateProfileScreenState extends State<CreateProfileScreen> {
   final PageController _pageController = PageController();
   int _currentStep = 0;
-  
+
   // Owner info controllers
   final _ownerNameController = TextEditingController();
   final _ownerBioController = TextEditingController();
   final _ownerLocationController = TextEditingController();
   // Removed old File-based ownerPhoto; using SelectedImage below
   String? _relationshipStatus;
-  
+
   // Dog info controllers
   final _dogNameController = TextEditingController();
   final _dogBreedController = TextEditingController();
@@ -55,11 +55,12 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   final _dogBioController = TextEditingController();
   String _dogSize = 'Medium';
   String _dogGender = 'Male';
-  bool _isPublic = true; // Dog visibility: true = visible in discovery, false = friends only
+  bool _isPublic =
+      true; // Dog visibility: true = visible in discovery, false = friends only
   List<SelectedImage> _dogPhotos = [];
   SelectedImage? _ownerPhoto;
   Map<String, dynamic>? _dogProfile; // Track existing dog data
-  
+
   bool _isLoading = false;
 
   // --- Normalization helpers to keep UI and DB in sync for dropdown/segmented fields ---
@@ -99,9 +100,10 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     super.initState();
     _ownerNameController.text = widget.userName ?? '';
     // Note: We don't pre-fill email in any field since users should enter their own info
-    
+
     // Load existing data if in edit mode (not for new creation or adding new dog)
-    if (widget.editMode != EditMode.createProfile && widget.editMode != EditMode.addNewDog) {
+    if (widget.editMode != EditMode.createProfile &&
+        widget.editMode != EditMode.addNewDog) {
       _loadExistingData();
     }
   }
@@ -122,7 +124,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   /// Load existing user and dog data for edit mode
   Future<void> _loadExistingData() async {
     setState(() => _isLoading = true);
-    
+
     try {
       String? userId = widget.userId ?? SupabaseConfig.auth.currentUser?.id;
       if (userId == null) return;
@@ -132,7 +134,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         'users',
         filters: {'id': userId},
       );
-      
+
       if (userProfile != null) {
         _ownerNameController.text = userProfile['name'] ?? '';
         _ownerBioController.text = userProfile['bio'] ?? '';
@@ -140,10 +142,12 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         if (userProfile['relationship_status'] != null) {
           _relationshipStatus = userProfile['relationship_status'];
         }
-        
+
         // Load existing owner avatar
-        if (userProfile['avatar_url'] != null && userProfile['avatar_url'].toString().isNotEmpty) {
-          final avatarImage = await _loadImageFromUrl(userProfile['avatar_url']);
+        if (userProfile['avatar_url'] != null &&
+            userProfile['avatar_url'].toString().isNotEmpty) {
+          final avatarImage =
+              await _loadImageFromUrl(userProfile['avatar_url']);
           if (avatarImage != null && mounted) {
             setState(() {
               _ownerPhoto = avatarImage;
@@ -154,7 +158,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
       // Load dog profile using enhanced method for consistency
       final dogProfiles = await BarkDateUserService.getUserDogs(userId);
-      
+
       if (dogProfiles.isNotEmpty) {
         // Find specific dog by ID if provided, otherwise use first dog
         Map<String, dynamic>? dogProfile;
@@ -172,31 +176,36 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         debugPrint('🐕 Loading dog profile from enhanced service:');
         debugPrint('  - Dog data: $dogProfile');
         debugPrint('  - Dog ID: ${dogProfile['id']}');
-        
+
         _dogNameController.text = dogProfile['name'] ?? '';
         _dogBreedController.text = dogProfile['breed'] ?? '';
         _dogAgeController.text = dogProfile['age']?.toString() ?? '';
         _dogBioController.text = dogProfile['bio'] ?? '';
-  final rawSize = dogProfile['size'];
-  final rawGender = dogProfile['gender'];
-  _dogSize = _normalizeSize(rawSize);
-  _dogGender = _normalizeGender(rawGender);
-  _isPublic = dogProfile['is_public'] ?? true;
-        
+        final rawSize = dogProfile['size'];
+        final rawGender = dogProfile['gender'];
+        _dogSize = _normalizeSize(rawSize);
+        _dogGender = _normalizeGender(rawGender);
+        _isPublic = dogProfile['is_public'] ?? true;
+
         // Debug: Log the loaded values
         debugPrint('🐕 Dog profile loaded:');
-        debugPrint('  - Size from DB raw: "$rawSize" -> normalized: "$_dogSize"');
-        debugPrint('  - Gender from DB raw: "$rawGender" -> normalized: "$_dogGender"');
-        if (!['Small','Medium','Large'].contains(_dogSize)) {
-          debugPrint('  ! Size value "$_dogSize" not in allowed set – forcing Medium');
+        debugPrint(
+            '  - Size from DB raw: "$rawSize" -> normalized: "$_dogSize"');
+        debugPrint(
+            '  - Gender from DB raw: "$rawGender" -> normalized: "$_dogGender"');
+        if (!['Small', 'Medium', 'Large'].contains(_dogSize)) {
+          debugPrint(
+              '  ! Size value "$_dogSize" not in allowed set – forcing Medium');
           _dogSize = 'Medium';
         }
-        if (!['Male','Female'].contains(_dogGender)) {
-          debugPrint('  ! Gender value "$_dogGender" not in allowed set – forcing Male');
+        if (!['Male', 'Female'].contains(_dogGender)) {
+          debugPrint(
+              '  ! Gender value "$_dogGender" not in allowed set – forcing Male');
           _dogGender = 'Male';
         }
-        debugPrint('  - Age from DB: "${dogProfile['age']}" -> UI shows: "${_dogAgeController.text}"');
-        
+        debugPrint(
+            '  - Age from DB: "${dogProfile['age']}" -> UI shows: "${_dogAgeController.text}"');
+
         // Load existing dog photos
         await _loadDogPhotos(dogProfile);
       } else {
@@ -222,22 +231,23 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   Future<void> _loadDogPhotos(Map<String, dynamic> dogProfile) async {
     try {
       List<SelectedImage> loadedPhotos = [];
-      
+
       // Load main photo
       if (dogProfile['main_photo_url'] != null) {
         final mainPhoto = await _loadImageFromUrl(dogProfile['main_photo_url']);
         if (mainPhoto != null) loadedPhotos.add(mainPhoto);
       }
-      
+
       // Load extra photos
       if (dogProfile['extra_photo_urls'] != null) {
         final extraUrls = List<String>.from(dogProfile['extra_photo_urls']);
-        for (String url in extraUrls.take(3)) { // Max 3 extra photos
+        for (String url in extraUrls.take(3)) {
+          // Max 3 extra photos
           final photo = await _loadImageFromUrl(url);
           if (photo != null) loadedPhotos.add(photo);
         }
       }
-      
+
       if (mounted) {
         setState(() {
           _dogPhotos = loadedPhotos;
@@ -279,8 +289,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         await SupabaseService.insert('users', {
           'id': userId,
           'email': user?.email ?? '',
-          'name': _ownerNameController.text.trim().isNotEmpty 
-              ? _ownerNameController.text.trim() 
+          'name': _ownerNameController.text.trim().isNotEmpty
+              ? _ownerNameController.text.trim()
               : 'User',
           'created_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
@@ -297,7 +307,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     FocusScope.of(context).unfocus();
 
     setState(() => _isLoading = true);
-    
+
     try {
       // Get user ID - either from parameter or current auth
       String? userId = widget.userId;
@@ -321,19 +331,22 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       List<String> dogPhotoUrls = [];
       String? mainPhotoUrl;
       List<String> extraPhotoUrls = [];
-      
+
       if (_dogPhotos.isNotEmpty) {
         try {
           // Upload all photos first
           dogPhotoUrls = await PhotoUploadService.uploadMultipleImages(
             imageFiles: _dogPhotos,
             bucketName: PhotoUploadService.dogPhotosBucket,
-            baseFilePath: '$userId/temp/photo', // Use temp folder, will update after getting dogId
+            baseFilePath:
+                '$userId/temp/photo', // Use temp folder, will update after getting dogId
           );
-          
+
           // Organize: first photo = main, rest = extras (max 3)
           mainPhotoUrl = dogPhotoUrls.isNotEmpty ? dogPhotoUrls[0] : null;
-          extraPhotoUrls = dogPhotoUrls.length > 1 ? dogPhotoUrls.sublist(1, dogPhotoUrls.length.clamp(1, 4)) : [];
+          extraPhotoUrls = dogPhotoUrls.length > 1
+              ? dogPhotoUrls.sublist(1, dogPhotoUrls.length.clamp(1, 4))
+              : [];
         } catch (e) {
           debugPrint('Error uploading dog photos: $e');
         }
@@ -349,7 +362,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         'bio': _dogBioController.text.trim(),
         'main_photo_url': mainPhotoUrl,
         'extra_photo_urls': extraPhotoUrls,
-        'photo_urls': dogPhotoUrls, // Keep all photos for backward compatibility
+        'photo_urls':
+            dogPhotoUrls, // Keep all photos for backward compatibility
         'is_public': _isPublic,
       });
 
@@ -375,9 +389,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       });
 
       // Success! Profile created with dog-first approach ✅
-      
+
       if (mounted) {
-        // Success! Show confirmation 
+        // Success! Show confirmation
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Profile created successfully! 🎉'),
@@ -385,15 +399,15 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             duration: Duration(seconds: 2),
           ),
         );
-        
+
         // Clear profile cache so auth wrapper knows profile is now complete
         final uid = SupabaseConfig.auth.currentUser?.id;
         if (uid != null) {
           SupabaseAuthWrapper.clearProfileCache(uid);
         }
-        
+
         // Navigate based on mode:
-        // - createProfile mode: Screen is rendered inline by SupabaseAuthWrapper, 
+        // - createProfile mode: Screen is rendered inline by SupabaseAuthWrapper,
         //   so we must use context.go() to navigate to the main app
         // - edit modes: Screen was pushed as a separate route, so we can pop back
         if (widget.editMode == EditMode.createProfile) {
@@ -424,19 +438,21 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       // Validate dog info (DOG FIRST!)
       if (_dogNameController.text.isEmpty || _dogBreedController.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter your dog\'s name and breed')),
+          const SnackBar(
+              content: Text('Please enter your dog\'s name and breed')),
         );
         return;
       }
-      
+
       // Validate at least 1 photo is required
       if (_dogPhotos.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please add at least one photo of your dog')),
+          const SnackBar(
+              content: Text('Please add at least one photo of your dog')),
         );
         return;
       }
-      
+
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -450,7 +466,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         );
         return;
       }
-      
+
       _createProfile();
     }
   }
@@ -478,7 +494,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     }
 
     setState(() => _isLoading = true);
-    
+
     try {
       String? userId = widget.userId ?? SupabaseConfig.auth.currentUser?.id;
       if (userId == null) {
@@ -512,24 +528,26 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Welcome to BarkDate! You can add your dog anytime from Settings.'),
+            content: Text(
+                'Welcome to BarkDate! You can add your dog anytime from Settings.'),
             backgroundColor: Colors.green,
           ),
         );
-        
+
         // Clear profile cache so it fetches fresh status (now has dog profile)
         final uid = SupabaseConfig.auth.currentUser?.id;
         if (uid != null) {
           SupabaseAuthWrapper.clearProfileCache(uid);
         }
-        
+
         // Navigate to main app
         context.go('/home');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Setup failed: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Setup failed: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -562,7 +580,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     if (widget.editMode == EditMode.addNewDog) {
       return _buildAddNewDogScreen();
     }
-    
+
     // Keep existing 2-step UI for creation and editBoth
     return _buildTwoStepScreen();
   }
@@ -571,161 +589,181 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: _currentStep > 0
-            ? IconButton(
-                icon: Icon(
-                  Icons.arrow_back,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                onPressed: _previousStep,
-              )
-            : null,
-        title: Text(
-          widget.editMode != EditMode.createProfile ? 'Edit Profile' : 'Create Profile',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: _currentStep > 0
+              ? IconButton(
+                  icon: Icon(
+                    Icons.arrow_back,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onPressed: _previousStep,
+                )
+              : null,
+          title: Text(
+            widget.editMode != EditMode.createProfile
+                ? 'Edit Profile'
+                : 'Create Profile',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
           ),
+          centerTitle: true,
         ),
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Progress indicator
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: LinearProgressIndicator(
-                      value: (_currentStep + 1) / 2,
-                      backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Flexible(
-                    child: Text(
-                      'Step ${_currentStep + 1} of 2',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Form pages
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _buildDogInfoStep(), // DOG FIRST! 🐕
-                  _buildOwnerInfoStep(), // OWNER SECOND! 👤
-                ],
-              ),
-            ),
-            
-            // Action buttons (Next + Skip)
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  // Primary action button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _nextStep,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Progress indicator
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: LinearProgressIndicator(
+                        value: (_currentStep + 1) / 2,
+                        backgroundColor: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.2),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Theme.of(context).colorScheme.primary,
                         ),
                       ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              _currentStep == 0 
-                                  ? 'Next: Owner Info' 
-                                  : widget.editMode != EditMode.createProfile ? 'Update Profile' : 'Create Profile',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  // Skip buttons (only for creation mode)
-                  if (widget.editMode == EditMode.createProfile) ...[
-                    if (_currentStep == 0) ...[
-                      // Skip dog step
-                      SizedBox(
-                        width: double.infinity,
-                        child: TextButton(
-                          onPressed: _isLoading ? null : _skipDogStep,
-                          child: Text(
-                            'Skip for now - Just set up my profile',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ] else ...[
-                      // Option to go back and add dog
-                      SizedBox(
-                        width: double.infinity,
-                        child: TextButton(
-                          onPressed: _isLoading ? null : () {
-                            setState(() => _currentStep = 0);
-                            _pageController.animateToPage(
-                              0,
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            );
-                          },
-                          child: const Text('← Back to add dog info'),
-                        ),
-                      ),
-                    ],
-                    
-                    // Enter app without full setup
-                    TextButton(
-                      onPressed: _isLoading ? null : _enterAppWithMinimalSetup,
+                    const SizedBox(width: 16),
+                    Flexible(
                       child: Text(
-                        'Enter app with basic setup',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
-                          fontWeight: FontWeight.w500,
-                        ),
+                        'Step ${_currentStep + 1} of 2',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+
+              // Form pages
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _buildDogInfoStep(), // DOG FIRST! 🐕
+                    _buildOwnerInfoStep(), // OWNER SECOND! 👤
+                  ],
+                ),
+              ),
+
+              // Action buttons (Next + Skip)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    // Primary action button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _nextStep,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                _currentStep == 0
+                                    ? 'Next: Owner Info'
+                                    : widget.editMode != EditMode.createProfile
+                                        ? 'Update Profile'
+                                        : 'Create Profile',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Skip buttons (only for creation mode)
+                    if (widget.editMode == EditMode.createProfile) ...[
+                      if (_currentStep == 0) ...[
+                        // Skip dog step
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton(
+                            onPressed: _isLoading ? null : _skipDogStep,
+                            child: Text(
+                              'Skip for now - Just set up my profile',
+                              style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        // Option to go back and add dog
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    setState(() => _currentStep = 0);
+                                    _pageController.animateToPage(
+                                      0,
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    );
+                                  },
+                            child: const Text('← Back to add dog info'),
+                          ),
+                        ),
+                      ],
+
+                      // Enter app without full setup
+                      TextButton(
+                        onPressed:
+                            _isLoading ? null : _enterAppWithMinimalSetup,
+                        child: Text(
+                          'Enter app with basic setup',
+                          style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.8),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ), // Close GestureDetector
     );
   }
@@ -741,18 +779,21 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           Text(
             '👤 Your Information',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Now tell us about yourself, the proud dog parent!',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
+                ),
           ),
           const SizedBox(height: 32),
-          
+
           // Profile photo
           Center(
             child: GestureDetector(
@@ -806,7 +847,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             ),
           ),
           const SizedBox(height: 32),
-          
+
           // Name field
           TextFormField(
             controller: _ownerNameController,
@@ -822,7 +863,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Bio field
           TextFormField(
             controller: _ownerBioController,
@@ -838,13 +879,16 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Location field with Google Places autocomplete
           LocationPickerField(
             controller: _ownerLocationController,
-            hintText: widget.locationEnabled ? 'Auto-detected or search...' : 'Search your city...',
+            hintText: widget.locationEnabled
+                ? 'Auto-detected or search...'
+                : 'Search your city...',
             onPlaceSelected: (place) {
-              debugPrint('📍 Location selected: ${place.structuredFormatting.mainText}');
+              debugPrint(
+                  '📍 Location selected: ${place.structuredFormatting.mainText}');
             },
           ),
           const SizedBox(height: 24),
@@ -855,18 +899,27 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             decoration: InputDecoration(
               labelText: 'Human Connection Status',
               helperText: 'Optional: Let others know your vibe',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               prefixIcon: const Icon(Icons.favorite_outline),
               filled: true,
               fillColor: Theme.of(context).colorScheme.surface,
             ),
             items: const [
-              DropdownMenuItem(value: 'Walk Buddy', child: Text('🚶 Walk Buddy')),
-              DropdownMenuItem(value: 'Playdates only', child: Text('🎾 Playdates only')),
-              DropdownMenuItem(value: 'Coffee & Chaos', child: Text('☕ Coffee & Chaos')),
-              DropdownMenuItem(value: 'Single & Dog-Loving', child: Text('🦴 Single & Dog-Loving')),
-              DropdownMenuItem(value: 'Ask my dog', child: Text('🐾 Ask my dog')),
-              DropdownMenuItem(value: 'Just here for the dogs', child: Text('🔒 Just here for the dogs')),
+              DropdownMenuItem(
+                  value: 'Walk Buddy', child: Text('🚶 Walk Buddy')),
+              DropdownMenuItem(
+                  value: 'Playdates only', child: Text('🎾 Playdates only')),
+              DropdownMenuItem(
+                  value: 'Coffee & Chaos', child: Text('☕ Coffee & Chaos')),
+              DropdownMenuItem(
+                  value: 'Single & Dog-Loving',
+                  child: Text('🦴 Single & Dog-Loving')),
+              DropdownMenuItem(
+                  value: 'Ask my dog', child: Text('🐾 Ask my dog')),
+              DropdownMenuItem(
+                  value: 'Just here for the dogs',
+                  child: Text('🔒 Just here for the dogs')),
             ],
             onChanged: (value) {
               setState(() {
@@ -890,22 +943,25 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           Text(
             '🐕 Your Dog Profile',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             "Dogs come first! Let's create your furry friend's profile",
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
+                ),
           ),
           const SizedBox(height: 32),
-          
+
           // Dog Photos Layout (Main + Extra)
           _buildDogPhotosSection(),
           const SizedBox(height: 32),
-          
+
           // Dog name field
           TextFormField(
             controller: _dogNameController,
@@ -921,7 +977,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Breed field
           // Breed field (Autocomplete)
           Autocomplete<String>(
@@ -935,22 +991,27 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             onSelected: (String selection) {
               _dogBreedController.text = selection;
             },
-            fieldViewBuilder: (BuildContext context, TextEditingController fieldTextEditingController, FocusNode fieldFocusNode, VoidCallback onFieldSubmitted) {
+            fieldViewBuilder: (BuildContext context,
+                TextEditingController fieldTextEditingController,
+                FocusNode fieldFocusNode,
+                VoidCallback onFieldSubmitted) {
               // Sync controller
-              if (fieldTextEditingController.text != _dogBreedController.text && fieldTextEditingController.text.isNotEmpty) {
-               // Only sync if local is empty or different? 
-               // Actually we should use the fieldTextEditingController as the main one, but we have _dogBreedController used elsewhere.
-               // Let's hook a listener.
+              if (fieldTextEditingController.text != _dogBreedController.text &&
+                  fieldTextEditingController.text.isNotEmpty) {
+                // Only sync if local is empty or different?
+                // Actually we should use the fieldTextEditingController as the main one, but we have _dogBreedController used elsewhere.
+                // Let's hook a listener.
               }
-              
+
               // We need to sync the changes back to _dogBreedController for validation and saving
               fieldTextEditingController.addListener(() {
                 _dogBreedController.text = fieldTextEditingController.text;
               });
 
               // Initial value sync
-              if (fieldTextEditingController.text.isEmpty && _dogBreedController.text.isNotEmpty) {
-                 fieldTextEditingController.text = _dogBreedController.text;
+              if (fieldTextEditingController.text.isEmpty &&
+                  _dogBreedController.text.isNotEmpty) {
+                fieldTextEditingController.text = _dogBreedController.text;
               }
 
               return TextFormField(
@@ -968,10 +1029,10 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                   fillColor: Theme.of(context).colorScheme.surface,
                 ),
                 validator: (value) {
-                   if (value == null || value.isEmpty) {
-                     return 'Please select or enter a breed';
-                   }
-                   return null;
+                  if (value == null || value.isEmpty) {
+                    return 'Please select or enter a breed';
+                  }
+                  return null;
                 },
               );
             },
@@ -982,7 +1043,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                   elevation: 4,
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    width: MediaQuery.of(context).size.width - 48, // Adjust based on padding
+                    width: MediaQuery.of(context).size.width -
+                        48, // Adjust based on padding
                     constraints: const BoxConstraints(maxHeight: 200),
                     child: ListView.builder(
                       padding: const EdgeInsets.all(8),
@@ -1004,7 +1066,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             },
           ),
           const SizedBox(height: 16),
-          
+
           // Age field
           TextFormField(
             controller: _dogAgeController,
@@ -1020,7 +1082,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Size selection
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1028,8 +1090,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               Text(
                 'Size',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
               const SizedBox(height: 8),
               SegmentedButton<String>(
@@ -1046,7 +1108,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // Gender selection
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1054,8 +1116,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               Text(
                 'Gender',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
               const SizedBox(height: 8),
               SegmentedButton<String>(
@@ -1071,7 +1133,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // Bio field
           TextFormField(
             controller: _dogBioController,
@@ -1087,12 +1149,15 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Privacy Toggle
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              color: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withOpacity(0.3),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -1109,16 +1174,16 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                       Text(
                         _isPublic ? 'Visible to Everyone' : 'Friends Only',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                       Text(
-                        _isPublic 
-                          ? 'Other users can discover your dog'
-                          : 'Only friends can see your dog',
+                        _isPublic
+                            ? 'Other users can discover your dog'
+                            : 'Only friends can see your dog',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                              color: Colors.grey[600],
+                            ),
                       ),
                     ],
                   ),
@@ -1146,8 +1211,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             Text(
               'Add Photos',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             Text(
               ' *',
@@ -1160,22 +1225,25 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        
+
         // Main Photo (Large, Center)
         _buildMainPhotoArea(),
         const SizedBox(height: 16),
-        
+
         // Extra Photos (3 smaller slots)
         _buildExtraPhotosRow(),
         const SizedBox(height: 8),
-        
+
         // Helper text
         Text(
           'First photo will be your dog\'s main profile picture',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            fontStyle: FontStyle.italic,
-          ),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
+                fontStyle: FontStyle.italic,
+              ),
         ),
       ],
     );
@@ -1196,9 +1264,12 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: hasMainPhoto 
-                  ? Theme.of(context).colorScheme.primary 
-                  : Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+              color: hasMainPhoto
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context)
+                      .colorScheme
+                      .outline
+                      .withValues(alpha: 0.5),
               width: 2,
             ),
           ),
@@ -1223,13 +1294,15 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                             _buildPhotoActionButton(
                               icon: Icons.edit,
                               onPressed: _pickMainPhoto,
-                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.primary,
                             ),
                             const SizedBox(width: 8),
                             _buildPhotoActionButton(
                               icon: Icons.delete,
                               onPressed: () => _removePhoto(0),
-                              backgroundColor: Theme.of(context).colorScheme.error,
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.error,
                             ),
                           ],
                         ),
@@ -1243,22 +1316,31 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                     Icon(
                       Icons.add_photo_alternate, // Material Design icon
                       size: 48,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'Main Photo',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                        fontWeight: FontWeight.w500,
-                      ),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.8),
+                            fontWeight: FontWeight.w500,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Tap to add',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
+                          ),
                     ),
                   ],
                 ),
@@ -1285,9 +1367,12 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               color: Theme.of(context).colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: hasPhoto 
-                    ? Theme.of(context).colorScheme.primary 
-                    : Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                color: hasPhoto
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context)
+                        .colorScheme
+                        .outline
+                        .withValues(alpha: 0.3),
                 width: 1.5,
               ),
             ),
@@ -1309,7 +1394,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                           child: _buildPhotoActionButton(
                             icon: Icons.close,
                             onPressed: () => _removePhoto(photoIndex),
-                            backgroundColor: Theme.of(context).colorScheme.error,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.error,
                             size: 24,
                             iconSize: 16,
                           ),
@@ -1323,15 +1409,21 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                       Icon(
                         Icons.add_photo_alternate,
                         size: 24,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.5),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Extra',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                          fontSize: 11,
-                        ),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.6),
+                              fontSize: 11,
+                            ),
                       ),
                     ],
                   ),
@@ -1395,7 +1487,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       setState(() {
         // Ensure list is long enough
         while (_dogPhotos.length <= index) {
-          _dogPhotos.add(_dogPhotos.first); // Duplicate main photo as placeholder
+          _dogPhotos
+              .add(_dogPhotos.first); // Duplicate main photo as placeholder
         }
         _dogPhotos[index] = image;
       });
@@ -1416,62 +1509,62 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          'Add New Dog',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              // Form step's own SingleChildScrollView handles scrolling with keyboard padding
-              child: _buildDogInfoStep(),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text(
+            'Add New Dog',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
             ),
-            Container(
-              padding: const EdgeInsets.all(24),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _addNewDog,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+          ),
+          centerTitle: true,
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                // Form step's own SingleChildScrollView handles scrolling with keyboard padding
+                child: _buildDogInfoStep(),
+              ),
+              Container(
+                padding: const EdgeInsets.all(24),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _addNewDog,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      minimumSize: const Size(double.infinity, 56),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Add Dog to My Pack',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Add Dog to My Pack',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ), // Close GestureDetector
     );
   }
@@ -1481,20 +1574,22 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     // Validate dog info
     if (_dogNameController.text.isEmpty || _dogBreedController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your dog\'s name and breed')),
+        const SnackBar(
+            content: Text('Please enter your dog\'s name and breed')),
       );
       return;
     }
-    
+
     if (_dogPhotos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one photo of your dog')),
+        const SnackBar(
+            content: Text('Please add at least one photo of your dog')),
       );
       return;
     }
 
     setState(() => _isLoading = true);
-    
+
     try {
       String? userId = widget.userId ?? SupabaseConfig.auth.currentUser?.id;
       if (userId == null) {
@@ -1516,7 +1611,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             baseFilePath: '$userId/dog_$timestamp/photo',
           );
           mainPhotoUrl = dogPhotoUrls.isNotEmpty ? dogPhotoUrls[0] : null;
-          extraPhotoUrls = dogPhotoUrls.length > 1 ? dogPhotoUrls.sublist(1, dogPhotoUrls.length.clamp(1, 4)) : [];
+          extraPhotoUrls = dogPhotoUrls.length > 1
+              ? dogPhotoUrls.sublist(1, dogPhotoUrls.length.clamp(1, 4))
+              : [];
         } catch (e) {
           debugPrint('Error uploading dog photos: $e');
         }
@@ -1533,13 +1630,13 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         'main_photo_url': mainPhotoUrl,
         'extra_photo_urls': extraPhotoUrls,
         'photo_urls': dogPhotoUrls,
-        'is_active': true,  // Ensure the dog is active
+        'is_active': true, // Ensure the dog is active
         'is_public': _isPublic, // Privacy setting
       };
-      
+
       debugPrint('🐕 Adding new dog to pack: $dogData');
       await BarkDateUserService.addDog(userId, dogData);
-      
+
       // Clear the cache so the new dog shows up
       BarkDateUserService.clearUserDogsCache(userId);
       debugPrint('🗑️ Cleared dogs cache after adding new dog');
@@ -1551,14 +1648,16 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        
+
         // Return success to refresh the profile screen
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add dog: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Failed to add dog: $e'),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -1573,64 +1672,68 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          isDogEdit ? (_dogProfile != null ? 'Edit Dog Profile' : 'Add Dog Profile') : 'Edit Owner Profile',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              // Form step's own SingleChildScrollView handles scrolling with keyboard padding
-              child: isDogEdit ? _buildDogInfoStep() : _buildOwnerInfoStep(),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text(
+            isDogEdit
+                ? (_dogProfile != null ? 'Edit Dog Profile' : 'Add Dog Profile')
+                : 'Edit Owner Profile',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
             ),
-            Container(
-              padding: const EdgeInsets.all(24),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveSingleEdit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+          ),
+          centerTitle: true,
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                // Form step's own SingleChildScrollView handles scrolling with keyboard padding
+                child: isDogEdit ? _buildDogInfoStep() : _buildOwnerInfoStep(),
+              ),
+              Container(
+                padding: const EdgeInsets.all(24),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _saveSingleEdit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      minimumSize: const Size(double.infinity, 56),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
+                    child: _isLoading
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            isDogEdit
+                                ? (_dogProfile != null
+                                    ? 'Update Dog Profile'
+                                    : 'Create Dog Profile')
+                                : 'Update Owner Profile',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
-                  child: _isLoading
-                      ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          isDogEdit 
-                              ? (_dogProfile != null ? 'Update Dog Profile' : 'Create Dog Profile')
-                              : 'Update Owner Profile',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ), // Close GestureDetector
     );
   }
@@ -1643,23 +1746,25 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     debugPrint('Current dog size: $_dogSize');
     debugPrint('Current dog gender: $_dogGender');
     debugPrint('Dog profile: $_dogProfile');
-    
+
     setState(() => _isLoading = true);
-    
+
     try {
       String? userId = widget.userId ?? SupabaseConfig.auth.currentUser?.id;
       if (userId == null) {
         throw Exception('User not authenticated');
       }
-      
+
       debugPrint('User ID: $userId');
       await _ensureUserProfileExists(userId);
 
       if (widget.editMode == EditMode.editDog) {
         // Validate dog info
-        if (_dogNameController.text.isEmpty || _dogBreedController.text.isEmpty) {
+        if (_dogNameController.text.isEmpty ||
+            _dogBreedController.text.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please enter your dog\'s name and breed')),
+            const SnackBar(
+                content: Text('Please enter your dog\'s name and breed')),
           );
           return;
         }
@@ -1677,15 +1782,18 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               baseFilePath: '$userId/dog/photo',
             );
             mainPhotoUrl = dogPhotoUrls.isNotEmpty ? dogPhotoUrls[0] : null;
-            extraPhotoUrls = dogPhotoUrls.length > 1 ? dogPhotoUrls.sublist(1, dogPhotoUrls.length.clamp(1, 4)) : [];
+            extraPhotoUrls = dogPhotoUrls.length > 1
+                ? dogPhotoUrls.sublist(1, dogPhotoUrls.length.clamp(1, 4))
+                : [];
           } catch (e) {
             debugPrint('Error uploading dog photos: $e');
           }
         }
 
         // Check if dog already exists, then add or update accordingly
-        final existingDogs = await BarkDateUserService.getUserDogsEnhanced(userId);
-        
+        final existingDogs =
+            await BarkDateUserService.getUserDogsEnhanced(userId);
+
         debugPrint('🔍 Checking existing dogs:');
         debugPrint('  - existingDogs.isEmpty: ${existingDogs.isEmpty}');
         debugPrint('  - existingDogs.length: ${existingDogs.length}');
@@ -1694,15 +1802,16 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         if (existingDogs.isNotEmpty) {
           debugPrint('  - existingDogs.first: ${existingDogs.first}');
           debugPrint('  - existingDogs.first ID: ${existingDogs.first['id']}');
-          debugPrint('  - existingDogs.first keys: ${existingDogs.first.keys.toList()}');
+          debugPrint(
+              '  - existingDogs.first keys: ${existingDogs.first.keys.toList()}');
         }
-        
+
         // Debug: Log what we're about to save
         debugPrint('🔄 Saving dog profile:');
         debugPrint('  - Size: "$_dogSize"');
         debugPrint('  - Gender: "$_dogGender"');
         debugPrint('  - Age: "${_dogAgeController.text}"');
-        
+
         // Ensure values are normalized before persisting
         _dogSize = _normalizeSize(_dogSize);
         _dogGender = _normalizeGender(_dogGender);
@@ -1718,7 +1827,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           'photo_urls': dogPhotoUrls,
           'is_public': _isPublic, // Privacy setting
         };
-        
+
         if (existingDogs.isEmpty) {
           // No dog exists - create a new one (first-time creation)
           debugPrint('📝 Creating new dog...');
@@ -1727,7 +1836,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           // Dog exists - update existing profile
           // Include the dog ID for the update
           String? dogId;
-          
+
           // First try to get ID from existingDogs (most reliable source)
           if (existingDogs.isNotEmpty && existingDogs.first['id'] != null) {
             dogId = existingDogs.first['id'];
@@ -1736,24 +1845,24 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             dogId = _dogProfile!['id'];
             debugPrint('🔧 Dog ID from _dogProfile: $dogId');
           }
-          
+
           debugPrint('🔍 Dog ID resolution:');
-          debugPrint('  - existingDogs: ${existingDogs.isNotEmpty ? existingDogs.first : 'empty'}');
+          debugPrint(
+              '  - existingDogs: ${existingDogs.isNotEmpty ? existingDogs.first : 'empty'}');
           debugPrint('  - _dogProfile: $_dogProfile');
           debugPrint('  - Final dogId: $dogId');
-          
+
           if (dogId == null) {
             debugPrint('❌ Could not determine dog ID for update!');
             throw Exception('Could not determine dog ID for update');
           }
-          
+
           dogData['id'] = dogId;
           debugPrint('  - Complete dogData with ID: $dogData');
           debugPrint('  - About to call updateDogProfile with data: $dogData');
           await BarkDateUserService.updateDogProfile(userId, dogData);
           debugPrint('  - updateDogProfile completed successfully');
         }
-
       } else if (widget.editMode == EditMode.editOwner) {
         // Validate owner info
         if (_ownerNameController.text.isEmpty) {
@@ -1792,7 +1901,6 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         debugPrint('✅ Profile update completed - navigating back');
         Navigator.pop(context, true); // Return true to indicate success
       }
-
     } catch (e) {
       debugPrint('❌ Error updating profile: $e');
       debugPrint('Error type: ${e.runtimeType}');

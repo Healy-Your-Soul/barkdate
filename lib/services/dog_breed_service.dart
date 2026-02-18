@@ -14,7 +14,7 @@ class DogBreedService {
           .eq('status', 'approved')
           .limit(10)
           .order('name');
-      
+
       return (response as List).map((e) => e['name'] as String).toList();
     } catch (e) {
       debugPrint('Error searching breeds: $e');
@@ -30,7 +30,7 @@ class DogBreedService {
           .select('name')
           .eq('status', 'approved')
           .order('name');
-      
+
       return (response as List).map((e) => e['name'] as String).toList();
     } catch (e) {
       debugPrint('Error getting all breeds: $e');
@@ -41,10 +41,10 @@ class DogBreedService {
   /// Submit a new breed for approval
   static Future<void> addBreed(String name) async {
     if (name.trim().isEmpty) return;
-    
+
     try {
-      // Try to insert. RLS will handle permission. 
-      // ON CONFLICT DO NOTHING is handled by database if configured, 
+      // Try to insert. RLS will handle permission.
+      // ON CONFLICT DO NOTHING is handled by database if configured,
       // or we just catch the unique constraint error.
       await _supabase.from('dog_breeds').upsert(
         {
@@ -53,7 +53,7 @@ class DogBreedService {
           'created_by': SupabaseConfig.auth.currentUser?.id,
         },
         onConflict: 'name',
-        ignoreDuplicates: true, 
+        ignoreDuplicates: true,
       );
       debugPrint('Breed submitted: $name');
     } catch (e) {

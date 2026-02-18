@@ -90,11 +90,11 @@ class EventsService {
 
   /// Get event categories for filtering
   static List<String> get eventCategories => [
-    'birthday',
-    'training',
-    'social',
-    'professional',
-  ];
+        'birthday',
+        'training',
+        'social',
+        'professional',
+      ];
 
   /// Get event category display names
   static String getCategoryDisplayName(String category) {

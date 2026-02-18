@@ -88,19 +88,20 @@ class _ReportContentSheetState extends State<ReportContentSheet> {
       contentId: widget.contentId,
       reportedUserId: widget.reportedUserId,
       reason: _selectedReason!,
-      details: _detailsController.text.trim().isEmpty 
-          ? null 
+      details: _detailsController.text.trim().isEmpty
+          ? null
           : _detailsController.text.trim(),
     );
 
     if (mounted) {
       setState(() => _isSubmitting = false);
-      
+
       if (success) {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Report submitted. Thank you for helping keep our community safe.'),
+            content: Text(
+                'Report submitted. Thank you for helping keep our community safe.'),
             backgroundColor: Colors.green,
           ),
         );
@@ -140,7 +141,7 @@ class _ReportContentSheetState extends State<ReportContentSheet> {
                 ),
               ),
               const SizedBox(height: 20),
-              
+
               // Title
               Row(
                 children: [
@@ -160,7 +161,7 @@ class _ReportContentSheetState extends State<ReportContentSheet> {
                 'Help us understand what\'s wrong with this $_contentTypeLabel.',
                 style: TextStyle(color: Colors.grey[600], fontSize: 14),
               ),
-              
+
               // Content preview (if provided)
               if (widget.contentPreview != null) ...[
                 const SizedBox(height: 16),
@@ -178,27 +179,31 @@ class _ReportContentSheetState extends State<ReportContentSheet> {
                   ),
                 ),
               ],
-              
+
               const SizedBox(height: 24),
-              
+
               // Reason selection
               const Text(
                 'Why are you reporting this?',
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
               ),
               const SizedBox(height: 12),
-              
+
               ...ModerationService.reportReasons.map((reason) {
                 final isSelected = _selectedReason == reason['value'];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: InkWell(
-                    onTap: () => setState(() => _selectedReason = reason['value']),
+                    onTap: () =>
+                        setState(() => _selectedReason = reason['value']),
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
-                        color: isSelected ? Colors.orange.withOpacity(0.1) : Colors.grey[50],
+                        color: isSelected
+                            ? Colors.orange.withOpacity(0.1)
+                            : Colors.grey[50],
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isSelected ? Colors.orange : Colors.grey[200]!,
@@ -208,16 +213,23 @@ class _ReportContentSheetState extends State<ReportContentSheet> {
                       child: Row(
                         children: [
                           Icon(
-                            isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-                            color: isSelected ? Colors.orange : Colors.grey[400],
+                            isSelected
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_off,
+                            color:
+                                isSelected ? Colors.orange : Colors.grey[400],
                             size: 22,
                           ),
                           const SizedBox(width: 12),
                           Text(
                             reason['label']!,
                             style: TextStyle(
-                              color: isSelected ? Colors.orange[800] : Colors.grey[700],
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                              color: isSelected
+                                  ? Colors.orange[800]
+                                  : Colors.grey[700],
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
                             ),
                           ),
                         ],
@@ -226,9 +238,9 @@ class _ReportContentSheetState extends State<ReportContentSheet> {
                   ),
                 );
               }),
-              
+
               const SizedBox(height: 16),
-              
+
               // Additional details
               TextField(
                 controller: _detailsController,
@@ -250,9 +262,9 @@ class _ReportContentSheetState extends State<ReportContentSheet> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Submit button
               SizedBox(
                 width: double.infinity,
@@ -277,13 +289,14 @@ class _ReportContentSheetState extends State<ReportContentSheet> {
                         )
                       : const Text(
                           'Submit Report',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                 ),
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // Cancel button
               SizedBox(
                 width: double.infinity,
@@ -295,7 +308,7 @@ class _ReportContentSheetState extends State<ReportContentSheet> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 8),
             ],
           ),

@@ -46,7 +46,8 @@ class _LiveLocationToggleState extends State<LiveLocationToggle> {
       } else {
         // Start or update tracking
         if (!LiveLocationService.instance.isTracking) {
-          await LiveLocationService.instance.startLiveTracking(userId, privacy: newPrivacy);
+          await LiveLocationService.instance
+              .startLiveTracking(userId, privacy: newPrivacy);
         } else {
           await LiveLocationService.instance.updatePrivacy(newPrivacy);
         }
@@ -114,7 +115,8 @@ class _LiveLocationToggleState extends State<LiveLocationToggle> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         itemBuilder: (context) => [
           _buildMenuItem('off', 'Off', Icons.location_off, Colors.grey),
-          _buildMenuItem('friends', 'Friends Only', Icons.people, Colors.orange),
+          _buildMenuItem(
+              'friends', 'Friends Only', Icons.people, Colors.orange),
           // 'Everyone' removed for privacy - live GPS never shared publicly
         ],
         child: Padding(

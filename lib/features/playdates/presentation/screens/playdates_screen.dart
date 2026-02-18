@@ -62,12 +62,16 @@ class _PlaydatesScreenState extends ConsumerState<PlaydatesScreen> {
                 data: (playdates) {
                   // Filter logic - exclude cancelled from All by default
                   final filteredPlaydates = playdates.where((playdate) {
-                    final status = (playdate['status'] as String?)?.toLowerCase() ?? 'pending';
+                    final status =
+                        (playdate['status'] as String?)?.toLowerCase() ??
+                            'pending';
                     // Always hide cancelled unless explicitly showing Past
                     if (status == 'cancelled') return false;
                     if (_selectedFilter == 'All') return true;
-                    if (_selectedFilter == 'Pending') return status == 'pending';
-                    if (_selectedFilter == 'Upcoming') return status == 'confirmed';
+                    if (_selectedFilter == 'Pending')
+                      return status == 'pending';
+                    if (_selectedFilter == 'Upcoming')
+                      return status == 'confirmed';
                     if (_selectedFilter == 'Past') return status == 'completed';
                     return true;
                   }).toList();
@@ -79,7 +83,8 @@ class _PlaydatesScreenState extends ConsumerState<PlaydatesScreen> {
                         child: CuteEmptyState(
                           icon: Icons.calendar_today_outlined,
                           title: 'No playdates found',
-                          message: 'Try changing your filter or schedule a new one!',
+                          message:
+                              'Try changing your filter or schedule a new one!',
                           actionLabel: 'Schedule a Playdate',
                           onAction: () {
                             context.push('/create-playdate');
@@ -92,7 +97,8 @@ class _PlaydatesScreenState extends ConsumerState<PlaydatesScreen> {
                   return ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     itemCount: filteredPlaydates.length,
-                    separatorBuilder: (context, index) => const Divider(height: 32, thickness: 0.5),
+                    separatorBuilder: (context, index) =>
+                        const Divider(height: 32, thickness: 0.5),
                     itemBuilder: (context, index) {
                       final playdate = filteredPlaydates[index];
                       return _buildPlaydateItem(context, playdate);
@@ -111,7 +117,8 @@ class _PlaydatesScreenState extends ConsumerState<PlaydatesScreen> {
     );
   }
 
-  Widget _buildPlaydateItem(BuildContext context, Map<String, dynamic> playdate) {
+  Widget _buildPlaydateItem(
+      BuildContext context, Map<String, dynamic> playdate) {
     final scheduledAt = DateTime.parse(playdate['scheduled_at']);
     final formattedDate = DateFormat('MMM d').format(scheduledAt);
     final formattedTime = DateFormat('h:mm a').format(scheduledAt);
@@ -137,7 +144,8 @@ class _PlaydatesScreenState extends ConsumerState<PlaydatesScreen> {
               children: [
                 Text(
                   formattedDate.split(' ')[0], // Month
-                  style: AppTypography.bodySmall().copyWith(fontWeight: FontWeight.bold, color: Colors.grey[600]),
+                  style: AppTypography.bodySmall().copyWith(
+                      fontWeight: FontWeight.bold, color: Colors.grey[600]),
                 ),
                 Text(
                   formattedDate.split(' ')[1], // Day
@@ -159,11 +167,13 @@ class _PlaydatesScreenState extends ConsumerState<PlaydatesScreen> {
                 const SizedBox(height: 4),
                 Text(
                   formattedTime,
-                  style: AppTypography.bodyMedium().copyWith(color: Colors.grey[600]),
+                  style: AppTypography.bodyMedium()
+                      .copyWith(color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: _getStatusColor(status).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
