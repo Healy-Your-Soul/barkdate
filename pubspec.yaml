@@ -51,6 +51,7 @@ dependencies:
   # Apple Sign In (required by App Store for apps with social login)
   sign_in_with_apple: ^6.1.4
   uuid: ^4.5.2
+  feature_flags_toggly: ^1.1.15
 
 dev_dependencies:
   flutter_test:
