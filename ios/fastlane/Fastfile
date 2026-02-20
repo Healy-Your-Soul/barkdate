@@ -1,0 +1,46 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Sync certificates and provisioning profiles using Match and App Store Connect API Key"
+  lane :sync_certificates do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
+      is_key_content_base64: true,
+      in_house: false
+    )
+    
+    match(
+      type: "appstore",
+      readonly: true # In CI, we only read certificates, we don't create new ones
+    )
+  end
+
+  desc "Build the iOS app and upload to TestFlight"
+  lane :beta do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
+      is_key_content_base64: true,
+      in_house: false
+    )
+
+    # 1. Fetch certificates and profiles
+    match(
+      type: "appstore",
+      readonly: true
+    )
+
+    # 2. Build the app using flutter
+    # Flutter handles the actual xcode build under the hood, but Fastlane match sets up the environment
+    sh("flutter build ipa --release --export-options-plist=ios/Runner/ExportOptions.plist")
+
+    # 3. Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      ipa: "../build/ios/ipa/barkdate.ipa" # This is the default output path for flutter build ipa
+    )
+  end
+end
