@@ -1,0 +1,90 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Sync certificates and provisioning profiles using Match and App Store Connect API Key"
+  lane :sync_certificates do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
+      is_key_content_base64: true,
+      in_house: false
+    )
+    
+    match(
+      type: "appstore",
+      app_identifier: "com.chenmordev.bark",
+      api_key: api_key,
+      readonly: true # In CI, we only read certificates, we don't create new ones
+    )
+  end
+
+  desc "FORCE Generate new certificates and provisioning profiles using Match and App Store Connect API Key"
+  lane :force_sync_certificates do
+    api_key = app_store_connect_api_key(
+      key_id: "3B5DNZHB84",
+      issuer_id: "6d07e132-8cfe-4757-83b4-0d8edf5e647f",
+      key_filepath: "../AuthKey_3B5DNZHB84.p8",
+      in_house: false
+    )
+    
+    match(
+      type: "appstore",
+      app_identifier: "com.chenmordev.bark",
+      api_key: api_key,
+      readonly: false # We actually want to generate here!
+    )
+  end
+
+  desc "Nuke existing distribution certificates and profiles using API Key"
+  lane :nuke_distribution do
+    api_key = app_store_connect_api_key(
+      key_id: "3B5DNZHB84",
+      issuer_id: "6d07e132-8cfe-4757-83b4-0d8edf5e647f",
+      key_filepath: "../AuthKey_3B5DNZHB84.p8",
+      in_house: false
+    )
+    
+    match_nuke(
+      type: "appstore",
+      api_key: api_key
+    )
+  end
+
+  desc "Build the iOS app and upload to TestFlight"
+  lane :beta do
+    setup_ci
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
+      is_key_content_base64: true,
+      in_house: false
+    )
+
+    # 1. Fetch certificates and profiles
+    match(
+      type: "appstore",
+      app_identifier: "com.chenmordev.bark",
+      api_key: api_key,
+      readonly: true
+    )
+
+    # 2. Build the app using flutter
+    # Flutter handles the actual xcode build under the hood, but Fastlane match sets up the environment
+    plist_path = File.expand_path("../ExportOptions.plist", __dir__)
+    project_root = File.expand_path("../..", __dir__)
+    
+    sh("cd '#{project_root}' && flutter build ipa --release --export-options-plist=\"#{plist_path}\"")
+
+    # 3. Upload to TestFlight
+    # Fastlane auto-discovery failed, so we give it an explicit wildcard path to the build folder
+    ipa_glob = File.expand_path("../../build/ios/ipa/*.ipa", __dir__)
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      app_identifier: "com.chenmordev.bark",
+      ipa: Dir[ipa_glob].first
+    )
+  end
+end
