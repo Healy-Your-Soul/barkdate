@@ -7,10 +7,13 @@ jobs:
   deploy_ios:
     name: Build & Deploy iOS to TestFlight
     runs-on: macos-latest
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
