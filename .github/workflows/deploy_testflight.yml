@@ -24,9 +24,10 @@ jobs:
       - name: Setup Ruby and Fastlane
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.3' # Adjust this to match your project if needed
-          bundler-cache: true
-          working-directory: ios
+          ruby-version: '3.3'
+
+      - name: Install Fastlane
+        run: gem install fastlane
 
       - name: Deploy to TestFlight
         env:
