@@ -76,7 +76,7 @@ platform :ios do
     plist_path = File.expand_path("../ExportOptions.plist", __dir__)
     project_root = File.expand_path("../..", __dir__)
     
-    sh("cd '#{project_root}' && flutter build ipa --release --export-options-plist=\"#{plist_path}\"")
+    sh("cd '#{project_root}' && flutter build ipa --release --build-number=#{ENV['GITHUB_RUN_NUMBER'] || 3} --export-options-plist=\"#{plist_path}\"")
 
     # 3. Upload to TestFlight
     # Fastlane auto-discovery failed, so we give it an explicit wildcard path to the build folder
