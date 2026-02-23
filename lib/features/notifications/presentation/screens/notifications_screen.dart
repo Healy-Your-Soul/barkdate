@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -29,6 +30,16 @@ class NotificationsScreen extends ConsumerWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              context.go('/');
+            }
+          },
+        ),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_horiz),
