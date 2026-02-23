@@ -1,5 +1,7 @@
 git_url("https://github.com/Healy-Your-Soul/ios-certificates.git")
 
+git_branch("main")
+
 storage_mode("git")
 
 type("development") # The default type, can be: appstore, adhoc, enterprise or development
