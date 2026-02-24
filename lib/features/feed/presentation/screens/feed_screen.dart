@@ -205,6 +205,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                   );
                 },
               ),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
               // Nearby Dogs List
               nearbyDogsAsync.when(
@@ -239,47 +240,10 @@ class FeedFeatureScreen extends ConsumerWidget {
                     );
                   }
 
-                  // Fixed height list for nested scrolling
+                  // Use a fixed-height horizontal list to prevent pushing content down
                   return SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: 400, // Fixed height window for the list
-                      child: ListView.builder(
-                        padding: EdgeInsets.zero,
-                        itemCount: dogs.length,
-                        itemBuilder: (context, index) {
-                          final dog = dogs[index];
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: AppSpacing.xs,
-                            ),
-                            child: DogCard(
-                              dog: dog,
-                              // Use actual friendship status if available, otherwise use tab mode
-                              // This ensures friends show "In Pack" even in "All Dogs" tab
-                              isFriend: dog.isFriend ?? isPackMode,
-                              onTap: () {
-                                context.push('/dog-details', extra: dog);
-                              },
-                              onBarkPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        'Barked! ${dog.ownerName} will be notified.'),
-                                    backgroundColor:
-                                        Theme.of(context).colorScheme.primary,
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
-                              },
-                              onPlaydatePressed: () {
-                                context.push('/create-playdate', extra: dog);
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                    child:
+                        _HorizontalDogList(dogs: dogs, isPackMode: isPackMode),
                   );
                 },
                 loading: () => const SliverToBoxAdapter(
@@ -1884,6 +1848,143 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
           ),
         );
       },
+    );
+  }
+}
+
+class _HorizontalDogList extends StatefulWidget {
+  final List<Dog> dogs;
+  final bool isPackMode;
+
+  const _HorizontalDogList({
+    required this.dogs,
+    required this.isPackMode,
+  });
+
+  @override
+  State<_HorizontalDogList> createState() => _HorizontalDogListState();
+}
+
+class _HorizontalDogListState extends State<_HorizontalDogList> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollNext() {
+    if (!_scrollController.hasClients) return;
+
+    // The width of one item + its right padding
+    const double itemWidth = 140.0 + 16.0;
+
+    // The total width currently visible in the horizontal list
+    final double viewportWidth = _scrollController.position.viewportDimension;
+
+    // Calculate how many full cards can fit entirely in the current viewport
+    // (We subtract a little bit of tolerance, e.g. 16px, to ensure we don't accidentally over-scroll
+    // if a card is just barely cut off).
+    final int cardsInView = (viewportWidth / itemWidth).floor();
+
+    // Ensure we always scroll by at least one card
+    final int cardsToScroll = cardsInView > 0 ? cardsInView : 1;
+
+    final double scrollAmount = cardsToScroll * itemWidth;
+
+    // Don't scroll past the maximum scroll extent
+    final double maxScroll = _scrollController.position.maxScrollExtent;
+    final double targetOffset =
+        (_scrollController.offset + scrollAmount).clamp(0.0, maxScroll);
+
+    _scrollController.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        SizedBox(
+          height: 200, // Height increased to fix bottom overflow
+          child: ListView.builder(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            padding: const EdgeInsets.only(left: 24, right: 32, bottom: 16),
+            itemCount: widget.dogs.length,
+            itemBuilder: (context, index) {
+              final dog = widget.dogs[index];
+              return Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: SizedBox(
+                  width: 140, // Fixed width for horizontal scrolling
+                  child: DogCard(
+                    dog: dog,
+                    compact: true,
+                    // Use actual friendship status if available, otherwise use tab mode
+                    // This ensures friends show "In Pack" even in "All Dogs" tab
+                    isFriend: dog.isFriend ?? widget.isPackMode,
+                    onTap: () {
+                      context.push('/dog-details', extra: dog);
+                    },
+                    onBarkPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              'Barked! ${dog.ownerName} will be notified.'),
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    onPlaydatePressed: () {
+                      context.push('/create-playdate', extra: dog);
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        // Scroll indicator arrow
+        if (widget.dogs.length > 1)
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 16, // Accounts for bottom padding
+            child: GestureDetector(
+              onTap: _scrollNext,
+              child: Container(
+                width: 32,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.0),
+                      Colors.white.withValues(alpha: 0.8),
+                      Colors.white,
+                    ],
+                  ),
+                ),
+                child: Icon(
+                  Icons.chevron_right,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.6),
+                  size: 28,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
