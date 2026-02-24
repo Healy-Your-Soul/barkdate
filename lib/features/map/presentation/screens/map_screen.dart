@@ -7,9 +7,14 @@ import 'package:barkdate/features/map/presentation/widgets/map_search_bar.dart';
 import 'package:barkdate/features/map/presentation/widgets/map_filter_chips.dart';
 import 'package:barkdate/features/map/presentation/widgets/map_bottom_sheets.dart';
 import 'package:barkdate/services/places_service.dart';
+import 'package:barkdate/widgets/plan_walk_sheet.dart';
 import 'package:barkdate/services/checkin_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/live_location_toggle.dart';
+import 'package:barkdate/widgets/map_friend_alert_overlay.dart';
+import 'package:barkdate/widgets/plan_walk_sheet.dart';
+import 'package:barkdate/widgets/walk_details_sheet.dart';
+import 'package:barkdate/features/feed/presentation/providers/friend_activity_provider.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -229,10 +234,55 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final viewport = ref.watch(mapViewportProvider);
     final selection = ref.watch(mapSelectionProvider);
     final mapDataAsync = ref.watch(mapDataProvider);
+    final scheduledWalksAsync = ref.watch(scheduledWalksForMapProvider);
 
     // Update markers when data is available
     mapDataAsync.whenData((data) {
       _updateMarkers(data);
+
+      // Add scheduled walk markers
+      scheduledWalksAsync.whenData((walks) {
+        for (final walk in walks) {
+          final lat = walk['latitude'] as double?;
+          final lng = walk['longitude'] as double?;
+          if (lat == null || lng == null) continue;
+
+          final dog = walk['dog'] as Map<String, dynamic>?;
+          final dogName = dog?['name'] ?? 'Someone';
+          final parkName = walk['park_name'] ?? 'a park';
+          final scheduledFor = DateTime.tryParse(walk['scheduled_for'] ?? '');
+          if (scheduledFor == null) continue;
+
+          final hour = scheduledFor.hour;
+          final minute = scheduledFor.minute.toString().padLeft(2, '0');
+          final amPm = hour >= 12 ? 'PM' : 'AM';
+          final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+          final timeStr = '$displayHour:$minute $amPm';
+
+          _markers.add(Marker(
+            markerId: MarkerId('walk_${walk['id']}'),
+            position: LatLng(lat, lng),
+            infoWindow: InfoWindow(
+              title: '🕐 $dogName • $timeStr',
+              snippet: 'Planned walk at $parkName',
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueAzure),
+            onTap: () {
+              showWalkDetailsSheet(
+                context,
+                parkId: walk['park_id'] ?? '',
+                parkName: parkName,
+                scheduledFor: scheduledFor,
+                organizerDogName: dogName,
+                checkInId: walk['id'] as String?,
+                latitude: lat,
+                longitude: lng,
+              );
+            },
+          ));
+        }
+      });
     });
 
     return Scaffold(
@@ -415,6 +465,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             top: 60,
             child: const LiveLocationToggle(),
           ),
+
+          // 🆕 Friend activity alerts overlay
+          if (!selection.hasSelection)
+            const Positioned(
+              top: 100,
+              left: 16,
+              right: 16,
+              child: MapFriendAlertOverlay(),
+            ),
 
           // Floating check-in status indicator
           Positioned(
