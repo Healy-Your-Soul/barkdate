@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:barkdate/core/config/app_constants.dart';
 import 'package:barkdate/features/profile/presentation/widgets/share_dog_sheet.dart';
 import 'package:barkdate/features/profile/presentation/providers/profile_provider.dart';
 import 'package:barkdate/design_system/app_typography.dart';
@@ -295,6 +296,14 @@ class ProfileScreen extends ConsumerWidget {
                       title: 'Account settings',
                       onTap: () => context.go('/profile/settings'),
                     ),
+                    if (AppConstants.adminEmails
+                        .contains(SupabaseConfig.auth.currentUser?.email))
+                      _buildMenuItem(
+                        context,
+                        icon: Icons.admin_panel_settings_outlined,
+                        title: 'Admin Panel',
+                        onTap: () => context.push('/admin'),
+                      ),
                     _buildMenuItem(
                       context,
                       icon: Icons.rss_feed,
