@@ -1910,7 +1910,7 @@ class _HorizontalDogListState extends State<_HorizontalDogList> {
     return Stack(
       children: [
         SizedBox(
-          height: 200, // Height increased to fix bottom overflow
+          height: 240, // Height increased to fix bottom overflow
           child: ListView.builder(
             controller: _scrollController,
             scrollDirection: Axis.horizontal,
