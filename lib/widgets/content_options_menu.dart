@@ -22,6 +22,8 @@ class ContentOptionsMenu extends StatelessWidget {
   final bool showAsIcon; // true = icon button, false = popup menu trigger
   final VoidCallback? onBlocked; // Callback after blocking
   final VoidCallback? onReported; // Callback after reporting
+  final VoidCallback? onViewProfile; // Callback to view profile (optional)
+  final Color? iconColor; // Override the default icon color
 
   const ContentOptionsMenu({
     super.key,
@@ -33,6 +35,8 @@ class ContentOptionsMenu extends StatelessWidget {
     this.showAsIcon = true,
     this.onBlocked,
     this.onReported,
+    this.onViewProfile,
+    this.iconColor,
   });
 
   Future<void> _handleBlock(BuildContext context) async {
@@ -113,12 +117,16 @@ class ContentOptionsMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
       icon: showAsIcon
-          ? Icon(Icons.more_vert, color: Colors.grey[600], size: 20)
+          ? Icon(Icons.more_vert,
+              color: iconColor ?? Colors.grey[600], size: 20)
           : null,
       padding: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       onSelected: (value) {
         switch (value) {
+          case 'profile':
+            onViewProfile?.call();
+            break;
           case 'report':
             _handleReport(context);
             break;
@@ -128,6 +136,17 @@ class ContentOptionsMenu extends StatelessWidget {
         }
       },
       itemBuilder: (context) => [
+        if (onViewProfile != null)
+          PopupMenuItem<String>(
+            value: 'profile',
+            child: Row(
+              children: [
+                Icon(Icons.person_outline, color: Colors.blue[700], size: 20),
+                const SizedBox(width: 12),
+                const Text('Profile'),
+              ],
+            ),
+          ),
         PopupMenuItem<String>(
           value: 'report',
           child: Row(
@@ -164,6 +183,7 @@ Future<void> showContentOptionsSheet(
   String? contentPreview,
   VoidCallback? onBlocked,
   VoidCallback? onReported,
+  VoidCallback? onViewProfile,
 }) {
   return showModalBottomSheet(
     context: context,
@@ -185,6 +205,19 @@ Future<void> showContentOptionsSheet(
             ),
           ),
           const SizedBox(height: 8),
+
+          // Profile option (if provided)
+          if (onViewProfile != null)
+            ListTile(
+              leading: Icon(Icons.person_outline, color: Colors.blue[700]),
+              title: const Text('Profile'),
+              subtitle: Text(
+                  'View this \${contentType}\'s profile'), // Escape interpolation for tool
+              onTap: () {
+                Navigator.pop(context);
+                onViewProfile();
+              },
+            ),
 
           // Report option
           ListTile(
