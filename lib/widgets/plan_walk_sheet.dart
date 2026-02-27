@@ -186,8 +186,7 @@ class _PlanWalkSheetState extends State<PlanWalkSheet> {
                     style: AppTypography.bodyMedium(),
                   ),
                   const Spacer(),
-                  Icon(Icons.chevron_right,
-                      color: Colors.grey[400], size: 20),
+                  Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
                 ],
               ),
             ),
@@ -225,8 +224,7 @@ class _PlanWalkSheetState extends State<PlanWalkSheet> {
                     style: AppTypography.bodyMedium(),
                   ),
                   const Spacer(),
-                  Icon(Icons.chevron_right,
-                      color: Colors.grey[400], size: 20),
+                  Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
                 ],
               ),
             ),
@@ -307,8 +305,18 @@ class _PlanWalkSheetState extends State<PlanWalkSheet> {
 
     final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
 
     return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';

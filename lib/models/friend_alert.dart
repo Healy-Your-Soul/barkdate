@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 
 /// Types of real-time friend activity alerts
 enum FriendAlertType {
-  friendCheckIn,    // A friend checked in at a park
-  nearbySpot,       // Multiple dogs at a nearby location
-  walkTogether,     // A friend scheduled a future walk
-  newFriend,        // A friend request was accepted
+  friendCheckIn, // A friend checked in at a park
+  nearbySpot, // Multiple dogs at a nearby location
+  walkTogether, // A friend scheduled a future walk
+  newFriend, // A friend request was accepted
   playdateStarting, // A friend's playdate is about to start
-  friendPost,       // A friend shared a new post
+  friendPost, // A friend shared a new post
 }
 
 /// A real-time alert about friend/pack activity
@@ -229,8 +229,7 @@ class FriendAlert {
       headline: 'Playdate Soon',
       body: 'Playdate at $location $timeStr',
       ctaLabel: 'View Details',
-      ctaRoute:
-          playdateId != null ? '/playdate-details?id=$playdateId' : null,
+      ctaRoute: playdateId != null ? '/playdate-details?id=$playdateId' : null,
       iconEmoji: '🎉',
       backgroundColor: colorForType(FriendAlertType.playdateStarting),
       createdAt: DateTime.now(),

@@ -16,8 +16,7 @@ class MapFriendAlertOverlay extends ConsumerStatefulWidget {
       _MapFriendAlertOverlayState();
 }
 
-class _MapFriendAlertOverlayState
-    extends ConsumerState<MapFriendAlertOverlay>
+class _MapFriendAlertOverlayState extends ConsumerState<MapFriendAlertOverlay>
     with SingleTickerProviderStateMixin {
   Timer? _rotateTimer;
   int _currentIndex = 0;
@@ -121,8 +120,7 @@ class _MapFriendAlertOverlayState
                   children: [
                     // Emoji
                     Text(
-                      alert.iconEmoji ??
-                          FriendAlert.emojiForType(alert.type),
+                      alert.iconEmoji ?? FriendAlert.emojiForType(alert.type),
                       style: const TextStyle(fontSize: 18),
                     ),
                     const SizedBox(width: 10),

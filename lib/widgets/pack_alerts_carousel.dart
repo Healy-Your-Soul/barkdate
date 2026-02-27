@@ -95,8 +95,7 @@ class _PackAlertsCarouselState extends ConsumerState<PackAlertsCarousel> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color:
-                              const Color(0xFF4CAF50).withValues(alpha: 0.5),
+                          color: const Color(0xFF4CAF50).withValues(alpha: 0.5),
                           blurRadius: 6,
                         ),
                       ],

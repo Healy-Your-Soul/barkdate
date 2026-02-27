@@ -291,8 +291,7 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
                       ),
                       child: photoUrl == null
                           ? const Center(
-                              child: Text('🐶',
-                                  style: TextStyle(fontSize: 16)))
+                              child: Text('🐶', style: TextStyle(fontSize: 16)))
                           : null,
                     ),
                     const SizedBox(width: 10),

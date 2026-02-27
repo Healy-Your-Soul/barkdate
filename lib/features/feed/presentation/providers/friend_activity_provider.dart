@@ -11,8 +11,7 @@ final friendAlertsProvider =
   FriendAlertsNotifier.new,
 );
 
-class FriendAlertsNotifier
-    extends AutoDisposeAsyncNotifier<List<FriendAlert>> {
+class FriendAlertsNotifier extends AutoDisposeAsyncNotifier<List<FriendAlert>> {
   Timer? _refreshTimer;
 
   @override

@@ -203,8 +203,7 @@ class FriendActivityService {
         // Get join count for this walk
         int joinCount = 0;
         try {
-          joinCount =
-              await _getWalkJoinCount(parkId ?? '', scheduledFor);
+          joinCount = await _getWalkJoinCount(parkId ?? '', scheduledFor);
         } catch (_) {}
 
         alerts.add(FriendAlert.walkTogether(
