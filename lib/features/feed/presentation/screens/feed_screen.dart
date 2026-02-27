@@ -1263,8 +1263,7 @@ class _NearbyDogsToggle extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(4),
-      child: Row(
-        children: [
+      child: Row(children: [
           _buildToggleButton(
               context, ref, true, 'My Pack', Icons.group, isPackSelected),
           _buildToggleButton(
