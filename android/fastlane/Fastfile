@@ -15,6 +15,7 @@ platform :android do
       aab: File.expand_path("../../build/app/outputs/bundle/release/app-release.aab", __dir__),
       json_key_data: ENV['GOOGLE_PLAY_JSON_KEY'],
       package_name: "com.bark.app",
+      release_status: "draft",
       skip_upload_apk: true,
       skip_upload_metadata: true,
       skip_upload_changelogs: true,
