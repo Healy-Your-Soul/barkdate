@@ -1,0 +1,50 @@
+name: Deploy to Google Play
+
+on:
+  workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
+
+jobs:
+  deploy_android:
+    name: Build & Deploy Android to Google Play (Internal)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Setup Ruby and Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Install Fastlane
+        run: gem install fastlane
+
+      - name: Decode keystore from secret
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/barkdate-release.keystore
+
+      - name: Write key.properties
+        run: |
+          cat > android/key.properties << EOF
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=barkdate-release.keystore
+          EOF
+
+      - name: Deploy to Google Play
+        env:
+          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          cd android
+          fastlane beta
