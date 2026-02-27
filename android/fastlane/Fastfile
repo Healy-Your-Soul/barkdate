@@ -1,0 +1,25 @@
+default_platform(:android)
+
+platform :android do
+  desc "Build and upload to Google Play Internal Testing"
+  lane :beta do
+    project_root = File.expand_path("../..", __dir__)
+    build_number = ENV['GITHUB_RUN_NUMBER'] || 1
+
+    # 1. Build the signed release app bundle
+    sh("cd '#{project_root}' && flutter build appbundle --release --build-number=#{build_number}")
+
+    # 2. Upload to Google Play Internal Testing track
+    upload_to_play_store(
+      track: "internal",
+      aab: File.expand_path("../../build/app/outputs/bundle/release/app-release.aab", __dir__),
+      json_key_data: ENV['GOOGLE_PLAY_JSON_KEY'],
+      package_name: "com.bark.app",
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+end
