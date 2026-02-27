@@ -14,8 +14,7 @@ class PlaydateRepositoryImpl implements PlaydateRepository {
   }
 
   @override
-  Future<void> joinPlaydate(
-      String playdateId, String userId, String dogId) async {
+  Future<void> joinPlaydate(String playdateId, String userId, String dogId) async {
     await BarkDatePlaydateService.joinPlaydate(playdateId, userId, dogId);
   }
 
