@@ -49,11 +49,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "style: auto-fix dart formatting [skip ci-format-check]"
+          git commit -m "style: auto-fix dart formatting"
           BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}
           git push origin HEAD:$BRANCH
-          echo "Formatting was fixed and committed. Failing this run so the new commit starts a fresh CI run."
-          exit 1
+          echo "::warning::Formatting issues were auto-fixed and committed. Please pull the latest changes."
 
       - name: Analyze
         run: flutter analyze || true
