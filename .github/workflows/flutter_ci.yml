@@ -6,12 +6,18 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - uses: subosito/flutter-action@v2
         with:
@@ -32,7 +38,21 @@ jobs:
         run: flutter pub get
 
       - name: Verify formatting
+        id: formatting
         run: dart format --output=none --set-exit-if-changed .
+        continue-on-error: true
+
+      - name: Fix formatting & commit
+        if: steps.formatting.outcome == 'failure'
+        run: |
+          dart format .
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "style: auto-fix dart formatting"
+          BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}
+          git push origin HEAD:$BRANCH
+          echo "::warning::Formatting issues were auto-fixed and committed. Please pull the latest changes."
 
       - name: Analyze
         run: flutter analyze || true
