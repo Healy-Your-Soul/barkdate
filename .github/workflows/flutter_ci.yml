@@ -32,7 +32,21 @@ jobs:
         run: flutter pub get
 
       - name: Verify formatting
+        id: formatting
         run: dart format --output=none --set-exit-if-changed .
+        continue-on-error: true
+
+      - name: Fix formatting & commit
+        if: steps.formatting.outcome == 'failure'
+        run: |
+          dart format .
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "style: auto-fix dart formatting [skip ci-format-check]"
+          git push
+          echo "Formatting was fixed and committed. Failing this run so the new commit starts a fresh CI run."
+          exit 1
 
       - name: Analyze
         run: flutter analyze || true
