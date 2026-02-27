@@ -19,6 +19,7 @@ import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart'
     hide DogFriendshipService;
+import 'package:barkdate/widgets/pack_alerts_carousel.dart';
 
 class FeedFeatureScreen extends ConsumerWidget {
   const FeedFeatureScreen({super.key});
@@ -94,6 +95,11 @@ class FeedFeatureScreen extends ConsumerWidget {
                   child:
                       _buildDashboard(context, userStatsAsync, playdatesAsync),
                 ),
+              ),
+
+              // 🆕 Pack Alerts — live friend activity
+              const SliverToBoxAdapter(
+                child: PackAlertsCarousel(),
               ),
 
               // 2. Nearby Dogs Section with integrated search
