@@ -55,7 +55,7 @@ jobs:
           echo "::warning::Formatting issues were auto-fixed and committed. Please pull the latest changes."
 
       - name: Analyze
-        run: flutter analyze || true
+        run: flutter analyze
 
       - name: Run tests
         run: flutter test
