@@ -199,13 +199,15 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
       );
 
       if (mounted) {
+        final nav = Navigator.of(context);
+        final messenger = ScaffoldMessenger.of(context);
         if (success) {
           // If sharing to feed, create a social post
           if (_shareToFeed && _recapController.text.trim().isNotEmpty) {
             await _createSocialPost(photoUrls, dogId);
           }
 
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             SnackBar(
               content: Text(_shareToFeed
                   ? 'Recap saved and shared to feed! 🎉'
@@ -214,7 +216,7 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
             ),
           );
 
-          Navigator.pop(context, true);
+          nav.pop(true);
         } else {
           throw Exception('Failed to save recap');
         }

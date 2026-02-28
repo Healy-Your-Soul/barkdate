@@ -81,82 +81,83 @@ class _ReportScreenState extends State<ReportScreen> {
 
     setState(() => _isSubmitting = true);
 
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     try {
       // TODO: Submit report to backend
       await Future.delayed(const Duration(seconds: 1)); // Simulate API call
 
-      if (mounted) {
-        // Show success dialog
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            title: Row(
-              children: [
-                Icon(
-                  Icons.check_circle,
-                  color: Colors.green,
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                const Text('Report Submitted'),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Thank you for helping keep our community safe. We\'ll review your report and take appropriate action.',
-                ),
-                if (_blockUser) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.block, color: Colors.red, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '$_reportedName has also been blocked.',
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pop(context); // Close report screen
-                },
-                child: const Text('Done'),
+      if (!mounted) return;
+      // Show success dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: Colors.green,
+                size: 24,
               ),
+              const SizedBox(width: 8),
+              const Text('Report Submitted'),
             ],
           ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to submit report: ${e.toString()}'),
-            backgroundColor: Colors.red,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Thank you for helping keep our community safe. We\'ll review your report and take appropriate action.',
+              ),
+              if (_blockUser) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.block, color: Colors.red, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '$_reportedName has also been blocked.',
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ),
-        );
-      }
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                navigator.pop(); // Close report screen
+              },
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Failed to submit report: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
       debugPrint('Report submission error: $e');
     } finally {
       if (mounted) {
@@ -297,8 +298,18 @@ class _ReportScreenState extends State<ReportScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Report reason options
-                ..._reportReasons.map((reason) => _buildReasonOption(reason)),
+                // Radio reason option
+                RadioGroup<String>(
+                  groupValue: _selectedReason,
+                  onChanged: (value) {
+                    setState(() => _selectedReason = value);
+                  },
+                  child: Column(
+                    children: _reportReasons
+                        .map((reason) => _buildReasonOption(reason))
+                        .toList(),
+                  ),
+                ),
 
                 const SizedBox(height: 24),
 
@@ -488,10 +499,6 @@ class _ReportScreenState extends State<ReportScreen> {
       ),
       child: RadioListTile<String>(
         value: reason.id,
-        groupValue: _selectedReason,
-        onChanged: (value) {
-          setState(() => _selectedReason = value);
-        },
         title: Text(
           reason.title,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(

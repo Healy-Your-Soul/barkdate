@@ -18,7 +18,7 @@ class SocialFeedScreen extends StatefulWidget {
 class _SocialFeedScreenState extends State<SocialFeedScreen> {
   List<Post> _posts = [];
   final TextEditingController _postController = TextEditingController();
-  bool _isPosting = false;
+  final bool _isPosting = false;
   bool _isLoading = false;
 
   @override

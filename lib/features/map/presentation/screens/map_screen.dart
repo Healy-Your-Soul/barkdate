@@ -326,7 +326,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               child: Center(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    ref.refresh(mapDataProvider);
+                    ref.invalidate(mapDataProvider);
                   },
                   icon: const Icon(Icons.refresh, size: 16),
                   label: const Text('Search this area'),
@@ -488,7 +488,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 events: mapDataAsync.value?.events ?? [],
                 checkInCounts: mapDataAsync.value?.checkInCounts ?? {},
                 onCheckInSuccess: () {
-                  ref.refresh(mapDataProvider);
+                  ref.invalidate(mapDataProvider);
                 },
               ),
             ),

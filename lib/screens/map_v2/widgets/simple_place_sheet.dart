@@ -260,19 +260,20 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             Text('What\'s wrong with ${widget.place.name}?'),
             const SizedBox(height: 12),
             StatefulBuilder(
-              builder: (context, setDialogState) => Column(
-                children: reasons
-                    .map((reason) => RadioListTile<String>(
-                          title: Text(reason,
-                              style: const TextStyle(fontSize: 14)),
-                          value: reason,
-                          groupValue: selectedReason,
-                          onChanged: (v) =>
-                              setDialogState(() => selectedReason = v),
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
-                        ))
-                    .toList(),
+              builder: (context, setDialogState) => RadioGroup<String>(
+                groupValue: selectedReason,
+                onChanged: (v) => setDialogState(() => selectedReason = v),
+                child: Column(
+                  children: reasons
+                      .map((reason) => RadioListTile<String>(
+                            title: Text(reason,
+                                style: const TextStyle(fontSize: 14)),
+                            value: reason,
+                            contentPadding: EdgeInsets.zero,
+                            dense: true,
+                          ))
+                      .toList(),
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -553,7 +554,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                                       await BarkDateUserService.getUserDogs(
                                           currentUser.id);
                                   if (dogs.isEmpty) {
-                                    if (mounted) {
+                                    if (context.mounted) {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
                                         const SnackBar(
@@ -574,7 +575,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                                     toDogId: targetDogId,
                                   );
 
-                                  if (mounted) {
+                                  if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(success
@@ -585,7 +586,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                                   }
 
                                   // Close dialog on success
-                                  if (success && mounted) {
+                                  if (success && context.mounted) {
                                     Navigator.pop(context);
                                   }
                                 } catch (e) {

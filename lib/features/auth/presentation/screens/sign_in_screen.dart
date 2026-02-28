@@ -163,6 +163,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       );
 
       // Sign in to Supabase with Apple ID token
+      // ignore: experimental_member_use
       final response = await Supabase.instance.client.auth.signInWithIdToken(
         provider: OAuthProvider.apple,
         idToken: credential.identityToken!,

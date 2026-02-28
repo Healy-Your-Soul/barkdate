@@ -38,7 +38,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             TextButton(
               onPressed: () async {
-                Navigator.of(context).pop();
+                final nav = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                nav.pop();
 
                 try {
                   final userId = SupabaseConfig.auth.currentUser?.id;
@@ -52,19 +54,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }
 
                   // Navigate to sign in and clear all previous routes
-                  if (mounted) {
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(
-                          builder: (context) => const SignInScreen()),
-                      (route) => false,
-                    );
-                  }
+                  nav.pushAndRemoveUntil(
+                    MaterialPageRoute(
+                        builder: (context) => const SignInScreen()),
+                    (route) => false,
+                  );
                 } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Sign out failed: $e')),
-                    );
-                  }
+                  messenger.showSnackBar(
+                    SnackBar(content: Text('Sign out failed: $e')),
+                  );
                 }
               },
               style: TextButton.styleFrom(
@@ -167,7 +165,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (e) {
       // Close loading dialog if still mounted
-      if (mounted) {
+      if (context.mounted) {
         try {
           Navigator.of(context).pop();
         } catch (navError) {
@@ -175,7 +173,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       }
 
-      if (mounted) {
+      if (context.mounted) {
         // Show error message
         try {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -228,33 +226,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // Navigate to profile editing
                 final user = SupabaseConfig.auth.currentUser;
                 if (user != null) {
+                  // Capture nav ref before async
+                  final nav = Navigator.of(context);
                   // Load current profile data
                   final userProfile = await SupabaseService.selectSingle(
                     'users',
                     filters: {'id': user.id},
                   );
 
-                  if (mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CreateProfileScreen(
-                          editMode: EditMode.editOwner,
-                          userName: userProfile?['name'],
-                          userEmail: userProfile?['email'] ?? user.email,
-                          userId: user.id,
-                          locationEnabled: true,
-                        ),
+                  if (!mounted) return;
+                  nav.push(
+                    MaterialPageRoute(
+                      builder: (context) => CreateProfileScreen(
+                        editMode: EditMode.editOwner,
+                        userName: userProfile?['name'],
+                        userEmail: userProfile?['email'] ?? user.email,
+                        userId: user.id,
+                        locationEnabled: true,
                       ),
-                    );
-                  }
+                    ),
+                  );
                 } else {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Please sign in to edit profile')),
-                    );
-                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Please sign in to edit profile')),
+                  );
                 }
               },
             ),
@@ -264,36 +260,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'My Dogs',
               subtitle: 'Manage your dog profiles',
               onTap: () async {
-                // Navigate to dog management (same as profile editing for now)
+                // Navigate to dog management
                 final user = SupabaseConfig.auth.currentUser;
                 if (user != null) {
+                  // Capture refs before async
+                  final nav = Navigator.of(context);
                   // Load current profile data
                   final userProfile = await SupabaseService.selectSingle(
                     'users',
                     filters: {'id': user.id},
                   );
 
-                  if (mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CreateProfileScreen(
-                          editMode: EditMode.editOwner,
-                          userName: userProfile?['name'],
-                          userEmail: userProfile?['email'] ?? user.email,
-                          userId: user.id,
-                          locationEnabled: true,
-                        ),
+                  if (!mounted) return;
+                  nav.push(
+                    MaterialPageRoute(
+                      builder: (context) => CreateProfileScreen(
+                        editMode: EditMode.editOwner,
+                        userName: userProfile?['name'],
+                        userEmail: userProfile?['email'] ?? user.email,
+                        userId: user.id,
+                        locationEnabled: true,
                       ),
-                    );
-                  }
+                    ),
+                  );
                 } else {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Please sign in to manage dogs')),
-                    );
-                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Please sign in to manage dogs')),
+                  );
                 }
               },
             ),

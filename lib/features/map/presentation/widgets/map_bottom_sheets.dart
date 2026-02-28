@@ -873,7 +873,7 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
             .setAiSuggestions(suggestedPlaceNames);
 
         // Trigger a refresh of the map data to search for these places
-        ref.refresh(mapDataProvider);
+        ref.invalidate(mapDataProvider);
       }
 
       setState(() {

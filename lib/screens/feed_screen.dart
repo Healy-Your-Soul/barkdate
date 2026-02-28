@@ -43,10 +43,12 @@ class _FeedScreenState extends State<FeedScreen> {
 
   FilterOptions _filterOptions = FilterOptions();
   bool _isRefreshing = false;
+  // ignore: unused_field
   bool _isLoading = true;
   bool _isInitialLoading = false;
   bool _hasLoadedOnce = false; // Prevent double loading
   List<Dog> _nearbyDogs = [];
+  // ignore: unused_field
   String? _error;
   int _upcomingPlaydates = 0;
   int _unreadNotifications = 0;
@@ -57,6 +59,7 @@ class _FeedScreenState extends State<FeedScreen> {
   List<Event> _suggestedEvents = [];
   List<Map<String, dynamic>> _friendDogs = [];
   String? _myPrimaryDogId;
+  // ignore: unused_field
   Map<String, dynamic> _feedMeta = {};
   final ScrollController _scrollController = ScrollController();
 
@@ -1188,9 +1191,11 @@ class _FeedScreenState extends State<FeedScreen> {
       // Get current user's dog
       final userDogs = await BarkDateUserService.getUserDogs(currentUser.id);
       if (userDogs.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please create a dog profile first')),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please create a dog profile first')),
+          );
+        }
         return;
       }
 
@@ -1204,7 +1209,7 @@ class _FeedScreenState extends State<FeedScreen> {
         toDogId: dog.id,
       );
 
-      if (mounted) {
+      if (context.mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1229,7 +1234,7 @@ class _FeedScreenState extends State<FeedScreen> {
       }
     } catch (e) {
       debugPrint('Error sending bark: $e');
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('Failed to send bark. Please try again.')),
@@ -1264,7 +1269,7 @@ class _FeedScreenState extends State<FeedScreen> {
       }
     } catch (e) {
       debugPrint('Error showing playdate modal: $e');
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content:
@@ -1985,7 +1990,7 @@ class _FeedScreenState extends State<FeedScreen> {
             onPressed: () async {
               Navigator.pop(context);
               final success = await CheckInService.checkOut();
-              if (success && mounted) {
+              if (success && mounted && context.mounted) {
                 setState(() {
                   _hasActiveCheckIn = false;
                 });

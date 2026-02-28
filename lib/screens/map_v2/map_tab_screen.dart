@@ -1318,7 +1318,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                       final dogs =
                           await BarkDateUserService.getUserDogs(currentUser.id);
                       if (dogs.isEmpty) {
-                        if (mounted) {
+                        if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                                 content:
@@ -1335,7 +1335,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                         toDogId: targetDogId,
                       );
 
-                      if (mounted) {
+                      if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(success

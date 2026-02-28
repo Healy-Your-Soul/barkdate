@@ -139,7 +139,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       if (mounted) navigator.pop();
 
-      if (mounted) {
+      if (context.mounted) {
         scaffoldMessenger.showSnackBar(
           const SnackBar(
               content: Text('Account deleted successfully'),
@@ -148,8 +148,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         context.go('/auth');
       }
     } catch (e) {
-      if (mounted) Navigator.of(context).pop();
-      if (mounted) {
+      if (context.mounted) Navigator.of(context).pop();
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text('Failed to delete account: $e'),
@@ -194,7 +194,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   final userProfile = await SupabaseService.selectSingle(
                       'users',
                       filters: {'id': user.id});
-                  if (mounted) {
+                  if (context.mounted) {
                     context.push('/create-profile', extra: {
                       'editMode': EditMode.editOwner,
                       'userName': userProfile?['name'],
