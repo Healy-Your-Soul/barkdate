@@ -24,7 +24,6 @@ class SelectionPlaceSheet extends StatefulWidget {
 }
 
 class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
-  bool _isLoading = true;
   int _dogCount = 0;
   List<Map<String, dynamic>> _amenities = [];
   bool _showAllAmenities = false;
@@ -52,12 +51,10 @@ class _SelectionPlaceSheetState extends State<SelectionPlaceSheet> {
           if (amenitiesData != null) {
             _amenities = List<Map<String, dynamic>>.from(amenitiesData);
           }
-          _isLoading = false;
         });
       }
     } catch (e) {
       debugPrint('Error loading place details: $e');
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 

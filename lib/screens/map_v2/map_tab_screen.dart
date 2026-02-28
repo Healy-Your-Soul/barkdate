@@ -359,12 +359,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     for (final liveUser in _liveUsers) {
       final latitude = liveUser['live_latitude'] as double?;
       final longitude = liveUser['live_longitude'] as double?;
-      final dogName = liveUser['dog_name'] as String? ??
-          liveUser['user_name'] as String? ??
-          'Unknown';
       final dogPhotoUrl = liveUser['dog_photo_url'] as String? ??
           liveUser['avatar_url'] as String?;
-      final isFriend = liveUser['is_friend'] as bool? ?? false;
       final updatedAt = liveUser['live_location_updated_at'] as String?;
 
       if (latitude == null || longitude == null) continue;
@@ -448,9 +444,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             continue;
           }
         }
-
-        // Get check-in count for this place
-        final dogCount = _checkInCounts[place.placeId] ?? 0;
 
         // Generate custom marker based on category (no count badge on marker)
         final categoryName = place.category.name;
@@ -620,17 +613,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     });
   }
 
-  /// Get marker hue based on how recently the user updated their location
-  double _getLiveUserMarkerHue(double hoursAgo) {
-    if (hoursAgo < 1.0) {
-      return BitmapDescriptor.hueGreen; // 0-1 hour: green
-    } else if (hoursAgo < 3.0) {
-      return BitmapDescriptor.hueOrange; // 1-3 hours: orange
-    } else {
-      return BitmapDescriptor.hueRed; // 3-4 hours: red (will expire soon)
-    }
-  }
-
   /// Format time ago for display
   String _formatTimeAgo(double hoursAgo) {
     if (hoursAgo < 1.0 / 60.0) {
@@ -650,21 +632,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     final updateTime = DateTime.tryParse(updatedAt);
     if (updateTime == null) return 0;
     return DateTime.now().difference(updateTime).inMinutes / 60.0;
-  }
-
-  double _getMarkerColor(PlaceCategory category) {
-    switch (category) {
-      case PlaceCategory.park:
-        return BitmapDescriptor.hueGreen;
-      case PlaceCategory.petStore:
-        return BitmapDescriptor.hueOrange;
-      case PlaceCategory.veterinary:
-        return BitmapDescriptor.hueRed;
-      case PlaceCategory.restaurant:
-        return BitmapDescriptor.hueBlue;
-      default:
-        return BitmapDescriptor.hueRose;
-    }
   }
 
   /// Load current user's check-in status

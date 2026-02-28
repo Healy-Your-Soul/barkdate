@@ -55,7 +55,6 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
   bool _isCheckingInOut = false;
   int _dogCount = 0;
   List<Map<String, dynamic>> _checkedInDogs = []; // Dogs with their details
-  Map<String, dynamic>? _selectedDog; // Dog to show mini popup for
   List<Map<String, dynamic>> _amenities = []; // Amenities with counts
   bool _showAllAmenities = false;
 
@@ -554,11 +553,14 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                                       await BarkDateUserService.getUserDogs(
                                           currentUser.id);
                                   if (dogs.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              'Please create a dog profile first')),
-                                    );
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                'Please create a dog profile first')),
+                                      );
+                                    }
                                     return;
                                   }
                                   final myDogId = dogs.first['id'] as String;
@@ -572,16 +574,18 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                                     toDogId: targetDogId,
                                   );
 
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(success
-                                          ? 'Request sent! 🐾'
-                                          : 'Could not send request'),
-                                    ),
-                                  );
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(success
+                                            ? 'Request sent! 🐾'
+                                            : 'Could not send request'),
+                                      ),
+                                    );
+                                  }
 
                                   // Close dialog on success
-                                  if (success) {
+                                  if (success && mounted) {
                                     Navigator.pop(context);
                                   }
                                 } catch (e) {

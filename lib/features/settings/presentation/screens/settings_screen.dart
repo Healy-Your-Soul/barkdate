@@ -19,9 +19,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  int _searchRadiusKm = 25;
-  bool _isLoadingRadius = true;
-
   @override
   void initState() {
     super.initState();
@@ -30,23 +27,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSearchRadius() async {
     final user = SupabaseConfig.auth.currentUser;
-    if (user == null) {
-      setState(() => _isLoadingRadius = false);
-      return;
-    }
+    if (user == null) return;
 
     try {
-      final profile =
-          await SupabaseService.selectSingle('users', filters: {'id': user.id});
+      await SupabaseService.selectSingle('users', filters: {'id': user.id});
       if (!mounted) return;
-      setState(() {
-        _searchRadiusKm = (profile?['search_radius_km'] as int?) ?? 25;
-        _isLoadingRadius = false;
-      });
     } catch (e) {
       debugPrint('Error loading search radius: $e');
-      if (!mounted) return;
-      setState(() => _isLoadingRadius = false);
     }
   }
 

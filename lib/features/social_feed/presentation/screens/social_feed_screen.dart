@@ -32,8 +32,6 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
     with SingleTickerProviderStateMixin {
   List<Post> _posts = [];
   final TextEditingController _postController = TextEditingController();
-  SelectedImage? _selectedImage;
-  final bool _isPosting = false;
   bool _isLoading = false;
 
   // New: Track current user and their likes
@@ -834,16 +832,6 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
         },
       ),
     );
-  }
-
-  /// Pick image for post
-  Future<void> _pickImage() async {
-    final image = await PhotoUploadService.pickImage();
-    if (image != null && mounted) {
-      setState(() {
-        _selectedImage = image;
-      });
-    }
   }
 
   /// Handle post creation from new screen

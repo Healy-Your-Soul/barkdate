@@ -73,7 +73,6 @@ class PlaceDetailsSheet extends ConsumerStatefulWidget {
 
 class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
   List<Map<String, dynamic>> _activeCheckIns = [];
-  bool _isLoadingCheckIns = false;
 
   @override
   void initState() {
@@ -82,21 +81,16 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
   }
 
   Future<void> _loadActiveCheckIns() async {
-    setState(() => _isLoadingCheckIns = true);
     try {
       final checkIns =
           await CheckInService.getActiveCheckInsAtPlace(widget.place.placeId);
       if (mounted) {
         setState(() {
           _activeCheckIns = checkIns;
-          _isLoadingCheckIns = false;
         });
       }
     } catch (e) {
       debugPrint('Error loading active check-ins: $e');
-      if (mounted) {
-        setState(() => _isLoadingCheckIns = false);
-      }
     }
   }
 
