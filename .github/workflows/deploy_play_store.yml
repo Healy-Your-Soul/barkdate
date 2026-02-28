@@ -1,10 +1,15 @@
 name: Deploy to Google Play
 
 on:
-  workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
+  workflow_run:
+    workflows: ["Flutter CI"] # Trigger after CI passes
+    types: [completed]
+    branches: [main]
+  workflow_dispatch: # Also allow manual triggering
 
 jobs:
   deploy_android:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     name: Build & Deploy Android to Google Play (Internal)
     runs-on: ubuntu-latest
     steps:

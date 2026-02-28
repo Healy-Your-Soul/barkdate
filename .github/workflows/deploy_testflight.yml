@@ -1,10 +1,15 @@
 name: Deploy to TestFlight
 
 on:
-  workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
+  workflow_run:
+    workflows: ["Flutter CI"] # Trigger after CI passes
+    types: [completed]
+    branches: [main]
+  workflow_dispatch: # Also allow manual triggering
 
 jobs:
   deploy_ios:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     name: Build & Deploy iOS to TestFlight
     runs-on: macos-15
     env:
