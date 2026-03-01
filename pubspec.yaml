@@ -75,7 +75,6 @@ flutter_launcher_icons:
 # (sqflite 2.4.2+ uses BAKLAVA which requires Android 16/SDK 36)
 dependency_overrides:
   sqflite_android: 2.4.0
-  path_provider_foundation: 2.4.1
 
 flutter:
   uses-material-design: true
