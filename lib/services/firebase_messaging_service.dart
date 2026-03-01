@@ -104,7 +104,7 @@ class FirebaseMessagingService {
     );
 
     await _localNotifications.initialize(
-      initializationSettings,
+      settings: initializationSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
@@ -340,10 +340,10 @@ class FirebaseMessagingService {
 
     // Show local notification
     await _localNotifications.show(
-      notification.id.hashCode,
-      title,
-      body,
-      notificationDetails,
+      id: notification.id.hashCode,
+      title: title,
+      body: body,
+      notificationDetails: notificationDetails,
       payload: jsonEncode({
         'type': notification.type.name,
         'id': notification.id,
@@ -622,7 +622,7 @@ class FirebaseMessagingService {
 
   /// Clear notification by ID
   static Future<void> clearNotification(int notificationId) async {
-    await _localNotifications.cancel(notificationId);
+    await _localNotifications.cancel(id: notificationId);
   }
 }
 
