@@ -35,7 +35,6 @@ class _CreatePlaydateScreenState extends ConsumerState<CreatePlaydateScreen> {
   bool _isLoadingLocation = false; // For map picker button loading state
 
   // State for new features
-  PlaceAutocomplete? _selectedPlace; // Holds simple autocomplete data
   PlaceResult?
       _detailedPlace; // Holds detailed place with coords from Map Picker
   final List<Dog> _invitedDogs = [];
@@ -484,10 +483,8 @@ class _CreatePlaydateScreenState extends ConsumerState<CreatePlaydateScreen> {
                         hintText: 'Search for a location...',
                         onPlaceSelected: (place) {
                           setState(() {
-                            _selectedPlace = place;
-                            // If picked from autocomplete, we don't have detailed coords yet
-                            // Detailed place info would be fetched if submitting or if we added that call
-                            _detailedPlace = null; // Clear manual pick
+                            // Clear manual map pick since autocomplete was used
+                            _detailedPlace = null;
                           });
                         },
                         validator: (value) {
@@ -600,7 +597,6 @@ class _CreatePlaydateScreenState extends ConsumerState<CreatePlaydateScreen> {
           setState(() {
             _detailedPlace =
                 nearest; // Store in _detailedPlace (PlaceResult type)
-            _selectedPlace = null; // Clear autocomplete selection
             _locationController.text = nearest.name;
           });
         } else if (mounted) {

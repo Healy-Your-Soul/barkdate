@@ -32,7 +32,6 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
   bool _isSubmitting = false;
 
   final List<SelectedImage> _selectedImages = [];
-  final List<String> _uploadedImageUrls = [];
   List<Map<String, dynamic>> _participatingDogs = [];
   Set<String> _taggedDogIds = {};
 
@@ -92,9 +91,11 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
       }
     } catch (e) {
       debugPrint('Error picking images: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to pick images')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to pick images')),
+        );
+      }
     }
   }
 
@@ -119,9 +120,11 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
       }
     } catch (e) {
       debugPrint('Error taking photo: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to take photo')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to take photo')),
+        );
+      }
     }
   }
 
@@ -196,13 +199,15 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
       );
 
       if (mounted) {
+        final nav = Navigator.of(context);
+        final messenger = ScaffoldMessenger.of(context);
         if (success) {
           // If sharing to feed, create a social post
           if (_shareToFeed && _recapController.text.trim().isNotEmpty) {
             await _createSocialPost(photoUrls, dogId);
           }
 
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             SnackBar(
               content: Text(_shareToFeed
                   ? 'Recap saved and shared to feed! 🎉'
@@ -211,7 +216,7 @@ class _PlaydateRecapScreenState extends State<PlaydateRecapScreen> {
             ),
           );
 
-          Navigator.pop(context, true);
+          nav.pop(true);
         } else {
           throw Exception('Failed to save recap');
         }

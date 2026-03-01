@@ -325,8 +325,6 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
     final formattedDate = DateFormat('EEEE, MMMM d, y').format(scheduledAt);
     final formattedTime = DateFormat('h:mm a').format(scheduledAt);
     final location = _playdate['location'] ?? 'Unknown Location';
-    final organizer = _playdate['organizer'] as Map<String, dynamic>?;
-    final participant = _playdate['participant'] as Map<String, dynamic>?;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -649,42 +647,6 @@ class _PlaydateDetailsScreenState extends ConsumerState<PlaydateDetailsScreen> {
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildParticipantRow(
-      BuildContext context, String role, Map<String, dynamic> user) {
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 24,
-          backgroundImage: user['avatar_url'] != null
-              ? NetworkImage(user['avatar_url'])
-              : null,
-          child: user['avatar_url'] == null ? const Icon(Icons.person) : null,
-        ),
-        const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              user['name'] ?? 'Unknown',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-            Text(
-              role,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
               ),
             ),
           ],

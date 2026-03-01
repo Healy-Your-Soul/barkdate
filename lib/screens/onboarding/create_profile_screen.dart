@@ -351,7 +351,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       }
 
       // 2) Add dog profile (DOG FIRST! 🐕)
-      final dogData = await BarkDateUserService.addDog(userId, {
+      await BarkDateUserService.addDog(userId, {
         'name': _dogNameController.text.trim(),
         'breed': _dogBreedController.text.trim(),
         'age': int.tryParse(_dogAgeController.text) ?? 1,
@@ -1760,10 +1760,12 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         // Validate dog info
         if (_dogNameController.text.isEmpty ||
             _dogBreedController.text.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Please enter your dog\'s name and breed')),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Please enter your dog\'s name and breed')),
+            );
+          }
           return;
         }
 
@@ -1864,9 +1866,11 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       } else if (widget.editMode == EditMode.editOwner) {
         // Validate owner info
         if (_ownerNameController.text.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please enter your name')),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Please enter your name')),
+            );
+          }
           return;
         }
 

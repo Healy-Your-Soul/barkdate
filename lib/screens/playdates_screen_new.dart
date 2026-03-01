@@ -507,21 +507,21 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
 
   Future<void> _respondToRequest(
       PlaydateRequest request, PlaydateRequestStatus response) async {
+    final messenger = ScaffoldMessenger.of(context);
     final success =
         await PlaydateService.respondToPlaydateRequest(request.id, response);
     if (success) {
       await _loadData();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              response == PlaydateRequestStatus.accepted
-                  ? 'Playdate request accepted!'
-                  : 'Playdate request declined',
-            ),
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            response == PlaydateRequestStatus.accepted
+                ? 'Playdate request accepted!'
+                : 'Playdate request declined',
           ),
-        );
-      }
+        ),
+      );
     }
   }
 
@@ -534,6 +534,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     );
 
     if (newDate == null) return;
+    if (!mounted) return;
 
     final newTime = await showTimePicker(
       context: context,
@@ -541,6 +542,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     );
 
     if (newTime == null) return;
+    if (!mounted) return;
 
     final newDateTime = DateTime(
       newDate.year,
@@ -550,15 +552,15 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
       newTime.minute,
     );
 
+    final messenger = ScaffoldMessenger.of(context);
     final success =
         await PlaydateService.reschedulePlaydate(playdate.id, newDateTime);
     if (success) {
       await _loadData();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Playdate rescheduled successfully')),
-        );
-      }
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Playdate rescheduled successfully')),
+      );
     }
   }
 
@@ -584,15 +586,16 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
     );
 
     if (confirmed == true) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
       final success = await PlaydateService.updatePlaydateStatus(
           playdate.id, PlaydateStatus.cancelled);
       if (success) {
         await _loadData();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Playdate cancelled')),
-          );
-        }
+        if (!context.mounted) return;
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Playdate cancelled')),
+        );
       }
     }
   }
@@ -782,6 +785,7 @@ class _CreatePlaydateDialogState extends State<CreatePlaydateDialog> {
     final currentUserId = AuthService.getCurrentUserId();
     if (currentUserId == null) return;
 
+    final messenger = ScaffoldMessenger.of(context);
     final playdate = await PlaydateService.createPlaydate(
       title: _titleController.text,
       description: _descriptionController.text.isEmpty
@@ -798,8 +802,9 @@ class _CreatePlaydateDialogState extends State<CreatePlaydateDialog> {
 
     if (playdate != null) {
       widget.onPlaydateCreated();
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+    } else {
+      if (!context.mounted) return;
+      messenger.showSnackBar(
         const SnackBar(content: Text('Failed to create playdate')),
       );
     }

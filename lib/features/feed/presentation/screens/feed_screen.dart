@@ -1815,10 +1815,12 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
                 final userDogs =
                     await BarkDateUserService.getUserDogs(currentUser.id);
                 if (userDogs.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Please add a dog profile first')),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Please add a dog profile first')),
+                    );
+                  }
                   return;
                 }
 

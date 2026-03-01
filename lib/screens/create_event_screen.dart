@@ -1,4 +1,3 @@
-import 'package:barkdate/screens/dog_friend_selector_dialog.dart';
 import 'package:barkdate/features/playdates/presentation/screens/map_picker_screen.dart';
 import 'package:barkdate/features/playdates/presentation/widgets/dog_search_sheet.dart';
 import 'package:barkdate/services/auth_service.dart';
@@ -7,8 +6,6 @@ import 'package:barkdate/services/photo_upload_service.dart';
 import 'package:barkdate/services/selected_image.dart';
 import 'package:barkdate/services/places_service.dart';
 import 'package:barkdate/services/location_service.dart';
-import 'package:barkdate/supabase/bark_playdate_services.dart';
-import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/widgets/event_image_uploader.dart';
 import 'package:barkdate/widgets/location_picker_field.dart';
 import 'package:barkdate/models/dog.dart';
@@ -54,11 +51,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
   double? _selectedLatitude;
   double? _selectedLongitude;
-  String? _selectedPlaceName;
 
   final List<String> _invitedDogIds = [];
-  final Map<String, DogFriendOption> _friendOptionLookup = {};
-  bool _loadingFriends = false;
   bool _isLoadingMapLocation = false; // For map picker button loading
   final List<Dog> _invitedDogs = []; // For invite-only with DogSearchSheet
 
@@ -277,8 +271,6 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                                     (location['lat'] as num?)?.toDouble();
                                 _selectedLongitude =
                                     (location['lng'] as num?)?.toDouble();
-                                _selectedPlaceName =
-                                    place.structuredFormatting.mainText;
                               });
                             }
                           }
@@ -762,7 +754,6 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         setState(() {
           _selectedLatitude = result.latitude;
           _selectedLongitude = result.longitude;
-          _selectedPlaceName = result.name;
           _locationController.text = result.name;
         });
       }
@@ -779,144 +770,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           setState(() {
             _selectedLatitude = result.latitude;
             _selectedLongitude = result.longitude;
-            _selectedPlaceName = result.name;
             _locationController.text = result.name;
           });
         }
       }
     }
-  }
-
-  Future<void> _inviteDogFriends() async {
-    if (_loadingFriends) return;
-
-    final userId = AuthService.getCurrentUserId();
-    if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('You need to be logged in to invite friends.')),
-      );
-      return;
-    }
-
-    setState(() => _loadingFriends = true);
-
-    try {
-      List<DogFriendOption> options;
-      if (_friendOptionLookup.isEmpty) {
-        options = await _fetchDogFriendOptions(userId);
-      } else {
-        options = _friendOptionLookup.values.toList()
-          ..sort((a, b) =>
-              a.dogName.toLowerCase().compareTo(b.dogName.toLowerCase()));
-      }
-
-      if (!mounted) return;
-      setState(() => _loadingFriends = false);
-
-      if (options.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Add some dog friends first to send invitations.'),
-          ),
-        );
-        return;
-      }
-
-      final selected = await showDialog<List<String>>(
-        context: context,
-        builder: (context) => DogFriendSelectorDialog(
-          options: options,
-          initialSelection: _invitedDogIds.toSet(),
-        ),
-      );
-
-      if (selected != null) {
-        setState(() {
-          _invitedDogIds
-            ..clear()
-            ..addAll(selected);
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _loadingFriends = false);
-      final message = e.toString().contains('dog profile')
-          ? e.toString()
-          : 'Could not load dog friends: ${e.toString()}';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-    }
-  }
-
-  Future<List<DogFriendOption>> _fetchDogFriendOptions(String userId) async {
-    final dogs = await BarkDateUserService.getUserDogs(userId);
-    if (dogs.isEmpty) {
-      throw Exception('Add a dog profile to invite friends to events.');
-    }
-
-    final Map<String, DogFriendOption> lookup = {};
-    for (final dog in dogs) {
-      final dogId = dog['id'] as String?;
-      if (dogId == null) continue;
-      final friends = await DogFriendshipService.getDogFriends(dogId);
-      for (final friend in friends) {
-        final friendDog = friend['friend_dog'] as Map<String, dynamic>?;
-        final friendDogId =
-            (friendDog?['id'] ?? friend['friend_dog_id']) as String?;
-        if (friendDogId == null || friendDogId == dogId) continue;
-
-        final owner = friendDog?['user'] as Map<String, dynamic>? ?? {};
-
-        lookup[friendDogId] = DogFriendOption(
-          dogId: friendDogId,
-          dogName: (friendDog?['name'] as String?) ?? 'Dog friend',
-          dogBreed: friendDog?['breed'] as String?,
-          ownerName: (owner['name'] as String?) ?? 'Dog owner',
-          photoUrl: friendDog?['main_photo_url'] as String?,
-        );
-      }
-    }
-
-    final options = lookup.values.toList()
-      ..sort(
-          (a, b) => a.dogName.toLowerCase().compareTo(b.dogName.toLowerCase()));
-
-    if (mounted) {
-      _friendOptionLookup
-        ..clear()
-        ..addEntries(options.map((option) => MapEntry(option.dogId, option)));
-    }
-
-    return options;
-  }
-
-  Widget _buildInvitedDogChips() {
-    if (_invitedDogIds.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: _invitedDogIds.map((dogId) {
-        final option = _friendOptionLookup[dogId];
-        return InputChip(
-          label: Text(option?.dogName ?? 'Invited pup'),
-          avatar: option?.photoUrl != null && option!.photoUrl!.isNotEmpty
-              ? CircleAvatar(backgroundImage: NetworkImage(option.photoUrl!))
-              : const CircleAvatar(child: Icon(Icons.pets, size: 16)),
-          onDeleted: () => _removeInvitedDog(dogId),
-        );
-      }).toList(),
-    );
-  }
-
-  void _removeInvitedDog(String dogId) {
-    setState(() {
-      _invitedDogIds.remove(dogId);
-    });
   }
 
   Future<void> _createEvent() async {

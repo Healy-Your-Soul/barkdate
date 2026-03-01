@@ -53,7 +53,7 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
       context,
       MaterialPageRoute(
         builder: (context) => ChatDetailScreen(
-          recipientName: widget.dog.ownerName ?? 'Dog Owner',
+          recipientName: widget.dog.ownerName,
           dogName: widget.dog.name,
         ),
       ),

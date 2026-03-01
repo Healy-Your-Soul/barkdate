@@ -42,19 +42,20 @@ class _SignInScreenState extends State<SignInScreen> {
       );
 
       if (mounted) {
+        final nav = Navigator.of(context);
+        final messenger = ScaffoldMessenger.of(context);
         if (response.user != null) {
           // Pre-warm feed caches before entering the home to make first frame instant
           final uid = response.user!.id;
           await PreloadService.warmFeedCaches(uid);
 
           // Success! Navigate to main app
-          Navigator.pushReplacement(
-            context,
+          nav.pushReplacement(
             MaterialPageRoute(builder: (context) => const MainNavigation()),
           );
         } else {
           // Show error
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             const SnackBar(
               content: Text('Sign in failed. Please check your credentials.'),
               backgroundColor: Colors.red,

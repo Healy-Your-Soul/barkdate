@@ -1353,7 +1353,7 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                         : descriptionController.text,
                   );
 
-                  if (mounted) {
+                  if (context.mounted) {
                     Navigator.of(context).pop();
                     if (success) {
                       ScaffoldMessenger.of(context).showSnackBar(

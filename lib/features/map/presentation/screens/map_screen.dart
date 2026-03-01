@@ -7,12 +7,10 @@ import 'package:barkdate/features/map/presentation/widgets/map_search_bar.dart';
 import 'package:barkdate/features/map/presentation/widgets/map_filter_chips.dart';
 import 'package:barkdate/features/map/presentation/widgets/map_bottom_sheets.dart';
 import 'package:barkdate/services/places_service.dart';
-import 'package:barkdate/widgets/plan_walk_sheet.dart';
 import 'package:barkdate/services/checkin_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/live_location_toggle.dart';
 import 'package:barkdate/widgets/map_friend_alert_overlay.dart';
-import 'package:barkdate/widgets/plan_walk_sheet.dart';
 import 'package:barkdate/widgets/walk_details_sheet.dart';
 import 'package:barkdate/features/feed/presentation/providers/friend_activity_provider.dart';
 
@@ -85,17 +83,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (_mapController == null) return;
 
     final bounds = await _mapController!.getVisibleRegion();
-    final position = await _mapController!
-        .getVisibleRegion(); // Wait, getVisibleRegion returns LatLngBounds
-    // We need camera position for center/zoom, but getVisibleRegion gives bounds.
-    // We can't get CameraPosition directly from controller easily without tracking it or using getCameraPosition (if available, mostly not in controller).
-    // Actually we can track it in onCameraMove.
-
-    // But better: just update bounds in provider, which triggers fetch.
-    // We also need center for search radius.
-
-    // Let's assume we tracked center in onCameraMove but didn't update provider to avoid rebuilds.
-    // Or we can just use the bounds center.
+    // Use bounds center for search radius calculation
     final centerLat =
         (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
     final centerLng =
@@ -338,7 +326,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               child: Center(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    ref.refresh(mapDataProvider);
+                    ref.invalidate(mapDataProvider);
                   },
                   icon: const Icon(Icons.refresh, size: 16),
                   label: const Text('Search this area'),
@@ -500,7 +488,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 events: mapDataAsync.value?.events ?? [],
                 checkInCounts: mapDataAsync.value?.checkInCounts ?? {},
                 onCheckInSuccess: () {
-                  ref.refresh(mapDataProvider);
+                  ref.invalidate(mapDataProvider);
                 },
               ),
             ),
