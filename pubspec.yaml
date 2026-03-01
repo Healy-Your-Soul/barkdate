@@ -71,10 +71,6 @@ flutter_launcher_icons:
   adaptive_icon_background: "#F8B363" # Orange background to match icon
   adaptive_icon_foreground: "assets/icon/app_icon.png"
 
-# Override sqflite to older version that works with Android SDK 35
-# (sqflite 2.4.2+ uses BAKLAVA which requires Android 16/SDK 36)
-dependency_overrides:
-  sqflite_android: 2.4.0
 
 flutter:
   uses-material-design: true

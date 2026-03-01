@@ -1462,7 +1462,7 @@ packages:
     source: hosted
     version: "2.4.2"
   sqflite_android:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
       name: sqflite_android
       sha256: "78f489aab276260cdd26676d2169446c7ecd3484bbd5fead4ca14f3ed4dd9ee3"
