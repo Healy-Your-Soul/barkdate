@@ -53,7 +53,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
 
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       // Update viewport provider
@@ -99,7 +101,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Future<void> _recenterMap() async {
     try {
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       final location = LatLng(position.latitude, position.longitude);

@@ -146,7 +146,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
       // Get position
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       setState(() {
