@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:barkdate/features/events/domain/repositories/event_repository.dart';
 import 'package:barkdate/features/events/data/repositories/event_repository_impl.dart';
 import 'package:barkdate/models/event.dart';

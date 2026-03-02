@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:barkdate/features/feed/domain/repositories/dog_repository.dart';
 import 'package:barkdate/features/feed/data/repositories/dog_repository_impl.dart';
 import 'package:barkdate/models/dog.dart';
