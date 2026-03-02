@@ -47,7 +47,7 @@ class ProfileScreen extends ConsumerWidget {
                           IconButton(
                             icon: const Icon(Icons.share_outlined),
                             onPressed: () {
-                              final dogs = userDogsAsync.valueOrNull;
+                              final dogs = userDogsAsync.value;
                               if (dogs != null && dogs.isNotEmpty) {
                                 final dog = dogs.first;
                                 showModalBottomSheet(
@@ -230,7 +230,7 @@ class ProfileScreen extends ConsumerWidget {
                                     onPressed: () {
                                       // Get the first dog to share (for now, simplistic approach)
                                       // In a real app with multiple dogs, we'd show a picker or share specific dog
-                                      final dogs = userDogsAsync.valueOrNull;
+                                      final dogs = userDogsAsync.value;
                                       if (dogs != null && dogs.isNotEmpty) {
                                         final dog = dogs.first;
                                         showModalBottomSheet(

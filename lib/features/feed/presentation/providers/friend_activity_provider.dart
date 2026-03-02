@@ -7,11 +7,11 @@ import 'package:barkdate/supabase/supabase_config.dart';
 /// Provides a periodically-refreshing list of friend alerts.
 /// Refreshes every 30 seconds and on manual refresh.
 final friendAlertsProvider =
-    AutoDisposeAsyncNotifierProvider<FriendAlertsNotifier, List<FriendAlert>>(
+    AsyncNotifierProvider<FriendAlertsNotifier, List<FriendAlert>>(
   FriendAlertsNotifier.new,
 );
 
-class FriendAlertsNotifier extends AutoDisposeAsyncNotifier<List<FriendAlert>> {
+class FriendAlertsNotifier extends AsyncNotifier<List<FriendAlert>> {
   Timer? _refreshTimer;
 
   @override

@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:barkdate/models/event.dart';
 import 'package:barkdate/services/places_service.dart';
 

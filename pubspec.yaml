@@ -32,7 +32,7 @@ dependencies:
   # Gemini AI
   google_generative_ai: ^0.4.6
   # State management
-  flutter_riverpod: ^2.4.9
+  flutter_riverpod: ^3.2.1
   # Lazy loading
   visibility_detector: ^0.4.0+2
   go_router: ^17.0.0
