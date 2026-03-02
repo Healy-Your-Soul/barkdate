@@ -61,5 +61,5 @@ jobs:
         run: flutter test
 
       - name: Build APK
-        # if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         run: flutter build apk --debug
