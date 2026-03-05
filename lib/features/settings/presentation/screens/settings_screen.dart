@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/settings_service.dart';
@@ -10,6 +10,7 @@ import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/screens/terms_of_service_screen.dart';
 import 'package:barkdate/features/settings/presentation/screens/blocked_users_screen.dart';
+import 'package:go_router/go_router.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -59,7 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     SupabaseAuthWrapper.clearProfileCache(userId);
                   }
                   if (context.mounted) {
-                    context.go('/auth');
+                    const AuthRoute().go(context);
                   }
                 } catch (e) {
                   if (context.mounted) {
@@ -145,7 +146,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               content: Text('Account deleted successfully'),
               backgroundColor: Colors.green),
         );
-        context.go('/auth');
+        const AuthRoute().go(context);
       }
     } catch (e) {
       if (context.mounted) Navigator.of(context).pop();
@@ -195,12 +196,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       'users',
                       filters: {'id': user.id});
                   if (context.mounted) {
-                    context.push('/create-profile', extra: {
-                      'editMode': EditMode.editOwner,
-                      'userName': userProfile?['name'],
-                      'userEmail': userProfile?['email'] ?? user.email,
-                      'userId': user.id,
-                    });
+                    CreateProfileRoute(
+                      editMode: EditMode.editOwner,
+                      userName: userProfile?['name'],
+                      userEmail: userProfile?['email'] ?? user.email,
+                      userId: user.id,
+                    ).push(context);
                   }
                 }
               },
@@ -211,8 +212,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'My Dogs',
               subtitle: 'Manage your dog profiles',
               onTap: () {
-                context.push('/create-profile',
-                    extra: {'editMode': EditMode.editDog});
+                const CreateProfileRoute(
+                  editMode: EditMode.editDog,
+                ).push(context);
               },
             ),
             _buildSettingsItem(

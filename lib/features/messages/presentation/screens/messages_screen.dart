@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
 import 'package:barkdate/design_system/app_typography.dart';
@@ -173,7 +173,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                                 'Start matching with other dogs to get the conversation started!',
                             actionLabel: 'Find Friends',
                             onAction: () {
-                              context.go('/home');
+                              const HomeRoute().go(context);
                             },
                           ),
                         ),
@@ -234,12 +234,12 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
             : conversation['sender_id'];
 
         if (matchId != null && targetId != null) {
-          context.push('/chat', extra: {
-            'matchId': matchId,
-            'recipientId': targetId,
-            'recipientName': displayName,
-            'recipientAvatarUrl': avatarUrl,
-          });
+          ChatRoute(
+            matchId: matchId,
+            recipientId: targetId,
+            recipientName: displayName,
+            recipientAvatarUrl: avatarUrl ?? '',
+          ).push(context);
         }
       },
       child: Row(

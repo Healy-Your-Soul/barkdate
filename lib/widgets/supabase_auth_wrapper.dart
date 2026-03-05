@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:go_router/go_router.dart';
 import 'package:barkdate/features/auth/presentation/screens/sign_in_screen.dart';
 // import 'package:barkdate/screens/main_navigation.dart';
 import 'package:barkdate/screens/onboarding/welcome_screen.dart';
 import 'package:barkdate/services/preload_service.dart';
 import 'package:barkdate/widgets/dog_loading_widget.dart';
-
 enum ProfileStatus {
   complete,
   needsDogProfile,
@@ -96,7 +95,7 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
                       // Use addPostFrameCallback to avoid navigation during build
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (context.mounted) {
-                          context.go('/home');
+                          const HomeRoute().go(context);
                         }
                       });
                       return const Scaffold(

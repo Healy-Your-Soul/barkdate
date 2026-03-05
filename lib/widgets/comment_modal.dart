@@ -1,10 +1,11 @@
 import 'dart:async';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:barkdate/models/post.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/models/dog.dart'; // Import Dog model
-import 'package:go_router/go_router.dart'; // Import go_router
+// Import go_router
 
 /// Instagram-style comment modal with post image and real comment functionality
 class CommentModal extends StatefulWidget {
@@ -129,7 +130,7 @@ class _CommentModalState extends State<CommentModal> {
 
       if (mounted) {
         final dog = Dog.fromJson(dogData);
-        context.push('/dog/${dog.id}', extra: dog);
+        DogDetailsByIdRoute(id: dog.id, $extra: dog).push(context);
       }
     } catch (e) {
       debugPrint('Error navigating to dog profile: $e');

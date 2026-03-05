@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/models/notification.dart';
 import 'package:barkdate/widgets/notification_banner.dart';
+
 import 'package:barkdate/core/router/app_router.dart';
 
 /// Service for displaying in-app notification banners when the app is in foreground
