@@ -2,8 +2,8 @@ import 'package:barkdate/features/playdates/presentation/screens/map_picker_scre
 import 'package:barkdate/features/playdates/presentation/widgets/dog_search_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/widgets/location_picker_field.dart';
 import 'package:barkdate/services/places_service.dart';

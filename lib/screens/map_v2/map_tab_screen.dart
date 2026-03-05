@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -24,9 +25,7 @@ import 'package:barkdate/screens/map_v2/widgets/dog_mini_card.dart';
 import 'package:barkdate/screens/map_v2/widgets/place_mini_card.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
-
 /// New map tab with AI assistant, event integration, and improved UX
 class MapTabScreenV2 extends ConsumerStatefulWidget {
   const MapTabScreenV2({super.key});
@@ -1012,7 +1011,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             child: IconButton(
               icon: const Icon(Icons.qr_code_scanner),
               tooltip: 'Scan QR Code',
-              onPressed: () => context.push('/qr-scan'),
+              onPressed: () => const QrScanRoute().push(context),
             ),
           ),
         ],

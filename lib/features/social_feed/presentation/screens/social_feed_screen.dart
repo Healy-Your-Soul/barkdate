@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/widgets/dog_loading_widget.dart';
 import 'dart:ui';
-import 'package:go_router/go_router.dart';
 import 'package:barkdate/data/sample_data.dart';
 import 'package:barkdate/models/post.dart';
 import 'package:barkdate/models/dog.dart';
@@ -12,6 +12,7 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
 import 'package:barkdate/features/playdates/presentation/widgets/dog_search_sheet.dart';
 import 'package:barkdate/services/notification_manager.dart';
+import 'package:go_router/go_router.dart';
 
 class SocialFeedScreen extends StatefulWidget {
   final int initialTab;
@@ -634,7 +635,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
 
       if (mounted) {
         final dog = Dog.fromJson(dogData);
-        context.push('/dog/${dog.id}', extra: dog);
+        DogDetailsByIdRoute(id: dog.id, $extra: dog).push(context);
       }
     } catch (e) {
       debugPrint('Error navigating to dog profile: $e');
@@ -1509,7 +1510,7 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
 
       if (!mounted) return;
       final dog = Dog.fromJson(dogData);
-      context.push('/dog/${dog.id}', extra: dog);
+      DogDetailsByIdRoute(id: dog.id, $extra: dog).push(context);
     } catch (e) {
       debugPrint('Error navigating to dog profile: $e');
       if (!context.mounted) return;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:go_router/go_router.dart';
 import '../services/qr_checkin_service.dart';
+import 'package:go_router/go_router.dart';
 
 class QrScanScreen extends StatefulWidget {
   const QrScanScreen({super.key});

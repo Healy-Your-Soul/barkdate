@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:barkdate/services/dog_sharing_service.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:go_router/go_router.dart';
 
 class AcceptShareScreen extends ConsumerStatefulWidget {
   final String? initialCode;
