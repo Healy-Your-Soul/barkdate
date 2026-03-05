@@ -204,17 +204,19 @@ class _PlaydateRequestModalState extends State<PlaydateRequestModal> {
             // Don't fail the whole flow if notification fails
           }
 
-          Navigator.pop(context, true); // Return success
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'Playdate request sent to ${widget.targetDog.ownerName}! 🎉'),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-          );
+          if (mounted) {
+            Navigator.pop(context, true); // Return success
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Playdate request sent to ${widget.targetDog.ownerName}! 🎉'),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+            );
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

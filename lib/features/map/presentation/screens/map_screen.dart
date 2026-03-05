@@ -10,6 +10,9 @@ import 'package:barkdate/services/places_service.dart';
 import 'package:barkdate/services/checkin_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/live_location_toggle.dart';
+import 'package:barkdate/widgets/map_friend_alert_overlay.dart';
+import 'package:barkdate/widgets/walk_details_sheet.dart';
+import 'package:barkdate/features/feed/presentation/providers/friend_activity_provider.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -50,7 +53,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
 
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       // Update viewport provider
@@ -80,17 +85,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (_mapController == null) return;
 
     final bounds = await _mapController!.getVisibleRegion();
-    final position = await _mapController!
-        .getVisibleRegion(); // Wait, getVisibleRegion returns LatLngBounds
-    // We need camera position for center/zoom, but getVisibleRegion gives bounds.
-    // We can't get CameraPosition directly from controller easily without tracking it or using getCameraPosition (if available, mostly not in controller).
-    // Actually we can track it in onCameraMove.
-
-    // But better: just update bounds in provider, which triggers fetch.
-    // We also need center for search radius.
-
-    // Let's assume we tracked center in onCameraMove but didn't update provider to avoid rebuilds.
-    // Or we can just use the bounds center.
+    // Use bounds center for search radius calculation
     final centerLat =
         (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
     final centerLng =
@@ -106,7 +101,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Future<void> _recenterMap() async {
     try {
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       final location = LatLng(position.latitude, position.longitude);
@@ -229,10 +226,55 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final viewport = ref.watch(mapViewportProvider);
     final selection = ref.watch(mapSelectionProvider);
     final mapDataAsync = ref.watch(mapDataProvider);
+    final scheduledWalksAsync = ref.watch(scheduledWalksForMapProvider);
 
     // Update markers when data is available
     mapDataAsync.whenData((data) {
       _updateMarkers(data);
+
+      // Add scheduled walk markers
+      scheduledWalksAsync.whenData((walks) {
+        for (final walk in walks) {
+          final lat = walk['latitude'] as double?;
+          final lng = walk['longitude'] as double?;
+          if (lat == null || lng == null) continue;
+
+          final dog = walk['dog'] as Map<String, dynamic>?;
+          final dogName = dog?['name'] ?? 'Someone';
+          final parkName = walk['park_name'] ?? 'a park';
+          final scheduledFor = DateTime.tryParse(walk['scheduled_for'] ?? '');
+          if (scheduledFor == null) continue;
+
+          final hour = scheduledFor.hour;
+          final minute = scheduledFor.minute.toString().padLeft(2, '0');
+          final amPm = hour >= 12 ? 'PM' : 'AM';
+          final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+          final timeStr = '$displayHour:$minute $amPm';
+
+          _markers.add(Marker(
+            markerId: MarkerId('walk_${walk['id']}'),
+            position: LatLng(lat, lng),
+            infoWindow: InfoWindow(
+              title: '🕐 $dogName • $timeStr',
+              snippet: 'Planned walk at $parkName',
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueAzure),
+            onTap: () {
+              showWalkDetailsSheet(
+                context,
+                parkId: walk['park_id'] ?? '',
+                parkName: parkName,
+                scheduledFor: scheduledFor,
+                organizerDogName: dogName,
+                checkInId: walk['id'] as String?,
+                latitude: lat,
+                longitude: lng,
+              );
+            },
+          ));
+        }
+      });
     });
 
     return Scaffold(
@@ -288,7 +330,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               child: Center(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    ref.refresh(mapDataProvider);
+                    ref.invalidate(mapDataProvider);
                   },
                   icon: const Icon(Icons.refresh, size: 16),
                   label: const Text('Search this area'),
@@ -416,6 +458,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             child: const LiveLocationToggle(),
           ),
 
+          // 🆕 Friend activity alerts overlay
+          if (!selection.hasSelection)
+            const Positioned(
+              top: 100,
+              left: 16,
+              right: 16,
+              child: MapFriendAlertOverlay(),
+            ),
+
           // Floating check-in status indicator
           Positioned(
             left: 16,
@@ -441,7 +492,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 events: mapDataAsync.value?.events ?? [],
                 checkInCounts: mapDataAsync.value?.checkInCounts ?? {},
                 onCheckInSuccess: () {
-                  ref.refresh(mapDataProvider);
+                  ref.invalidate(mapDataProvider);
                 },
               ),
             ),

@@ -55,7 +55,6 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
   bool _isCheckingInOut = false;
   int _dogCount = 0;
   List<Map<String, dynamic>> _checkedInDogs = []; // Dogs with their details
-  Map<String, dynamic>? _selectedDog; // Dog to show mini popup for
   List<Map<String, dynamic>> _amenities = []; // Amenities with counts
   bool _showAllAmenities = false;
 
@@ -261,19 +260,20 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             Text('What\'s wrong with ${widget.place.name}?'),
             const SizedBox(height: 12),
             StatefulBuilder(
-              builder: (context, setDialogState) => Column(
-                children: reasons
-                    .map((reason) => RadioListTile<String>(
-                          title: Text(reason,
-                              style: const TextStyle(fontSize: 14)),
-                          value: reason,
-                          groupValue: selectedReason,
-                          onChanged: (v) =>
-                              setDialogState(() => selectedReason = v),
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
-                        ))
-                    .toList(),
+              builder: (context, setDialogState) => RadioGroup<String>(
+                groupValue: selectedReason,
+                onChanged: (v) => setDialogState(() => selectedReason = v),
+                child: Column(
+                  children: reasons
+                      .map((reason) => RadioListTile<String>(
+                            title: Text(reason,
+                                style: const TextStyle(fontSize: 14)),
+                            value: reason,
+                            contentPadding: EdgeInsets.zero,
+                            dense: true,
+                          ))
+                      .toList(),
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -554,11 +554,14 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                                       await BarkDateUserService.getUserDogs(
                                           currentUser.id);
                                   if (dogs.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              'Please create a dog profile first')),
-                                    );
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                'Please create a dog profile first')),
+                                      );
+                                    }
                                     return;
                                   }
                                   final myDogId = dogs.first['id'] as String;
@@ -572,16 +575,18 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                                     toDogId: targetDogId,
                                   );
 
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(success
-                                          ? 'Request sent! 🐾'
-                                          : 'Could not send request'),
-                                    ),
-                                  );
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(success
+                                            ? 'Request sent! 🐾'
+                                            : 'Could not send request'),
+                                      ),
+                                    );
+                                  }
 
                                   // Close dialog on success
-                                  if (success) {
+                                  if (success && context.mounted) {
                                     Navigator.pop(context);
                                   }
                                 } catch (e) {

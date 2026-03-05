@@ -94,13 +94,15 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
                 .update({'fcm_token': token}).eq('id', user.id);
           }
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Notifications enabled!'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 1),
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Notifications enabled!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('Error requesting notification permission: $e');
@@ -316,38 +318,6 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildBenefitItem(BuildContext context, IconData icon, String text) {
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Theme.of(context)
-                .colorScheme
-                .primaryContainer
-                .withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Text(
-            text,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-          ),
-        ),
-      ],
     );
   }
 }

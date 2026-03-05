@@ -73,17 +73,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         debugPrint('User already verified, proceeding to app');
         if (mounted) {
           // Email verified! Check if user has completed profile setup
+          final nav = Navigator.of(context);
           final hasProfile = await _checkUserProfile(user.id);
+          if (!mounted) return;
           if (hasProfile) {
-            // Profile exists, go to main app
-            Navigator.pushReplacement(
-              context,
+            nav.pushReplacement(
               MaterialPageRoute(builder: (context) => const MainNavigation()),
             );
           } else {
-            // Profile doesn't exist, go to profile creation
-            Navigator.pushReplacement(
-              context,
+            nav.pushReplacement(
               MaterialPageRoute(
                 builder: (context) => CreateProfileScreen(
                   userName: user?.userMetadata?['name'] ?? '',
@@ -108,15 +106,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         if (user?.emailConfirmedAt != null) {
           // Now verified! Proceed to app
           if (mounted) {
+            final nav = Navigator.of(context);
             final hasProfile = await _checkUserProfile(user!.id);
+            if (!mounted) return;
             if (hasProfile) {
-              Navigator.pushReplacement(
-                context,
+              nav.pushReplacement(
                 MaterialPageRoute(builder: (context) => const MainNavigation()),
               );
             } else {
-              Navigator.pushReplacement(
-                context,
+              nav.pushReplacement(
                 MaterialPageRoute(
                   builder: (context) => CreateProfileScreen(
                     userName: user?.userMetadata?['name'] ?? '',

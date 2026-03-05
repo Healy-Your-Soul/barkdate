@@ -9,7 +9,6 @@ import 'package:barkdate/services/photo_upload_service.dart';
 import 'package:barkdate/services/selected_image.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/widgets/comment_modal.dart';
 import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
 import 'package:barkdate/features/playdates/presentation/widgets/dog_search_sheet.dart';
 import 'package:barkdate/services/notification_manager.dart';
@@ -32,8 +31,6 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
     with SingleTickerProviderStateMixin {
   List<Post> _posts = [];
   final TextEditingController _postController = TextEditingController();
-  SelectedImage? _selectedImage;
-  final bool _isPosting = false;
   bool _isLoading = false;
 
   // New: Track current user and their likes
@@ -368,382 +365,12 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
     return '${(diff.inDays / 7).floor()}w';
   }
 
-  Widget _buildPostCard(BuildContext context, Post post) {
-    final isOwnPost = post.userId == _currentUserId;
-
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Post header - tappable to view dog profile
-          InkWell(
-            onTap: post.dogId != null
-                ? () => _navigateToDogProfile(post.dogId!)
-                : null,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundImage: post.userPhoto.isNotEmpty &&
-                            !post.userPhoto.contains('placeholder')
-                        ? NetworkImage(post.userPhoto)
-                        : null,
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primaryContainer,
-                    onBackgroundImageError: post.userPhoto.isNotEmpty &&
-                            !post.userPhoto.contains('placeholder')
-                        ? (exception, stackTrace) {
-                            debugPrint(
-                                'Error loading profile image: $exception');
-                          }
-                        : null,
-                    child: post.userPhoto.isEmpty ||
-                            post.userPhoto.contains('placeholder')
-                        ? Icon(
-                            Icons.pets,
-                            size: 20,
-                            color: Theme.of(context).colorScheme.primary,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              post.dogName,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                  ),
-                            ),
-                            if (post.dogId != null) ...[
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.chevron_right,
-                                size: 16,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.4),
-                              ),
-                            ],
-                          ],
-                        ),
-                        Text(
-                          'with ${post.userName} • ${_formatPostTime(post.timestamp)}',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.6),
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // More options menu
-                  PopupMenuButton<String>(
-                    icon: Icon(
-                      Icons.more_horiz,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                    ),
-                    onSelected: (value) {
-                      if (value == 'delete') {
-                        _deletePost(post);
-                      } else if (value == 'report') {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Report feature coming soon')),
-                        );
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      if (isOwnPost)
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete_outline, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text('Delete Post',
-                                  style: TextStyle(color: Colors.red)),
-                            ],
-                          ),
-                        ),
-                      if (!isOwnPost)
-                        const PopupMenuItem(
-                          value: 'report',
-                          child: Row(
-                            children: [
-                              Icon(Icons.flag_outlined),
-                              SizedBox(width: 8),
-                              Text('Report'),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Post content
-          if (post.content.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                post.content,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-              ),
-            ),
-
-          // Hashtags
-          if (post.hashtags.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Wrap(
-                spacing: 8,
-                children: post.hashtags
-                    .map((hashtag) => Text(
-                          hashtag,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                        ))
-                    .toList(),
-              ),
-            ),
-
-          // Post image
-          if (post.imageUrl != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  post.imageUrl!,
-                  width: double.infinity,
-                  height: 300,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: double.infinity,
-                    height: 300,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primaryContainer
-                        .withValues(alpha: 0.3),
-                    child: Icon(
-                      Icons.image,
-                      size: 50,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-          // Tagged dogs display (like Instagram - small text under image)
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: _getPostTags(post.id),
-            builder: (context, snapshot) {
-              final tags = snapshot.data ?? [];
-              if (tags.isEmpty) return const SizedBox.shrink();
-
-              return Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: GestureDetector(
-                  onTap: () {
-                    // Show all tagged dogs
-                    showModalBottomSheet(
-                      context: context,
-                      builder: (context) => _buildTaggedDogsSheet(tags),
-                    );
-                  },
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.pets,
-                        size: 14,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.5),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        tags.length == 1
-                            ? 'with ${tags.first['dog_name'] ?? 'a friend'}'
-                            : 'with ${tags.first['dog_name'] ?? 'a friend'} and ${tags.length - 1} others',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.6),
-                              fontWeight: FontWeight.w500,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-
-          // Post actions - using bone emoji 🦴 instead of hearts
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    // Bone button (like) 🦴
-                    _buildBoneButton(context, post),
-                    const SizedBox(width: 24),
-                    _buildActionButton(
-                      context,
-                      icon: Icons.chat_bubble_outline,
-                      count: post.comments,
-                      onPressed: () => _showComments(post),
-                    ),
-                    const SizedBox(width: 24),
-                    _buildActionButton(
-                      context,
-                      icon: Icons.share_outlined,
-                      count: post.shares,
-                      onPressed: () => _sharePost(post),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build the bone "like" button using emoji
-  Widget _buildBoneButton(BuildContext context, Post post) {
-    final isLiked = _likedPostIds.contains(post.id);
-
-    return GestureDetector(
-      onTap: () => _toggleLike(post),
-      child: Row(
-        children: [
-          Text(
-            '🦴',
-            style: TextStyle(
-              fontSize: 22,
-              color: isLiked ? null : Colors.grey,
-            ),
-          ),
-          if (post.likes > 0) ...[
-            const SizedBox(width: 4),
-            Text(
-              post.likes.toString(),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isLiked
-                        ? Colors.amber[700]
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.7),
-                    fontWeight: isLiked ? FontWeight.w600 : FontWeight.normal,
-                  ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButton(
-    BuildContext context, {
-    required IconData icon,
-    required int count,
-    Color? color,
-    required VoidCallback onPressed,
-  }) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 24,
-            color: color ??
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-          ),
-          if (count > 0) ...[
-            const SizedBox(width: 4),
-            Text(
-              count.toString(),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: color ??
-                        Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.7),
-                  ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  String _formatPostTime(DateTime timestamp) {
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-
-    if (difference.inDays >= 365) {
-      final years = difference.inDays ~/ 365;
-      return '${years}y';
-    } else if (difference.inDays > 0) {
-      return '${difference.inDays}d';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m';
-    } else {
-      return 'now';
-    }
-  }
-
-  /// Toggle like on a post - now persists to database
+  /// Toggle like on a post - persists to database
   Future<void> _toggleLike(Post post) async {
     if (_currentUserId == null) return;
 
     final isCurrentlyLiked = _likedPostIds.contains(post.id);
 
-    // Optimistic UI update
     setState(() {
       if (isCurrentlyLiked) {
         _likedPostIds.remove(post.id);
@@ -760,12 +387,10 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
       }
     });
 
-    // Persist to database
     try {
       await BarkDateSocialService.togglePostLike(post.id, _currentUserId!);
     } catch (e) {
       debugPrint('Error toggling like: $e');
-      // Revert on error
       if (mounted) {
         setState(() {
           if (isCurrentlyLiked) {
@@ -784,28 +409,6 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
         });
       }
     }
-  }
-
-  void _showComments(Post post) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.transparent, // Transparent barrier
-      builder: (context) => CommentModal(post: post),
-    ).then((_) {
-      // Reload feed when comment modal closes to update comment counts
-      _loadFeed();
-    });
-  }
-
-  void _sharePost(Post post) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Post shared! 📤'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-    );
   }
 
   void _showCreatePostDialog({bool? photoMode}) {
@@ -834,16 +437,6 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
         },
       ),
     );
-  }
-
-  /// Pick image for post
-  Future<void> _pickImage() async {
-    final image = await PhotoUploadService.pickImage();
-    if (image != null && mounted) {
-      setState(() {
-        _selectedImage = image;
-      });
-    }
   }
 
   /// Handle post creation from new screen
@@ -1053,51 +646,6 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
     }
   }
 
-  /// Delete a post
-  Future<void> _deletePost(Post post) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Post?'),
-        content: const Text('This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      try {
-        await BarkDateSocialService.deletePost(post.id);
-
-        setState(() {
-          _posts.removeWhere((p) => p.id == post.id);
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Post deleted')),
-          );
-        }
-      } catch (e) {
-        debugPrint('Error deleting post: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting post: $e')),
-          );
-        }
-      }
-    }
-  }
-
   /// Build empty state when no posts
   Widget _buildEmptyState() {
     final isFollowingTab = _selectedTab == 1;
@@ -1116,125 +664,6 @@ class _SocialFeedScreenState extends State<SocialFeedScreen>
           onAction:
               isFollowingTab ? () => context.pop() : _showCreatePostDialog,
         ),
-      ),
-    );
-  }
-
-  /// Get approved tags for a post
-  Future<List<Map<String, dynamic>>> _getPostTags(String postId) async {
-    try {
-      final result = await SupabaseConfig.client.from('post_tags').select('''
-            id,
-            tagged_dog_id,
-            is_collaborator,
-            dogs!post_tags_tagged_dog_id_fkey(id, name, photos)
-          ''').eq('post_id', postId).eq('status', 'approved');
-
-      return (result as List).map((tag) {
-        final dog = tag['dogs'] as Map<String, dynamic>?;
-        return {
-          'id': tag['id'],
-          'dog_id': tag['tagged_dog_id'],
-          'dog_name': dog?['name'] ?? 'Unknown',
-          'dog_photo': (dog?['photos'] as List?)?.isNotEmpty == true
-              ? dog!['photos'][0]
-              : null,
-          'is_collaborator': tag['is_collaborator'] ?? false,
-        };
-      }).toList();
-    } catch (e) {
-      debugPrint('Error fetching post tags: $e');
-      return [];
-    }
-  }
-
-  /// Build sheet showing all tagged dogs
-  Widget _buildTaggedDogsSheet(List<Map<String, dynamic>> tags) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          Text(
-            'Tagged Dogs',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 16),
-          ...tags.map((tag) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.pop(context);
-                    _navigateToDogProfile(tag['dog_id']);
-                  },
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundImage: tag['dog_photo'] != null
-                            ? NetworkImage(tag['dog_photo'])
-                            : null,
-                        backgroundColor:
-                            Theme.of(context).colorScheme.primaryContainer,
-                        child: tag['dog_photo'] == null
-                            ? const Icon(Icons.pets)
-                            : null,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              tag['dog_name'],
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                            ),
-                            if (tag['is_collaborator'] == true)
-                              Text(
-                                '✨ Contributor',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.chevron_right,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.4),
-                      ),
-                    ],
-                  ),
-                ),
-              )),
-        ],
       ),
     );
   }
@@ -2046,6 +1475,7 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
 
     setState(() => _isPostingComment = true);
 
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final userId = widget.currentUserId;
       if (userId == null) throw Exception('Not logged in');
@@ -2057,7 +1487,8 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
       _commentController.clear();
       await _loadComments();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!context.mounted) return;
+      messenger.showSnackBar(
         SnackBar(content: Text('Error posting comment: $e')),
       );
     } finally {
@@ -2067,6 +1498,7 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
 
   /// Navigate to dog profile
   Future<void> _navigateToDogProfile(String dogId) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       // Fetch dog data and navigate
       final dogData = await SupabaseConfig.client
@@ -2075,17 +1507,15 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
           .eq('id', dogId)
           .single();
 
-      if (mounted) {
-        final dog = Dog.fromJson(dogData);
-        context.push('/dog/${dog.id}', extra: dog);
-      }
+      if (!mounted) return;
+      final dog = Dog.fromJson(dogData);
+      context.push('/dog/${dog.id}', extra: dog);
     } catch (e) {
       debugPrint('Error navigating to dog profile: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not load dog profile')),
-        );
-      }
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not load dog profile')),
+      );
     }
   }
 
@@ -2405,10 +1835,11 @@ class _ExpandedPostWithCommentsState extends State<_ExpandedPostWithComments> {
         final diff = DateTime.now().difference(dt);
         if (diff.inMinutes < 60) {
           timeAgo = '${diff.inMinutes}m';
-        } else if (diff.inHours < 24)
+        } else if (diff.inHours < 24) {
           timeAgo = '${diff.inHours}h';
-        else
+        } else {
           timeAgo = '${diff.inDays}d';
+        }
       }
     }
 

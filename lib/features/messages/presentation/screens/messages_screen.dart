@@ -223,16 +223,12 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
     final avatarUrl = otherUser?['avatar_url'];
     final content = conversation['content'] ?? '';
     final createdAt = DateTime.parse(conversation['created_at']);
-    final isRead = conversation['is_read'] ??
-        false; // Note: logic for read status needs refinement based on user
+    // Note: read status logic needs refinement based on user
 
     return InkWell(
       onTap: () {
         final matchId = conversation['match_id'];
-        final recipientId = otherUser?['id']; // We need ID in the user object
-
-        // Fallback if ID is not in the embedded object (it usually isn't by default unless selected)
-        // But we can infer it from sender_id/receiver_id
+        // ID is inferred from sender_id/receiver_id since it's not in embedded object by default
         final targetId = (senderId == currentUserId)
             ? conversation['receiver_id']
             : conversation['sender_id'];

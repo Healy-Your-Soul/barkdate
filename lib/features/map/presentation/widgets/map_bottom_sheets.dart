@@ -8,6 +8,7 @@ import 'package:barkdate/services/gemini_service.dart';
 import 'package:barkdate/services/checkin_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/models/event.dart';
+import 'package:barkdate/widgets/plan_walk_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Main bottom sheet manager for map selections
@@ -72,7 +73,6 @@ class PlaceDetailsSheet extends ConsumerStatefulWidget {
 
 class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
   List<Map<String, dynamic>> _activeCheckIns = [];
-  bool _isLoadingCheckIns = false;
 
   @override
   void initState() {
@@ -81,21 +81,16 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
   }
 
   Future<void> _loadActiveCheckIns() async {
-    setState(() => _isLoadingCheckIns = true);
     try {
       final checkIns =
           await CheckInService.getActiveCheckInsAtPlace(widget.place.placeId);
       if (mounted) {
         setState(() {
           _activeCheckIns = checkIns;
-          _isLoadingCheckIns = false;
         });
       }
     } catch (e) {
       debugPrint('Error loading active check-ins: $e');
-      if (mounted) {
-        setState(() => _isLoadingCheckIns = false);
-      }
     }
   }
 
@@ -497,6 +492,33 @@ class _PlaceDetailsSheetState extends ConsumerState<PlaceDetailsSheet> {
                       longitude: widget.place.longitude,
                       onCheckInSuccess: widget.onCheckInSuccess,
                     ),
+                    const SizedBox(height: 10),
+
+                    // Plan a Walk button
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          showPlanWalkSheet(
+                            context,
+                            parkId: widget.place.placeId,
+                            parkName: widget.place.name,
+                            latitude: widget.place.latitude,
+                            longitude: widget.place.longitude,
+                          );
+                        },
+                        icon: const Text('🕐', style: TextStyle(fontSize: 16)),
+                        label: const Text('Plan a Walk'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF0D47A1),
+                          side: const BorderSide(color: Color(0xFF0D47A1)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 16),
 
                     // 2. Open/Rating status
@@ -851,7 +873,7 @@ class _GeminiAssistantSheetState extends ConsumerState<GeminiAssistantSheet> {
             .setAiSuggestions(suggestedPlaceNames);
 
         // Trigger a refresh of the map data to search for these places
-        ref.refresh(mapDataProvider);
+        ref.invalidate(mapDataProvider);
       }
 
       setState(() {

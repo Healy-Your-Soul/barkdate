@@ -43,10 +43,12 @@ class _FeedScreenState extends State<FeedScreen> {
 
   FilterOptions _filterOptions = FilterOptions();
   bool _isRefreshing = false;
+  // ignore: unused_field
   bool _isLoading = true;
   bool _isInitialLoading = false;
   bool _hasLoadedOnce = false; // Prevent double loading
   List<Dog> _nearbyDogs = [];
+  // ignore: unused_field
   String? _error;
   int _upcomingPlaydates = 0;
   int _unreadNotifications = 0;
@@ -57,6 +59,7 @@ class _FeedScreenState extends State<FeedScreen> {
   List<Event> _suggestedEvents = [];
   List<Map<String, dynamic>> _friendDogs = [];
   String? _myPrimaryDogId;
+  // ignore: unused_field
   Map<String, dynamic> _feedMeta = {};
   final ScrollController _scrollController = ScrollController();
 
@@ -724,126 +727,6 @@ class _FeedScreenState extends State<FeedScreen> {
     }
   }
 
-  Future<void> _loadCheckInStatus() async {
-    try {
-      final user = SupabaseConfig.auth.currentUser;
-      if (user == null) return;
-
-      final checkIn = await CheckInService.getActiveCheckIn(user.id);
-      if (mounted) {
-        setState(() {
-          _hasActiveCheckIn = checkIn != null;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading check-in status: $e');
-    }
-  }
-
-  Future<void> _loadFeedSections() async {
-    try {
-      final user = SupabaseAuth.currentUser;
-      if (user == null) {
-        _loadSampleFeedData();
-        return;
-      }
-
-      // Prepare variables to collect data
-      List<Map<String, dynamic>> playdates = [];
-      List<Event> myEvents = [];
-      List<Event> suggestedEvents = [];
-      List<Map<String, dynamic>> friends = [];
-
-      // Check cache first for quick initial display
-      final cachedPlaydates =
-          CacheService().getCachedPlaydateList(user.id, 'upcoming');
-      if (cachedPlaydates != null) {
-        playdates = cachedPlaydates;
-      }
-
-      final cachedEvents =
-          CacheService().getCachedEventList('suggested_${user.id}');
-      if (cachedEvents != null) {
-        suggestedEvents = cachedEvents.cast<Event>();
-      }
-
-      final cachedFriends =
-          CacheService().getCachedFriendList('user_${user.id}');
-      if (cachedFriends != null) {
-        friends = cachedFriends;
-      }
-
-      // Load fresh data in background
-      String? myDogId;
-      try {
-        final userDogs = await BarkDateUserService.getUserDogs(user.id);
-        if (userDogs.isNotEmpty) {
-          myDogId = userDogs.first['id'] as String?;
-        }
-      } catch (_) {}
-
-      // Parallel fetch all sections
-      final results = await Future.wait([
-        PlaydateQueryService.getUserPlaydatesAggregated(user.id)
-            .catchError((e) {
-          debugPrint('Error loading playdates: $e');
-          return {'upcoming': <Map<String, dynamic>>[]};
-        }),
-        EventService.getUserParticipatingEvents(user.id).catchError((e) {
-          debugPrint('Error loading my events: $e');
-          return <Event>[];
-        }),
-        (myDogId != null
-                ? EventService.getRecommendedEvents(
-                    dogId: myDogId, dogAge: '3', dogSize: 'medium')
-                : EventService.getUpcomingEvents(limit: 8))
-            .catchError((e) {
-          debugPrint('Error loading suggested events: $e');
-          return <Event>[];
-        }),
-        (myDogId != null
-                ? DogFriendshipService.getDogFriends(myDogId)
-                : Future.value(<Map<String, dynamic>>[]))
-            .catchError((e) {
-          debugPrint('Error loading friends: $e');
-          return <Map<String, dynamic>>[];
-        }),
-      ]);
-
-      // Update cache with fresh data
-      playdates =
-          (results[0] as Map)['upcoming'] as List<Map<String, dynamic>>? ?? [];
-      CacheService().cachePlaydateList(user.id, 'upcoming', playdates);
-
-      myEvents = results[1] as List<Event>;
-
-      suggestedEvents = results[2] as List<Event>;
-      CacheService().cacheEventList('suggested_${user.id}', suggestedEvents);
-
-      friends = results[3] as List<Map<String, dynamic>>;
-      if (myDogId != null && friends.isNotEmpty) {
-        CacheService().cacheFriendList('user_${user.id}', friends);
-      }
-
-      // Single setState to update ALL sections at once
-      if (mounted) {
-        setState(() {
-          _upcomingFeedPlaydates = playdates;
-          _myEvents = myEvents;
-          _suggestedEvents = suggestedEvents;
-          _friendDogs = friends;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading feed sections: $e');
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-        });
-      }
-    }
-  }
-
   void _loadSampleFeedData() {
     final now = DateTime.now();
 
@@ -1079,15 +962,6 @@ class _FeedScreenState extends State<FeedScreen> {
         .subscribe();
   }
 
-  void _cancelSubscriptions() {
-    final user = SupabaseAuth.currentUser;
-    if (user != null) {
-      SupabaseConfig.client.channel('notifications_${user.id}').unsubscribe();
-      SupabaseConfig.client.channel('playdates_${user.id}').unsubscribe();
-      SupabaseConfig.client.channel('matches_${user.id}').unsubscribe();
-    }
-  }
-
   void _showFilterSheet() {
     showModalBottomSheet(
       context: context,
@@ -1317,9 +1191,11 @@ class _FeedScreenState extends State<FeedScreen> {
       // Get current user's dog
       final userDogs = await BarkDateUserService.getUserDogs(currentUser.id);
       if (userDogs.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please create a dog profile first')),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please create a dog profile first')),
+          );
+        }
         return;
       }
 
@@ -1333,7 +1209,7 @@ class _FeedScreenState extends State<FeedScreen> {
         toDogId: dog.id,
       );
 
-      if (mounted) {
+      if (context.mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1358,7 +1234,7 @@ class _FeedScreenState extends State<FeedScreen> {
       }
     } catch (e) {
       debugPrint('Error sending bark: $e');
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('Failed to send bark. Please try again.')),
@@ -1393,7 +1269,7 @@ class _FeedScreenState extends State<FeedScreen> {
       }
     } catch (e) {
       debugPrint('Error showing playdate modal: $e');
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content:
@@ -2099,10 +1975,6 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  void _showCheckInOptions() {
-    Navigator.pushNamed(context, '/map');
-  }
-
   void _showCheckOutOptions() {
     showDialog(
       context: context,
@@ -2118,7 +1990,7 @@ class _FeedScreenState extends State<FeedScreen> {
             onPressed: () async {
               Navigator.pop(context);
               final success = await CheckInService.checkOut();
-              if (success && mounted) {
+              if (success && mounted && context.mounted) {
                 setState(() {
                   _hasActiveCheckIn = false;
                 });

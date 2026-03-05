@@ -19,9 +19,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  int _searchRadiusKm = 25;
-  bool _isLoadingRadius = true;
-
   @override
   void initState() {
     super.initState();
@@ -30,23 +27,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSearchRadius() async {
     final user = SupabaseConfig.auth.currentUser;
-    if (user == null) {
-      setState(() => _isLoadingRadius = false);
-      return;
-    }
+    if (user == null) return;
 
     try {
-      final profile =
-          await SupabaseService.selectSingle('users', filters: {'id': user.id});
+      await SupabaseService.selectSingle('users', filters: {'id': user.id});
       if (!mounted) return;
-      setState(() {
-        _searchRadiusKm = (profile?['search_radius_km'] as int?) ?? 25;
-        _isLoadingRadius = false;
-      });
     } catch (e) {
       debugPrint('Error loading search radius: $e');
-      if (!mounted) return;
-      setState(() => _isLoadingRadius = false);
     }
   }
 
@@ -152,7 +139,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       if (mounted) navigator.pop();
 
-      if (mounted) {
+      if (context.mounted) {
         scaffoldMessenger.showSnackBar(
           const SnackBar(
               content: Text('Account deleted successfully'),
@@ -161,8 +148,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         context.go('/auth');
       }
     } catch (e) {
-      if (mounted) Navigator.of(context).pop();
-      if (mounted) {
+      if (context.mounted) Navigator.of(context).pop();
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text('Failed to delete account: $e'),
@@ -207,7 +194,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   final userProfile = await SupabaseService.selectSingle(
                       'users',
                       filters: {'id': user.id});
-                  if (mounted) {
+                  if (context.mounted) {
                     context.push('/create-profile', extra: {
                       'editMode': EditMode.editOwner,
                       'userName': userProfile?['name'],
