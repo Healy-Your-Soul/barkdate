@@ -26,6 +26,7 @@ import 'package:barkdate/screens/map_v2/widgets/place_mini_card.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
+
 /// New map tab with AI assistant, event integration, and improved UX
 class MapTabScreenV2 extends ConsumerStatefulWidget {
   const MapTabScreenV2({super.key});
