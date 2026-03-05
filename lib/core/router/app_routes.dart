@@ -274,11 +274,26 @@ class DogDetailsByIdRoute extends GoRouteData with $DogDetailsByIdRoute {
             .single(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Scaffold(
+              appBar: AppBar(title: const Text('Loading...')),
+              body: const Center(child: CircularProgressIndicator()),
+            );
           }
 
           if (snapshot.hasError || !snapshot.hasData) {
-            return const Center(child: Text('Error loading dog profile'));
+            if (snapshot.hasError) {
+              debugPrint(
+                  'Error loading dog profile (ID: $id): ${snapshot.error}');
+            }
+            return Scaffold(
+              appBar: AppBar(title: const Text('Dog Not Found')),
+              body: const Center(
+                child: Text(
+                  'Error loading dog profile.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
           }
 
           try {
@@ -286,7 +301,11 @@ class DogDetailsByIdRoute extends GoRouteData with $DogDetailsByIdRoute {
             final fetchedDog = Dog.fromJson(dogData);
             return DogDetailsScreen(dog: fetchedDog);
           } catch (e) {
-            return Center(child: Text('Error parsing dog data: $e'));
+            debugPrint('Error parsing dog data (ID: $id): $e');
+            return Scaffold(
+              appBar: AppBar(title: const Text('Error')),
+              body: const Center(child: Text('An unexpected error occurred.')),
+            );
           }
         },
       ),
