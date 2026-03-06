@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:barkdate/core/router/app_routes.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/screens/onboarding/location_permission_screen.dart';
+
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
 

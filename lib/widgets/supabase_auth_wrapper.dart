@@ -6,6 +6,7 @@ import 'package:barkdate/features/auth/presentation/screens/sign_in_screen.dart'
 import 'package:barkdate/screens/onboarding/welcome_screen.dart';
 import 'package:barkdate/services/preload_service.dart';
 import 'package:barkdate/widgets/dog_loading_widget.dart';
+
 enum ProfileStatus {
   complete,
   needsDogProfile,
