@@ -10,9 +10,9 @@ import 'package:barkdate/widgets/event_image_uploader.dart';
 import 'package:barkdate/widgets/location_picker_field.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
 class CreateEventScreen extends StatefulWidget {
   const CreateEventScreen({super.key});

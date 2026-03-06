@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
@@ -41,7 +41,7 @@ class _PlaydatesScreenState extends ConsumerState<PlaydatesScreen> {
                   IconButton(
                     icon: const Icon(Icons.add),
                     onPressed: () {
-                      context.push('/create-playdate');
+                      const CreatePlaydateRoute().push(context);
                     },
                   ),
                 ],
@@ -88,7 +88,7 @@ class _PlaydatesScreenState extends ConsumerState<PlaydatesScreen> {
                               'Try changing your filter or schedule a new one!',
                           actionLabel: 'Schedule a Playdate',
                           onAction: () {
-                            context.push('/create-playdate');
+                            const CreatePlaydateRoute().push(context);
                           },
                         ),
                       ),
@@ -128,7 +128,7 @@ class _PlaydatesScreenState extends ConsumerState<PlaydatesScreen> {
 
     return InkWell(
       onTap: () {
-        context.push('/playdate-details', extra: playdate);
+        PlaydateDetailsRoute($extra: playdate).push(context);
       },
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

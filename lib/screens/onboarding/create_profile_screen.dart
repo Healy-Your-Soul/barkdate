@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:http/http.dart' as http;
-import 'package:go_router/go_router.dart';
 
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
@@ -409,7 +409,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         //   so we must use context.go() to navigate to the main app
         // - edit modes: Screen was pushed as a separate route, so we can pop back
         if (widget.editMode == EditMode.createProfile) {
-          context.go('/home');
+          const HomeRoute().go(context);
         } else {
           Navigator.pop(context, true);
         }
@@ -539,7 +539,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         }
 
         // Navigate to main app
-        context.go('/home');
+        const HomeRoute().go(context);
       }
     } catch (e) {
       if (mounted) {

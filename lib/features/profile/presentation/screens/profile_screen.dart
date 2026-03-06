@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:barkdate/core/config/app_constants.dart';
 import 'package:barkdate/features/profile/presentation/widgets/share_dog_sheet.dart';
 import 'package:barkdate/features/profile/presentation/providers/profile_provider.dart';
 import 'package:barkdate/design_system/app_typography.dart';
+import 'package:barkdate/core/config/app_constants.dart';
 
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
@@ -193,9 +193,9 @@ class ProfileScreen extends ConsumerWidget {
                                   icon: const Icon(Icons.edit,
                                       size: 20, color: Colors.grey),
                                   onPressed: () {
-                                    context.push('/create-profile', extra: {
-                                      'editMode': EditMode.editOwner
-                                    });
+                                    const CreateProfileRoute(
+                                      editMode: EditMode.editOwner,
+                                    ).push(context);
                                   },
                                 ),
                               ],
@@ -207,9 +207,9 @@ class ProfileScreen extends ConsumerWidget {
                                 Expanded(
                                   child: OutlinedButton.icon(
                                     onPressed: () {
-                                      context.push('/create-profile', extra: {
-                                        'editMode': EditMode.addNewDog
-                                      });
+                                      const CreateProfileRoute(
+                                        editMode: EditMode.addNewDog,
+                                      ).push(context);
                                     },
                                     icon: const Icon(Icons.add, size: 16),
                                     label: const Text('Add Dog',
@@ -292,7 +292,7 @@ class ProfileScreen extends ConsumerWidget {
                       context,
                       icon: Icons.settings_outlined,
                       title: 'Account settings',
-                      onTap: () => context.go('/profile/settings'),
+                      onTap: () => const SettingsRoute().go(context),
                     ),
                     if (AppConstants.adminEmails
                         .contains(SupabaseConfig.auth.currentUser?.email))
@@ -300,19 +300,19 @@ class ProfileScreen extends ConsumerWidget {
                         context,
                         icon: Icons.admin_panel_settings_outlined,
                         title: 'Admin Panel',
-                        onTap: () => context.push('/admin'),
+                        onTap: () => const AdminRoute().push(context),
                       ),
                     _buildMenuItem(
                       context,
                       icon: Icons.rss_feed,
                       title: 'Social Feed',
-                      onTap: () => context.go('/profile/social-feed'),
+                      onTap: () => const ProfileSocialFeedRoute().go(context),
                     ),
                     _buildMenuItem(
                       context,
                       icon: Icons.emoji_events_outlined,
                       title: 'Achievements',
-                      onTap: () => context.push('/achievements'),
+                      onTap: () => const AchievementsRoute().push(context),
                     ),
                     _buildMenuItem(
                       context,
@@ -333,7 +333,7 @@ class ProfileScreen extends ConsumerWidget {
                       onTap: () async {
                         await SupabaseConfig.auth.signOut();
                         if (context.mounted) {
-                          context.go('/auth');
+                          const AuthRoute().go(context);
                         }
                       },
                     ),
@@ -352,7 +352,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildLargeDogCard(BuildContext context, WidgetRef ref, dynamic dog) {
     return GestureDetector(
       onTap: () {
-        context.push('/dog-details', extra: dog);
+        DogDetailsRoute($extra: dog).push(context);
       },
       child: Container(
         width: 280, // Much wider card
@@ -378,11 +378,10 @@ class ProfileScreen extends ConsumerWidget {
                 icon: const Icon(Icons.more_vert, size: 24, color: Colors.grey),
                 onSelected: (value) async {
                   if (value == 'edit') {
-                    final result =
-                        await context.push<bool>('/create-profile', extra: {
-                      'editMode': EditMode.editDog,
-                      'dogId': dog.id,
-                    });
+                    final result = await CreateProfileRoute(
+                      editMode: EditMode.editDog,
+                      dogId: dog.id,
+                    ).push<bool>(context);
                     // Refresh dog list when returning from edit
                     if (result == true) {
                       ref.invalidate(userDogsProvider);
@@ -634,8 +633,9 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildAddDogCard(BuildContext context, {bool isLarge = false}) {
     return GestureDetector(
       onTap: () {
-        context.push('/create-profile',
-            extra: {'editMode': EditMode.createProfile});
+        const CreateProfileRoute(
+          editMode: EditMode.createProfile,
+        ).push(context);
       },
       child: Container(
         width: isLarge ? 160 : 120,

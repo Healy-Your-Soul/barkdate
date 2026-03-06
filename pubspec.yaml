@@ -61,6 +61,7 @@ dev_dependencies:
   freezed: ^3.2.3
   json_serializable: ^6.11.2
   flutter_launcher_icons: ^0.14.3
+  go_router_builder: ^4.2.0
 
 # App icon configuration
 flutter_launcher_icons:

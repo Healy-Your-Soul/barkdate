@@ -6,6 +6,7 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/models/notification.dart';
 import 'package:barkdate/services/in_app_notification_service.dart';
 import 'package:barkdate/services/notification_sound_service.dart';
+
 import 'package:barkdate/core/router/app_router.dart';
 import 'package:go_router/go_router.dart';
 

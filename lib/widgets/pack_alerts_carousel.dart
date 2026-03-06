@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:barkdate/models/friend_alert.dart';
 import 'package:barkdate/features/feed/presentation/providers/friend_activity_provider.dart';
 import 'package:barkdate/widgets/pack_alert_card.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/design_system/app_spacing.dart';
+import 'package:go_router/go_router.dart';
+import 'package:barkdate/core/router/app_routes.dart';
+import 'package:barkdate/models/dog.dart';
 
 /// A horizontally scrollable carousel of PackAlertCards.
 /// Auto-advances every 5 seconds with page indicator dots.
@@ -58,7 +60,27 @@ class _PackAlertsCarouselState extends ConsumerState<PackAlertsCarousel> {
     if (route != null && route.isNotEmpty) {
       // Parse route — may contain query params
       final uri = Uri.parse(route);
-      context.push(uri.path, extra: alert.metadata);
+      debugPrint('Navigating to ${uri.path} with metadata ${alert.metadata}');
+
+      if (uri.path == '/social-feed') {
+        const SocialFeedRoute().push(context);
+      } else if (uri.path == '/map') {
+        const MapRoute().go(context);
+      } else if (uri.path == '/dog-details') {
+        if (alert.metadata != null) {
+          DogDetailsRoute($extra: Dog.fromJson(alert.metadata!)).push(context);
+        }
+      } else if (uri.path == '/playdate-details') {
+        if (alert.metadata != null) {
+          PlaydateDetailsRoute($extra: alert.metadata!).push(context);
+        }
+      } else if (uri.path == '/event-details') {
+        EventDetailsRoute($extra: alert.metadata).push(context);
+      } else {
+        debugPrint(
+            'WARNING: Unhandled route in PackAlertsCarousel: $route. Falling back to untyped context.push.');
+        context.push(route, extra: alert.metadata);
+      }
     }
   }
 
