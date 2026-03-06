@@ -10,7 +10,6 @@ import 'package:barkdate/services/selected_image.dart';
 import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 import 'package:barkdate/services/dog_breed_service.dart';
 import 'package:barkdate/widgets/location_picker_field.dart';
-
 enum EditMode { createProfile, editDog, editOwner, editBoth, addNewDog }
 
 class CreateProfileScreen extends StatefulWidget {

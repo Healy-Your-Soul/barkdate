@@ -81,7 +81,9 @@ extension AppDelegate {
     let userInfo = response.notification.request.content.userInfo
     print("📱 Notification tapped: \(userInfo)")
     
-    // Let Flutter handle the notification tap
-    completionHandler()
+    // CRITICAL: call super FIRST so the firebase_messaging Flutter plugin
+    // intercepts the tap and fires onMessageOpenedApp / getInitialMessage().
+    // Calling completionHandler() directly (without super) bypasses the plugin.
+    super.userNotificationCenter(center, didReceive: response, withCompletionHandler: completionHandler)
   }
 }

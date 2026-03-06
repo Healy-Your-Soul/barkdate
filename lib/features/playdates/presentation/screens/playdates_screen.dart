@@ -7,7 +7,6 @@ import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 
 import 'package:barkdate/core/presentation/widgets/filter_tabs.dart';
-
 class PlaydatesScreen extends ConsumerStatefulWidget {
   const PlaydatesScreen({super.key});
 

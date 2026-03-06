@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/services/qr_checkin_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-
 /// Screen for handling QR code check-ins (via deep link or web)
 class QrCheckInScreen extends StatefulWidget {
   final String? parkId;

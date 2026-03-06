@@ -4,7 +4,6 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
 
 permissions:
   contents: write
@@ -61,5 +60,4 @@ jobs:
         run: flutter test
 
       - name: Build APK
-        if: github.ref == 'refs/heads/main'
         run: flutter build apk --debug

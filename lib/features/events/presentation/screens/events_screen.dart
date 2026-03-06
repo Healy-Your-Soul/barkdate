@@ -8,7 +8,6 @@ import 'package:barkdate/design_system/app_typography.dart';
 
 import 'package:barkdate/core/presentation/widgets/filter_tabs.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-
 class EventsScreen extends ConsumerStatefulWidget {
   const EventsScreen({super.key});
 
