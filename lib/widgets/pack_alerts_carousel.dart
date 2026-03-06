@@ -140,7 +140,7 @@ class _PackAlertsCarouselState extends ConsumerState<PackAlertsCarousel> {
 
             // Card carousel
             SizedBox(
-              height: 180,
+              height: 190,
               child: GestureDetector(
                 onPanDown: (_) {
                   _userInteracting = true;

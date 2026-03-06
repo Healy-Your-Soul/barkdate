@@ -39,7 +39,6 @@ class PackAlertCard extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
             // Icon + Headline row
             Row(
@@ -72,9 +71,11 @@ class PackAlertCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
 
+            // Push the button to the bottom
+            const Spacer(),
+
             // CTA button
-            if (alert.ctaLabel != null) ...[
-              const SizedBox(height: 16),
+            if (alert.ctaLabel != null)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -97,7 +98,6 @@ class PackAlertCard extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
           ],
         ),
       ),
