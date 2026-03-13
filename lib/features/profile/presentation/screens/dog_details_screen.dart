@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
@@ -12,6 +12,7 @@ import 'package:barkdate/features/profile/presentation/providers/profile_provide
 import 'package:barkdate/features/feed/presentation/providers/feed_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:barkdate/widgets/send_walk_sheet.dart';
+import 'package:go_router/go_router.dart';
 
 class DogDetailsScreen extends ConsumerStatefulWidget {
   final Dog dog;
@@ -202,12 +203,12 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
 
       if (mounted) {
         // Navigate to chat screen
-        context.push('/chat', extra: {
-          'matchId': conversationId, // ChatScreen uses matchId
-          'recipientId': widget.dog.ownerId,
-          'recipientName': widget.dog.ownerName,
-          'recipientAvatarUrl': widget.dog.ownerAvatarUrl,
-        });
+        ChatRoute(
+          matchId: conversationId, // ChatScreen uses matchId
+          recipientId: widget.dog.ownerId,
+          recipientName: widget.dog.ownerName,
+          recipientAvatarUrl: widget.dog.ownerAvatarUrl ?? '',
+        ).push(context);
       }
     } catch (e) {
       debugPrint('❌ Error starting conversation: $e');
@@ -220,7 +221,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
   }
 
   void _onSuggestPlaydate() {
-    context.push('/create-playdate', extra: widget.dog);
+    CreatePlaydateRoute($extra: widget.dog).push(context);
   }
 
   @override

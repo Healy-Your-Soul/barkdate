@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:barkdate/widgets/dog_loading_widget.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:barkdate/widgets/dog_loading_widget.dart';
 import 'package:barkdate/features/feed/presentation/providers/feed_provider.dart';
 import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 import 'package:barkdate/features/events/presentation/providers/event_provider.dart';
@@ -79,7 +79,8 @@ class FeedFeatureScreen extends ConsumerWidget {
                                 );
                               },
                             ),
-                            onPressed: () => context.push('/notifications'),
+                            onPressed: () =>
+                                const NotificationsRoute().push(context),
                           ),
                         ],
                       ),
@@ -212,6 +213,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                   );
                 },
               ),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
               // Nearby Dogs List
               nearbyDogsAsync.when(
@@ -246,44 +248,10 @@ class FeedFeatureScreen extends ConsumerWidget {
                     );
                   }
 
-                  // Fixed height list for nested scrolling
+                  // Use a fixed-height horizontal list to prevent pushing content down
                   return SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: 400, // Fixed height window for the list
-                      child: ListView.builder(
-                        padding: EdgeInsets.zero,
-                        itemCount: dogs.length,
-                        itemBuilder: (context, index) {
-                          final dog = dogs[index];
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: AppSpacing.xs,
-                            ),
-                            child: DogCard(
-                              dog: dog,
-                              // Use actual friendship status if available, otherwise use tab mode
-                              // This ensures friends show "In Pack" even in "All Dogs" tab
-                              isFriend: dog.isFriend ?? isPackMode,
-                              onTap: () {
-                                context.push('/dog-details', extra: dog);
-                              },
-                              onBarkPressed: () {
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  backgroundColor: Colors.transparent,
-                                  builder: (_) => SendWalkSheet(targetDog: dog),
-                                );
-                              },
-                              onPlaydatePressed: () {
-                                context.push('/create-playdate', extra: dog);
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                    child:
+                        _HorizontalDogList(dogs: dogs, isPackMode: isPackMode),
                   );
                 },
                 loading: () => const SliverToBoxAdapter(
@@ -323,7 +291,7 @@ class FeedFeatureScreen extends ConsumerWidget {
               // 3. Upcoming Playdates Section (MOVED DOWN)
               SliverToBoxAdapter(
                 child: _buildSectionHeader(context, "Upcoming Walks", () {
-                  context.go('/playdates');
+                  const PlaydatesRoute().go(context);
                 }),
               ),
               SliverToBoxAdapter(
@@ -362,7 +330,7 @@ class FeedFeatureScreen extends ConsumerWidget {
               // 4. Suggested Events Section
               SliverToBoxAdapter(
                 child: _buildSectionHeader(context, "Suggested Events", () {
-                  context.go('/events');
+                  const EventsRoute().go(context);
                 }),
               ),
               SliverToBoxAdapter(
@@ -437,22 +405,22 @@ class FeedFeatureScreen extends ConsumerWidget {
             icon: Icons.calendar_today_outlined,
             label: 'Walks',
             value: playdatesAsync.value?.length.toString() ?? '-',
-            onTap: () => context.go('/playdates'),
+            onTap: () => const PlaydatesRoute().go(context),
           ),
           _buildDashboardItem(
             context,
             icon: Icons.pets_outlined,
             label: 'Walks',
             value: statsAsync.value?['barks'].toString() ?? '-',
-            onTap: () =>
-                context.go('/messages'), // Navigate to messages/friends
+            onTap: () => const MessagesRoute()
+                .go(context), // Navigate to messages/friends
           ),
           _buildDashboardItem(
             context,
             icon: Icons.notifications_none_outlined,
             label: 'Alerts',
             value: null, // Value managed by child builder
-            onTap: () => context.go('/notifications'),
+            onTap: () => const NotificationsRoute().go(context),
             valueBuilder: (context) => Consumer(
               builder: (context, ref, _) {
                 final unreadAsync = ref.watch(unreadNotificationCountProvider);
@@ -657,7 +625,7 @@ class FeedFeatureScreen extends ConsumerWidget {
     return GestureDetector(
       onTap: () {
         if (playdateId != null) {
-          context.push('/playdate-details', extra: playdate);
+          PlaydateDetailsRoute($extra: playdate).push(context);
         }
       },
       child: Container(
@@ -1048,7 +1016,7 @@ class FeedFeatureScreen extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        context.push('/event-details', extra: event);
+        EventDetailsRoute($extra: event).push(context);
       },
       child: Container(
         width: 200,
@@ -1125,7 +1093,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                     ],
                   ),
                   TextButton.icon(
-                    onPressed: () => context.push('/social-feed'),
+                    onPressed: () => const SocialFeedRoute().push(context),
                     icon: const Icon(Icons.arrow_forward, size: 16),
                     label: const Text('See All'),
                     style: TextButton.styleFrom(
@@ -1148,7 +1116,8 @@ class FeedFeatureScreen extends ConsumerWidget {
 
               // Create Post CTA - Opens create post dialog
               GestureDetector(
-                onTap: () => context.push('/social-feed?create=true'),
+                onTap: () =>
+                    const SocialFeedRoute(openCreatePost: true).push(context),
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -1218,8 +1187,8 @@ class FeedFeatureScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () =>
-                          context.push('/social-feed?tab=0'), // For You tab
+                      onPressed: () => const SocialFeedRoute(initialTab: 0)
+                          .push(context), // For You tab
                       icon: Icon(Icons.pets,
                           size: 18,
                           color: Theme.of(context).colorScheme.primary),
@@ -1235,8 +1204,8 @@ class FeedFeatureScreen extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () =>
-                          context.push('/social-feed?tab=1'), // Following tab
+                      onPressed: () => const SocialFeedRoute(initialTab: 1)
+                          .push(context), // Following tab
                       icon: const Icon(Icons.group_outlined, size: 18),
                       label: const Text('Friends'),
                       style: OutlinedButton.styleFrom(
@@ -1721,7 +1690,7 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
               dog: Dog.fromJson(dog),
               isFriend: false,
               onTap: () =>
-                  context.push('/dog-details', extra: Dog.fromJson(dog)),
+                  DogDetailsRoute($extra: Dog.fromJson(dog)).push(context),
               onBarkPressed: () async {
                 final currentUser = SupabaseConfig.auth.currentUser;
                 if (currentUser == null) return;
@@ -1746,7 +1715,7 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
                 }
               },
               onPlaydatePressed: () =>
-                  context.push('/create-playdate', extra: Dog.fromJson(dog)),
+                  CreatePlaydateRoute($extra: Dog.fromJson(dog)).push(context),
             ),
           );
         },
@@ -1810,7 +1779,8 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
           child: DogCard(
             dog: Dog.fromJson(dog),
             isFriend: false,
-            onTap: () => context.push('/dog-details', extra: Dog.fromJson(dog)),
+            onTap: () =>
+                DogDetailsRoute($extra: Dog.fromJson(dog)).push(context),
             onBarkPressed: () async {
               // Implement actual bark functionality
               final currentUser = SupabaseConfig.auth.currentUser;
@@ -1826,10 +1796,12 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
                 final userDogs =
                     await BarkDateUserService.getUserDogs(currentUser.id);
                 if (userDogs.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Please add a dog profile first')),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Please add a dog profile first')),
+                    );
+                  }
                   return;
                 }
 
@@ -1862,10 +1834,144 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
               }
             },
             onPlaydatePressed: () =>
-                context.push('/create-playdate', extra: Dog.fromJson(dog)),
+                CreatePlaydateRoute($extra: Dog.fromJson(dog)).push(context),
           ),
         );
       },
+    );
+  }
+}
+
+class _HorizontalDogList extends StatefulWidget {
+  final List<Dog> dogs;
+  final bool isPackMode;
+
+  const _HorizontalDogList({
+    required this.dogs,
+    required this.isPackMode,
+  });
+
+  @override
+  State<_HorizontalDogList> createState() => _HorizontalDogListState();
+}
+
+class _HorizontalDogListState extends State<_HorizontalDogList> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollNext() {
+    if (!_scrollController.hasClients) return;
+
+    // The width of one item + its right padding
+    const double itemWidth = 140.0 + 16.0;
+
+    // The total width currently visible in the horizontal list
+    final double viewportWidth = _scrollController.position.viewportDimension;
+
+    // Calculate how many full cards can fit entirely in the current viewport
+    // (We subtract a little bit of tolerance, e.g. 16px, to ensure we don't accidentally over-scroll
+    // if a card is just barely cut off).
+    final int cardsInView = (viewportWidth / itemWidth).floor();
+
+    // Ensure we always scroll by at least one card
+    final int cardsToScroll = cardsInView > 0 ? cardsInView : 1;
+
+    final double scrollAmount = cardsToScroll * itemWidth;
+
+    // Don't scroll past the maximum scroll extent
+    final double maxScroll = _scrollController.position.maxScrollExtent;
+    final double targetOffset =
+        (_scrollController.offset + scrollAmount).clamp(0.0, maxScroll);
+
+    _scrollController.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        SizedBox(
+          height: 240, // Height increased to fix bottom overflow
+          child: ListView.builder(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            padding: const EdgeInsets.only(left: 24, right: 32, bottom: 16),
+            itemCount: widget.dogs.length,
+            itemBuilder: (context, index) {
+              final dog = widget.dogs[index];
+              return Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: SizedBox(
+                  width: 140, // Fixed width for horizontal scrolling
+                  child: DogCard(
+                    dog: dog,
+                    compact: true,
+                    // Use actual friendship status if available, otherwise use tab mode
+                    // This ensures friends show "In Pack" even in "All Dogs" tab
+                    isFriend: dog.isFriend ?? widget.isPackMode,
+                    onTap: () {
+                      DogDetailsRoute($extra: dog).push(context);
+                    },
+                    onBarkPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => SendWalkSheet(targetDog: dog),
+                      );
+                    },
+                    onPlaydatePressed: () {
+                      CreatePlaydateRoute($extra: dog).push(context);
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        // Scroll indicator arrow
+        if (widget.dogs.length > 1)
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 16, // Accounts for bottom padding
+            child: GestureDetector(
+              onTap: _scrollNext,
+              child: Container(
+                width: 32,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.0),
+                      Colors.white.withValues(alpha: 0.8),
+                      Colors.white,
+                    ],
+                  ),
+                ),
+                child: Icon(
+                  Icons.chevron_right,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.6),
+                  size: 28,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

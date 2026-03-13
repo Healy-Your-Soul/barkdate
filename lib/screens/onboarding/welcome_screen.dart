@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:go_router/go_router.dart';
 import 'package:barkdate/screens/onboarding/location_permission_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -57,7 +57,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       );
     } else {
       // Shouldn't happen, but fallback to auth screen
-      context.go('/auth');
+      const AuthRoute().go(context);
     }
   }
 
@@ -71,7 +71,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back,
               color: Theme.of(context).colorScheme.onSurface),
-          onPressed: () => context.go('/auth'),
+          onPressed: () => const AuthRoute().go(context),
           tooltip: 'Back to Sign In',
         ),
       ),

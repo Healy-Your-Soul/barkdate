@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:barkdate/services/dog_sharing_service.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:go_router/go_router.dart';
 
 class AcceptShareScreen extends ConsumerStatefulWidget {
   final String? initialCode;
@@ -89,8 +89,6 @@ class _AcceptShareScreenState extends ConsumerState<AcceptShareScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(

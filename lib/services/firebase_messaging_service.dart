@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart' hide Priority;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/models/notification.dart';
 import 'package:barkdate/services/in_app_notification_service.dart';
 import 'package:barkdate/services/notification_sound_service.dart';
+
 import 'package:barkdate/core/router/app_router.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
@@ -106,7 +108,7 @@ class FirebaseMessagingService {
     );
 
     await _localNotifications.initialize(
-      initializationSettings,
+      settings: initializationSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
@@ -221,6 +223,18 @@ class FirebaseMessagingService {
       FirebaseMessaging.onBackgroundMessage(
           _firebaseMessagingBackgroundHandler);
     }
+
+    // Handle cold-start tap: app was terminated and user tapped a notification.
+    // Use addPostFrameCallback so the router is mounted before we navigate.
+    SchedulerBinding.instance.addPostFrameCallback((_) async {
+      final initialMessage =
+          await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null) {
+        debugPrint(
+            '🚀 Cold-start notification tap: ${initialMessage.messageId}');
+        await _handleNotificationNavigation(initialMessage);
+      }
+    });
 
     // Listen for token refresh
     _firebaseMessaging.onTokenRefresh.listen((newToken) async {
@@ -342,10 +356,10 @@ class FirebaseMessagingService {
 
     // Show local notification
     await _localNotifications.show(
-      notification.id.hashCode,
-      title,
-      body,
-      notificationDetails,
+      id: notification.id.hashCode,
+      title: title,
+      body: body,
+      notificationDetails: notificationDetails,
       payload: jsonEncode({
         'type': notification.type.name,
         'id': notification.id,
@@ -360,21 +374,9 @@ class FirebaseMessagingService {
     RemoteMessage message,
     BarkDateNotification notification,
   ) {
-    // Get image URL from message data
-    final imageUrl = message.data['image_url'];
-
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      // Big picture style for image notifications
-      return BigPictureStyleInformation(
-        FilePathAndroidBitmap(imageUrl), // Use file path for now
-        contentTitle: notification.title,
-        htmlFormatContentTitle: true,
-        summaryText: notification.body,
-        htmlFormatSummaryText: true,
-      );
-    }
-
     // Big text style for long notifications
+    // Note: BigPictureStyleInformation requires a local file path, not a URL.
+    // Remote image support can be added later by downloading the image first.
     if (notification.body.length > 50) {
       return BigTextStyleInformation(
         notification.body,
@@ -416,10 +418,12 @@ class FirebaseMessagingService {
 
     switch (type) {
       case NotificationType.bark:
-        // Navigate to dog profile
-        if (data['sender_dog_name'] != null) {
-          // Ideally we would navigate to the specific dog, but we might only have names
-          // Navigating to matches or feed is safer
+        // Navigate to the specific dog profile if we have an ID,
+        // otherwise fall back to the matches screen.
+        final dogId = data['related_id'] ?? data['sender_dog_id'];
+        if (dogId != null) {
+          GoRouter.of(context).push('/dog-details/$dogId');
+        } else {
           GoRouter.of(context).push('/matches');
         }
         break;
@@ -623,7 +627,7 @@ class FirebaseMessagingService {
 
   /// Clear notification by ID
   static Future<void> clearNotification(int notificationId) async {
-    await _localNotifications.cancel(notificationId);
+    await _localNotifications.cancel(id: notificationId);
   }
 }
 

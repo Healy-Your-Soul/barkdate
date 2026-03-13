@@ -50,19 +50,14 @@ class _DogSearchSheetState extends State<DogSearchSheet>
       if (userId == null) throw Exception('User not logged in');
 
       // Call the RPC function we created
-      final response = await SupabaseConfig.client.rpc(
+      final data = (await SupabaseConfig.client.rpc(
         'search_dogs_for_playdate',
         params: {
           'search_query': query?.isEmpty == true ? null : query,
           'user_id': userId,
           'limit_count': 50,
         },
-      );
-
-      final List<dynamic> data = response as List<dynamic>;
-      final allDogs = data.map((json) {
-        return _mapToDog(json);
-      }).toList();
+      )) as List<dynamic>;
 
       setState(() {
         // Filter based on 'is_friend' from RPC response

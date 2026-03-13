@@ -397,9 +397,11 @@ class _CheckInStatusBannerState extends State<CheckInStatusBanner> {
           ),
           TextButton(
             onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
               final success = await CheckInService.checkOut();
-              if (success && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+              if (!success) return;
+              if (mounted) {
+                messenger.showSnackBar(
                   const SnackBar(
                     content: Text('Checked out successfully! 🐾'),
                     backgroundColor: Colors.green,

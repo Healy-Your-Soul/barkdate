@@ -13,6 +13,8 @@ import 'package:barkdate/firebase_options.dart';
 import 'package:barkdate/utils/maps_js_bridge.dart';
 import 'package:barkdate/app.dart';
 
+import 'package:barkdate/services/feature_flags.dart';
+
 /// A Completer that completes when the Google Maps API is ready.
 final mapsApiReadyCompleter = Completer<void>();
 
@@ -48,6 +50,9 @@ void main() async {
 
   // Initialize comprehensive notification system
   await NotificationManager.initialize();
+
+  // Initialize Feature Flags
+  await FeatureFlags.init();
 
   // Start cache cleanup (periodic cleanup every minute)
   CacheService().startPeriodicCleanup();

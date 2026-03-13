@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:http/http.dart' as http;
-import 'package:go_router/go_router.dart';
 
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
@@ -351,7 +351,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       }
 
       // 2) Add dog profile (DOG FIRST! 🐕)
-      final dogData = await BarkDateUserService.addDog(userId, {
+      await BarkDateUserService.addDog(userId, {
         'name': _dogNameController.text.trim(),
         'breed': _dogBreedController.text.trim(),
         'age': int.tryParse(_dogAgeController.text) ?? 1,
@@ -409,7 +409,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         //   so we must use context.go() to navigate to the main app
         // - edit modes: Screen was pushed as a separate route, so we can pop back
         if (widget.editMode == EditMode.createProfile) {
-          context.go('/home');
+          const HomeRoute().go(context);
         } else {
           Navigator.pop(context, true);
         }
@@ -539,7 +539,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         }
 
         // Navigate to main app
-        context.go('/home');
+        const HomeRoute().go(context);
       }
     } catch (e) {
       if (mounted) {
@@ -1760,10 +1760,12 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         // Validate dog info
         if (_dogNameController.text.isEmpty ||
             _dogBreedController.text.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Please enter your dog\'s name and breed')),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Please enter your dog\'s name and breed')),
+            );
+          }
           return;
         }
 
@@ -1864,9 +1866,11 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       } else if (widget.editMode == EditMode.editOwner) {
         // Validate owner info
         if (_ownerNameController.text.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please enter your name')),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Please enter your name')),
+            );
+          }
           return;
         }
 

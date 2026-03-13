@@ -175,7 +175,7 @@ class _MapSearchBarState extends ConsumerState<MapSearchBar> {
   void _executeSearch(String query) {
     ref.read(mapFiltersProvider.notifier).setSearchQuery(query);
     // Trigger a refresh of map data
-    ref.refresh(mapDataProvider);
+    ref.invalidate(mapDataProvider);
   }
 
   void _onSubmitted(String value) {
@@ -189,7 +189,7 @@ class _MapSearchBarState extends ConsumerState<MapSearchBar> {
     _controller.clear();
     _removeOverlay();
     ref.read(mapFiltersProvider.notifier).setSearchQuery('');
-    ref.refresh(mapDataProvider);
+    ref.invalidate(mapDataProvider);
   }
 
   @override

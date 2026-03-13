@@ -5,6 +5,7 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 import 'package:barkdate/features/notifications/presentation/widgets/notifications_app_bar.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 
 import 'package:barkdate/supabase/notification_service.dart';
 
@@ -132,27 +133,30 @@ class NotificationsScreen extends ConsumerWidget {
           case 'playdate_request':
           case 'playdate_confirmed':
             // Navigate to playdates tab
-            Navigator.of(context).pushNamed('/playdates');
+            const PlaydatesRoute().push(context);
             break;
           case 'message':
             // Navigate to messages or specific chat if we have conversation data
             if (metadata != null && metadata['conversation_id'] != null) {
-              Navigator.of(context).pushNamed('/chat', arguments: {
-                'conversationId': metadata['conversation_id'],
-              });
+              ChatRoute(
+                matchId: metadata['conversation_id'],
+                recipientId: '',
+                recipientName: 'Unknown',
+                recipientAvatarUrl: '',
+              ).push(context);
             } else {
-              Navigator.of(context).pushNamed('/messages');
+              const MessagesRoute().push(context);
             }
             break;
           case 'bark':
             // Navigate to dog profile if we have the dog ID
             if (relatedId != null) {
-              Navigator.of(context).pushNamed('/dog/$relatedId');
+              DogDetailsByIdRoute(id: relatedId).push(context);
             }
             break;
           case 'event':
             // Navigate to events
-            Navigator.of(context).pushNamed('/events');
+            const EventsRoute().push(context);
             break;
           default:
             // Just close and stay on notifications

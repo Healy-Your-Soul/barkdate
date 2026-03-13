@@ -34,7 +34,7 @@ class _BarkDateAppState extends ConsumerState<BarkDateApp> {
       _achievementSubscription =
           RealtimeService().achievementStream.listen((event) {
         final context = _navigatorKey.currentContext;
-        if (context != null) {
+        if (context != null && context.mounted) {
           showAchievementToast(
             context,
             name: event.name,
@@ -54,7 +54,7 @@ class _BarkDateAppState extends ConsumerState<BarkDateApp> {
         _achievementSubscription =
             RealtimeService().achievementStream.listen((event) {
           final context = _navigatorKey.currentContext;
-          if (context != null) {
+          if (context != null && context.mounted) {
             showAchievementToast(
               context,
               name: event.name,

@@ -299,7 +299,6 @@ class _MapScreenState extends State<MapScreen> {
                 BitmapDescriptor.hueViolet);
             break;
           case PlaceCategory.other:
-          default:
             markerIcon =
                 BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
         }
@@ -608,55 +607,6 @@ class _MapScreenState extends State<MapScreen> {
         });
       }
     }
-  }
-
-  List<String> _generateSuggestions(String query) {
-    final lowerQuery = query.toLowerCase().trim();
-    final suggestions = <String>[];
-
-    // Predefined smart suggestions (Google-style)
-    final predefinedSuggestions = [
-      'dog park near me',
-      'dog-friendly cafes',
-      'pet stores',
-      'veterinary clinics',
-      'dog beach',
-      'dog-friendly restaurants',
-      'off-leash dog areas',
-      'dog daycare',
-      'dog grooming',
-      'puppy training classes',
-    ];
-
-    // Add matching predefined suggestions
-    for (final suggestion in predefinedSuggestions) {
-      if (suggestion.toLowerCase().contains(lowerQuery)) {
-        suggestions.add(suggestion);
-      }
-    }
-
-    // Add suggestions based on loaded places (if available)
-    for (final place in _searchResults) {
-      if (place.name.toLowerCase().contains(lowerQuery)) {
-        if (!suggestions.contains(place.name)) {
-          suggestions.add(place.name);
-        }
-      }
-    }
-
-    // If no suggestions, add helpful defaults
-    if (suggestions.isEmpty) {
-      if (lowerQuery.length >= 2) {
-        suggestions.addAll([
-          'dog park near me',
-          'pet-friendly places near me',
-          'dog cafes',
-        ]);
-      }
-    }
-
-    // Limit to 8 suggestions (Google-like)
-    return suggestions.take(8).toList();
   }
 
   @override
@@ -1149,24 +1099,29 @@ class _MapScreenState extends State<MapScreen> {
         _activeCheckIn = checkIn;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Woof! I\'m checked in at ${park['name']}! 🐕'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Woof! I\'m checked in at ${park['name']}! 🐕'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        );
+      }
 
       // Refresh dog counts
       _loadParksData();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to check in. Please try again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to check in. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

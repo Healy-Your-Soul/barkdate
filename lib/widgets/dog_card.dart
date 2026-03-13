@@ -14,6 +14,7 @@ class DogCard extends StatefulWidget {
   final bool isFriend; // Whether this dog is already in the user's pack
   final VoidCallback?
       onAddToPackPressed; // For non-friends: send bark/friend request
+  final bool compact; // If true, uses a portrait-style card layout
 
   const DogCard({
     super.key,
@@ -24,6 +25,7 @@ class DogCard extends StatefulWidget {
     this.onTap,
     this.isFriend = true, // Default to true for backwards compatibility
     this.onAddToPackPressed,
+    this.compact = false,
   });
 
   @override
@@ -438,15 +440,208 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
     );
   }
 
+  Widget _buildCompactLayout(ThemeData theme, Dog dog) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side:
+            BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: widget.onTap ?? widget.onOpenProfile,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Dog photo taking up top half
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  dog.photos.isNotEmpty
+                      ? Image.network(
+                          dog.photos.first,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              _buildFallbackIcon(theme),
+                        )
+                      : _buildFallbackIcon(theme),
+
+                  // Options menu in top right over photo
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: ContentOptionsMenu(
+                        contentType: 'dog_profile',
+                        contentId: dog.id,
+                        ownerId: dog.ownerId,
+                        ownerName: dog.ownerName,
+                        iconColor: Colors.white,
+                        onViewProfile: widget.onTap ?? widget.onOpenProfile,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Details in bottom half
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    dog.name,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                  Text(
+                    dog.breed,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                  Text(
+                    '${dog.distanceKm.toStringAsFixed(1)} km away',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                      fontSize: 10,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Only Primary Action Button (Bark or Play, no Profile button)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 32,
+                    child: widget.isFriend
+                        ? _buildFriendButtonsCompact(theme)
+                        : _buildNonFriendButtonsCompact(theme),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFallbackIcon(ThemeData theme) {
+    return Container(
+      color: theme.colorScheme.primaryContainer,
+      child: Center(
+        child: Icon(
+          Icons.pets,
+          color: theme.colorScheme.primary,
+          size: 32,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFriendButtonsCompact(ThemeData theme) {
+    // Only return the top priority button for compact mode
+    if (_playdateStatus == 'confirmed') {
+      return OutlinedButton(
+        onPressed: _showPlaydatePopup,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.green,
+          side: const BorderSide(color: Colors.green, width: 1),
+          padding: EdgeInsets.zero,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        child: const Text('Edit Playdate',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+      );
+    }
+    return AnimatedBuilder(
+      animation: _barkScaleAnimation,
+      builder: (context, child) => Transform.scale(
+        scale: _barkScaleAnimation.value,
+        child: Material(
+          color: const Color(0xFF4CAF50),
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            onTap: _hasBarked ? null : _handleBarkPressed,
+            borderRadius: BorderRadius.circular(16),
+            child: Center(
+              child: Text(
+                _hasBarked ? 'Barked!' : 'Bark',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNonFriendButtonsCompact(ThemeData theme) {
+    return ElevatedButton(
+      onPressed: widget.onAddToPackPressed ?? widget.onBarkPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFFE89E5F), // Orange brand color
+        foregroundColor: Colors.white,
+        elevation: 0,
+        padding: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      child: Text(
+        'Add to Pack',
+        style: theme.textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+          fontSize: 11,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final dog = widget.dog;
+
+    if (widget.compact) {
+      return _buildCompactLayout(theme, dog);
+    }
 
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+            color: theme.colorScheme.outline.withValues(
+                alpha: 0.3)), // Added border here as well for consistency
+      ),
       child: InkWell(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(16),
@@ -466,33 +661,9 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
                           height: 60,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
-                              Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: Icon(
-                              Icons.pets,
-                              color: theme.colorScheme.primary,
-                              size: 24,
-                            ),
-                          ),
+                              _buildFallbackIcon(theme),
                         )
-                      : Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          child: Icon(
-                            Icons.pets,
-                            color: theme.colorScheme.primary,
-                            size: 24,
-                          ),
-                        ),
+                      : _buildFallbackIcon(theme),
                 ),
               ),
               const SizedBox(width: 12),

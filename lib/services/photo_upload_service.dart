@@ -595,20 +595,3 @@ extension PhotoPickerExtension on BuildContext {
         maxImages: maxImages);
   }
 }
-
-/// Compress raw bytes (web-safe)
-Future<Uint8List> _compressBytes(Uint8List input,
-    {int maxWidth = 1080, int maxHeight = 1920, int quality = 85}) async {
-  try {
-    final result = await FlutterImageCompress.compressWithList(
-      input,
-      minWidth: maxWidth,
-      minHeight: maxHeight,
-      quality: quality,
-      format: CompressFormat.jpeg,
-    );
-    return Uint8List.fromList(result);
-  } catch (_) {
-    return input;
-  }
-}

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:go_router/go_router.dart';
 import '../services/qr_checkin_service.dart';
+import 'package:go_router/go_router.dart';
 
 class QrScanScreen extends StatefulWidget {
   const QrScanScreen({super.key});
@@ -204,10 +204,6 @@ class QrScannerOverlayShape extends ShapeBorder {
 
   @override
   void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {
-    final width = rect.width;
-    final borderWidthSize = width / 2;
-    final height = rect.height;
-    final borderOffset = borderWidth / 2;
     final cutOutSize = this.cutOutSize;
 
     final backgroundPaint = Paint()
@@ -218,10 +214,6 @@ class QrScannerOverlayShape extends ShapeBorder {
       ..color = borderColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = borderWidth;
-
-    final boxPaint = Paint()
-      ..color = borderColor
-      ..style = PaintingStyle.fill;
 
     final cutOutRect = Rect.fromCenter(
       center: rect.center,

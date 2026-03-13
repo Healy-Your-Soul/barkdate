@@ -42,7 +42,6 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
   LatLng? _selectedLatLng;
   String? _selectedAddress;
   String? _selectedPlaceName;
-  bool _mapReady = false;
   bool _initializing = true;
 
   final TextEditingController _searchController = TextEditingController();
@@ -91,7 +90,6 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
-    setState(() => _mapReady = true);
   }
 
   void _onMapTap(LatLng position) {

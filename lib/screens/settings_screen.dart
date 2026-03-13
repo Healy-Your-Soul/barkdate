@@ -18,58 +18,10 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  int _searchRadiusKm = 25;
-  bool _isLoadingRadius = true;
-
   @override
   void initState() {
     super.initState();
-    _loadSearchRadius();
-  }
-
-  Future<void> _loadSearchRadius() async {
-    final user = SupabaseConfig.auth.currentUser;
-    if (user == null) {
-      setState(() => _isLoadingRadius = false);
-      return;
-    }
-
-    try {
-      final profile =
-          await SupabaseService.selectSingle('users', filters: {'id': user.id});
-      if (!mounted) return;
-      setState(() {
-        _searchRadiusKm = (profile?['search_radius_km'] as int?) ?? 25;
-        _isLoadingRadius = false;
-      });
-    } catch (e) {
-      debugPrint('Error loading search radius: $e');
-      if (!mounted) return;
-      setState(() => _isLoadingRadius = false);
-    }
-  }
-
-  Future<void> _updateSearchRadius(int radiusKm) async {
-    final userId = SupabaseConfig.auth.currentUser?.id;
-    if (userId == null) return;
-
-    setState(() {
-      _searchRadiusKm = radiusKm;
-    });
-
-    try {
-      await SupabaseConfig.client
-          .from('users')
-          .update({'search_radius_km': radiusKm}).eq('id', userId);
-      CacheService().invalidate('nearby_$userId');
-    } catch (e) {
-      debugPrint('Error updating search radius: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update search radius: $e')),
-        );
-      }
-    }
+    // Load settings on startup (can be used for future radius UI)
   }
 
   void _showSignOutDialog(BuildContext context) {
@@ -86,7 +38,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             TextButton(
               onPressed: () async {
-                Navigator.of(context).pop();
+                final nav = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                nav.pop();
 
                 try {
                   final userId = SupabaseConfig.auth.currentUser?.id;
@@ -100,13 +54,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }
 
                   // Navigate to sign in and clear all previous routes
-                  Navigator.of(context).pushAndRemoveUntil(
+                  nav.pushAndRemoveUntil(
                     MaterialPageRoute(
                         builder: (context) => const SignInScreen()),
                     (route) => false,
                   );
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(content: Text('Sign out failed: $e')),
                   );
                 }
@@ -211,7 +165,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (e) {
       // Close loading dialog if still mounted
-      if (mounted) {
+      if (context.mounted) {
         try {
           Navigator.of(context).pop();
         } catch (navError) {
@@ -219,7 +173,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       }
 
-      if (mounted) {
+      if (context.mounted) {
         // Show error message
         try {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -272,26 +226,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // Navigate to profile editing
                 final user = SupabaseConfig.auth.currentUser;
                 if (user != null) {
+                  // Capture nav ref before async
+                  final nav = Navigator.of(context);
                   // Load current profile data
                   final userProfile = await SupabaseService.selectSingle(
                     'users',
                     filters: {'id': user.id},
                   );
 
-                  if (mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CreateProfileScreen(
-                          editMode: EditMode.editOwner,
-                          userName: userProfile?['name'],
-                          userEmail: userProfile?['email'] ?? user.email,
-                          userId: user.id,
-                          locationEnabled: true,
-                        ),
+                  if (!mounted) return;
+                  nav.push(
+                    MaterialPageRoute(
+                      builder: (context) => CreateProfileScreen(
+                        editMode: EditMode.editOwner,
+                        userName: userProfile?['name'],
+                        userEmail: userProfile?['email'] ?? user.email,
+                        userId: user.id,
+                        locationEnabled: true,
                       ),
-                    );
-                  }
+                    ),
+                  );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -306,29 +260,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'My Dogs',
               subtitle: 'Manage your dog profiles',
               onTap: () async {
-                // Navigate to dog management (same as profile editing for now)
+                // Navigate to dog management
                 final user = SupabaseConfig.auth.currentUser;
                 if (user != null) {
+                  // Capture refs before async
+                  final nav = Navigator.of(context);
                   // Load current profile data
                   final userProfile = await SupabaseService.selectSingle(
                     'users',
                     filters: {'id': user.id},
                   );
 
-                  if (mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CreateProfileScreen(
-                          editMode: EditMode.editOwner,
-                          userName: userProfile?['name'],
-                          userEmail: userProfile?['email'] ?? user.email,
-                          userId: user.id,
-                          locationEnabled: true,
-                        ),
+                  if (!mounted) return;
+                  nav.push(
+                    MaterialPageRoute(
+                      builder: (context) => CreateProfileScreen(
+                        editMode: EditMode.editOwner,
+                        userName: userProfile?['name'],
+                        userEmail: userProfile?['email'] ?? user.email,
+                        userId: user.id,
+                        locationEnabled: true,
                       ),
-                    );
-                  }
+                    ),
+                  );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(

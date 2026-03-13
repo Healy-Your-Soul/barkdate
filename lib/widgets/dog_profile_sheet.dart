@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/screens/chat_detail_screen.dart';
-import 'package:barkdate/models/message.dart';
 import 'package:barkdate/screens/playdates_screen.dart';
 
 class DogProfileSheet extends StatelessWidget {
@@ -91,16 +90,6 @@ class DogProfileSheet extends StatelessWidget {
                 },
                 onMessage: () {
                   Navigator.pop(context);
-                  final preview = ChatPreview(
-                    chatId: 'new_${dog.id}',
-                    otherUserId: dog.ownerId,
-                    otherUserName: dog.ownerName,
-                    otherDogName: dog.name,
-                    otherDogPhoto:
-                        dog.photos.isNotEmpty ? dog.photos.first : '',
-                    lastMessage: '',
-                    lastMessageTime: DateTime.now(),
-                  );
                   Navigator.push(
                     context,
                     MaterialPageRoute(

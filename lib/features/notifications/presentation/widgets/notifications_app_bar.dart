@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:barkdate/features/notifications/presentation/screens/notifications_screen.dart'; // To access notificationsProvider
 
@@ -23,10 +24,10 @@ class NotificationsAppBar extends ConsumerWidget
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
         onPressed: () {
-          if (Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
+          if (context.canPop()) {
+            context.pop();
           } else {
-            context.go('/');
+            const SplashRoute().go(context);
           }
         },
       ),
@@ -97,11 +98,11 @@ class NotificationsAppBar extends ConsumerWidget
         content: const Text('This action cannot be undone.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => context.pop(false),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => context.pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Clear All'),
           ),

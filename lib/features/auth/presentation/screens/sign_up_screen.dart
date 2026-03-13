@@ -1,12 +1,13 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:barkdate/features/auth/presentation/providers/auth_provider.dart';
 import 'package:barkdate/services/preload_service.dart';
+import 'package:go_router/go_router.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -108,6 +109,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         ],
       );
 
+      // ignore: experimental_member_use
       final response = await Supabase.instance.client.auth.signInWithIdToken(
         provider: OAuthProvider.apple,
         idToken: credential.identityToken!,
@@ -116,7 +118,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       if (mounted && response.user != null) {
         await PreloadService.warmFeedCaches(response.user!.id);
         if (mounted) {
-          context.go('/home');
+          const HomeRoute().go(context);
         }
       }
     } on SignInWithAppleAuthorizationException catch (e) {
@@ -179,7 +181,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               backgroundColor: Colors.green,
             ),
           );
-          context.go('/auth'); // Go back to sign in
+          const AuthRoute().go(context); // Go back to sign in
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

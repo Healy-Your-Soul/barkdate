@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:barkdate/core/config/app_constants.dart';
 import 'package:barkdate/features/profile/presentation/widgets/share_dog_sheet.dart';
 import 'package:barkdate/features/profile/presentation/providers/profile_provider.dart';
 import 'package:barkdate/design_system/app_typography.dart';
+import 'package:barkdate/core/config/app_constants.dart';
 
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/services/dog_sharing_service.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/screens/help_screen.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
@@ -21,7 +20,6 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userProfileAsync = ref.watch(userProfileProvider);
     final userDogsAsync = ref.watch(userDogsProvider);
-    final userStatsAsync = ref.watch(userStatsProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -49,7 +47,7 @@ class ProfileScreen extends ConsumerWidget {
                           IconButton(
                             icon: const Icon(Icons.share_outlined),
                             onPressed: () {
-                              final dogs = userDogsAsync.valueOrNull;
+                              final dogs = userDogsAsync.value;
                               if (dogs != null && dogs.isNotEmpty) {
                                 final dog = dogs.first;
                                 showModalBottomSheet(
@@ -195,9 +193,9 @@ class ProfileScreen extends ConsumerWidget {
                                   icon: const Icon(Icons.edit,
                                       size: 20, color: Colors.grey),
                                   onPressed: () {
-                                    context.push('/create-profile', extra: {
-                                      'editMode': EditMode.editOwner
-                                    });
+                                    const CreateProfileRoute(
+                                      editMode: EditMode.editOwner,
+                                    ).push(context);
                                   },
                                 ),
                               ],
@@ -209,9 +207,9 @@ class ProfileScreen extends ConsumerWidget {
                                 Expanded(
                                   child: OutlinedButton.icon(
                                     onPressed: () {
-                                      context.push('/create-profile', extra: {
-                                        'editMode': EditMode.addNewDog
-                                      });
+                                      const CreateProfileRoute(
+                                        editMode: EditMode.addNewDog,
+                                      ).push(context);
                                     },
                                     icon: const Icon(Icons.add, size: 16),
                                     label: const Text('Add Dog',
@@ -232,7 +230,7 @@ class ProfileScreen extends ConsumerWidget {
                                     onPressed: () {
                                       // Get the first dog to share (for now, simplistic approach)
                                       // In a real app with multiple dogs, we'd show a picker or share specific dog
-                                      final dogs = userDogsAsync.valueOrNull;
+                                      final dogs = userDogsAsync.value;
                                       if (dogs != null && dogs.isNotEmpty) {
                                         final dog = dogs.first;
                                         showModalBottomSheet(
@@ -294,7 +292,7 @@ class ProfileScreen extends ConsumerWidget {
                       context,
                       icon: Icons.settings_outlined,
                       title: 'Account settings',
-                      onTap: () => context.go('/profile/settings'),
+                      onTap: () => const SettingsRoute().go(context),
                     ),
                     if (AppConstants.adminEmails
                         .contains(SupabaseConfig.auth.currentUser?.email))
@@ -302,19 +300,19 @@ class ProfileScreen extends ConsumerWidget {
                         context,
                         icon: Icons.admin_panel_settings_outlined,
                         title: 'Admin Panel',
-                        onTap: () => context.push('/admin'),
+                        onTap: () => const AdminRoute().push(context),
                       ),
                     _buildMenuItem(
                       context,
                       icon: Icons.rss_feed,
                       title: 'Social Feed',
-                      onTap: () => context.go('/profile/social-feed'),
+                      onTap: () => const ProfileSocialFeedRoute().go(context),
                     ),
                     _buildMenuItem(
                       context,
                       icon: Icons.emoji_events_outlined,
                       title: 'Achievements',
-                      onTap: () => context.push('/achievements'),
+                      onTap: () => const AchievementsRoute().push(context),
                     ),
                     _buildMenuItem(
                       context,
@@ -335,7 +333,7 @@ class ProfileScreen extends ConsumerWidget {
                       onTap: () async {
                         await SupabaseConfig.auth.signOut();
                         if (context.mounted) {
-                          context.go('/auth');
+                          const AuthRoute().go(context);
                         }
                       },
                     ),
@@ -351,167 +349,10 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatItem(BuildContext context, String value, String label) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDogCard(BuildContext context, dynamic dog) {
-    return GestureDetector(
-      onTap: () {
-        context.push('/dog-details', extra: dog);
-      },
-      child: Container(
-        width: 120,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          image: DecorationImage(
-            image: NetworkImage(dog.photos.isNotEmpty
-                ? dog.photos.first
-                : 'https://via.placeholder.com/150'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.transparent, Colors.black.withValues(alpha: 0.6)],
-            ),
-          ),
-          padding: const EdgeInsets.all(12),
-          alignment: Alignment.bottomLeft,
-          child: Text(
-            dog.name,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCompactStat(String value, String label) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSharedDogCard(BuildContext context, SharedDog dog) {
-    return Container(
-      width: 140,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        image: DecorationImage(
-          image: NetworkImage(
-              dog.dogPhotoUrl ?? 'https://via.placeholder.com/150'),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
-          ),
-        ),
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text(
-              dog.dogName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-            Text(
-              dog.ownerName,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                dog.accessLevel.name.toUpperCase(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildLargeDogCard(BuildContext context, WidgetRef ref, dynamic dog) {
     return GestureDetector(
       onTap: () {
-        context.push('/dog-details', extra: dog);
+        DogDetailsRoute($extra: dog).push(context);
       },
       child: Container(
         width: 280, // Much wider card
@@ -537,11 +378,10 @@ class ProfileScreen extends ConsumerWidget {
                 icon: const Icon(Icons.more_vert, size: 24, color: Colors.grey),
                 onSelected: (value) async {
                   if (value == 'edit') {
-                    final result =
-                        await context.push<bool>('/create-profile', extra: {
-                      'editMode': EditMode.editDog,
-                      'dogId': dog.id,
-                    });
+                    final result = await CreateProfileRoute(
+                      editMode: EditMode.editDog,
+                      dogId: dog.id,
+                    ).push<bool>(context);
                     // Refresh dog list when returning from edit
                     if (result == true) {
                       ref.invalidate(userDogsProvider);
@@ -790,34 +630,12 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDogStat(String value, String label) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 10,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildAddDogCard(BuildContext context, {bool isLarge = false}) {
     return GestureDetector(
       onTap: () {
-        context.push('/create-profile',
-            extra: {'editMode': EditMode.createProfile});
+        const CreateProfileRoute(
+          editMode: EditMode.createProfile,
+        ).push(context);
       },
       child: Container(
         width: isLarge ? 160 : 120,

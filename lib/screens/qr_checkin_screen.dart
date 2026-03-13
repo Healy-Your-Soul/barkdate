@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/services/qr_checkin_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 
@@ -67,11 +67,11 @@ class _QrCheckInScreenState extends State<QrCheckInScreen> {
   }
 
   void _goToMap() {
-    context.go('/map');
+    const MapRoute().go(context);
   }
 
   void _signIn() {
-    context.go('/auth');
+    const AuthRoute().go(context);
   }
 
   @override

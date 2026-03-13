@@ -18,8 +18,7 @@ class SocialFeedScreen extends StatefulWidget {
 class _SocialFeedScreenState extends State<SocialFeedScreen> {
   List<Post> _posts = [];
   final TextEditingController _postController = TextEditingController();
-  SelectedImage? _selectedImage;
-  bool _isPosting = false;
+  final bool _isPosting = false;
   bool _isLoading = false;
 
   @override
@@ -380,16 +379,6 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
     );
   }
 
-  /// Pick image for post
-  Future<void> _pickImage() async {
-    final image = await PhotoUploadService.pickImage();
-    if (image != null && mounted) {
-      setState(() {
-        _selectedImage = image;
-      });
-    }
-  }
-
   /// Handle post creation from new screen
   Future<void> _handleCreatePost(String content, SelectedImage? image) async {
     setState(() => _isLoading = true);
@@ -428,8 +417,6 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Post created successfully!')),
         );
-
-        // Reload feed to show new post
         _loadFeed();
       }
     } catch (e) {
@@ -442,76 +429,6 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  /// Create and upload post
-  Future<void> _createPost() async {
-    if (_postController.text.trim().isEmpty && _selectedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add some content or a photo')),
-      );
-      return;
-    }
-
-    setState(() => _isPosting = true);
-
-    try {
-      final userId = SupabaseConfig.auth.currentUser?.id;
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
-      String? imageUrl;
-
-      // Upload image if selected
-      if (_selectedImage != null) {
-        final postId = DateTime.now().millisecondsSinceEpoch.toString();
-        imageUrl = await PhotoUploadService.uploadPostImage(
-          image: _selectedImage!,
-          postId: postId,
-          userId: userId,
-        );
-      }
-
-      // Get user's dog for the post
-      final userDogs = await BarkDateUserService.getUserDogs(userId);
-      final dogId = userDogs.isNotEmpty ? userDogs.first['id'] : null;
-
-      // Create post in database
-      await BarkDateSocialService.createPost(
-        userId: userId,
-        content: _postController.text.trim(),
-        dogId: dogId,
-        imageUrls: imageUrl != null ? [imageUrl] : null,
-      );
-
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Post created successfully!')),
-        );
-
-        // Clear form
-        _postController.clear();
-        setState(() {
-          _selectedImage = null;
-        });
-
-        // Reload feed to show new post
-        _loadFeed();
-      }
-    } catch (e) {
-      debugPrint('Error creating post: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating post: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isPosting = false);
       }
     }
   }

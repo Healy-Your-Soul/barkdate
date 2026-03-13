@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/settings_service.dart';
@@ -10,6 +10,7 @@ import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/screens/terms_of_service_screen.dart';
 import 'package:barkdate/features/settings/presentation/screens/blocked_users_screen.dart';
+import 'package:go_router/go_router.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -19,9 +20,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  int _searchRadiusKm = 25;
-  bool _isLoadingRadius = true;
-
   @override
   void initState() {
     super.initState();
@@ -30,23 +28,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSearchRadius() async {
     final user = SupabaseConfig.auth.currentUser;
-    if (user == null) {
-      setState(() => _isLoadingRadius = false);
-      return;
-    }
+    if (user == null) return;
 
     try {
-      final profile =
-          await SupabaseService.selectSingle('users', filters: {'id': user.id});
+      await SupabaseService.selectSingle('users', filters: {'id': user.id});
       if (!mounted) return;
-      setState(() {
-        _searchRadiusKm = (profile?['search_radius_km'] as int?) ?? 25;
-        _isLoadingRadius = false;
-      });
     } catch (e) {
       debugPrint('Error loading search radius: $e');
-      if (!mounted) return;
-      setState(() => _isLoadingRadius = false);
     }
   }
 
@@ -72,7 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     SupabaseAuthWrapper.clearProfileCache(userId);
                   }
                   if (context.mounted) {
-                    context.go('/auth');
+                    const AuthRoute().go(context);
                   }
                 } catch (e) {
                   if (context.mounted) {
@@ -152,17 +140,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       if (mounted) navigator.pop();
 
-      if (mounted) {
+      if (context.mounted) {
         scaffoldMessenger.showSnackBar(
           const SnackBar(
               content: Text('Account deleted successfully'),
               backgroundColor: Colors.green),
         );
-        context.go('/auth');
+        const AuthRoute().go(context);
       }
     } catch (e) {
-      if (mounted) Navigator.of(context).pop();
-      if (mounted) {
+      if (context.mounted) Navigator.of(context).pop();
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text('Failed to delete account: $e'),
@@ -207,13 +195,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   final userProfile = await SupabaseService.selectSingle(
                       'users',
                       filters: {'id': user.id});
-                  if (mounted) {
-                    context.push('/create-profile', extra: {
-                      'editMode': EditMode.editOwner,
-                      'userName': userProfile?['name'],
-                      'userEmail': userProfile?['email'] ?? user.email,
-                      'userId': user.id,
-                    });
+                  if (context.mounted) {
+                    CreateProfileRoute(
+                      editMode: EditMode.editOwner,
+                      userName: userProfile?['name'],
+                      userEmail: userProfile?['email'] ?? user.email,
+                      userId: user.id,
+                    ).push(context);
                   }
                 }
               },
@@ -224,8 +212,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'My Dogs',
               subtitle: 'Manage your dog profiles',
               onTap: () {
-                context.push('/create-profile',
-                    extra: {'editMode': EditMode.editDog});
+                const CreateProfileRoute(
+                  editMode: EditMode.editDog,
+                ).push(context);
               },
             ),
             _buildSettingsItem(

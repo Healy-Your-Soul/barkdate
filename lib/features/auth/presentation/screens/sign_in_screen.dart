@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:barkdate/features/auth/presentation/providers/auth_provider.dart';
@@ -55,10 +55,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           if (mounted) {
             if (dogs.isEmpty) {
               // New user - go to onboarding
-              context.go('/onboarding');
+              const WelcomeRoute().go(context);
             } else {
               // Existing user - go to home
-              context.go('/home');
+              const HomeRoute().go(context);
             }
           }
         }
@@ -92,7 +92,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           await PreloadService.warmFeedCaches(uid);
 
           if (mounted) {
-            context.go('/home');
+            const HomeRoute().go(context);
           }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -163,6 +163,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       );
 
       // Sign in to Supabase with Apple ID token
+      // ignore: experimental_member_use
       final response = await Supabase.instance.client.auth.signInWithIdToken(
         provider: OAuthProvider.apple,
         idToken: credential.identityToken!,
@@ -173,7 +174,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         await PreloadService.warmFeedCaches(response.user!.id);
 
         if (mounted) {
-          context.go('/home');
+          const HomeRoute().go(context);
         }
       }
     } on SignInWithAppleAuthorizationException catch (e) {
@@ -469,7 +470,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     const Spacer(),
                     TextButton(
                       onPressed: () {
-                        // context.push('/auth/forgot-password');
+                        const ForgotPasswordRoute().push(context);
                       },
                       child: Text(
                         'Forgot Password?',
@@ -523,7 +524,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     ),
                     TextButton(
                       onPressed: () {
-                        context.push('/auth/sign-up');
+                        const SignUpRoute().push(context);
                       },
                       child: Text(
                         'Sign Up',

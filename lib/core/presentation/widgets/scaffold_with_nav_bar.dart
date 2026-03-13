@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:barkdate/services/feature_flags.dart';
 
-class ScaffoldWithNavBar extends StatelessWidget {
+class ScaffoldWithNavBar extends ConsumerWidget {
   const ScaffoldWithNavBar({
     required this.navigationShell,
     super.key,
@@ -18,18 +20,30 @@ class ScaffoldWithNavBar extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     const greenColor = Color(0xFF4CAF50);
     const unselectedColor = Color(0xFF9E9E9E);
 
-    final navItems = [
-      _NavItem(icon: Symbols.home, label: 'Feed'),
-      _NavItem(icon: Symbols.map, label: 'Map'),
-      _NavItem(icon: Symbols.calendar_today, label: 'Playdates'),
-      _NavItem(icon: Symbols.event, label: 'Events'),
-      _NavItem(icon: Symbols.chat_bubble, label: 'Messages'),
-      _NavItem(icon: Symbols.person, label: 'Profile'),
+    final useSlimBottomNav = ref.watch(featureFlagsProvider).useSlimBottomNav;
+
+    // Define all possible items with their original index
+    final allItems = [
+      _NavItem(index: 0, icon: Symbols.home, label: 'Feed'),
+      _NavItem(index: 1, icon: Symbols.map, label: 'Map'),
+      _NavItem(index: 2, icon: Symbols.calendar_today, label: 'Playdates'),
+      _NavItem(index: 3, icon: Symbols.event, label: 'Events'),
+      _NavItem(index: 4, icon: Symbols.chat_bubble, label: 'Messages'),
+      _NavItem(index: 5, icon: Symbols.person, label: 'Profile'),
     ];
+
+    final List<_NavItem> navItems;
+    if (useSlimBottomNav) {
+      const slimLabels = ['Feed', 'Map', 'Profile'];
+      navItems =
+          allItems.where((item) => slimLabels.contains(item.label)).toList();
+    } else {
+      navItems = allItems;
+    }
 
     return Scaffold(
       body: navigationShell,
@@ -48,13 +62,12 @@ class ScaffoldWithNavBar extends StatelessWidget {
           child: SizedBox(
             height: 56,
             child: Row(
-              children: List.generate(navItems.length, (index) {
-                final isSelected = navigationShell.currentIndex == index;
-                final item = navItems[index];
+              children: navItems.map((item) {
+                final isSelected = navigationShell.currentIndex == item.index;
 
                 return Expanded(
                   child: GestureDetector(
-                    onTap: () => _goBranch(index),
+                    onTap: () => _goBranch(item.index),
                     behavior: HitTestBehavior.opaque,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -95,7 +108,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
                     ),
                   ),
                 );
-              }),
+              }).toList(),
             ),
           ),
         ),
@@ -105,8 +118,13 @@ class ScaffoldWithNavBar extends StatelessWidget {
 }
 
 class _NavItem {
+  final int index;
   final IconData icon;
   final String label;
 
-  const _NavItem({required this.icon, required this.label});
+  const _NavItem({
+    required this.index,
+    required this.icon,
+    required this.label,
+  });
 }

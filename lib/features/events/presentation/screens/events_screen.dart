@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:barkdate/features/events/presentation/providers/event_provider.dart';
 import 'package:barkdate/models/event.dart';
 import 'package:barkdate/core/presentation/widgets/cute_empty_state.dart';
@@ -111,7 +111,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                       IconButton(
                         icon: const Icon(Icons.add),
                         onPressed: () {
-                          context.push('/create-event');
+                          const CreateEventRoute().push(context);
                         },
                       ),
                     ],
@@ -192,7 +192,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                               'There are no events happening nearby right now. Be the first to create one!',
                           actionLabel: 'Create New Event',
                           onAction: () {
-                            context.push('/create-event');
+                            const CreateEventRoute().push(context);
                           },
                         ),
                       ),
@@ -230,7 +230,7 @@ class EventCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        context.push('/event-details', extra: event);
+        EventDetailsRoute($extra: event).push(context);
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 32),

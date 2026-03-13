@@ -390,7 +390,7 @@ class _PlaydateActionButtonState extends State<PlaydateActionButton> {
                     newLocation:
                         locationCtrl.text.isEmpty ? null : locationCtrl.text,
                   );
-                  if (mounted) Navigator.pop(ctx);
+                  if (ctx.mounted) Navigator.pop(ctx);
                   _refresh();
                 }
               },

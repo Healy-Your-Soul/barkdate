@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -24,7 +25,6 @@ import 'package:barkdate/screens/map_v2/widgets/dog_mini_card.dart';
 import 'package:barkdate/screens/map_v2/widgets/place_mini_card.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
 
 /// New map tab with AI assistant, event integration, and improved UX
@@ -146,7 +146,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
       // Get position
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       setState(() {
@@ -359,12 +361,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     for (final liveUser in _liveUsers) {
       final latitude = liveUser['live_latitude'] as double?;
       final longitude = liveUser['live_longitude'] as double?;
-      final dogName = liveUser['dog_name'] as String? ??
-          liveUser['user_name'] as String? ??
-          'Unknown';
       final dogPhotoUrl = liveUser['dog_photo_url'] as String? ??
           liveUser['avatar_url'] as String?;
-      final isFriend = liveUser['is_friend'] as bool? ?? false;
       final updatedAt = liveUser['live_location_updated_at'] as String?;
 
       if (latitude == null || longitude == null) continue;
@@ -448,9 +446,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             continue;
           }
         }
-
-        // Get check-in count for this place
-        final dogCount = _checkInCounts[place.placeId] ?? 0;
 
         // Generate custom marker based on category (no count badge on marker)
         final categoryName = place.category.name;
@@ -620,17 +615,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     });
   }
 
-  /// Get marker hue based on how recently the user updated their location
-  double _getLiveUserMarkerHue(double hoursAgo) {
-    if (hoursAgo < 1.0) {
-      return BitmapDescriptor.hueGreen; // 0-1 hour: green
-    } else if (hoursAgo < 3.0) {
-      return BitmapDescriptor.hueOrange; // 1-3 hours: orange
-    } else {
-      return BitmapDescriptor.hueRed; // 3-4 hours: red (will expire soon)
-    }
-  }
-
   /// Format time ago for display
   String _formatTimeAgo(double hoursAgo) {
     if (hoursAgo < 1.0 / 60.0) {
@@ -650,21 +634,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     final updateTime = DateTime.tryParse(updatedAt);
     if (updateTime == null) return 0;
     return DateTime.now().difference(updateTime).inMinutes / 60.0;
-  }
-
-  double _getMarkerColor(PlaceCategory category) {
-    switch (category) {
-      case PlaceCategory.park:
-        return BitmapDescriptor.hueGreen;
-      case PlaceCategory.petStore:
-        return BitmapDescriptor.hueOrange;
-      case PlaceCategory.veterinary:
-        return BitmapDescriptor.hueRed;
-      case PlaceCategory.restaurant:
-        return BitmapDescriptor.hueBlue;
-      default:
-        return BitmapDescriptor.hueRose;
-    }
   }
 
   /// Load current user's check-in status
@@ -1043,7 +1012,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             child: IconButton(
               icon: const Icon(Icons.qr_code_scanner),
               tooltip: 'Scan QR Code',
-              onPressed: () => context.push('/qr-scan'),
+              onPressed: () => const QrScanRoute().push(context),
             ),
           ),
         ],
@@ -1351,7 +1320,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                       final dogs =
                           await BarkDateUserService.getUserDogs(currentUser.id);
                       if (dogs.isEmpty) {
-                        if (mounted) {
+                        if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                                 content:
@@ -1368,7 +1337,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                         toDogId: targetDogId,
                       );
 
-                      if (mounted) {
+                      if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(success

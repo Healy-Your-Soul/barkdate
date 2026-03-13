@@ -222,8 +222,6 @@ class NotificationTile extends StatelessWidget {
   }
 
   Widget _buildActionButton(BuildContext context, NotificationAction action) {
-    final theme = Theme.of(context);
-
     return ElevatedButton.icon(
       onPressed: () => onActionPressed?.call(action.action),
       icon: Icon(action.icon, size: 16),
