@@ -37,8 +37,8 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
       SnackBar(
         content: Text(
           _isBarked
-              ? 'Barked! ${widget.dog.ownerName} will be notified.'
-              : 'Bark removed',
+              ? 'Walk request sent! ${widget.dog.ownerName} will be notified.'
+              : 'Walk request removed',
         ),
         backgroundColor:
             _isBarked ? Theme.of(context).colorScheme.primary : Colors.grey,
@@ -474,7 +474,8 @@ class _DogProfileDetailState extends State<DogProfileDetail> {
                                       : Icons.favorite_border,
                                   color: _isBarked ? Colors.red : null,
                                 ),
-                                label: Text(_isBarked ? 'Barked' : 'Bark'),
+                                label:
+                                    Text(_isBarked ? 'Request Sent' : 'Walk?'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: _isBarked
                                       ? Colors.red.withValues(alpha: 0.1)

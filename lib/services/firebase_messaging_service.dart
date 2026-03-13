@@ -8,6 +8,8 @@ import 'package:barkdate/services/in_app_notification_service.dart';
 import 'package:barkdate/services/notification_sound_service.dart';
 import 'package:barkdate/core/router/app_router.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/material.dart';
+import 'package:barkdate/widgets/receive_walk_sheet.dart';
 
 /// Firebase Cloud Messaging service for BarkDate
 /// Handles push notifications, background messages, and FCM token management
@@ -422,10 +424,9 @@ class FirebaseMessagingService {
         }
         break;
       case NotificationType.playdateRequest:
-        // Navigate to playdate details
+        // Show Receiver Flow popup for new Walk requests
         if (data['related_id'] != null) {
-          GoRouter.of(context)
-              .push('/playdate-details', extra: {'id': data['related_id']});
+          showReceiveWalkSheetFromPayload(context, data);
         }
         break;
       case NotificationType.playdate:

@@ -251,7 +251,7 @@ class _ActionRow extends StatelessWidget {
             onPressed: onBark,
             icon: Icon(Icons.campaign,
                 color: Theme.of(context).colorScheme.onPrimary),
-            label: Text('Bark',
+            label: Text('Walk?',
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onPrimary,
                     fontWeight: FontWeight.w600)),

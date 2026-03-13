@@ -282,7 +282,7 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
                   highlightColor: Colors.white.withValues(alpha: 0.2),
                   child: Center(
                     child: Text(
-                      _hasBarked ? 'Barked!' : 'Bark',
+                      _hasBarked ? 'Sending...' : 'Walk?',
                       style: theme.textTheme.labelSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         fontSize: 11,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:barkdate/features/tabs/presentation/providers/notification_count_provider.dart';
 import 'package:barkdate/screens/feed_screen.dart';
 import 'package:barkdate/screens/map_screen.dart';
 import 'package:barkdate/screens/map_v2/map_tab_screen.dart'; // New map
@@ -11,11 +13,11 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'dart:async';
 
-class MainNavigation extends StatefulWidget {
+class MainNavigation extends ConsumerStatefulWidget {
   const MainNavigation({super.key});
 
   @override
-  State<MainNavigation> createState() => _MainNavigationState();
+  ConsumerState<MainNavigation> createState() => _MainNavigationState();
 
   /// Helper to switch tabs from nested screens without pushing new routes
   static void switchTab(BuildContext context, int index) {
@@ -24,7 +26,7 @@ class MainNavigation extends StatefulWidget {
   }
 }
 
-class _MainNavigationState extends State<MainNavigation> {
+class _MainNavigationState extends ConsumerState<MainNavigation> {
   int _selectedIndex = 0;
   String? _dogAvatarUrl;
   int _unreadMessageCount = 0;
@@ -160,20 +162,28 @@ class _MainNavigationState extends State<MainNavigation> {
             label: 'Messages',
           ),
           BottomNavigationBarItem(
-            icon: _dogAvatarUrl != null && _dogAvatarUrl!.isNotEmpty
-                ? CircleAvatar(
-                    radius: 12,
-                    backgroundImage: NetworkImage(_dogAvatarUrl!),
-                    onBackgroundImageError: (_, __) {},
-                  )
-                : Icon(Symbols.person, weight: 300),
-            activeIcon: _dogAvatarUrl != null && _dogAvatarUrl!.isNotEmpty
-                ? CircleAvatar(
-                    radius: 12,
-                    backgroundImage: NetworkImage(_dogAvatarUrl!),
-                    onBackgroundImageError: (_, __) {},
-                  )
-                : Icon(Symbols.person, weight: 500, fill: 1),
+            icon: Badge(
+              isLabelVisible: ref.watch(notificationCountProvider) > 0,
+              label: Text('${ref.watch(notificationCountProvider)}'),
+              child: _dogAvatarUrl != null && _dogAvatarUrl!.isNotEmpty
+                  ? CircleAvatar(
+                      radius: 12,
+                      backgroundImage: NetworkImage(_dogAvatarUrl!),
+                      onBackgroundImageError: (_, __) {},
+                    )
+                  : Icon(Symbols.person, weight: 300),
+            ),
+            activeIcon: Badge(
+              isLabelVisible: ref.watch(notificationCountProvider) > 0,
+              label: Text('${ref.watch(notificationCountProvider)}'),
+              child: _dogAvatarUrl != null && _dogAvatarUrl!.isNotEmpty
+                  ? CircleAvatar(
+                      radius: 12,
+                      backgroundImage: NetworkImage(_dogAvatarUrl!),
+                      onBackgroundImageError: (_, __) {},
+                    )
+                  : Icon(Symbols.person, weight: 500, fill: 1),
+            ),
             label: 'Profile',
           ),
         ],

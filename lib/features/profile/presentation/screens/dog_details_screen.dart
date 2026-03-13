@@ -11,6 +11,7 @@ import 'package:barkdate/services/notification_manager.dart';
 import 'package:barkdate/features/profile/presentation/providers/profile_provider.dart';
 import 'package:barkdate/features/feed/presentation/providers/feed_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:barkdate/widgets/send_walk_sheet.dart';
 
 class DogDetailsScreen extends ConsumerStatefulWidget {
   final Dog dog;
@@ -116,6 +117,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
           ref.invalidate(nearbyDogsProvider);
           // Also invalidate friend requests in case we are accepting
           ref.invalidate(pendingFriendRequestsProvider);
+
+          // The notification is now handled internally by DogFriendshipService.sendBark
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Already friends or error occurred')),
@@ -159,66 +162,12 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
   }
 
   Future<void> _onBarkPoke() async {
-    if (_myDogId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You need a dog to bark!')),
-      );
-      return;
-    }
-
-    // Get my dog details for the notification
-    final myDogName = (await BarkDateUserService.getUserDogs(
-            SupabaseConfig.auth.currentUser!.id))
-        .firstWhere((d) => d['id'] == _myDogId)['name'];
-
-    try {
-      // Use BarkDateBarkService with rate limiting (3/day for non-friends)
-      final success = await BarkDateBarkService.sendBark(
-        fromDogId: _myDogId!,
-        toDogId: widget.dog.id,
-      );
-
-      if (!success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'You\'ve reached your daily bark limit for this pup! 🐕'),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-        return;
-      }
-
-      // Also send push notification
-      await NotificationManager.sendBarkNotification(
-        receiverUserId: widget.dog.ownerId,
-        senderDogName: myDogName ?? 'Someone',
-        receiverDogName: widget.dog.name,
-        senderUserId: SupabaseConfig.auth.currentUser?.id,
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('You barked at ${widget.dog.name}! 🐕'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.orange,
-          ),
-        );
-        // Refresh stats (Barks count might increment if we count sent barks, but mainly for hygiene)
-        ref.invalidate(userStatsProvider);
-      }
-    } catch (e) {
-      debugPrint('Error sending bark poke: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not send bark right now')),
-        );
-      }
-    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => SendWalkSheet(targetDog: widget.dog),
+    );
   }
 
   Future<void> _onMessage() async {
@@ -620,16 +569,16 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                           ),
                           const SizedBox(height: 12),
 
-                          // Secondary Row: Bark + Playdate
+                          // Secondary Row: Walk + Playdate
                           Row(
                             children: [
-                              // Bark Poke Button
+                              // Walk Button
                               Expanded(
                                 child: OutlinedButton.icon(
                                   onPressed: _onBarkPoke,
                                   icon: const Icon(Icons.pets,
                                       color: Colors.orange),
-                                  label: const Text('Bark'),
+                                  label: const Text('Walk?'),
                                   style: OutlinedButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 14),

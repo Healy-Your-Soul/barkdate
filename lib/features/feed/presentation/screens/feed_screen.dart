@@ -20,6 +20,7 @@ import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart'
     hide DogFriendshipService;
 import 'package:barkdate/widgets/pack_alerts_carousel.dart';
+import 'package:barkdate/widgets/send_walk_sheet.dart';
 
 class FeedFeatureScreen extends ConsumerWidget {
   const FeedFeatureScreen({super.key});
@@ -51,7 +52,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Bark',
+                        'BarkDate',
                         style: AppTypography.brandTitle(
                           color: Theme.of(context)
                               .colorScheme
@@ -268,14 +269,11 @@ class FeedFeatureScreen extends ConsumerWidget {
                                 context.push('/dog-details', extra: dog);
                               },
                               onBarkPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        'Barked! ${dog.ownerName} will be notified.'),
-                                    backgroundColor:
-                                        Theme.of(context).colorScheme.primary,
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (_) => SendWalkSheet(targetDog: dog),
                                 );
                               },
                               onPlaydatePressed: () {
@@ -324,7 +322,7 @@ class FeedFeatureScreen extends ConsumerWidget {
 
               // 3. Upcoming Playdates Section (MOVED DOWN)
               SliverToBoxAdapter(
-                child: _buildSectionHeader(context, "Upcoming Playdates", () {
+                child: _buildSectionHeader(context, "Upcoming Walks", () {
                   context.go('/playdates');
                 }),
               ),
@@ -336,7 +334,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                       if (playdates.isEmpty) {
                         return _buildEmptyHorizontalState(
                           context,
-                          "No playdates yet",
+                          "No walks yet",
                           Icons.calendar_today,
                         );
                       }
@@ -430,13 +428,6 @@ class FeedFeatureScreen extends ConsumerWidget {
         border: Border.all(
             color:
                 Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -444,14 +435,14 @@ class FeedFeatureScreen extends ConsumerWidget {
           _buildDashboardItem(
             context,
             icon: Icons.calendar_today_outlined,
-            label: 'Playdates',
+            label: 'Walks',
             value: playdatesAsync.value?.length.toString() ?? '-',
             onTap: () => context.go('/playdates'),
           ),
           _buildDashboardItem(
             context,
             icon: Icons.pets_outlined,
-            label: 'Barks',
+            label: 'Walks',
             value: statsAsync.value?['barks'].toString() ?? '-',
             onTap: () =>
                 context.go('/messages'), // Navigate to messages/friends
@@ -679,13 +670,6 @@ class FeedFeatureScreen extends ConsumerWidget {
           border: Border.all(
             color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -915,13 +899,9 @@ class FeedFeatureScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: Colors.grey.shade100,
+        ),
       ),
       child: Column(
         children: [
@@ -1080,13 +1060,6 @@ class FeedFeatureScreen extends ConsumerWidget {
           border: Border.all(
             color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1763,7 +1736,8 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                          content: Text('Barked at ${targetDog.name}! 🐕'),
+                          content: Text(
+                              'Sending Walk request to ${targetDog.name}! 🐕'),
                           backgroundColor: Colors.green),
                     );
                   }
@@ -1842,7 +1816,8 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
               final currentUser = SupabaseConfig.auth.currentUser;
               if (currentUser == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please sign in to bark')),
+                  const SnackBar(
+                      content: Text('Please sign in to send a Walk request')),
                 );
                 return;
               }
@@ -1870,17 +1845,18 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(success
-                          ? 'Woof! Barked at ${targetDog.name}! 🐕'
-                          : 'Already barked at ${targetDog.name}'),
+                          ? 'Woof! Sent Walk request to ${targetDog.name}! 🐕'
+                          : 'Already sent Walk request to ${targetDog.name}'),
                       backgroundColor: success ? Colors.green : Colors.orange,
                     ),
                   );
                 }
               } catch (e) {
-                debugPrint('Error sending bark: $e');
+                debugPrint('Error sending walk request: $e');
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Failed to send bark')),
+                    const SnackBar(
+                        content: Text('Failed to send Walk request')),
                   );
                 }
               }
