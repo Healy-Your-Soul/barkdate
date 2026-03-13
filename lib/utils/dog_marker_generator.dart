@@ -22,6 +22,9 @@ class DogMarkerGenerator {
     int size = 80,
     double borderWidth = 4,
   }) async {
+    // Get DPR internally
+    final devicePixelRatio =
+        ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
     // Create a cache key
     final cacheKey = '${imageUrl ?? 'default'}_${borderColor.toARGB32()}_$size';
 
@@ -43,9 +46,14 @@ class DogMarkerGenerator {
         borderColor: borderColor,
         size: size,
         borderWidth: borderWidth,
+        devicePixelRatio: devicePixelRatio,
       );
 
-      final descriptor = BitmapDescriptor.bytes(markerBytes);
+      final descriptor = BitmapDescriptor.bytes(
+        markerBytes,
+        width: size.toDouble(),
+        height: size.toDouble(),
+      );
       _cache[cacheKey] = descriptor;
       return descriptor;
     } catch (e) {
@@ -81,37 +89,46 @@ class DogMarkerGenerator {
     required Color borderColor,
     required int size,
     required double borderWidth,
+    required double devicePixelRatio,
   }) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final paint = Paint();
 
-    final center = Offset(size / 2, size / 2);
-    final radius = size / 2;
+    // Scale up dimensions based on DPR
+    final scaledSize = (size * devicePixelRatio).toInt();
+    final scaledBorderWidth = borderWidth * devicePixelRatio;
+
+    final center = Offset(scaledSize / 2, scaledSize / 2);
+    final radius = scaledSize / 2;
 
     // Draw shadow
     paint
       ..color = Colors.black.withValues(alpha: 0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-    canvas.drawCircle(center + const Offset(2, 2), radius - 2, paint);
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 3 * devicePixelRatio);
+    canvas.drawCircle(
+        center + Offset(2 * devicePixelRatio, 2 * devicePixelRatio),
+        radius - (2 * devicePixelRatio),
+        paint);
 
     // Reset paint
     paint.maskFilter = null;
 
     // Draw border (colored ring)
     paint.color = borderColor;
-    canvas.drawCircle(center, radius - 2, paint);
+    canvas.drawCircle(center, radius - (2 * devicePixelRatio), paint);
 
     // Draw white ring (inner border)
     paint.color = Colors.white;
-    final innerRadius = radius - borderWidth - 2;
+    final innerRadius = radius - scaledBorderWidth - (2 * devicePixelRatio);
     canvas.drawCircle(center, innerRadius, paint);
 
     if (dogImage != null) {
       // Clip and draw the dog image
       canvas.save();
       final clipPath = Path()
-        ..addOval(Rect.fromCircle(center: center, radius: innerRadius - 2));
+        ..addOval(Rect.fromCircle(
+            center: center, radius: innerRadius - (2 * devicePixelRatio)));
       canvas.clipPath(clipPath);
 
       // Scale and center the image
@@ -123,20 +140,21 @@ class DogMarkerGenerator {
         width: imageSize,
         height: imageSize,
       );
-      final dstRect = Rect.fromCircle(center: center, radius: innerRadius - 2);
+      final dstRect = Rect.fromCircle(
+          center: center, radius: innerRadius - (2 * devicePixelRatio));
 
       canvas.drawImageRect(dogImage, srcRect, dstRect, Paint());
       canvas.restore();
     } else {
       // Draw a dog icon placeholder
       paint.color = Colors.grey[300]!;
-      canvas.drawCircle(center, innerRadius - 2, paint);
+      canvas.drawCircle(center, innerRadius - (2 * devicePixelRatio), paint);
 
       // Draw paw print icon
       final textPainter = TextPainter(
         text: TextSpan(
           text: '🐕',
-          style: TextStyle(fontSize: size * 0.4),
+          style: TextStyle(fontSize: scaledSize * 0.4),
         ),
         textDirection: TextDirection.ltr,
       );
@@ -152,7 +170,7 @@ class DogMarkerGenerator {
 
     // Convert to bytes
     final picture = recorder.endRecording();
-    final image = await picture.toImage(size, size);
+    final image = await picture.toImage(scaledSize, scaledSize);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
     return byteData!.buffer.asUint8List();
@@ -196,6 +214,9 @@ class DogMarkerGenerator {
     required String category,
     int size = 40,
   }) async {
+    // Get DPR internally
+    final devicePixelRatio =
+        ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
     // Create a cache key
     final cacheKey = 'place_${category}_$size';
 
@@ -240,9 +261,14 @@ class DogMarkerGenerator {
         color: markerColor,
         icon: icon,
         size: size,
+        devicePixelRatio: devicePixelRatio,
       );
 
-      final descriptor = BitmapDescriptor.bytes(markerBytes);
+      final descriptor = BitmapDescriptor.bytes(
+        markerBytes,
+        width: size.toDouble(),
+        height: size.toDouble(),
+      );
       _cache[cacheKey] = descriptor;
       return descriptor;
     } catch (e) {
@@ -257,40 +283,45 @@ class DogMarkerGenerator {
     required Color color,
     required String icon,
     required int size,
+    required double devicePixelRatio,
   }) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final paint = Paint();
 
-    final center = Offset(size / 2, size / 2);
-    final radius = size / 2;
+    final scaledSize = (size * devicePixelRatio).toInt();
+    final center = Offset(scaledSize / 2, scaledSize / 2);
+    final radius = scaledSize / 2;
 
     // Draw shadow
     paint
       ..color = Colors.black.withValues(alpha: 0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-    canvas.drawCircle(center + const Offset(1, 1), radius - 2, paint);
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 2 * devicePixelRatio);
+    canvas.drawCircle(
+        center + Offset(1 * devicePixelRatio, 1 * devicePixelRatio),
+        radius - (2 * devicePixelRatio),
+        paint);
 
     // Reset paint
     paint.maskFilter = null;
 
     // Draw colored circle
     paint.color = color;
-    canvas.drawCircle(center, radius - 2, paint);
+    canvas.drawCircle(center, radius - (2 * devicePixelRatio), paint);
 
     // Draw white border
     paint
       ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawCircle(center, radius - 3, paint);
+      ..strokeWidth = 2 * devicePixelRatio;
+    canvas.drawCircle(center, radius - (3 * devicePixelRatio), paint);
 
     // Draw white letter icon in center (more reliable than emojis)
     final textPainter = TextPainter(
       text: TextSpan(
         text: icon,
         style: TextStyle(
-          fontSize: size * 0.4,
+          fontSize: scaledSize * 0.4,
           color: Colors.white,
           fontWeight: FontWeight.bold,
         ),
@@ -308,7 +339,7 @@ class DogMarkerGenerator {
 
     // Convert to bytes
     final picture = recorder.endRecording();
-    final image = await picture.toImage(size, size);
+    final image = await picture.toImage(scaledSize, scaledSize);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
     return byteData!.buffer.asUint8List();
@@ -324,6 +355,9 @@ class DogMarkerGenerator {
     required int dogCount,
     int size = 48,
   }) async {
+    // Get DPR internally
+    final devicePixelRatio =
+        ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
     // Create a cache key that includes dog count
     final cacheKey = 'place_${category}_${dogCount}_$size';
 
@@ -369,9 +403,14 @@ class DogMarkerGenerator {
         icon: icon,
         dogCount: dogCount,
         size: size,
+        devicePixelRatio: devicePixelRatio,
       );
 
-      final descriptor = BitmapDescriptor.bytes(markerBytes);
+      final descriptor = BitmapDescriptor.bytes(
+        markerBytes,
+        width: size.toDouble(),
+        height: size.toDouble(),
+      );
       _cache[cacheKey] = descriptor;
       return descriptor;
     } catch (e) {
@@ -386,34 +425,43 @@ class DogMarkerGenerator {
     required String icon,
     required int dogCount,
     required int size,
+    required double devicePixelRatio,
   }) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final paint = Paint();
 
-    final center =
-        Offset(size / 2, size / 2 + 4); // Offset down to leave room for badge
-    final radius = (size - 12) / 2; // Smaller to leave room for badge
+    final scaledSize = (size * devicePixelRatio).toInt();
+
+    final center = Offset(
+        scaledSize / 2,
+        scaledSize / 2 +
+            (4 * devicePixelRatio)); // Offset down to leave room for badge
+    final radius = ((scaledSize) - (12 * devicePixelRatio)) /
+        2; // Smaller to leave room for badge
 
     // Draw shadow
     paint
       ..color = Colors.black.withValues(alpha: 0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-    canvas.drawCircle(center + const Offset(1, 1), radius - 2, paint);
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 2 * devicePixelRatio);
+    canvas.drawCircle(
+        center + Offset(1 * devicePixelRatio, 1 * devicePixelRatio),
+        radius - (2 * devicePixelRatio),
+        paint);
 
     // Reset paint
     paint.maskFilter = null;
 
     // Draw colored circle
     paint.color = color;
-    canvas.drawCircle(center, radius - 2, paint);
+    canvas.drawCircle(center, radius - (2 * devicePixelRatio), paint);
 
     // Draw white border
     paint
       ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawCircle(center, radius - 3, paint);
+      ..strokeWidth = 2 * devicePixelRatio;
+    canvas.drawCircle(center, radius - (3 * devicePixelRatio), paint);
 
     // Draw icon in center (using letter for reliability)
     final letterIcon = icon == '🌳'
@@ -425,7 +473,7 @@ class DogMarkerGenerator {
       text: TextSpan(
         text: letterIcon,
         style: TextStyle(
-          fontSize: size * 0.35,
+          fontSize: scaledSize * 0.35,
           color: Colors.white,
           fontWeight: FontWeight.bold,
         ),
@@ -443,8 +491,10 @@ class DogMarkerGenerator {
 
     // Draw dog count badge (top right) if count > 0
     if (dogCount > 0) {
-      final badgeRadius = size * 0.22;
-      final badgeCenter = Offset(size - badgeRadius - 2, badgeRadius + 2);
+      final badgeRadius = scaledSize * 0.22;
+      final badgeCenter = Offset(
+          scaledSize - badgeRadius - (2 * devicePixelRatio),
+          badgeRadius + (2 * devicePixelRatio));
 
       // Badge background (red/orange circle)
       paint
@@ -457,7 +507,7 @@ class DogMarkerGenerator {
       // Badge border
       paint
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
+        ..strokeWidth = 1.5 * devicePixelRatio
         ..color = Colors.white;
       canvas.drawCircle(badgeCenter, badgeRadius, paint);
 
@@ -486,7 +536,7 @@ class DogMarkerGenerator {
 
     // Convert to bytes
     final picture = recorder.endRecording();
-    final image = await picture.toImage(size, size);
+    final image = await picture.toImage(scaledSize, scaledSize);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
     return byteData!.buffer.asUint8List();
