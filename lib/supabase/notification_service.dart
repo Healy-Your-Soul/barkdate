@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/services/app_badge_service.dart';
 import 'package:barkdate/services/in_app_notification_service.dart';
 import 'package:barkdate/models/notification.dart';
 
@@ -56,6 +57,11 @@ class NotificationService {
       await SupabaseConfig.client
           .from('notifications')
           .update({'is_read': true}).eq('id', notificationId);
+
+      final userId = SupabaseConfig.auth.currentUser?.id;
+      if (userId != null) {
+        await _syncUnreadBadgeCount(userId);
+      }
     } catch (e) {
       debugPrint('Error marking notification as read: $e');
       rethrow;
@@ -68,6 +74,8 @@ class NotificationService {
       await SupabaseConfig.client
           .from('notifications')
           .update({'is_read': true}).eq('user_id', userId);
+
+      await AppBadgeService.clearBadge();
     } catch (e) {
       debugPrint('Error marking all notifications as read: $e');
       rethrow;
@@ -157,6 +165,11 @@ class NotificationService {
           .from('notifications')
           .delete()
           .eq('id', notificationId);
+
+      final userId = SupabaseConfig.auth.currentUser?.id;
+      if (userId != null) {
+        await _syncUnreadBadgeCount(userId);
+      }
     } catch (e) {
       debugPrint('Error deleting notification: $e');
       rethrow;
@@ -177,6 +190,11 @@ class NotificationService {
       debugPrint('Error getting notification count: $e');
       return 0;
     }
+  }
+
+  static Future<void> _syncUnreadBadgeCount(String userId) async {
+    final unreadCount = await getUnreadCount(userId);
+    await AppBadgeService.setBadgeCount(unreadCount);
   }
 
   /// Show in-app notification banner (for foreground notifications)

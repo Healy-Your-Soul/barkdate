@@ -6,6 +6,8 @@ import FirebaseMessaging
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+  private let appBadgeChannelName = "bark/app_badge"
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -29,6 +31,39 @@ import FirebaseMessaging
     
     // Set Firebase Messaging delegate
     Messaging.messaging().delegate = self
+
+    if let controller = window?.rootViewController as? FlutterViewController {
+      let badgeChannel = FlutterMethodChannel(
+        name: appBadgeChannelName,
+        binaryMessenger: controller.binaryMessenger
+      )
+
+      badgeChannel.setMethodCallHandler { call, result in
+        switch call.method {
+        case "setBadgeCount":
+          guard
+            let args = call.arguments as? [String: Any],
+            let rawCount = args["count"] as? Int
+          else {
+            result(
+              FlutterError(
+                code: "bad_args",
+                message: "Missing or invalid badge count",
+                details: nil
+              )
+            )
+            return
+          }
+
+          DispatchQueue.main.async {
+            UIApplication.shared.applicationIconBadgeNumber = max(0, rawCount)
+            result(nil)
+          }
+        default:
+          result(FlutterMethodNotImplemented)
+        }
+      }
+    }
     
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }

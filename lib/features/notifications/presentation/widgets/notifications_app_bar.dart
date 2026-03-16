@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:barkdate/core/router/app_routes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:barkdate/design_system/app_typography.dart';
+import 'package:barkdate/services/app_badge_service.dart';
+import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:go_router/go_router.dart';
 
@@ -73,9 +75,7 @@ class NotificationsAppBar extends ConsumerWidget
       final user = SupabaseConfig.auth.currentUser;
       if (user == null) return;
 
-      await SupabaseConfig.client
-          .from('notifications')
-          .update({'is_read': true}).eq('user_id', user.id);
+      await NotificationService.markAllAsRead(user.id);
 
       ref.invalidate(notificationsProvider);
 
@@ -120,6 +120,8 @@ class NotificationsAppBar extends ConsumerWidget
           .from('notifications')
           .delete()
           .eq('user_id', user.id);
+
+        await AppBadgeService.clearBadge();
 
       ref.invalidate(notificationsProvider);
 

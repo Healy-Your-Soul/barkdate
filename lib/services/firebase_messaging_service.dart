@@ -7,6 +7,7 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/models/notification.dart';
 import 'package:barkdate/services/in_app_notification_service.dart';
 import 'package:barkdate/services/notification_sound_service.dart';
+import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/widgets/receive_walk_sheet.dart';
 
 import 'package:barkdate/core/router/app_router.dart';
@@ -341,11 +342,20 @@ class FirebaseMessagingService {
           : null,
     );
 
-    const iosDetails = DarwinNotificationDetails(
+    var badgeCount = 1;
+    final userId = SupabaseConfig.auth.currentUser?.id;
+    if (userId != null) {
+      final unread = await NotificationService.getUnreadCount(userId);
+      if (unread > 0) {
+        badgeCount = unread;
+      }
+    }
+
+    final iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
-      badgeNumber: 1,
+      badgeNumber: badgeCount,
     );
 
     final notificationDetails = NotificationDetails(
@@ -590,6 +600,7 @@ class FirebaseMessagingService {
     required NotificationType type,
     Map<String, dynamic>? data,
     String? imageUrl,
+    int? badgeCount,
   }) async {
     try {
       // This would typically be done via a cloud function or server
@@ -603,6 +614,7 @@ class FirebaseMessagingService {
           'type': type.name,
           'data': data ?? {},
           'imageUrl': imageUrl,
+          if (badgeCount != null) 'badgeCount': badgeCount,
         },
       );
 

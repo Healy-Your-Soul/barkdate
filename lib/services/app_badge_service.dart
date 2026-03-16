@@ -1,0 +1,27 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+
+/// Handles app icon badge updates on iOS.
+class AppBadgeService {
+  static const MethodChannel _channel = MethodChannel('bark/app_badge');
+
+  static bool get _isSupported =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+  static Future<void> setBadgeCount(int count) async {
+    if (!_isSupported) return;
+
+    final safeCount = count < 0 ? 0 : count;
+    try {
+      await _channel.invokeMethod<void>('setBadgeCount', {
+        'count': safeCount,
+      });
+    } catch (e) {
+      debugPrint('Failed to set app badge count: $e');
+    }
+  }
+
+  static Future<void> clearBadge() async {
+    await setBadgeCount(0);
+  }
+}

@@ -108,11 +108,20 @@ class NotificationManager {
           final fcmToken = userResponse?['fcm_token'] as String?;
 
           if (fcmToken != null && fcmToken.isNotEmpty) {
+            var badgeCount = 1;
+            try {
+              badgeCount = await NotificationService.getUnreadCount(userId);
+              if (badgeCount < 1) badgeCount = 1;
+            } catch (e) {
+              debugPrint('Failed to compute unread badge count: $e');
+            }
+
             await FirebaseMessagingService.sendPushNotificationToUser(
               userToken: fcmToken,
               title: title,
               body: body,
               type: type,
+              badgeCount: badgeCount,
               data: {
                 'action_type': actionType,
                 'related_id': relatedId,

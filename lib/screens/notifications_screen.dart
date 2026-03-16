@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/models/notification.dart';
 import 'package:barkdate/widgets/notification_tile.dart';
+import 'package:barkdate/services/app_badge_service.dart';
 import 'package:barkdate/supabase/notification_service.dart' as notif_service;
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/core/router/app_routes.dart';
@@ -686,6 +687,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             .from('notifications')
             .delete()
             .eq('user_id', currentUser.id);
+
+        await AppBadgeService.clearBadge();
       }
 
       // Update local state

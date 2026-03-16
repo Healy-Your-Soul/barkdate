@@ -127,6 +127,17 @@ serve(async (req) => {
         continue;
       }
 
+      let badgeCount = 1;
+      const { count: unreadCount } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", row.user_id)
+        .eq("is_read", false);
+
+      if ((unreadCount ?? 0) > 0) {
+        badgeCount = unreadCount as number;
+      }
+
       const fcmToken = row.user?.fcm_token;
       if (fcmToken) {
         try {
@@ -147,6 +158,7 @@ serve(async (req) => {
                   minutes_before: minutesBefore,
                 },
               },
+              badgeCount,
             },
           });
         } catch (e) {

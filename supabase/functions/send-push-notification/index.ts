@@ -70,7 +70,12 @@ serve(async (req) => {
   }
 
   try {
-    const { token, title, body, type, data, imageUrl } = await req.json();
+    const { token, title, body, type, data, imageUrl, badgeCount } =
+      await req.json();
+    const parsedBadgeCount = Number.isFinite(Number(badgeCount))
+      ? Math.max(0, Math.floor(Number(badgeCount)))
+      : 1;
+
 
     if (!token) {
       return new Response(
@@ -127,7 +132,7 @@ serve(async (req) => {
               payload: {
                 aps: {
                   sound: "default",
-                  badge: 1,
+                  badge: parsedBadgeCount,
                   // content-available: 1 is REQUIRED for onMessageOpenedApp / getInitialMessage to fire
                   "content-available": 1,
                   "mutable-content": 1,
