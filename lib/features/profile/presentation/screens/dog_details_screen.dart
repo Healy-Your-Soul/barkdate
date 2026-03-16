@@ -7,7 +7,6 @@ import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/services/conversation_service.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/services/notification_manager.dart';
 import 'package:barkdate/features/profile/presentation/providers/profile_provider.dart';
 import 'package:barkdate/features/feed/presentation/providers/feed_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
