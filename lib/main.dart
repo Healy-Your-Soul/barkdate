@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/settings_service.dart';
 import 'package:barkdate/services/notification_manager.dart';
+import 'package:barkdate/services/reminder_dispatch_service.dart';
 import 'package:barkdate/services/cache_service.dart';
 import 'package:barkdate/firebase_options.dart';
 import 'package:barkdate/utils/maps_js_bridge.dart';
@@ -50,6 +51,9 @@ void main() async {
 
   // Initialize comprehensive notification system
   await NotificationManager.initialize();
+
+  // Start periodic reminder dispatching for due walk reminders.
+  ReminderDispatchService().start();
 
   // Initialize Feature Flags
   await FeatureFlags.init();

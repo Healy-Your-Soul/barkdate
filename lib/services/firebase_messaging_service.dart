@@ -7,6 +7,7 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/models/notification.dart';
 import 'package:barkdate/services/in_app_notification_service.dart';
 import 'package:barkdate/services/notification_sound_service.dart';
+import 'package:barkdate/widgets/receive_walk_sheet.dart';
 
 import 'package:barkdate/core/router/app_router.dart';
 import 'package:go_router/go_router.dart';
@@ -426,8 +427,28 @@ class FirebaseMessagingService {
         }
         break;
       case NotificationType.playdateRequest:
-        // Navigate to playdate details
-        if (data['related_id'] != null) {
+        final metadataRaw = data['metadata'];
+        Map<String, dynamic> metadata = {};
+        if (metadataRaw is Map<String, dynamic>) {
+          metadata = metadataRaw;
+        } else if (metadataRaw is String && metadataRaw.isNotEmpty) {
+          try {
+            final parsed = jsonDecode(metadataRaw);
+            if (parsed is Map<String, dynamic>) {
+              metadata = parsed;
+            }
+          } catch (_) {}
+        }
+
+        final payload = <String, dynamic>{...metadata, ...data};
+        final hasSheetData = payload['request_id'] != null &&
+            payload['organizer_dog_name'] != null &&
+            payload['scheduled_at'] != null;
+
+        if (hasSheetData) {
+          showReceiveWalkSheetFromPayload(context, payload);
+        } else if (data['related_id'] != null) {
+          // Fallback when payload is incomplete
           GoRouter.of(context)
               .push('/playdate-details', extra: {'id': data['related_id']});
         }

@@ -1,8 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Calendar integration service for BarkDate playdates
 /// Handles syncing confirmed playdates with device calendar
 class CalendarIntegrationService {
+  static String _formatUtcForGoogleCalendar(DateTime value) {
+    final compact =
+        value.toUtc().toIso8601String().replaceAll('-', '').replaceAll(':', '').split('.').first;
+    return '${compact}Z';
+  }
+
+  static Uri _buildGoogleCalendarTemplateUri({
+    required String title,
+    required DateTime startTime,
+    required DateTime endTime,
+    required String location,
+    String? description,
+  }) {
+    final details = (description == null || description.trim().isEmpty)
+        ? 'Walk planned with BarkDate'
+        : description.trim();
+
+    return Uri.https('calendar.google.com', '/calendar/render', {
+      'action': 'TEMPLATE',
+      'text': title,
+      'dates':
+          '${_formatUtcForGoogleCalendar(startTime)}/${_formatUtcForGoogleCalendar(endTime)}',
+      'location': location,
+      'details': details,
+    });
+  }
+
   /// Add a confirmed playdate to device calendar
   /// Returns true if successfully added, false otherwise
   static Future<bool> addPlaydateToCalendar({
@@ -13,22 +41,24 @@ class CalendarIntegrationService {
     String? description,
     List<String>? attendees,
   }) async {
-    // TODO: Implement calendar integration
-    // This will require add_2_calendar or device_calendar package
+    try {
+      final uri = _buildGoogleCalendarTemplateUri(
+        title: title,
+        startTime: startTime,
+        endTime: endTime,
+        location: location,
+        description: description,
+      );
 
-    debugPrint('📅 COMING SOON: Adding to calendar');
-    debugPrint('Title: $title');
-    debugPrint('Time: $startTime - $endTime');
-    debugPrint('Location: $location');
-
-    // For now, return true to simulate success
-    // In real implementation, this would:
-    // 1. Request calendar permissions
-    // 2. Create calendar event
-    // 3. Add to default calendar or BarkDate calendar
-    // 4. Set reminder notifications
-
-    return true;
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened) {
+        debugPrint('❌ Could not launch calendar URL: $uri');
+      }
+      return opened;
+    } catch (e) {
+      debugPrint('❌ Error opening calendar deep link: $e');
+      return false;
+    }
   }
 
   /// Remove a playdate from device calendar
@@ -54,15 +84,14 @@ class CalendarIntegrationService {
 
   /// Check if calendar permissions are granted
   static Future<bool> hasCalendarPermissions() async {
-    // TODO: Check permissions
-    return false; // For now, assume no permissions
+    // Deep-link flow does not require device calendar permissions.
+    return true;
   }
 
   /// Request calendar permissions from user
   static Future<bool> requestCalendarPermissions() async {
-    // TODO: Request permissions
-    debugPrint('📅 COMING SOON: Requesting calendar permissions');
-    return false;
+    // Deep-link flow does not require device calendar permissions.
+    return true;
   }
 
   /// Show calendar integration setup dialog
@@ -115,7 +144,7 @@ class CalendarIntegrationButton extends StatelessWidget {
 
     return OutlinedButton.icon(
       onPressed: () =>
-          CalendarIntegrationService.showCalendarSetupDialog(context),
+          _handleAddToCalendar(context),
       icon: const Icon(Icons.calendar_month, size: 18),
       label: const Text('Add to Calendar'),
       style: OutlinedButton.styleFrom(
@@ -124,6 +153,39 @@ class CalendarIntegrationButton extends StatelessWidget {
           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+    );
+  }
+
+  Future<void> _handleAddToCalendar(BuildContext context) async {
+    final title = (playdate['title'] as String?) ?? 'BarkDate Walk';
+    final location = (playdate['location'] as String?) ?? 'TBD';
+    final scheduledAtRaw = playdate['scheduled_at'] as String?;
+    final scheduledAt =
+        scheduledAtRaw != null ? DateTime.tryParse(scheduledAtRaw) : null;
+
+    if (scheduledAt == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Missing walk time for calendar export.')),
+      );
+      return;
+    }
+
+    final ok = await CalendarIntegrationService.addPlaydateToCalendar(
+      title: title,
+      startTime: scheduledAt,
+      endTime: scheduledAt.add(const Duration(minutes: 60)),
+      location: location,
+      description: 'Planned with BarkDate',
+    );
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok
+            ? 'Opening calendar event draft...'
+            : 'Could not open calendar right now.'),
       ),
     );
   }

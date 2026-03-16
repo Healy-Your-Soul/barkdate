@@ -193,6 +193,24 @@ class BarkNotificationService {
 // =============================================================================
 
 class PlaydateRequestService {
+  static final RegExp _uuidPattern = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+  );
+
+  static bool _isValidUuid(String value) => _uuidPattern.hasMatch(value);
+
+  /// Pure helper for deterministic reminder timing checks.
+  static bool isReminderDue({
+    required DateTime now,
+    required DateTime scheduledAt,
+    required int minutesBefore,
+    DateTime? lastSentAt,
+  }) {
+    if (lastSentAt != null) return false;
+    final triggerAt = scheduledAt.subtract(Duration(minutes: minutesBefore));
+    return !now.isBefore(triggerAt);
+  }
+
   /// Create a new playdate request
   static Future<String?> createPlaydateRequest({
     required String organizerId,
@@ -243,8 +261,10 @@ class PlaydateRequestService {
       });
 
       // Create the playdate request for the invitee (attempt to include requester_dog_id if schema migrated)
+      String? requestId;
       try {
-        await SupabaseConfig.client.from('playdate_requests').insert({
+        final requestResult =
+            await SupabaseConfig.client.from('playdate_requests').insert({
           'playdate_id': playdateId,
           'requester_id': organizerId,
           'requester_dog_id': organizerDogId, // new column (safe try)
@@ -252,19 +272,22 @@ class PlaydateRequestService {
           'invitee_dog_id': inviteeDogId,
           'status': 'pending',
           'message': message,
-        });
+        }).select('id').single();
+        requestId = requestResult['id'];
       } catch (e) {
         final msg = e.toString();
         if (msg.contains('requester_dog_id') || msg.contains('column')) {
           debugPrint('requester_dog_id column missing – retrying without it');
-          await SupabaseConfig.client.from('playdate_requests').insert({
+          final requestResult =
+              await SupabaseConfig.client.from('playdate_requests').insert({
             'playdate_id': playdateId,
             'requester_id': organizerId,
             'invitee_id': inviteeId,
             'invitee_dog_id': inviteeDogId,
             'status': 'pending',
             'message': message,
-          });
+          }).select('id').single();
+          requestId = requestResult['id'];
         } else {
           rethrow;
         }
@@ -293,6 +316,7 @@ class PlaydateRequestService {
             '${organizerDog['name']} invited ${inviteeDog['name']} for a playdate at $location',
         relatedId: playdateId,
         metadata: {
+          'request_id': requestId, // Crucial for responding to the request
           'playdate_id': playdateId,
           'organizer_id': organizerId,
           'organizer_dog_id': organizerDogId,
@@ -320,6 +344,93 @@ class PlaydateRequestService {
     }
   }
 
+  /// Add an additional invitee to an existing playdate request.
+  /// Returns true when the request row is created and the invitee is notified.
+  static Future<bool> addInviteeToPlaydateRequest({
+    required String playdateId,
+    required String requesterId,
+    required String requesterDogId,
+    required String inviteeId,
+    required String inviteeDogId,
+    required String organizerDogName,
+    required String inviteeDogName,
+    required String title,
+    required String location,
+    required DateTime scheduledAt,
+    String? message,
+  }) async {
+    try {
+      if (!_isValidUuid(playdateId) ||
+          !_isValidUuid(requesterId) ||
+          !_isValidUuid(requesterDogId) ||
+          !_isValidUuid(inviteeId) ||
+          !_isValidUuid(inviteeDogId)) {
+        debugPrint('Invalid UUID in addInviteeToPlaydateRequest');
+        return false;
+      }
+
+      String? requestId;
+      try {
+        final requestResult =
+            await SupabaseConfig.client.from('playdate_requests').insert({
+          'playdate_id': playdateId,
+          'requester_id': requesterId,
+          'requester_dog_id': requesterDogId,
+          'invitee_id': inviteeId,
+          'invitee_dog_id': inviteeDogId,
+          'status': 'pending',
+          'message': message,
+        }).select('id').single();
+        requestId = requestResult['id'];
+      } catch (e) {
+        final err = e.toString();
+        if (err.contains('requester_dog_id') || err.contains('column')) {
+          final requestResult =
+              await SupabaseConfig.client.from('playdate_requests').insert({
+            'playdate_id': playdateId,
+            'requester_id': requesterId,
+            'invitee_id': inviteeId,
+            'invitee_dog_id': inviteeDogId,
+            'status': 'pending',
+            'message': message,
+          }).select('id').single();
+          requestId = requestResult['id'];
+        } else {
+          rethrow;
+        }
+      }
+
+      await NotificationService.createNotification(
+        userId: inviteeId,
+        type: 'playdate_request',
+        actionType: 'playdate_invited',
+        title: 'New Walk Invitation! 🐕',
+        body: '$organizerDogName invited $inviteeDogName for a walk at $location',
+        relatedId: playdateId,
+        metadata: {
+          'request_id': requestId,
+          'playdate_id': playdateId,
+          'organizer_id': requesterId,
+          'organizer_dog_id': requesterDogId,
+          'organizer_dog_name': organizerDogName,
+          'title': title,
+          'location': location,
+          'scheduled_at': scheduledAt.toIso8601String(),
+        },
+      );
+
+      await ConversationService.ensurePlaydateParticipant(
+        playdateId: playdateId,
+        userId: inviteeId,
+      );
+
+      return true;
+    } catch (e) {
+      debugPrint('Error adding invitee to playdate request: $e');
+      return false;
+    }
+  }
+
   /// Respond to a playdate request (accept, decline, counter-propose)
   static Future<bool> respondToPlaydateRequest({
     required String requestId,
@@ -336,14 +447,14 @@ class PlaydateRequestService {
       final now = DateTime.now();
 
       // Update the request
-      final updateData = {
+      final updateData = <String, dynamic>{
         'status': response,
         'responded_at': now.toIso8601String(),
       };
 
       if (message != null) updateData['message'] = message;
       if (counterProposal != null) {
-        updateData['counter_proposal'] = counterProposal.toString();
+        updateData['counter_proposal'] = counterProposal;
       }
 
       await SupabaseConfig.client
@@ -369,11 +480,21 @@ class PlaydateRequestService {
         }).eq('id', request['playdate_id']);
 
         // Add invitee as participant (for many-to-many relationships if needed later)
-        await SupabaseConfig.client.from('playdate_participants').insert({
-          'playdate_id': request['playdate_id'],
-          'user_id': request['invitee_id'],
-          'dog_id': request['invitee_dog_id'],
-        });
+        try {
+          await SupabaseConfig.client.from('playdate_participants').insert({
+            'playdate_id': request['playdate_id'],
+            'user_id': request['invitee_id'],
+            'dog_id': request['invitee_dog_id'],
+          });
+        } catch (e) {
+          final duplicate = e.toString().contains('duplicate key');
+          if (!duplicate) rethrow;
+        }
+
+        await ConversationService.ensurePlaydateParticipant(
+          playdateId: request['playdate_id'],
+          userId: request['invitee_id'],
+        );
 
         // Notify organizer
         await NotificationService.createNotification(
@@ -391,10 +512,32 @@ class PlaydateRequestService {
           },
         );
       } else if (response == 'declined') {
-        // Update playdate status to cancelled
-        await SupabaseConfig.client
-            .from('playdates')
-            .update({'status': 'cancelled'}).eq('id', request['playdate_id']);
+        await ConversationService.removePlaydateParticipant(
+          playdateId: request['playdate_id'],
+          userId: request['invitee_id'],
+        );
+
+        final remainingRequests = await SupabaseConfig.client
+            .from('playdate_requests')
+            .select('status')
+            .eq('playdate_id', request['playdate_id']);
+
+        final hasStillActive = (remainingRequests as List).any((entry) {
+          final status = (entry['status'] as String?) ?? '';
+          return status == 'accepted' ||
+              status == 'pending' ||
+              status == 'counter_proposed';
+        });
+
+        if (hasStillActive) {
+          await SupabaseConfig.client
+              .from('playdates')
+              .update({'status': 'confirmed'}).eq('id', request['playdate_id']);
+        } else {
+          await SupabaseConfig.client
+              .from('playdates')
+              .update({'status': 'cancelled'}).eq('id', request['playdate_id']);
+        }
 
         // Notify organizer
         await NotificationService.createNotification(
@@ -436,6 +579,112 @@ class PlaydateRequestService {
       debugPrint('Error responding to playdate request: $e');
       debugPrint('Error type: ${e.runtimeType} - details: ${e.toString()}');
       return false;
+    }
+  }
+
+  /// Save reminder preference for a user+playdate/request.
+  static Future<bool> upsertReminderPreference({
+    required String userId,
+    required String playdateId,
+    required String requestId,
+    required int minutesBefore,
+    bool enabled = true,
+  }) async {
+    try {
+      await SupabaseConfig.client.from('playdate_reminder_preferences').upsert({
+        'user_id': userId,
+        'playdate_id': playdateId,
+        'playdate_request_id': requestId,
+        'enabled': enabled,
+        'minutes_before': minutesBefore,
+        'updated_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'user_id,playdate_id');
+
+      return true;
+    } catch (e) {
+      debugPrint('Error upserting reminder preference: $e');
+      return false;
+    }
+  }
+
+  /// Create due reminder notifications and mark them as sent.
+  /// Useful for app-driven dispatch and for future scheduled workers.
+  static Future<int> processDueReminderNotifications({
+    int limit = 50,
+  }) async {
+    try {
+      final now = DateTime.now();
+      final rows = await SupabaseConfig.client
+          .from('playdate_reminder_preferences')
+          .select('''
+            id,
+            user_id,
+            playdate_id,
+            playdate_request_id,
+            minutes_before,
+            last_sent_at,
+            playdate:playdates!playdate_reminder_preferences_playdate_id_fkey(
+              title,
+              location,
+              scheduled_at
+            )
+          ''')
+          .eq('enabled', true)
+          .isFilter('last_sent_at', null)
+          .limit(limit);
+
+      int sent = 0;
+      for (final raw in rows as List) {
+        final row = Map<String, dynamic>.from(raw as Map);
+        final playdate = (row['playdate'] as Map<String, dynamic>?);
+        if (playdate == null) continue;
+
+        final scheduledAtRaw = playdate['scheduled_at'] as String?;
+        final scheduledAt =
+            scheduledAtRaw != null ? DateTime.tryParse(scheduledAtRaw) : null;
+        if (scheduledAt == null) continue;
+
+        final minutesBefore = (row['minutes_before'] as num?)?.toInt() ?? 60;
+        final lastSentRaw = row['last_sent_at'] as String?;
+        final lastSentAt =
+            lastSentRaw != null ? DateTime.tryParse(lastSentRaw) : null;
+
+        if (!isReminderDue(
+          now: now,
+          scheduledAt: scheduledAt,
+          minutesBefore: minutesBefore,
+          lastSentAt: lastSentAt,
+        )) {
+          continue;
+        }
+
+        await NotificationService.createNotification(
+          userId: row['user_id'] as String,
+          type: 'playdate',
+          actionType: 'playdate_reminder',
+          title: 'Walk reminder',
+          body:
+              'Your walk at ${playdate['location'] ?? 'the selected location'} starts soon.',
+          relatedId: row['playdate_id'] as String,
+          metadata: {
+            'playdate_id': row['playdate_id'],
+            'request_id': row['playdate_request_id'],
+            'scheduled_at': scheduledAt.toIso8601String(),
+            'minutes_before': minutesBefore,
+          },
+        );
+
+        await SupabaseConfig.client
+            .from('playdate_reminder_preferences')
+            .update({'last_sent_at': now.toIso8601String()}).eq('id', row['id']);
+
+        sent++;
+      }
+
+      return sent;
+    } catch (e) {
+      debugPrint('Error processing due reminder notifications: $e');
+      return 0;
     }
   }
 

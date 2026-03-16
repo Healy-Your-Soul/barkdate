@@ -9,6 +9,7 @@ import 'package:barkdate/design_system/app_spacing.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/models/dog.dart';
+import 'package:barkdate/widgets/walk_details_sheet.dart';
 
 /// A horizontally scrollable carousel of PackAlertCards.
 /// Auto-advances every 5 seconds with page indicator dots.
@@ -56,6 +57,39 @@ class _PackAlertsCarouselState extends ConsumerState<PackAlertsCarousel> {
   }
 
   void _handleCtaTap(BuildContext context, FriendAlert alert) {
+    if (alert.type == FriendAlertType.walkTogether) {
+      final metadata = alert.metadata ?? const <String, dynamic>{};
+      final parkId = metadata['park_id'] as String?;
+      final parkName = metadata['park_name'] as String?;
+      final scheduledForRaw = metadata['scheduled_for'] as String?;
+      final organizerDogName = metadata['dog_name'] as String? ?? 'A friend';
+      final checkInId = metadata['check_in_id'] as String?;
+
+      final scheduledFor = scheduledForRaw != null
+          ? DateTime.tryParse(scheduledForRaw)
+          : null;
+
+      if (parkId != null &&
+          parkId.isNotEmpty &&
+          parkName != null &&
+          parkName.isNotEmpty &&
+          scheduledFor != null) {
+        showWalkDetailsSheet(
+          context,
+          parkId: parkId,
+          parkName: parkName,
+          scheduledFor: scheduledFor,
+          organizerDogName: organizerDogName,
+          checkInId: checkInId,
+        );
+        return;
+      }
+
+      // Fallback for own playdate-based walk cards without check-in metadata.
+      const PlaydatesRoute().go(context);
+      return;
+    }
+
     final route = alert.ctaRoute;
     if (route != null && route.isNotEmpty) {
       // Parse route — may contain query params
