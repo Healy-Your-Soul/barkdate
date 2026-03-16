@@ -54,13 +54,13 @@ void main() {
     expect(find.descendant(of: botNav, matching: find.text('Map')),
         findsOneWidget);
     expect(find.descendant(of: botNav, matching: find.text('Messages')),
-      findsOneWidget);
+        findsOneWidget);
     expect(find.descendant(of: botNav, matching: find.text('Profile')),
         findsOneWidget);
     expect(find.descendant(of: botNav, matching: find.text('Playdates')),
         findsNothing);
     expect(find.descendant(of: botNav, matching: find.text('Events')),
-      findsNothing);
+        findsNothing);
   });
 
   testWidgets('MainNavigation shows 6 items when slimBottomNav is false',
