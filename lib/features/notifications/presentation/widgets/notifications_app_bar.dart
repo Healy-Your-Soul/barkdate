@@ -121,7 +121,7 @@ class NotificationsAppBar extends ConsumerWidget
           .delete()
           .eq('user_id', user.id);
 
-        await AppBadgeService.clearBadge();
+      await AppBadgeService.clearBadge();
 
       ref.invalidate(notificationsProvider);
 
