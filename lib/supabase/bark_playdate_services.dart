@@ -263,30 +263,36 @@ class PlaydateRequestService {
       // Create the playdate request for the invitee (attempt to include requester_dog_id if schema migrated)
       String? requestId;
       try {
-        final requestResult =
-            await SupabaseConfig.client.from('playdate_requests').insert({
-          'playdate_id': playdateId,
-          'requester_id': organizerId,
-          'requester_dog_id': organizerDogId, // new column (safe try)
-          'invitee_id': inviteeId,
-          'invitee_dog_id': inviteeDogId,
-          'status': 'pending',
-          'message': message,
-        }).select('id').single();
+        final requestResult = await SupabaseConfig.client
+            .from('playdate_requests')
+            .insert({
+              'playdate_id': playdateId,
+              'requester_id': organizerId,
+              'requester_dog_id': organizerDogId, // new column (safe try)
+              'invitee_id': inviteeId,
+              'invitee_dog_id': inviteeDogId,
+              'status': 'pending',
+              'message': message,
+            })
+            .select('id')
+            .single();
         requestId = requestResult['id'];
       } catch (e) {
         final msg = e.toString();
         if (msg.contains('requester_dog_id') || msg.contains('column')) {
           debugPrint('requester_dog_id column missing – retrying without it');
-          final requestResult =
-              await SupabaseConfig.client.from('playdate_requests').insert({
-            'playdate_id': playdateId,
-            'requester_id': organizerId,
-            'invitee_id': inviteeId,
-            'invitee_dog_id': inviteeDogId,
-            'status': 'pending',
-            'message': message,
-          }).select('id').single();
+          final requestResult = await SupabaseConfig.client
+              .from('playdate_requests')
+              .insert({
+                'playdate_id': playdateId,
+                'requester_id': organizerId,
+                'invitee_id': inviteeId,
+                'invitee_dog_id': inviteeDogId,
+                'status': 'pending',
+                'message': message,
+              })
+              .select('id')
+              .single();
           requestId = requestResult['id'];
         } else {
           rethrow;
@@ -371,29 +377,35 @@ class PlaydateRequestService {
 
       String? requestId;
       try {
-        final requestResult =
-            await SupabaseConfig.client.from('playdate_requests').insert({
-          'playdate_id': playdateId,
-          'requester_id': requesterId,
-          'requester_dog_id': requesterDogId,
-          'invitee_id': inviteeId,
-          'invitee_dog_id': inviteeDogId,
-          'status': 'pending',
-          'message': message,
-        }).select('id').single();
+        final requestResult = await SupabaseConfig.client
+            .from('playdate_requests')
+            .insert({
+              'playdate_id': playdateId,
+              'requester_id': requesterId,
+              'requester_dog_id': requesterDogId,
+              'invitee_id': inviteeId,
+              'invitee_dog_id': inviteeDogId,
+              'status': 'pending',
+              'message': message,
+            })
+            .select('id')
+            .single();
         requestId = requestResult['id'];
       } catch (e) {
         final err = e.toString();
         if (err.contains('requester_dog_id') || err.contains('column')) {
-          final requestResult =
-              await SupabaseConfig.client.from('playdate_requests').insert({
-            'playdate_id': playdateId,
-            'requester_id': requesterId,
-            'invitee_id': inviteeId,
-            'invitee_dog_id': inviteeDogId,
-            'status': 'pending',
-            'message': message,
-          }).select('id').single();
+          final requestResult = await SupabaseConfig.client
+              .from('playdate_requests')
+              .insert({
+                'playdate_id': playdateId,
+                'requester_id': requesterId,
+                'invitee_id': inviteeId,
+                'invitee_dog_id': inviteeDogId,
+                'status': 'pending',
+                'message': message,
+              })
+              .select('id')
+              .single();
           requestId = requestResult['id'];
         } else {
           rethrow;
@@ -405,7 +417,8 @@ class PlaydateRequestService {
         type: 'playdate_request',
         actionType: 'playdate_invited',
         title: 'New Walk Invitation! 🐕',
-        body: '$organizerDogName invited $inviteeDogName for a walk at $location',
+        body:
+            '$organizerDogName invited $inviteeDogName for a walk at $location',
         relatedId: playdateId,
         metadata: {
           'request_id': requestId,
@@ -676,7 +689,8 @@ class PlaydateRequestService {
 
         await SupabaseConfig.client
             .from('playdate_reminder_preferences')
-            .update({'last_sent_at': now.toIso8601String()}).eq('id', row['id']);
+            .update({'last_sent_at': now.toIso8601String()}).eq(
+                'id', row['id']);
 
         sent++;
       }

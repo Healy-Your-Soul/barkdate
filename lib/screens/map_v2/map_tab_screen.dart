@@ -581,7 +581,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       if (hoursAgo >= 4) continue;
 
       // Traffic light system: Green <1h, Orange 1-2h, Red 2-3h
-        final borderColor = DogMarkerGenerator.getBorderColorForAge(hoursAgo);
+      final borderColor = DogMarkerGenerator.getBorderColorForAge(hoursAgo);
 
       final dogPhotoUrl = dog?['main_photo_url'] as String?;
       final dogName = dog?['name'] as String? ?? 'Dog';

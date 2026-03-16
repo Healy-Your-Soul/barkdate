@@ -40,15 +40,12 @@ class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
 
   Future<Map<String, dynamic>?> _fetchRequestContext() async {
     try {
-      final request = await SupabaseConfig.client
-          .from('playdate_requests')
-          .select('''
+      final request =
+          await SupabaseConfig.client.from('playdate_requests').select('''
             id,
             playdate_id,
             playdate:playdates(id, title, location, scheduled_at)
-          ''')
-          .eq('id', widget.requestId)
-          .maybeSingle();
+          ''').eq('id', widget.requestId).maybeSingle();
 
       if (request == null) return null;
       return Map<String, dynamic>.from(request);
@@ -60,15 +57,12 @@ class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
 
   Future<Map<String, String>?> _resolveAcceptedChatTarget() async {
     try {
-      final request = await SupabaseConfig.client
-          .from('playdate_requests')
-          .select('''
+      final request =
+          await SupabaseConfig.client.from('playdate_requests').select('''
             playdate_id,
             requester_id,
             requester:users!playdate_requests_requester_id_fkey(name, avatar_url)
-          ''')
-          .eq('id', widget.requestId)
-          .maybeSingle();
+          ''').eq('id', widget.requestId).maybeSingle();
 
       if (request == null) return null;
 
@@ -96,7 +90,8 @@ class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
       return {
         'conversationId': conversationId,
         'recipientId': requesterId,
-        'recipientName': (requester?['name'] as String?) ?? widget.organizerName,
+        'recipientName':
+            (requester?['name'] as String?) ?? widget.organizerName,
         'recipientAvatarUrl': (requester?['avatar_url'] as String?) ?? '',
       };
     } catch (e) {

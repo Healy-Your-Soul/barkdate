@@ -38,7 +38,8 @@ class ReminderDispatchService {
 
     _isRunning = true;
     try {
-      final sent = await PlaydateRequestService.processDueReminderNotifications();
+      final sent =
+          await PlaydateRequestService.processDueReminderNotifications();
       if (sent > 0) {
         debugPrint('⏰ Reminder dispatcher sent $sent notification(s)');
       }

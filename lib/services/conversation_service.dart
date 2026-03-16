@@ -241,7 +241,8 @@ class ConversationService {
     } catch (e) {
       final message = e.toString();
       if (message.contains('duplicate key') ||
-          message.contains('conversation_participants_conversation_id_user_id_key')) {
+          message.contains(
+              'conversation_participants_conversation_id_user_id_key')) {
         debugPrint('ℹ️ Participant already exists in conversation: $userId');
         return true;
       }
@@ -290,7 +291,8 @@ class ConversationService {
       debugPrint('✅ Removed participant $userId from playdate conversation');
       return true;
     } catch (e) {
-      debugPrint('⚠️ Could not remove participant from playdate conversation: $e');
+      debugPrint(
+          '⚠️ Could not remove participant from playdate conversation: $e');
       return false;
     }
   }

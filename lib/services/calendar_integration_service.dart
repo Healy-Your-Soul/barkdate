@@ -5,8 +5,13 @@ import 'package:url_launcher/url_launcher.dart';
 /// Handles syncing confirmed playdates with device calendar
 class CalendarIntegrationService {
   static String _formatUtcForGoogleCalendar(DateTime value) {
-    final compact =
-        value.toUtc().toIso8601String().replaceAll('-', '').replaceAll(':', '').split('.').first;
+    final compact = value
+        .toUtc()
+        .toIso8601String()
+        .replaceAll('-', '')
+        .replaceAll(':', '')
+        .split('.')
+        .first;
     return '${compact}Z';
   }
 
@@ -143,8 +148,7 @@ class CalendarIntegrationButton extends StatelessWidget {
     if (!isConfirmed) return const SizedBox.shrink();
 
     return OutlinedButton.icon(
-      onPressed: () =>
-          _handleAddToCalendar(context),
+      onPressed: () => _handleAddToCalendar(context),
       icon: const Icon(Icons.calendar_month, size: 18),
       label: const Text('Add to Calendar'),
       style: OutlinedButton.styleFrom(

@@ -65,9 +65,8 @@ class _PackAlertsCarouselState extends ConsumerState<PackAlertsCarousel> {
       final organizerDogName = metadata['dog_name'] as String? ?? 'A friend';
       final checkInId = metadata['check_in_id'] as String?;
 
-      final scheduledFor = scheduledForRaw != null
-          ? DateTime.tryParse(scheduledForRaw)
-          : null;
+      final scheduledFor =
+          scheduledForRaw != null ? DateTime.tryParse(scheduledForRaw) : null;
 
       if (parkId != null &&
           parkId.isNotEmpty &&

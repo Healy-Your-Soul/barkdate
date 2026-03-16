@@ -104,7 +104,8 @@ class _SendWalkSheetState extends ConsumerState<SendWalkSheet> {
             ? f['dog'] as Map<String, dynamic>
             : f['friend_dog'] as Map<String, dynamic>;
 
-        final photosRaw = friendDogMap['photo_urls'] ?? friendDogMap['photos'] ?? [];
+        final photosRaw =
+            friendDogMap['photo_urls'] ?? friendDogMap['photos'] ?? [];
         final photos = (photosRaw as List).map((e) => e.toString()).toList();
         if (photos.isEmpty && friendDogMap['main_photo_url'] != null) {
           photos.add(friendDogMap['main_photo_url']);
@@ -260,7 +261,8 @@ class _SendWalkSheetState extends ConsumerState<SendWalkSheet> {
               continue;
             }
 
-            final success = await PlaydateRequestService.addInviteeToPlaydateRequest(
+            final success =
+                await PlaydateRequestService.addInviteeToPlaydateRequest(
               playdateId: playdateId,
               requesterId: userId,
               requesterDogId: _myDog!.id,
@@ -373,8 +375,9 @@ class _SendWalkSheetState extends ConsumerState<SendWalkSheet> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
-                        color:
-                            !_isFutureWalk ? const Color(0xFFE89E5F) : Colors.transparent,
+                        color: !_isFutureWalk
+                            ? const Color(0xFFE89E5F)
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -394,8 +397,9 @@ class _SendWalkSheetState extends ConsumerState<SendWalkSheet> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
-                        color:
-                            _isFutureWalk ? const Color(0xFFE89E5F) : Colors.transparent,
+                        color: _isFutureWalk
+                            ? const Color(0xFFE89E5F)
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -414,65 +418,64 @@ class _SendWalkSheetState extends ConsumerState<SendWalkSheet> {
             ),
           ),
           const SizedBox(height: 20),
-
           if (_isFutureWalk) ...[
-          Text('When',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: _selectDate,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.calendar_today,
-                            size: 18, color: Color(0xFFE89E5F)),
-                        const SizedBox(width: 8),
-                        Text(_formatDate(),
-                            style: Theme.of(context).textTheme.bodyMedium),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: InkWell(
-                  onTap: _selectTime,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.access_time,
-                            size: 18, color: Color(0xFFE89E5F)),
-                        const SizedBox(width: 8),
-                        Text(_selectedTime.format(context),
-                            style: Theme.of(context).textTheme.bodyMedium),
-                      ],
+            Text('When',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: _selectDate,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_today,
+                              size: 18, color: Color(0xFFE89E5F)),
+                          const SizedBox(width: 8),
+                          Text(_formatDate(),
+                              style: Theme.of(context).textTheme.bodyMedium),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: InkWell(
+                    onTap: _selectTime,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.access_time,
+                              size: 18, color: Color(0xFFE89E5F)),
+                          const SizedBox(width: 8),
+                          Text(_selectedTime.format(context),
+                              style: Theme.of(context).textTheme.bodyMedium),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ] else ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -482,7 +485,8 @@ class _SendWalkSheetState extends ConsumerState<SendWalkSheet> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.flash_on, color: Color(0xFFE89E5F), size: 18),
+                  const Icon(Icons.flash_on,
+                      color: Color(0xFFE89E5F), size: 18),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -495,7 +499,6 @@ class _SendWalkSheetState extends ConsumerState<SendWalkSheet> {
             ),
             const SizedBox(height: 20),
           ],
-
           Text('Where',
               style: Theme.of(context)
                   .textTheme
@@ -577,7 +580,8 @@ class _SendWalkSheetState extends ConsumerState<SendWalkSheet> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final availableDogs = _packMembers.where((d) => d.id != widget.targetDog.id).toList();
+    final availableDogs =
+        _packMembers.where((d) => d.id != widget.targetDog.id).toList();
     if (availableDogs.isEmpty) {
       return const Text('No other pack members available.',
           style: TextStyle(color: Colors.grey));
@@ -639,8 +643,10 @@ class _SendWalkSheetState extends ConsumerState<SendWalkSheet> {
                     friendDog.name,
                     style: TextStyle(
                       fontSize: 10,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected ? const Color(0xFFE89E5F) : Colors.black87,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      color:
+                          isSelected ? const Color(0xFFE89E5F) : Colors.black87,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
