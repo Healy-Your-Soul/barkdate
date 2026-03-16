@@ -29,7 +29,7 @@ void main() {
     );
   });
 
-  testWidgets('MainNavigation shows 3 items when slimBottomNav is true',
+  testWidgets('MainNavigation shows 4 items when slimBottomNav is true',
       (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -42,21 +42,25 @@ void main() {
       ),
     );
 
-    // Verify BottomNavigationBar has 3 items
+    // Verify BottomNavigationBar has 4 items
     final botNav = find.byType(BottomNavigationBar);
     expect(botNav, findsOneWidget);
 
     final widget = tester.widget<BottomNavigationBar>(botNav);
-    expect(widget.items.length, 3);
+    expect(widget.items.length, 4);
 
     expect(find.descendant(of: botNav, matching: find.text('Feed')),
         findsOneWidget);
     expect(find.descendant(of: botNav, matching: find.text('Map')),
         findsOneWidget);
+    expect(find.descendant(of: botNav, matching: find.text('Messages')),
+      findsOneWidget);
     expect(find.descendant(of: botNav, matching: find.text('Profile')),
         findsOneWidget);
     expect(find.descendant(of: botNav, matching: find.text('Playdates')),
         findsNothing);
+    expect(find.descendant(of: botNav, matching: find.text('Events')),
+      findsNothing);
   });
 
   testWidgets('MainNavigation shows 6 items when slimBottomNav is false',
