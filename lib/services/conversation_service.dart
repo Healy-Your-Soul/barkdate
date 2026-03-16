@@ -239,7 +239,58 @@ class ConversationService {
       debugPrint('✅ Added participant $userId to conversation');
       return true;
     } catch (e) {
+      final message = e.toString();
+      if (message.contains('duplicate key') ||
+          message.contains('conversation_participants_conversation_id_user_id_key')) {
+        debugPrint('ℹ️ Participant already exists in conversation: $userId');
+        return true;
+      }
       debugPrint('❌ Error adding participant: $e');
+      return false;
+    }
+  }
+
+  /// Ensure a user is a participant in a playdate conversation.
+  static Future<bool> ensurePlaydateParticipant({
+    required String playdateId,
+    required String userId,
+    String role = 'member',
+  }) async {
+    try {
+      final conversation = await getPlaydateConversation(playdateId);
+      if (conversation == null || conversation['id'] == null) {
+        debugPrint('ℹ️ No playdate conversation to sync participant yet');
+        return false;
+      }
+
+      return addParticipant(conversation['id'] as String, userId, role: role);
+    } catch (e) {
+      debugPrint('❌ Error ensuring playdate participant: $e');
+      return false;
+    }
+  }
+
+  /// Remove a user from a playdate conversation.
+  static Future<bool> removePlaydateParticipant({
+    required String playdateId,
+    required String userId,
+  }) async {
+    try {
+      final conversation = await getPlaydateConversation(playdateId);
+      if (conversation == null || conversation['id'] == null) {
+        return true;
+      }
+
+      await _client
+          .from('conversation_participants')
+          .delete()
+          .eq('conversation_id', conversation['id'])
+          .eq('user_id', userId);
+
+      debugPrint('✅ Removed participant $userId from playdate conversation');
+      return true;
+    } catch (e) {
+      debugPrint('⚠️ Could not remove participant from playdate conversation: $e');
       return false;
     }
   }

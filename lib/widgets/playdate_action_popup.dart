@@ -72,7 +72,7 @@ class PlaydateActionPopup extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Playdate Confirmed! 🎉',
+                    'Walk Confirmed! 🎉',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -171,7 +171,7 @@ class PlaydateActionPopup extends StatelessWidget {
                     children: [
                       Expanded(
                         child: AppButton(
-                          text: 'Cancel Playdate',
+                          text: 'Cancel Walk',
                           type: AppButtonType.text,
                           customColor: Colors.red,
                           onPressed: onCancel,

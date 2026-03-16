@@ -219,10 +219,12 @@ class DogMarkerGenerator {
   static Color getBorderColorForAge(double hoursAgo) {
     if (hoursAgo < 1.0) {
       return Colors.green; // 0-1 hour: green (active)
+    } else if (hoursAgo < 2.0) {
+      return Colors.orange; // 1-2 hours: orange (recent)
     } else if (hoursAgo < 3.0) {
-      return Colors.orange; // 1-3 hours: orange (recent)
+      return Colors.red; // 2-3 hours: red (stale)
     } else {
-      return Colors.red; // 3-4 hours: red (stale)
+      return Colors.grey; // 3h+: very stale
     }
   }
 

@@ -4,6 +4,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:barkdate/screens/feed_screen.dart';
 import 'package:barkdate/screens/map_screen.dart';
 import 'package:barkdate/screens/map_v2/map_tab_screen.dart'; // New map
+import 'package:barkdate/features/feed/presentation/providers/feed_provider.dart';
 import 'package:barkdate/screens/events_screen.dart';
 import 'package:barkdate/screens/playdates_screen.dart';
 import 'package:barkdate/screens/messages_screen.dart';
@@ -118,7 +119,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     if (useSlim) {
       // Map Logical to Visible in Slim Mode
       // Logical: 0:Feed, 1:Map, 2:Playdates, 3:Events, 4:Messages, 5:Profile
-      // Slim:    0:Feed, 1:Map, 2:Profile
+      // Slim:    0:Feed, 1:Map, 2:Messages, 3:Profile
       switch (logicalIndex) {
         case 0:
           visibleIndex = 0;
@@ -126,8 +127,11 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
         case 1:
           visibleIndex = 1;
           break;
-        case 5:
+        case 4:
           visibleIndex = 2;
+          break; // Messages
+        case 5:
+          visibleIndex = 3;
           break; // Profile
         default:
           debugPrint('Tab $logicalIndex is hidden in Slim mode');
@@ -182,20 +186,44 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
         screen: const MessagesScreen(),
       ),
       NavigationItem(
-        icon: _dogAvatarUrl != null && _dogAvatarUrl!.isNotEmpty
-            ? CircleAvatar(
-                radius: 12,
-                backgroundImage: NetworkImage(_dogAvatarUrl!),
-                onBackgroundImageError: (_, __) {},
-              )
-            : const Icon(Symbols.person, weight: 300),
-        activeIcon: _dogAvatarUrl != null && _dogAvatarUrl!.isNotEmpty
-            ? CircleAvatar(
-                radius: 12,
-                backgroundImage: NetworkImage(_dogAvatarUrl!),
-                onBackgroundImageError: (_, __) {},
-              )
-            : const Icon(Symbols.person, weight: 500, fill: 1),
+        icon: Consumer(
+          builder: (context, ref, _) {
+            final unreadCount =
+                ref.watch(unreadNotificationCountProvider).value ?? 0;
+            final avatar = _dogAvatarUrl != null && _dogAvatarUrl!.isNotEmpty
+                ? CircleAvatar(
+                    radius: 12,
+                    backgroundImage: NetworkImage(_dogAvatarUrl!),
+                    onBackgroundImageError: (_, __) {},
+                  )
+                : const Icon(Symbols.person, weight: 300);
+
+            return Badge(
+              isLabelVisible: unreadCount > 0,
+              label: Text('$unreadCount'),
+              child: avatar,
+            );
+          },
+        ),
+        activeIcon: Consumer(
+          builder: (context, ref, _) {
+            final unreadCount =
+                ref.watch(unreadNotificationCountProvider).value ?? 0;
+            final avatar = _dogAvatarUrl != null && _dogAvatarUrl!.isNotEmpty
+                ? CircleAvatar(
+                    radius: 12,
+                    backgroundImage: NetworkImage(_dogAvatarUrl!),
+                    onBackgroundImageError: (_, __) {},
+                  )
+                : const Icon(Symbols.person, weight: 500, fill: 1);
+
+            return Badge(
+              isLabelVisible: unreadCount > 0,
+              label: Text('$unreadCount'),
+              child: avatar,
+            );
+          },
+        ),
         label: 'Profile',
         screen: const ProfileScreen(),
       ),
@@ -212,7 +240,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     // Filter items based on flag
     final List<NavigationItem> items;
     if (useSlimBottomNav) {
-      const slimLabels = ['Feed', 'Map', 'Profile'];
+      const slimLabels = ['Feed', 'Map', 'Messages', 'Profile'];
       items =
           allItems.where((item) => slimLabels.contains(item.label)).toList();
     } else {

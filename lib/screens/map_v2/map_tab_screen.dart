@@ -17,6 +17,7 @@ import 'package:barkdate/services/places_service.dart';
 import 'package:barkdate/services/events_service.dart';
 import 'package:barkdate/services/checkin_service.dart';
 import 'package:barkdate/services/location_service.dart';
+import 'package:barkdate/services/friend_activity_service.dart';
 import 'package:barkdate/models/event.dart';
 import 'package:barkdate/models/checkin.dart';
 import 'package:barkdate/widgets/live_location_toggle.dart';
@@ -79,6 +80,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   // Other users' check-ins (for displaying on map)
   final List<Map<String, dynamic>> _otherUsersCheckIns = [];
 
+  // Scheduled future walks (for clock markers)
+  final List<Map<String, dynamic>> _scheduledWalks = [];
+
   @override
   void initState() {
     super.initState();
@@ -91,7 +95,10 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     // Auto-refresh check-ins every 30 seconds
     _checkInRefreshTimer = Timer.periodic(
       const Duration(seconds: 30),
-      (_) => _refreshCheckInCounts(),
+      (_) async {
+        await _refreshCheckInCounts();
+        await _refreshScheduledWalks();
+      },
     );
 
     // Auto-refresh live users every 30 seconds
@@ -112,6 +119,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         .stream(primaryKey: ['id']).listen((_) {
       debugPrint('📍 Realtime: Check-in update received');
       _refreshCheckInCounts();
+      _refreshScheduledWalks();
       _loadUserCheckIn();
     });
   }
@@ -243,10 +251,30 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       // Fetch live users nearby
       await _refreshLiveUsers();
 
+      // Fetch scheduled future walks for clock markers
+      await _refreshScheduledWalks();
+
       _updateMarkers();
     } catch (e) {
       debugPrint('❌ Error fetching data: $e');
       setState(() => _isLoadingPlaces = false);
+    }
+  }
+
+  Future<void> _refreshScheduledWalks() async {
+    try {
+      final walks = await FriendActivityService.getScheduledWalksForMap();
+
+      if (mounted) {
+        setState(() {
+          _scheduledWalks
+            ..clear()
+            ..addAll(walks);
+        });
+        _updateMarkers();
+      }
+    } catch (e) {
+      debugPrint('❌ Error refreshing scheduled walks: $e');
     }
   }
 
@@ -498,6 +526,37 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       }
     }
 
+    // Add scheduled future walk markers (clock markers)
+    for (final walk in _scheduledWalks) {
+      final lat = walk['latitude'] as double?;
+      final lng = walk['longitude'] as double?;
+      if (lat == null || lng == null) continue;
+
+      final scheduledFor = DateTime.tryParse(walk['scheduled_for'] ?? '');
+      if (scheduledFor == null) continue;
+
+      final dog = walk['dog'] as Map<String, dynamic>?;
+      final dogName = dog?['name'] as String? ?? 'Someone';
+      final parkName = walk['park_name'] as String? ?? 'a park';
+
+      final hour = scheduledFor.hour;
+      final minute = scheduledFor.minute.toString().padLeft(2, '0');
+      final amPm = hour >= 12 ? 'PM' : 'AM';
+      final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+      final timeStr = '$displayHour:$minute $amPm';
+
+      newMarkers.add(Marker(
+        markerId: MarkerId('scheduled_walk_${walk['id']}'),
+        position: LatLng(lat, lng),
+        infoWindow: InfoWindow(
+          title: '🕐 $dogName • $timeStr',
+          snippet: 'Future walk at $parkName',
+        ),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        zIndexInt: 40,
+      ));
+    }
+
     // Add OTHER users' check-in markers (dogs at parks)
     for (final checkIn in _otherUsersCheckIns) {
       final latitude = checkIn['latitude'] as double?;
@@ -522,13 +581,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       if (hoursAgo >= 4) continue;
 
       // Traffic light system: Green <1h, Orange 1-2h, Red 2-3h
-      final borderColor = hoursAgo < 1
-          ? Colors.green
-          : hoursAgo < 2
-              ? Colors.orange
-              : hoursAgo < 3
-                  ? Colors.red
-                  : Colors.grey;
+        final borderColor = DogMarkerGenerator.getBorderColorForAge(hoursAgo);
 
       final dogPhotoUrl = dog?['main_photo_url'] as String?;
       final dogName = dog?['name'] as String? ?? 'Dog';
@@ -576,13 +629,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       // Only show if within 4 hours
       if (hoursAgo < 4) {
         // Traffic light system: Green <1h, Orange 1-2h, Red 2-3h
-        final borderColor = hoursAgo < 1
-            ? Colors.green
-            : hoursAgo < 2
-                ? Colors.orange
-                : hoursAgo < 3
-                    ? Colors.red
-                    : Colors.grey; // Stale (3-4h)
+        final borderColor = DogMarkerGenerator.getBorderColorForAge(hoursAgo);
 
         // Create dog photo marker with colored border
         final icon = await DogMarkerGenerator.createDogMarker(
@@ -607,6 +654,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         ));
       }
     }
+
+    // Ensure live user markers are included in final marker set.
+    newMarkers.addAll(_liveUserMarkers);
 
     debugPrint('🗺️ Setting ${newMarkers.length} markers on map');
     setState(() {

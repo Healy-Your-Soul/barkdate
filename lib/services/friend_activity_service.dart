@@ -53,6 +53,7 @@ class FriendActivityService {
         _getNewFriendAlerts(myDogId),
         _getUpcomingPlaydateAlerts(userId),
         _getFriendPostAlerts(friendDogIds),
+        _getUserOwnUpcomingWalkAlerts(userId),
       ]);
 
       final allAlerts = <FriendAlert>[];
@@ -432,6 +433,41 @@ class FriendActivityService {
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       debugPrint('Error getting walk participants: $e');
+      return [];
+    }
+  }
+
+  /// Get user's own upcoming walks (playdates they organized)
+  static Future<List<FriendAlert>> _getUserOwnUpcomingWalkAlerts(
+      String userId) async {
+    try {
+      final now = DateTime.now().toIso8601String();
+
+      // Get upcoming playdates organized by this user
+      final data = await SupabaseConfig.client
+          .from('playdates')
+          .select('id, location, scheduled_at, status, title')
+          .eq('organizer_id', userId)
+          .gte('scheduled_at', now)
+          .order('scheduled_at', ascending: true)
+          .limit(3);
+
+      return (data as List).map((playdate) {
+        final dateStr = playdate['scheduled_at'] ?? '';
+        final startsAt = DateTime.tryParse(dateStr) ?? DateTime.now();
+
+        return FriendAlert.walkTogether(
+          id: 'own_walk_${playdate['id']}',
+          dogName: 'You',
+          parkName: playdate['location'] ?? 'Scheduled Location',
+          scheduledFor: startsAt,
+          joinCount: 1, // At least the user is going
+          parkId: null,
+          checkInId: playdate['id'],
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('Error fetching own walk alerts: $e');
       return [];
     }
   }

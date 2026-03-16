@@ -241,7 +241,7 @@ class DogFriendshipService {
       final result = await _supabase
           .from('dog_friendships')
           .select(
-              '*, dog:dogs!dog_friendships_dog_id_fkey(id, name, breed, main_photo_url), friend_dog:dogs!dog_friendships_friend_dog_id_fkey(id, name, breed, main_photo_url)')
+              '*, dog:dogs!dog_friendships_dog_id_fkey(id, name, breed, main_photo_url, user_id), friend_dog:dogs!dog_friendships_friend_dog_id_fkey(id, name, breed, main_photo_url, user_id)')
           .eq('status', statusAccepted)
           .or('dog_id.eq.$dogId,friend_dog_id.eq.$dogId');
 
