@@ -52,7 +52,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'BarkDate',
+                        'Bark',
                         style: AppTypography.brandTitle(
                           color: Theme.of(context)
                               .colorScheme

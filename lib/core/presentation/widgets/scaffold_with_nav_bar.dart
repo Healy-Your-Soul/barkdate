@@ -38,7 +38,7 @@ class ScaffoldWithNavBar extends ConsumerWidget {
 
     final List<_NavItem> navItems;
     if (useSlimBottomNav) {
-      const slimLabels = ['Feed', 'Map', 'Profile'];
+      const slimLabels = ['Feed', 'Map', 'Messages', 'Profile'];
       navItems =
           allItems.where((item) => slimLabels.contains(item.label)).toList();
     } else {
