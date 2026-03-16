@@ -3,9 +3,9 @@ import 'package:barkdate/models/notification.dart';
 import 'package:barkdate/widgets/notification_tile.dart';
 import 'package:barkdate/supabase/notification_service.dart' as notif_service;
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/screens/playdates_screen.dart';
 import 'package:barkdate/models/dog.dart';
-import 'package:barkdate/screens/dog_profile_detail.dart';
 import 'package:barkdate/screens/chat_detail_screen.dart';
 import 'package:barkdate/screens/social_feed_screen.dart';
 import 'package:barkdate/widgets/playdate_response_bottom_sheet.dart';
@@ -791,10 +791,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       );
 
       if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => DogProfileDetail(dog: dog)),
-      );
+      DogDetailsRoute($extra: dog).push(context);
 
       _markNotificationAsRead(notification);
     } catch (e) {

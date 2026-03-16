@@ -6,7 +6,7 @@ import 'package:barkdate/widgets/filter_sheet.dart';
 import 'package:barkdate/screens/catch_screen.dart';
 import 'package:barkdate/screens/notifications_screen.dart';
 import 'package:barkdate/screens/social_feed_screen.dart';
-import 'package:barkdate/screens/dog_profile_detail.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/screens/settings_screen.dart';
 import 'package:barkdate/screens/main_navigation.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
@@ -1280,12 +1280,7 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   void _showDogProfile(Dog dog) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DogProfileDetail(dog: dog),
-      ),
-    );
+    DogDetailsRoute($extra: dog).push(context);
   }
 
   Widget _buildDashboard() {
