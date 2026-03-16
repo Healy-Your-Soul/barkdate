@@ -63,7 +63,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       ref.read(mapViewportProvider.notifier).state =
           ref.read(mapViewportProvider).copyWith(
                 center: location,
-                zoom: 14.0,
+                zoom: 16.0,
               );
 
       setState(() {

@@ -20,6 +20,7 @@ import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart'
     hide DogFriendshipService;
 import 'package:barkdate/widgets/pack_alerts_carousel.dart';
+import 'package:barkdate/widgets/send_walk_sheet.dart';
 
 class FeedFeatureScreen extends ConsumerWidget {
   const FeedFeatureScreen({super.key});
@@ -51,7 +52,7 @@ class FeedFeatureScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Bark',
+                        'BarkDate',
                         style: AppTypography.brandTitle(
                           color: Theme.of(context)
                               .colorScheme
@@ -289,7 +290,7 @@ class FeedFeatureScreen extends ConsumerWidget {
 
               // 3. Upcoming Playdates Section (MOVED DOWN)
               SliverToBoxAdapter(
-                child: _buildSectionHeader(context, "Upcoming Playdates", () {
+                child: _buildSectionHeader(context, "Upcoming Walks", () {
                   const PlaydatesRoute().go(context);
                 }),
               ),
@@ -393,15 +394,8 @@ class FeedFeatureScreen extends ConsumerWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color:
-                Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -416,8 +410,8 @@ class FeedFeatureScreen extends ConsumerWidget {
           _buildDashboardItem(
             context,
             icon: Icons.pets_outlined,
-            label: 'Barks',
-            value: statsAsync.value?['barks'].toString() ?? '-',
+            label: 'Walks',
+            value: statsAsync.value?['playdates'].toString() ?? '-',
             onTap: () => const MessagesRoute()
                 .go(context), // Navigate to messages/friends
           ),
@@ -644,13 +638,6 @@ class FeedFeatureScreen extends ConsumerWidget {
           border: Border.all(
             color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -880,13 +867,6 @@ class FeedFeatureScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         children: [
@@ -1045,13 +1025,6 @@ class FeedFeatureScreen extends ConsumerWidget {
           border: Border.all(
             color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1944,14 +1917,11 @@ class _HorizontalDogListState extends State<_HorizontalDogList> {
                       DogDetailsRoute($extra: dog).push(context);
                     },
                     onBarkPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              'Barked! ${dog.ownerName} will be notified.'),
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primary,
-                          behavior: SnackBarBehavior.floating,
-                        ),
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => SendWalkSheet(targetDog: dog),
                       );
                     },
                     onPlaydatePressed: () {

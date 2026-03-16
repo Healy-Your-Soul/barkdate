@@ -29,13 +29,6 @@ class PackAlertCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: alert.backgroundColor,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: alert.backgroundColor.withValues(alpha: 0.4),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
