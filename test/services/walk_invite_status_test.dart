@@ -84,7 +84,8 @@ void main() {
       final newFilter =
           statuses.where((s) => activeStatuses.contains(s)).toList();
       expect(newFilter, contains('accepted'),
-          reason: 'Fixed filter must include accepted invites so Person 1 can see the status change');
+          reason:
+              'Fixed filter must include accepted invites so Person 1 can see the status change');
       expect(newFilter, contains('pending'));
       expect(newFilter, contains('counter_proposed'));
       expect(newFilter, isNot(contains('declined')),

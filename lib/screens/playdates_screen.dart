@@ -684,8 +684,9 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                 AppButton(
                   text: 'View Walk',
                   size: AppButtonSize.small,
-                  onPressed:
-                      playdate != null ? () => _showPlaydatePopup(playdate) : null,
+                  onPressed: playdate != null
+                      ? () => _showPlaydatePopup(playdate)
+                      : null,
                 ),
               ] else if (status == 'counter_proposed') ...[
                 AppButton(
