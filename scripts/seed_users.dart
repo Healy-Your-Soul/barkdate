@@ -3,18 +3,20 @@ import 'dart:io';
 
 void main(List<String> args) async {
   const String supabaseUrl = 'https://caottaawpnocywayjmyl.supabase.co';
-  
+
   // Read keys securely from context variables on invocation
-  const String serviceRoleKey = String.fromEnvironment('SUPABASE_SERVICE_ROLE_KEY');
+  const String serviceRoleKey =
+      String.fromEnvironment('SUPABASE_SERVICE_ROLE_KEY');
   const String testPassword = String.fromEnvironment('TEST_PASSWORD');
 
   if (serviceRoleKey.isEmpty || testPassword.isEmpty) {
-    print('❌ Error: SUPABASE_SERVICE_ROLE_KEY and TEST_PASSWORD must be provided!');
+    print(
+        '❌ Error: SUPABASE_SERVICE_ROLE_KEY and TEST_PASSWORD must be provided!');
     return;
   }
 
   print('🌱 Starting User Seeding using Admin API...');
-  
+
   // Initialize standard SupabaseClient
   final client = SupabaseClient(supabaseUrl, serviceRoleKey);
 
@@ -54,14 +56,16 @@ void main(List<String> args) async {
       }
     } catch (e) {
       print('ℹ️ User skip/exists ($email): ${e.toString().split('\n').first}');
-      
+
       // Even if createUser fails with email_exists, verify rows exist for this user IF we can fetch their ID.
       // Since admin.createUser catches duplicate, we can fetch the ID from existing auth user index to safely backfill:
       try {
         final existing = await client.auth.admin.listUsers();
         final user = existing.firstWhere((u) => u.email == email);
-        
-        await client.from('users').upsert({'id': user.id, 'name': 'Test User', 'email': email});
+
+        await client
+            .from('users')
+            .upsert({'id': user.id, 'name': 'Test User', 'email': email});
         await client.from('dogs').upsert({
           'user_id': user.id,
           'name': 'Buddy',
@@ -77,7 +81,7 @@ void main(List<String> args) async {
       }
     }
   }
-  
+
   print('✅ Seeding complete.');
   exit(0);
 }

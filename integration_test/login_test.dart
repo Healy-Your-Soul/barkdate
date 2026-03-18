@@ -14,7 +14,6 @@ void main() {
   // Emails to ensure exist for the testing suite
   final testEmails = ['test_user1@example.com', 'test_user2@example.com'];
 
-
   group('end-to-end test', () {
     testWidgets('verify app launches', (tester) async {
       // Skip notification permission prompt to avoid blocking the test with modal dialogs
@@ -42,8 +41,10 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       // 2. Enter Credentials using explicit keys added to the widgets
-      await tester.enterText(find.byKey(const Key('email_field')), testEmails[0]);
-      await tester.enterText(find.byKey(const Key('password_field')), testPassword);
+      await tester.enterText(
+          find.byKey(const Key('email_field')), testEmails[0]);
+      await tester.enterText(
+          find.byKey(const Key('password_field')), testPassword);
 
       // 3. Tap the button
       // Ensure the button is visible (not obscured by keyboard or off-screen in scroll view)
@@ -53,8 +54,6 @@ void main() {
       // Wait until home screen content loads
       await waitForWidget(tester, find.text('Bark'));
 
-
-
       // 4. Verify login succeeded by finding a home screen element (e.g., Feed navbar label)
       expect(find.text('Bark'), findsOneWidget);
     });
@@ -62,7 +61,8 @@ void main() {
 }
 
 /// Helper function to wait for a widget to appear in the tree (typical for async delays)
-Future<void> waitForWidget(WidgetTester tester, Finder finder, {int timeoutSeconds = 15}) async {
+Future<void> waitForWidget(WidgetTester tester, Finder finder,
+    {int timeoutSeconds = 15}) async {
   int attempts = 0;
   while (attempts < timeoutSeconds) {
     if (finder.evaluate().isNotEmpty) return;
