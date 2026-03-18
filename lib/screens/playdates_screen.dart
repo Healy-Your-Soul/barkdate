@@ -680,6 +680,19 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
                   size: AppButtonSize.small,
                   onPressed: () => _cancelRequest(request['id']),
                 ),
+              ] else if (status == 'accepted') ...[
+                AppButton(
+                  text: 'View Walk',
+                  size: AppButtonSize.small,
+                  onPressed:
+                      playdate != null ? () => _showPlaydatePopup(playdate) : null,
+                ),
+              ] else if (status == 'counter_proposed') ...[
+                AppButton(
+                  text: 'Review Counter-Proposal',
+                  size: AppButtonSize.small,
+                  onPressed: () => _showResponseBottomSheet(request),
+                ),
               ] else if (status == 'declined') ...[
                 AppButton(
                   text: 'Send New Request',
@@ -702,6 +715,8 @@ class _PlaydatesScreenState extends State<PlaydatesScreen>
         return Colors.green;
       case 'declined':
         return Colors.red;
+      case 'counter_proposed':
+        return Colors.blue;
       default:
         return Colors.grey;
     }
