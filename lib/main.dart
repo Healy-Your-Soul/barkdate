@@ -19,7 +19,7 @@ import 'package:barkdate/services/feature_flags.dart';
 /// A Completer that completes when the Google Maps API is ready.
 final mapsApiReadyCompleter = Completer<void>();
 
-void main() async {
+Future<void> main() async {
   if (kIsWeb) {
     registerMapsApiReadyCallback(() {
       if (!mapsApiReadyCompleter.isCompleted) {

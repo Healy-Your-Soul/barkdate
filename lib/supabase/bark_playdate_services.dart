@@ -793,6 +793,9 @@ class PlaydateRequestService {
       debugPrint('=== GETTING SENT REQUESTS FOR USER: $userId ===');
 
       // Use efficient joined query with Postgrest
+      // Fetch all active statuses so requester can see accepted/counter-proposed
+      // invites (not just pending). This fixes the bug where an accepted invite
+      // would appear to still be "in progress" because it became invisible.
       final requests = await SupabaseConfig.client
           .from('playdate_requests')
           .select('''
@@ -803,7 +806,7 @@ class PlaydateRequestService {
             requester_dog:requester_dog_id(id, name, breed, main_photo_url)
           ''')
           .eq('requester_id', userId)
-          .eq('status', 'pending')
+          .inFilter('status', ['pending', 'accepted', 'counter_proposed'])
           .order('created_at', ascending: false);
 
       debugPrint('Found ${requests.length} sent requests with joins');
@@ -817,8 +820,11 @@ class PlaydateRequestService {
             .from('playdate_requests')
             .select('*')
             .eq('requester_id', userId)
-            .eq('status', 'pending')
-            .order('created_at', ascending: false);
+            .inFilter('status', [
+          'pending',
+          'accepted',
+          'counter_proposed'
+        ]).order('created_at', ascending: false);
 
         debugPrint('Found ${requests.length} sent requests (fallback)');
 

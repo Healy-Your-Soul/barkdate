@@ -24,6 +24,7 @@ class FirebaseMessagingService {
 
   static bool _isInitialized = false;
   static String? _cachedToken;
+  static bool skipPermissionRequest = false;
 
   /// Initialize Firebase messaging service
   static Future<void> initialize() async {
@@ -33,7 +34,11 @@ class FirebaseMessagingService {
       debugPrint('🔥 Initializing Firebase Messaging...');
 
       // Request permissions for notifications
-      await _requestPermissions();
+      if (!skipPermissionRequest) {
+        await _requestPermissions();
+      } else {
+        debugPrint('ℹ️ Skipping notification permission request (Test Mode)');
+      }
 
       // Initialize local notifications
       await _initializeLocalNotifications();
@@ -94,14 +99,14 @@ class FirebaseMessagingService {
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const DarwinInitializationSettings iosSettings =
+    final DarwinInitializationSettings iosSettings =
         DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      requestAlertPermission: !skipPermissionRequest,
+      requestBadgePermission: !skipPermissionRequest,
+      requestSoundPermission: !skipPermissionRequest,
     );
 
-    const InitializationSettings initializationSettings =
+    final InitializationSettings initializationSettings =
         InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
