@@ -820,8 +820,11 @@ class PlaydateRequestService {
             .from('playdate_requests')
             .select('*')
             .eq('requester_id', userId)
-            .inFilter('status', ['pending', 'accepted', 'counter_proposed'])
-            .order('created_at', ascending: false);
+            .inFilter('status', [
+          'pending',
+          'accepted',
+          'counter_proposed'
+        ]).order('created_at', ascending: false);
 
         debugPrint('Found ${requests.length} sent requests (fallback)');
 
