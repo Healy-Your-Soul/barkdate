@@ -36,6 +36,24 @@ jobs:
       - name: Install Fastlane
         run: gem install fastlane
 
+      - name: Start iOS Simulator
+        run: |
+          # Dynamically find the first available iPhone device Name
+          DEVICE_NAME=$(xcrun simctl list devices available | grep -m 1 "iPhone" | cut -d '(' -f 1 | xargs)
+          echo "Booting $DEVICE_NAME..."
+          xcrun simctl boot "$DEVICE_NAME" || true
+          
+          # Wait for the simulator to finish booting
+          while [ "`xcrun simctl list | grep "$DEVICE_NAME" | grep 'Booted' | wc -l`" -eq 0 ]; do sleep 1; done
+          echo "Simulator $DEVICE_NAME booted successfully!"
+
+      - name: Seed Admin users
+        run: |
+          dart run --define=SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} --define=TEST_PASSWORD=${{ secrets.TEST_PASSWORD }} scripts/seed_users.dart
+
+      - name: Run Integration Tests
+        run: flutter test integration_test --dart-define=TEST_PASSWORD=${{ secrets.TEST_PASSWORD }}
+
       - name: Deploy to TestFlight
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
