@@ -76,7 +76,8 @@ class DogMarkerGenerator {
     bool isCurrentUser = false,
   }) async {
     // Create a cache key
-    final cacheKey = '${imageUrl ?? 'default'}_${borderColor.toARGB32()}_${size}_$isCurrentUser';
+    final cacheKey =
+        '${imageUrl ?? 'default'}_${borderColor.toARGB32()}_${size}_$isCurrentUser';
 
     // Return cached version if available
     if (_cache.containsKey(cacheKey)) {
@@ -227,19 +228,24 @@ class DogMarkerGenerator {
           // Draw badge background
           paint.style = PaintingStyle.fill;
           paint.color = Colors.blueAccent;
-          canvas.drawRRect(RRect.fromRectAndRadius(badgeRect, Radius.circular(4 * dpr)), paint);
+          canvas.drawRRect(
+              RRect.fromRectAndRadius(badgeRect, Radius.circular(4 * dpr)),
+              paint);
 
           // Draw badge border
           paint.style = PaintingStyle.stroke;
           paint.color = Colors.white;
           paint.strokeWidth = 1 * dpr;
-          canvas.drawRRect(RRect.fromRectAndRadius(badgeRect, Radius.circular(4 * dpr)), paint);
+          canvas.drawRRect(
+              RRect.fromRectAndRadius(badgeRect, Radius.circular(4 * dpr)),
+              paint);
 
           // Draw text
           paint.style = PaintingStyle.fill; // reset
           adjustedTextPainter.paint(
             canvas,
-            center + Offset(-adjustedTextPainter.width / 2, radius - badgeHeight),
+            center +
+                Offset(-adjustedTextPainter.width / 2, radius - badgeHeight),
           );
         }
       },

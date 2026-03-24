@@ -413,7 +413,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         borderColor: borderColor,
         size: 42,
         borderWidth: 3,
-        isCurrentUser: liveUser['user_id'] == Supabase.instance.client.auth.currentUser?.id,
+        isCurrentUser: liveUser['user_id'] ==
+            Supabase.instance.client.auth.currentUser?.id,
       );
 
       newMarkers.add(Marker(
