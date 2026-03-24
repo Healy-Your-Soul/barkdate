@@ -154,6 +154,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
             markerId: MarkerId(place.placeId),
             position: LatLng(place.latitude, place.longitude),
             icon: icon,
+            anchor: const Offset(0.5, 0.5),
             onTap: () {
               setState(() => _selectedPlace = place);
             },
