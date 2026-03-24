@@ -81,6 +81,7 @@ flutter:
     - assets/sounds/
     - assets/images/
     - assets/icon/
+    - assets/lottie/
     
   # Sound files for notifications
   # To be added:

@@ -21,20 +21,9 @@ class DogLoadingWidget extends StatelessWidget {
         SizedBox(
           width: size,
           height: size,
-          child: Lottie.network(
-            // Cute dog walking animation from LottieFiles
-            'https://lottie.host/9946c90c-1c13-4180-8ae0-a8b66354acbf/zIDozkNyfw.json',
+          child: Lottie.asset(
+            'assets/lottie/dog_walking.json',
             fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              // Fallback to paw animation on error
-              return _buildFallbackAnimation(context);
-            },
-            frameBuilder: (context, child, composition) {
-              if (composition == null) {
-                return _buildFallbackAnimation(context);
-              }
-              return child;
-            },
           ),
         ),
         if (message != null) ...[
@@ -51,28 +40,6 @@ class DogLoadingWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildFallbackAnimation(BuildContext context) {
-    // Animated paw print as fallback
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.8, end: 1.0),
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeInOut,
-      builder: (context, value, child) {
-        return Transform.scale(
-          scale: value,
-          child: child,
-        );
-      },
-      child: Icon(
-        Icons.pets,
-        size: size * 0.6,
-        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
-      ),
-      onEnd: () {
-        // This will cause a rebuild with the animation continuing
-      },
-    );
-  }
 }
 
 /// Small inline loading indicator with paw
