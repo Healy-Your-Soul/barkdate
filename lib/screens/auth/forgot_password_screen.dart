@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/utils/validators.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -169,16 +170,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               filled: true,
               fillColor: Theme.of(context).colorScheme.surface,
             ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your email';
-              }
-              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                  .hasMatch(value)) {
-                return 'Please enter a valid email';
-              }
-              return null;
-            },
+            validator: Validators.validateEmail,
           ),
           const SizedBox(height: 24),
 

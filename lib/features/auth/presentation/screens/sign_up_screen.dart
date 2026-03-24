@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:barkdate/features/auth/presentation/providers/auth_provider.dart';
+import 'package:barkdate/utils/validators.dart';
 import 'package:barkdate/services/preload_service.dart';
 import 'package:go_router/go_router.dart';
 
@@ -433,16 +434,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       filled: true,
                       fillColor: Theme.of(context).colorScheme.surface,
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                          .hasMatch(value)) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
-                    },
+                    validator: Validators.validateEmail,
                   ),
                   const SizedBox(height: 16),
                   Column(

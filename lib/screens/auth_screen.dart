@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../theme.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:barkdate/utils/validators.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -487,16 +488,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             : LightModeColors.lightSecondary,
                       ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                          .hasMatch(value)) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
-                    },
+                    validator: Validators.validateEmail,
                   ),
                   const SizedBox(height: 16),
 
