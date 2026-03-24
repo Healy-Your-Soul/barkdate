@@ -413,6 +413,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         borderColor: borderColor,
         size: 42,
         borderWidth: 3,
+        isCurrentUser: liveUser['user_id'] ==
+            Supabase.instance.client.auth.currentUser?.id,
       );
 
       newMarkers.add(Marker(
@@ -420,6 +422,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         position: LatLng(latitude, longitude),
         infoWindow: InfoWindow.noText, // Disable default info window
         icon: icon,
+        anchor: const Offset(0.5, 0.5),
         onTap: () {
           // Show dog mini card popup
           setState(() => _selectedLiveDog = liveUser);
@@ -487,6 +490,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           position: LatLng(place.latitude, place.longitude),
           infoWindow: InfoWindow.noText,
           icon: icon,
+          anchor: const Offset(0.5, 0.5),
           onTap: () {
             // Open place sheet directly in expanded state
             setState(() {
@@ -605,6 +609,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         ),
         icon: icon,
         zIndexInt: 50, // Below current user's marker
+        anchor: const Offset(0.5, 0.5),
         onTap: () {
           // Show dog mini card popup
           setState(() => _selectedLiveDog = {
@@ -637,6 +642,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           borderColor: borderColor,
           size: 50,
           borderWidth: 4,
+          isCurrentUser: true,
         );
 
         newMarkers.add(Marker(
@@ -651,6 +657,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           ),
           icon: icon,
           zIndexInt: 100, // Show on top of all other markers
+          anchor: const Offset(0.5, 0.5),
         ));
       }
     }

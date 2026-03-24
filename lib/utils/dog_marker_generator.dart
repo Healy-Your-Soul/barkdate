@@ -73,9 +73,11 @@ class DogMarkerGenerator {
     required Color borderColor,
     int size = 80,
     double borderWidth = 4,
+    bool isCurrentUser = false,
   }) async {
     // Create a cache key
-    final cacheKey = '${imageUrl ?? 'default'}_${borderColor.toARGB32()}_$size';
+    final cacheKey =
+        '${imageUrl ?? 'default'}_${borderColor.toARGB32()}_${size}_$isCurrentUser';
 
     // Return cached version if available
     if (_cache.containsKey(cacheKey)) {
@@ -95,6 +97,7 @@ class DogMarkerGenerator {
         borderColor: borderColor,
         size: size,
         borderWidth: borderWidth,
+        isCurrentUser: isCurrentUser,
       );
 
       final descriptor = BitmapDescriptor.bytes(
@@ -137,6 +140,7 @@ class DogMarkerGenerator {
     required Color borderColor,
     required int size,
     required double borderWidth,
+    bool isCurrentUser = false,
   }) async {
     return _buildBaseMarker(
       size: size,
@@ -195,6 +199,53 @@ class DogMarkerGenerator {
               center.dx - textPainter.width / 2,
               center.dy - textPainter.height / 2,
             ),
+          );
+        }
+
+        // Draw "You" badge at bottom center if isCurrentUser
+        if (isCurrentUser) {
+          final adjustedTextPainter = TextPainter(
+            text: TextSpan(
+              text: 'You',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: scaledSize * 0.18,
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          );
+          adjustedTextPainter.layout();
+
+          final badgeWidth = adjustedTextPainter.width + (8 * dpr);
+          final badgeHeight = adjustedTextPainter.height + (4 * dpr);
+          final badgeRect = Rect.fromCenter(
+            center: center + Offset(0, radius - (badgeHeight / 2) - (2 * dpr)),
+            width: badgeWidth,
+            height: badgeHeight,
+          );
+
+          // Draw badge background
+          paint.style = PaintingStyle.fill;
+          paint.color = Colors.blueAccent;
+          canvas.drawRRect(
+              RRect.fromRectAndRadius(badgeRect, Radius.circular(4 * dpr)),
+              paint);
+
+          // Draw badge border
+          paint.style = PaintingStyle.stroke;
+          paint.color = Colors.white;
+          paint.strokeWidth = 1 * dpr;
+          canvas.drawRRect(
+              RRect.fromRectAndRadius(badgeRect, Radius.circular(4 * dpr)),
+              paint);
+
+          // Draw text
+          paint.style = PaintingStyle.fill; // reset
+          adjustedTextPainter.paint(
+            canvas,
+            center +
+                Offset(-adjustedTextPainter.width / 2, radius - badgeHeight),
           );
         }
       },
