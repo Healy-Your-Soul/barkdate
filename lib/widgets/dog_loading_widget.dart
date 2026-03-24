@@ -39,7 +39,6 @@ class DogLoadingWidget extends StatelessWidget {
       ],
     );
   }
-
 }
 
 /// Small inline loading indicator with paw
