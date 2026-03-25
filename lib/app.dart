@@ -7,6 +7,8 @@ import 'package:barkdate/design_system/app_theme.dart';
 import 'package:barkdate/services/realtime_service.dart';
 import 'package:barkdate/widgets/achievement_toast.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/services/app_badge_service.dart';
+import 'package:barkdate/supabase/notification_service.dart';
 
 class BarkDateApp extends ConsumerStatefulWidget {
   const BarkDateApp({super.key});
@@ -15,13 +17,14 @@ class BarkDateApp extends ConsumerStatefulWidget {
   ConsumerState<BarkDateApp> createState() => _BarkDateAppState();
 }
 
-class _BarkDateAppState extends ConsumerState<BarkDateApp> {
+class _BarkDateAppState extends ConsumerState<BarkDateApp> with WidgetsBindingObserver {
   StreamSubscription<AchievementEvent>? _achievementSubscription;
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initRealtimeService();
   }
 
@@ -68,7 +71,27 @@ class _BarkDateAppState extends ConsumerState<BarkDateApp> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _syncBadgeCount();
+    }
+  }
+
+  Future<void> _syncBadgeCount() async {
+    final userId = SupabaseConfig.auth.currentUser?.id;
+    if (userId != null) {
+      try {
+        final count = await NotificationService.getUnreadCount(userId);
+        await AppBadgeService.setBadgeCount(count);
+      } catch (e) {
+        debugPrint('Failed to sync badge on resume: $e');
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _achievementSubscription?.cancel();
     super.dispose();
   }
