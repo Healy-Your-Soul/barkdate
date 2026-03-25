@@ -1,5 +1,24 @@
 default_platform(:ios)
 
+def bump_pubspec_version
+  pubspec_path = File.expand_path("../../pubspec.yaml", __dir__)
+  content = File.read(pubspec_path)
+  
+  if content =~ /^version:\s*(\d+)\.(\d+)\.(\d+)\+(\d+)/
+    major = $1
+    minor = $2
+    patch = $3.to_i
+    build = $4
+    
+    new_version = "#{major}.#{minor}.#{patch + 1}+#{build}"
+    content.gsub!(/^version:\s*\d+\.\d+\.\d+\+\d+/, "version: #{new_version}")
+    File.write(pubspec_path, content)
+    return new_version
+  else
+    UI.user_error!("Could not parse version in #{pubspec_path}")
+  end
+end
+
 platform :ios do
   desc "Sync certificates and provisioning profiles using Match and App Store Connect API Key"
   lane :sync_certificates do
@@ -81,10 +100,33 @@ platform :ios do
     # 3. Upload to TestFlight
     # Fastlane auto-discovery failed, so we give it an explicit wildcard path to the build folder
     ipa_glob = File.expand_path("../../build/ios/ipa/*.ipa", __dir__)
-    upload_to_testflight(
-      skip_waiting_for_build_processing: true,
-      app_identifier: "com.chenmordev.bark",
-      ipa: Dir[ipa_glob].first
-    )
+    
+    begin
+      upload_to_testflight(
+        skip_waiting_for_build_processing: true,
+        app_identifier: "com.chenmordev.bark",
+        ipa: Dir[ipa_glob].first
+      )
+    rescue => e
+      # Catch locked release train errors
+      if e.message.include?("Invalid Pre-Release Train") || e.message.include?("closed for new build submissions")
+        UI.important("Detected closed release train. Bumping version...")
+        new_version = bump_pubspec_version
+        
+        # Commit back to GitHub to trigger continuous workflow
+        sh("git config user.name 'github-actions[bot]'")
+        sh("git config user.email 'github-actions[bot]@users.noreply.github.com'")
+        sh("git add ../../pubspec.yaml")
+        
+        # User said: "Once I close the it would auto commit and push a new release."
+        # If we DON'T skip CI, it will re-trigger the deploy workflow for the new version train!
+        sh("git commit -m 'Bump version to #{new_version} due to closed train'")
+        sh("git push origin HEAD:main") # Push directly back to main Since workflow is on main.
+        
+        UI.success("Bumped version and pushed back to GitHub.")
+      else
+        raise e # Re-raise other errors
+      end
+    end
   end
 end
