@@ -342,7 +342,7 @@ class FirebaseMessagingService {
           : null,
     );
 
-    var badgeCount = 1;
+    var badgeCount = 0;
     final userId = SupabaseConfig.auth.currentUser?.id;
     if (userId != null) {
       final unread = await NotificationService.getUnreadCount(userId);
