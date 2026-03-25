@@ -110,7 +110,7 @@ platform :ios do
     rescue => e
       # Catch locked release train errors
       if e.message.include?("Invalid Pre-Release Train") || e.message.include?("closed for new build submissions")
-        UI.important("Detected closed release train. Bumping version...")
+        UI.important("Detected closed release train. Bumping version and rebuilding...")
         new_version = bump_pubspec_version
         
         # Commit back to GitHub to trigger continuous workflow
@@ -118,12 +118,20 @@ platform :ios do
         sh("git config user.email 'github-actions[bot]@users.noreply.github.com'")
         sh("git add ../../pubspec.yaml")
         
-        # User said: "Once I close the it would auto commit and push a new release."
-        # If we DON'T skip CI, it will re-trigger the deploy workflow for the new version train!
-        sh("git commit -m 'Bump version to #{new_version} due to closed train'")
+        sh("git commit -m 'Bump version to #{new_version} due to closed train [skip ci]'")
         sh("git push origin HEAD:main") # Push directly back to main Since workflow is on main.
         
-        UI.success("Bumped version and pushed back to GitHub.")
+        UI.important("Rebuilding app with new version #{new_version}...")
+        sh("cd '#{project_root}' && flutter build ipa --release --build-number=#{ENV['GITHUB_RUN_NUMBER'] || 3} --export-options-plist=\"#{plist_path}\"")
+        
+        UI.important("Re-uploading to TestFlight...")
+        upload_to_testflight(
+          skip_waiting_for_build_processing: true,
+          app_identifier: "com.chenmordev.bark",
+          ipa: Dir[ipa_glob].first
+        )
+        
+        UI.success("Recovery successful: Bumped version, rebuilt, and uploaded to TestFlight.")
       else
         raise e # Re-raise other errors
       end
