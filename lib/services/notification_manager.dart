@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:barkdate/services/app_badge_service.dart';
 import 'package:barkdate/services/firebase_messaging_service.dart';
 import 'package:barkdate/services/in_app_notification_service.dart';
 import 'package:barkdate/services/notification_sound_service.dart';
@@ -17,6 +18,16 @@ class NotificationManager {
     try {
       // Initialize Firebase messaging first
       await FirebaseMessagingService.initialize();
+
+      // Sync badge count on initialization for iOS
+      final currentUser = SupabaseConfig.auth.currentUser;
+      if (currentUser != null) {
+        await NotificationService.getUnreadCount(currentUser.id).then((count) {
+          AppBadgeService.setBadgeCount(count);
+        }).catchError((e) {
+          debugPrint('Failed to sync badge on initialization: $e');
+        });
+      }
 
       // Initialize in-app notification service
       await InAppNotificationService.initialize();
@@ -108,10 +119,9 @@ class NotificationManager {
           final fcmToken = userResponse?['fcm_token'] as String?;
 
           if (fcmToken != null && fcmToken.isNotEmpty) {
-            var badgeCount = 1;
+            var badgeCount = 0;
             try {
               badgeCount = await NotificationService.getUnreadCount(userId);
-              if (badgeCount < 1) badgeCount = 1;
             } catch (e) {
               debugPrint('Failed to compute unread badge count: $e');
             }
