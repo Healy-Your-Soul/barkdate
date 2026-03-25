@@ -17,7 +17,8 @@ class BarkDateApp extends ConsumerStatefulWidget {
   ConsumerState<BarkDateApp> createState() => _BarkDateAppState();
 }
 
-class _BarkDateAppState extends ConsumerState<BarkDateApp> with WidgetsBindingObserver {
+class _BarkDateAppState extends ConsumerState<BarkDateApp>
+    with WidgetsBindingObserver {
   StreamSubscription<AchievementEvent>? _achievementSubscription;
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
