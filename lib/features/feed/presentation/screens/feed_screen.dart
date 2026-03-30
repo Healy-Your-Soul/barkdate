@@ -1688,7 +1688,7 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
               isFriend: false,
               onTap: () =>
                   DogDetailsRoute($extra: Dog.fromJson(dog)).push(context),
-              onBarkPressed: () async {
+              onWalkPressed: () async {
                 final currentUser = SupabaseConfig.auth.currentUser;
                 if (currentUser == null) return;
                 try {
@@ -1777,7 +1777,7 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
             isFriend: false,
             onTap: () =>
                 DogDetailsRoute($extra: Dog.fromJson(dog)).push(context),
-            onBarkPressed: () async {
+            onWalkPressed: () async {
               // Implement actual bark functionality
               final currentUser = SupabaseConfig.auth.currentUser;
               if (currentUser == null) {
@@ -1916,7 +1916,7 @@ class _HorizontalDogListState extends State<_HorizontalDogList> {
                     onTap: () {
                       DogDetailsRoute($extra: dog).push(context);
                     },
-                    onBarkPressed: () {
+                    onWalkPressed: () {
                       showModalBottomSheet(
                         context: context,
                         isScrollControlled: true,

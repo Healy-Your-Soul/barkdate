@@ -1160,7 +1160,7 @@ class _FeedScreenState extends State<FeedScreen> {
                         onTap: () => _showDogProfile(dog),
                         child: DogCard(
                           dog: dog,
-                          onBarkPressed: () => _onBarkPressed(context, dog),
+                          onWalkPressed: () => _onWalkPressed(context, dog),
                           onPlaydatePressed: () =>
                               _onPlaydatePressed(context, dog),
                         ),
@@ -1178,7 +1178,7 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  Future<void> _onBarkPressed(BuildContext context, Dog dog) async {
+  Future<void> _onWalkPressed(BuildContext context, Dog dog) async {
     try {
       final currentUser = SupabaseConfig.auth.currentUser;
       if (currentUser == null) {

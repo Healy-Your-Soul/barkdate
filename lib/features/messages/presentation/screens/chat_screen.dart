@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart'; // Using the shared provider file
+import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 import 'package:barkdate/models/message.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/widgets/chat_walk_card.dart';
+import 'package:barkdate/widgets/walk_details_sheet.dart';
 
 import 'package:intl/intl.dart' as intl;
 
@@ -30,10 +32,51 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _isSending = false;
   bool _isInputRtl = false;
 
+  // Walk/playdate data for this conversation
+  Map<String, dynamic>? _playdateData;
+  String? _playdateId;
+  bool _loadingPlaydate = true;
+
   @override
   void initState() {
     super.initState();
     _messageController.addListener(_checkInputDirection);
+    _loadLinkedPlaydate();
+  }
+
+  /// Check if this conversation is linked to a playdate
+  Future<void> _loadLinkedPlaydate() async {
+    try {
+      // Query the conversation to check for a linked playdate_id
+      final conversation = await SupabaseConfig.client
+          .from('conversations')
+          .select('playdate_id')
+          .eq('id', widget.matchId)
+          .maybeSingle();
+
+      if (conversation != null && conversation['playdate_id'] != null) {
+        final pId = conversation['playdate_id'] as String;
+        // Load the playdate details
+        final playdate = await SupabaseConfig.client
+            .from('playdates')
+            .select('id, title, location, scheduled_at, status')
+            .eq('id', pId)
+            .maybeSingle();
+
+        if (mounted) {
+          setState(() {
+            _playdateId = pId;
+            _playdateData = playdate;
+            _loadingPlaydate = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _loadingPlaydate = false);
+      }
+    } catch (e) {
+      debugPrint('Error loading linked playdate: $e');
+      if (mounted) setState(() => _loadingPlaydate = false);
+    }
   }
 
   void _checkInputDirection() {
@@ -87,13 +130,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         body: Column(
           children: [
+            // Pinned walk header (if this chat is linked to a playdate)
+            if (!_loadingPlaydate && _playdateData != null && _playdateId != null)
+              ChatWalkPinnedHeader(
+                playdateId: _playdateId!,
+                location: _playdateData!['location'] ?? 'Walk',
+                scheduledFor:
+                    DateTime.tryParse(_playdateData!['scheduled_at'] ?? '') ??
+                        DateTime.now(),
+                status: _playdateData!['status'] ?? 'pending',
+                onTap: () {
+                  final scheduledFor = DateTime.tryParse(
+                          _playdateData!['scheduled_at'] ?? '') ??
+                      DateTime.now();
+                  showWalkDetailsSheet(
+                    context,
+                    parkId: _playdateData!['location'] ?? '',
+                    parkName: _playdateData!['location'] ?? 'Walk Location',
+                    scheduledFor: scheduledFor,
+                    organizerDogName: widget.recipientName,
+                    checkInId: _playdateId,
+                  );
+                },
+              ),
             Expanded(
               child: messagesAsync.when(
                 data: (messagesData) {
-                  // Convert Map to Message objects if needed, or use Map directly
-                  // The repository returns List<Map<String, dynamic>>
-                  // Let's map them to Message objects for easier handling
                   final messages = messagesData.map((data) {
+                    final msgType = data['message_type'] as String? ?? 'text';
                     return Message(
                       id: data['id'] as String,
                       senderId: data['sender_id'] as String,
@@ -101,35 +165,56 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       text: data['content'] as String,
                       timestamp: DateTime.parse(data['created_at'] as String),
                       isRead: data['is_read'] ?? false,
+                      type: msgType == 'system'
+                          ? MessageType.system
+                          : MessageType.text,
                     );
                   }).toList();
-
-                  if (messages.isEmpty) {
-                    return const Center(
-                      child: Text('Say hello! 👋'),
-                    );
-                  }
 
                   // Auto-scroll to bottom after messages load
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     _scrollToBottom();
                   });
 
+                  // Build the message list with an optional walk card at the top
+                  final hasWalkCard = _playdateId != null && !_loadingPlaydate;
+                  final totalItems = messages.length + (hasWalkCard ? 1 : 0);
+
+                  if (totalItems == 0) {
+                    return const Center(
+                      child: Text('Say hello! 👋'),
+                    );
+                  }
+
                   return ListView.builder(
                     controller: _scrollController,
-                    reverse:
-                        false, // Messages are usually ordered by created_at ascending
                     padding: const EdgeInsets.all(16),
-                    itemCount: messages.length,
+                    itemCount: totalItems,
                     itemBuilder: (context, index) {
-                      final message = messages[index];
+                      // First item: walk card (if linked to playdate)
+                      if (hasWalkCard && index == 0) {
+                        return ChatWalkCard(
+                          playdateId: _playdateId!,
+                          onUpdated: _loadLinkedPlaydate,
+                        );
+                      }
+
+                      final messageIndex =
+                          hasWalkCard ? index - 1 : index;
+                      final message = messages[messageIndex];
+                      // Render system messages as centered cards
+                      if (message.type == MessageType.system) {
+                        return _buildSystemMessage(context, message);
+                      }
                       final isMe = message.senderId == currentUser?.id;
                       return _buildMessageBubble(context, message, isMe);
                     },
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(child: Text('Error: $error')),
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (error, stack) =>
+                    Center(child: Text('Error: $error')),
               ),
             ),
             _buildMessageInput(currentUser?.id),
@@ -199,6 +284,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSystemMessage(BuildContext context, Message message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            message.text,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey[600],
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
       ),
     );
   }

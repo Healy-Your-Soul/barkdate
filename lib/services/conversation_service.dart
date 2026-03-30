@@ -298,14 +298,29 @@ class ConversationService {
   }
 
   /// Post a system message (for playdate updates)
+  /// Note: The messages table uses 'match_id' (not 'conversation_id')
+  /// and requires sender_id + receiver_id.
+  /// For system messages, we use sender_id = receiver_id = first participant.
   static Future<void> postSystemMessage(
       String conversationId, String text) async {
     try {
+      // Get a participant to use as sender/receiver placeholder
+      final participants = await getGroupParticipants(conversationId);
+      final participantId = participants.isNotEmpty
+          ? participants.first['user_id'] as String
+          : null;
+
+      if (participantId == null) {
+        debugPrint('⚠️ No participants found, skipping system message');
+        return;
+      }
+
       await _client.from('messages').insert({
-        'conversation_id': conversationId,
+        'match_id': conversationId,
         'content': text,
-        'is_system_message': true,
-        'sender_id': null, // System messages have no sender
+        'message_type': 'system',
+        'sender_id': participantId,
+        'receiver_id': participantId,
       });
       await updateLastMessageTime(conversationId);
       debugPrint('📢 Posted system message: $text');

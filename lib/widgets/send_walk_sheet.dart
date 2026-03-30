@@ -11,6 +11,8 @@ import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 import 'package:barkdate/features/profile/presentation/providers/profile_provider.dart';
 import 'package:barkdate/features/feed/presentation/providers/friend_activity_provider.dart';
+import 'package:barkdate/services/conversation_service.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 
 class SendWalkSheet extends ConsumerStatefulWidget {
   final Dog targetDog;
@@ -300,11 +302,28 @@ class _SendWalkSheetState extends ConsumerState<SendWalkSheet> {
 
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(content),
-            backgroundColor: const Color(0xFFE89E5F),
+            backgroundColor: const Color(0xFF4CAF50),
             behavior: SnackBarBehavior.floating,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ));
+
+          // Navigate to the walk's group chat
+          try {
+            final conversation =
+                await ConversationService.getPlaydateConversation(playdateId);
+            if (conversation != null && mounted) {
+              final nav = Navigator.of(context);
+              ChatRoute(
+                matchId: conversation['id'] as String,
+                recipientId: widget.targetDog.ownerId,
+                recipientName: widget.targetDog.ownerName,
+                recipientAvatarUrl: widget.targetDog.ownerAvatarUrl ?? '',
+              ).push(nav.context);
+            }
+          } catch (e) {
+            debugPrint('Could not navigate to walk chat: $e');
+          }
         }
       } else {
         if (mounted) {
@@ -549,7 +568,7 @@ class _SendWalkSheetState extends ConsumerState<SendWalkSheet> {
             onPressed: _isLoading ? null : _sendWalkRequest,
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: const Color(0xFFE89E5F), // App Brand Orange
+              backgroundColor: const Color(0xFF4CAF50), // App Green
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(

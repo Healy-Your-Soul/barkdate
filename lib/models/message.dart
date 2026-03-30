@@ -37,7 +37,7 @@ class Message {
       );
 }
 
-enum MessageType { text, image, quickReply }
+enum MessageType { text, image, quickReply, system }
 
 class ChatPreview {
   final String chatId;
