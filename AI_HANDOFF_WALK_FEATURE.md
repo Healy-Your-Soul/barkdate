@@ -1,5 +1,5 @@
 # 🤖 AI Handoff Document: "Walk Together" Feature
-**Current Status: Sprints 0, 1 & 2 Complete. Ready for Sprint 3.**
+**Current Status: ALL Sprints (0-5) Complete. Feature fully unified.**
 
 > **Dear Next AI Assistant:**
 > This document is designed to give you complete context on the ongoing implementation of the "Walk Together" feature. An architectural misalignment was discovered between two separate walk systems in the app (System A and System B). We are currently in the middle of a 5-sprint plan to unify them.
@@ -64,15 +64,44 @@
     *   `lib/features/feed/presentation/screens/feed_screen.dart` (playdate card tap + accept/decline refresh)
 *   **Status**: `flutter analyze` — No issues found.
 
-### ⏳ Sprint 3: Feed Carousel & Map Entry Point (TODO)
-*   **Goal**: Ensure walk cards show in the feed carousel correctly. Switch `PlanWalkSheet` to use System A instead of System B.
-*   **Task List**: Fix `pack_alerts_carousel.dart` taping. Change `plan_walk_sheet.dart` from CheckInService back to PlaydateRequestService.
+### ✅ Sprint 3: Data Source Switch (DONE)
+*   **Goal**: Switch all walk data queries from `checkins` to `playdates`. Rewire `PlanWalkSheet`.
+*   **What was done**:
+    *   Replaced `_getScheduledWalkAlerts()` (checkins) with `_getFriendUpcomingWalkAlerts()` (playdates) — friend walks now come from the `playdates` table with `playdateId` in metadata.
+    *   Removed `_getWalkJoinCount()` (checkins) — participant counts now use `playdate_participants`.
+    *   Replaced `getScheduledWalksForMap()` to query `playdates` instead of `checkins` — map walk markers now show playdate-based walks.
+    *   Rewired `PlanWalkSheet` from `CheckInService.scheduleFutureCheckIn()` to creating a playdate + group conversation + navigating to chat.
+    *   Added "Plan a Walk" button to the V2 map `PlaceSheetContent` (was missing from active map, only existed in legacy).
+*   **Files Touched**:
+    *   `lib/services/friend_activity_service.dart` (replaced 3 methods)
+    *   `lib/widgets/plan_walk_sheet.dart` (rewired from CheckInService to playdates + ConversationService)
+    *   `lib/screens/map_v2/widgets/simple_place_sheet.dart` (added Plan a Walk button)
+*   **Status**: `flutter analyze` — No issues found.
 
-### ⏳ Sprint 4: Chat ↔ Walk Live Sync (TODO)
-*   **Goal**: Sync accept/decline actions in `receive_walk_sheet.dart` to invalidate the feed carousel provider and post a system message to the chat.
+### ✅ Sprint 4: Chat ↔ Walk Live Sync (DONE)
+*   **Goal**: Accept/decline in `ReceiveWalkSheet` updates feed carousel and posts system message to chat.
+*   **What was done**:
+    *   Converted `ReceiveWalkSheet` from `StatefulWidget` to `ConsumerStatefulWidget` for Riverpod access.
+    *   Added `ref.invalidate(friendAlertsProvider)` after accept AND decline — carousel refreshes immediately.
+    *   Added `_postWalkSystemMessage()` helper — fetches conversation, gets user's dog name + human name, posts dog-centric system message (e.g. "Luna's human, Sarah, joined the walk!").
+    *   Fixed accepted/declined/counter-proposed notifications in `respondToPlaydateRequest()` to use dog-centric text (e.g. "Luna is joining the walk! 🎉" instead of "Playdate Accepted!").
+    *   Added `invitee_dog.main_photo_url` to the query so `dog_photo` is available in notification metadata.
+*   **Files Touched**:
+    *   `lib/widgets/receive_walk_sheet.dart` (ConsumerStatefulWidget + invalidate + system messages)
+    *   `lib/supabase/bark_playdate_services.dart` (dog-centric accept/decline/counter notifications)
+*   **Status**: `flutter analyze` — No issues found.
 
-### ⏳ Sprint 5: Map Markers & Polish (TODO)
-*   **Goal**: Wire map screen to show scheduled walks as markers. Wire notification tap-throughs.
+### ✅ Sprint 5: Map Markers & Notification Polish (DONE)
+*   **Goal**: Scheduled walks visible on map with tap-through. All notification routing works correctly.
+*   **What was done**:
+    *   V2 map scheduled walk markers now use green markers (instead of azure) and have `onTap` → `showWalkDetailsSheet()` with `playdateId`.
+    *   Fixed FCM notification type mismatch: DB stores `playdate_request` (snake_case) but Dart enum is `playdateRequest` (camelCase). Added a `_typeMap` + `_parseType()` helper that handles both formats across all three notification entry points.
+    *   `playdate_accepted` notification tap now opens the walk's group chat (fetches conversation from `playdateId` in metadata) in both FCM routing and in-app notifications screen.
+    *   Added `context.mounted` checks after async gaps to fix lint warnings.
+*   **Files Touched**:
+    *   `lib/screens/map_v2/map_tab_screen.dart` (green markers + onTap + walk_details_sheet import)
+    *   `lib/services/firebase_messaging_service.dart` (type map + _parseType + playdate chat navigation)
+    *   `lib/features/notifications/presentation/screens/notifications_screen.dart` (playdate tap → chat)
 
 ---
 

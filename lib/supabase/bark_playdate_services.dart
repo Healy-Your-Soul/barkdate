@@ -299,10 +299,10 @@ class PlaydateRequestService {
         }
       }
 
-      // Get dog names for notification
+      // Get dog info + organizer human name for notification
       final organizerDog = await SupabaseConfig.client
           .from('dogs')
-          .select('name')
+          .select('name, main_photo_url')
           .eq('id', organizerDogId)
           .single();
 
@@ -312,21 +312,33 @@ class PlaydateRequestService {
           .eq('id', inviteeDogId)
           .single();
 
+      final organizerUser = await SupabaseConfig.client
+          .from('users')
+          .select('name')
+          .eq('id', organizerId)
+          .single();
+
+      final orgDogName = organizerDog['name'] as String? ?? 'A dog';
+      final orgHumanName = organizerUser['name'] as String? ?? 'their human';
+      final invDogName = inviteeDog['name'] as String? ?? 'your pup';
+
       // Create notification for invitee
       await NotificationService.createNotification(
         userId: inviteeId,
         type: 'playdate_request',
         actionType: 'playdate_invited',
-        title: 'New Playdate Invitation! 🐕',
+        title: '$orgDogName wants to walk! 🐕',
         body:
-            '${organizerDog['name']} invited ${inviteeDog['name']} for a playdate at $location',
+            '$orgDogName\'s human, $orgHumanName, invited $invDogName for a walk at $location',
         relatedId: playdateId,
         metadata: {
-          'request_id': requestId, // Crucial for responding to the request
+          'request_id': requestId,
           'playdate_id': playdateId,
           'organizer_id': organizerId,
           'organizer_dog_id': organizerDogId,
-          'organizer_dog_name': organizerDog['name'],
+          'organizer_dog_name': orgDogName,
+          'organizer_name': orgHumanName,
+          'organizer_dog_photo': organizerDog['main_photo_url'],
           'title': title,
           'location': location,
           'scheduled_at': scheduledAt.toIso8601String(),
@@ -482,7 +494,7 @@ class PlaydateRequestService {
             playdate:playdates(*),
             requester:users!playdate_requests_requester_id_fkey(name),
             invitee:users!playdate_requests_invitee_id_fkey(name),
-            invitee_dog:dogs!playdate_requests_invitee_dog_id_fkey(name)
+            invitee_dog:dogs!playdate_requests_invitee_dog_id_fkey(name, main_photo_url)
           ''').eq('id', requestId).single();
 
       if (response == 'accepted') {
@@ -509,19 +521,25 @@ class PlaydateRequestService {
           userId: request['invitee_id'],
         );
 
-        // Notify organizer
+        final invDogName = request['invitee_dog']?['name'] as String? ?? 'A pup';
+        final invHumanName = request['invitee']?['name'] as String? ?? 'their human';
+        final playdateLocation =
+            request['playdate']?['location'] as String? ?? 'the walk';
+
+        // Notify organizer (dog-centric)
         await NotificationService.createNotification(
           userId: request['requester_id'],
           type: 'playdate',
           actionType: 'playdate_accepted',
-          title: 'Playdate Accepted! 🎉',
+          title: '$invDogName is joining the walk! 🎉',
           body:
-              '${request['invitee']['name']} accepted your playdate invitation!',
+              '$invDogName\'s human, $invHumanName, accepted the walk at $playdateLocation',
           relatedId: request['playdate_id'],
           metadata: {
             'playdate_id': request['playdate_id'],
-            'responder_name': request['invitee']['name'],
-            'dog_name': request['invitee_dog']['name'],
+            'responder_name': invHumanName,
+            'dog_name': invDogName,
+            'dog_photo': request['invitee_dog']?['main_photo_url'],
           },
         );
       } else if (response == 'declined') {
@@ -552,34 +570,41 @@ class PlaydateRequestService {
               .update({'status': 'cancelled'}).eq('id', request['playdate_id']);
         }
 
-        // Notify organizer
+        final decDogName = request['invitee_dog']?['name'] as String? ?? 'A pup';
+        final decHumanName = request['invitee']?['name'] as String? ?? 'their human';
+
+        // Notify organizer (dog-centric)
         await NotificationService.createNotification(
           userId: request['requester_id'],
           type: 'playdate',
           actionType: 'playdate_declined',
-          title: 'Playdate Declined',
+          title: '$decDogName can\'t make it',
           body:
-              '${request['invitee']['name']} declined your playdate invitation',
+              '$decDogName\'s human, $decHumanName, declined the walk',
           relatedId: request['playdate_id'],
           metadata: {
             'playdate_id': request['playdate_id'],
-            'responder_name': request['invitee']['name'],
+            'responder_name': decHumanName,
+            'dog_name': decDogName,
             'message': message,
           },
         );
       } else if (response == 'counter_proposed') {
-        // Notify organizer about counter-proposal
+        final ctrDogName = request['invitee_dog']?['name'] as String? ?? 'A pup';
+        final ctrHumanName = request['invitee']?['name'] as String? ?? 'their human';
+
+        // Notify organizer about counter-proposal (dog-centric)
         await NotificationService.createNotification(
           userId: request['requester_id'],
           type: 'playdate',
           actionType: 'playdate_counter_proposed',
-          title: 'Playdate Counter-Proposal',
+          title: '$ctrDogName suggested a change',
           body:
-              '${request['invitee']['name']} suggested changes to your playdate',
+              '$ctrDogName\'s human, $ctrHumanName, suggested changes to the walk',
           relatedId: request['playdate_id'],
           metadata: {
             'playdate_id': request['playdate_id'],
-            'responder_name': request['invitee']['name'],
+            'responder_name': ctrHumanName,
             'counter_proposal': counterProposal,
             'message': message,
           },

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/conversation_service.dart';
 import 'package:barkdate/services/calendar_integration_service.dart';
 import 'package:barkdate/core/router/app_routes.dart';
+import 'package:barkdate/features/feed/presentation/providers/friend_activity_provider.dart';
 
-class ReceiveWalkSheet extends StatefulWidget {
+class ReceiveWalkSheet extends ConsumerStatefulWidget {
   final String requestId;
   final String organizerName;
   final String dogName;
@@ -24,10 +27,10 @@ class ReceiveWalkSheet extends StatefulWidget {
   });
 
   @override
-  State<ReceiveWalkSheet> createState() => _ReceiveWalkSheetState();
+  ConsumerState<ReceiveWalkSheet> createState() => _ReceiveWalkSheetState();
 }
 
-class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
+class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
   bool _isLoading = false;
   final TextEditingController _counterLocationController =
       TextEditingController();
@@ -100,6 +103,35 @@ class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
     }
   }
 
+  Future<void> _postWalkSystemMessage(
+      String playdateId, String userId, String status) async {
+    try {
+      final conversation =
+          await ConversationService.getPlaydateConversation(playdateId);
+      if (conversation == null) return;
+      final conversationId = conversation['id'] as String;
+
+      final dogs = await BarkDateUserService.getUserDogs(userId);
+      final myDogName =
+          dogs.isNotEmpty ? (dogs.first['name'] as String? ?? 'A pup') : 'A pup';
+
+      final userRow = await SupabaseConfig.client
+          .from('users')
+          .select('name')
+          .eq('id', userId)
+          .maybeSingle();
+      final humanName = userRow?['name'] as String? ?? 'their human';
+
+      final message = status == 'accepted'
+          ? "$myDogName's human, $humanName, joined the walk!"
+          : "$myDogName's human, $humanName, can't make it to the walk";
+
+      await ConversationService.postSystemMessage(conversationId, message);
+    } catch (e) {
+      debugPrint('Error posting walk system message: $e');
+    }
+  }
+
   Future<void> _handleResponse(String status) async {
     setState(() => _isLoading = true);
 
@@ -116,10 +148,13 @@ class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
       if (!mounted) return;
 
       if (success) {
+        ref.invalidate(friendAlertsProvider);
+
         Map<String, String>? chatTarget;
         Map<String, dynamic>? requestContext;
+        requestContext = await _fetchRequestContext();
+
         if (status == 'accepted') {
-          requestContext = await _fetchRequestContext();
           chatTarget = await _resolveAcceptedChatTarget();
           if (!mounted) return;
 
@@ -128,6 +163,8 @@ class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
                 requestContext['playdate'] as Map<String, dynamic>? ?? const {};
             final playdateId = (requestContext['playdate_id'] as String?) ?? '';
             if (playdateId.isNotEmpty) {
+              await _postWalkSystemMessage(playdateId, userId, status);
+
               await _showPostAcceptActions(
                 userId: userId,
                 playdateId: playdateId,
@@ -142,9 +179,15 @@ class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
               if (!mounted) return;
             }
           }
+        } else if (status == 'declined' && requestContext != null) {
+          final playdateId = (requestContext['playdate_id'] as String?) ?? '';
+          if (playdateId.isNotEmpty) {
+            await _postWalkSystemMessage(playdateId, userId, status);
+          }
         }
 
-        Navigator.pop(context); // Close sheet
+        if (!mounted) return;
+        Navigator.pop(context);
 
         if (status == 'accepted') {
           if (chatTarget != null && mounted) {
@@ -159,7 +202,7 @@ class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Walk Confirmed! 🎉 Chat is ready.'),
-              backgroundColor: Color(0xFFE89E5F),
+              backgroundColor: Color(0xFF4CAF50),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -573,9 +616,10 @@ void showReceiveWalkSheetFromPayload(
     builder: (context) => ReceiveWalkSheet(
       requestId: data['request_id'] ??
           data['playdate_id'] ??
-          '', // Prefer request_id if available
+          '',
       organizerName: data['organizer_name'] ?? 'BarkDate User',
       dogName: data['organizer_dog_name'] ?? 'A dog',
+      dogPhotoUrl: data['organizer_dog_photo'] as String?,
       location: data['location'] ?? 'Unknown location',
       scheduledAt: data['scheduled_at'] != null
           ? DateTime.tryParse(data['scheduled_at']) ?? DateTime.now()

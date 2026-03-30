@@ -49,7 +49,7 @@ class FriendActivityService {
       final results = await Future.wait([
         _getFriendCheckInAlerts(friendUserIds, friendDogIds),
         _getNearbySpotAlerts(),
-        _getScheduledWalkAlerts(friendUserIds, friendDogIds),
+        _getFriendUpcomingWalkAlerts(friendUserIds),
         _getNewFriendAlerts(myDogId),
         _getUpcomingPlaydateAlerts(userId),
         _getFriendPostAlerts(friendDogIds),
@@ -167,85 +167,67 @@ class FriendActivityService {
     }
   }
 
-  /// Get scheduled walks from friends
-  static Future<List<FriendAlert>> _getScheduledWalkAlerts(
-      List<String> friendUserIds, List<String> friendDogIds) async {
+  /// Get upcoming walks from friends (from playdates table)
+  static Future<List<FriendAlert>> _getFriendUpcomingWalkAlerts(
+      List<String> friendUserIds) async {
     try {
       if (friendUserIds.isEmpty) return [];
 
       final now = DateTime.now().toIso8601String();
 
       final data = await SupabaseConfig.client
-          .from('checkins')
-          .select('''
-            *,
-            dog:dog_id (
-              id, name, breed, main_photo_url
-            )
-          ''')
-          .inFilter('user_id', friendUserIds)
-          .eq('status', 'scheduled')
-          .eq('is_future_checkin', true)
-          .gte('scheduled_for', now)
-          .order('scheduled_for', ascending: true)
+          .from('playdates')
+          .select('id, location, scheduled_at, status, title, latitude, longitude, organizer_id')
+          .inFilter('organizer_id', friendUserIds)
+          .inFilter('status', ['pending', 'confirmed'])
+          .gte('scheduled_at', now)
+          .order('scheduled_at', ascending: true)
           .limit(5);
 
       final alerts = <FriendAlert>[];
 
-      for (final walk in data) {
-        final dog = walk['dog'] as Map<String, dynamic>?;
-        final dogName = dog?['name'] ?? 'A friend';
-        final parkName = walk['park_name'] ?? 'a park';
-        final scheduledFor =
-            DateTime.tryParse(walk['scheduled_for'] ?? '') ?? DateTime.now();
-        final checkInId = walk['id'] as String;
-        final parkId = walk['park_id'] as String?;
+      for (final playdate in data) {
+        final playdateId = playdate['id'] as String;
+        final location = playdate['location'] as String? ?? 'a park';
+        final scheduledAt =
+            DateTime.tryParse(playdate['scheduled_at'] ?? '') ?? DateTime.now();
 
-        // Get join count for this walk
-        int joinCount = 0;
+        String dogName = 'A friend';
         try {
-          joinCount = await _getWalkJoinCount(parkId ?? '', scheduledFor);
+          final orgDog = await SupabaseConfig.client
+              .from('dogs')
+              .select('name')
+              .eq('user_id', playdate['organizer_id'])
+              .limit(1)
+              .maybeSingle();
+          if (orgDog != null) dogName = orgDog['name'] as String? ?? dogName;
+        } catch (_) {}
+
+        int participantCount = 0;
+        try {
+          final participants = await SupabaseConfig.client
+              .from('playdate_participants')
+              .select('id')
+              .eq('playdate_id', playdateId);
+          participantCount = (participants as List).length;
         } catch (_) {}
 
         alerts.add(FriendAlert.walkTogether(
-          id: 'walk_$checkInId',
+          id: 'walk_$playdateId',
           dogName: dogName,
-          parkName: parkName,
-          scheduledFor: scheduledFor,
-          joinCount: joinCount,
-          parkId: parkId,
-          checkInId: checkInId,
+          parkName: location,
+          scheduledFor: scheduledAt,
+          joinCount: participantCount > 1 ? participantCount - 1 : 0,
+          parkId: location,
+          checkInId: playdateId,
+          playdateId: playdateId,
         ));
       }
 
       return alerts;
     } catch (e) {
-      debugPrint('Error fetching scheduled walk alerts: $e');
+      debugPrint('Error fetching friend walk alerts: $e');
       return [];
-    }
-  }
-
-  /// Count how many people are joining a scheduled walk (same park, within 30min)
-  static Future<int> _getWalkJoinCount(
-      String parkId, DateTime scheduledFor) async {
-    try {
-      final windowStart =
-          scheduledFor.subtract(const Duration(minutes: 30)).toIso8601String();
-      final windowEnd =
-          scheduledFor.add(const Duration(minutes: 30)).toIso8601String();
-
-      final data = await SupabaseConfig.client
-          .from('checkins')
-          .select('id')
-          .eq('park_id', parkId)
-          .eq('status', 'scheduled')
-          .gte('scheduled_for', windowStart)
-          .lte('scheduled_for', windowEnd);
-
-      // Subtract 1 because the original planner is included
-      return (data as List).length > 1 ? (data.length - 1) : 0;
-    } catch (e) {
-      return 0;
     }
   }
 
@@ -361,24 +343,44 @@ class FriendActivityService {
     }
   }
 
-  /// Get scheduled walks for the map (includes ALL upcoming scheduled walks)
+  /// Get scheduled walks for the map (from playdates table)
   static Future<List<Map<String, dynamic>>> getScheduledWalksForMap() async {
     try {
       final now = DateTime.now().toIso8601String();
 
       final data = await SupabaseConfig.client
-          .from('checkins')
+          .from('playdates')
           .select('''
-            *,
-            user:user_id (id, name, avatar_url),
-            dog:dog_id (id, name, breed, main_photo_url)
+            id, location, scheduled_at, status, title, latitude, longitude, organizer_id
           ''')
-          .eq('status', 'scheduled')
-          .eq('is_future_checkin', true)
-          .gte('scheduled_for', now)
-          .order('scheduled_for', ascending: true);
+          .inFilter('status', ['pending', 'confirmed'])
+          .gte('scheduled_at', now)
+          .order('scheduled_at', ascending: true);
 
-      return List<Map<String, dynamic>>.from(data);
+      final results = <Map<String, dynamic>>[];
+      for (final playdate in data) {
+        Map<String, dynamic>? orgDog;
+        try {
+          orgDog = await SupabaseConfig.client
+              .from('dogs')
+              .select('id, name, breed, main_photo_url')
+              .eq('user_id', playdate['organizer_id'])
+              .limit(1)
+              .maybeSingle();
+        } catch (_) {}
+
+        results.add({
+          'id': playdate['id'],
+          'latitude': playdate['latitude'],
+          'longitude': playdate['longitude'],
+          'scheduled_for': playdate['scheduled_at'],
+          'park_name': playdate['location'],
+          'playdate_id': playdate['id'],
+          'dog': orgDog ?? {'name': 'Someone'},
+        });
+      }
+
+      return results;
     } catch (e) {
       debugPrint('Error getting scheduled walks for map: $e');
       return [];

@@ -11,6 +11,8 @@ import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/widgets/receive_walk_sheet.dart';
 
 import 'package:barkdate/core/router/app_router.dart';
+import 'package:barkdate/core/router/app_routes.dart';
+import 'package:barkdate/services/conversation_service.dart';
 import 'package:go_router/go_router.dart';
 
 /// Firebase Cloud Messaging service for BarkDate
@@ -24,6 +26,23 @@ class FirebaseMessagingService {
 
   static bool _isInitialized = false;
   static String? _cachedToken;
+
+  static const _typeMap = <String, NotificationType>{
+    'bark': NotificationType.bark,
+    'playdate': NotificationType.playdate,
+    'playdate_request': NotificationType.playdateRequest,
+    'playdateRequest': NotificationType.playdateRequest,
+    'message': NotificationType.message,
+    'match': NotificationType.match,
+    'social': NotificationType.social,
+    'achievement': NotificationType.achievement,
+    'system': NotificationType.system,
+  };
+
+  static NotificationType _parseType(String? raw) {
+    if (raw == null) return NotificationType.system;
+    return _typeMap[raw] ?? NotificationType.system;
+  }
 
   /// Initialize Firebase messaging service
   static Future<void> initialize() async {
@@ -406,10 +425,7 @@ class FirebaseMessagingService {
     if (response.payload != null) {
       try {
         final data = jsonDecode(response.payload!);
-        final type = NotificationType.values.firstWhere(
-          (e) => e.name == data['type'],
-          orElse: () => NotificationType.system,
-        );
+        final type = _parseType(data['type'] as String?);
 
         // Navigate based on notification type
         await _navigateToScreen(type, data);
@@ -464,8 +480,38 @@ class FirebaseMessagingService {
         }
         break;
       case NotificationType.playdate:
-        // Navigate to playdate details
-        if (data['related_id'] != null) {
+        final playdateActionType = data['action_type'] as String?;
+        final metaRaw2 = data['metadata'];
+        Map<String, dynamic> meta2 = {};
+        if (metaRaw2 is Map<String, dynamic>) {
+          meta2 = metaRaw2;
+        } else if (metaRaw2 is String && metaRaw2.isNotEmpty) {
+          try {
+            final p = jsonDecode(metaRaw2);
+            if (p is Map<String, dynamic>) meta2 = p;
+          } catch (_) {}
+        }
+        final merged2 = <String, dynamic>{...meta2, ...data};
+        final pId = merged2['playdate_id'] as String?;
+
+        if (playdateActionType == 'playdate_accepted' && pId != null) {
+          try {
+            final conv =
+                await ConversationService.getPlaydateConversation(pId);
+            if (conv != null && context.mounted) {
+              final responderName =
+                  merged2['responder_name'] as String? ?? 'Walk buddy';
+              ChatRoute(
+                matchId: conv['id'] as String,
+                recipientId: '',
+                recipientName: responderName,
+                recipientAvatarUrl: '',
+              ).push(context);
+              break;
+            }
+          } catch (_) {}
+        }
+        if (data['related_id'] != null && context.mounted) {
           GoRouter.of(context)
               .push('/playdate-details', extra: {'id': data['related_id']});
         }
@@ -510,13 +556,9 @@ class FirebaseMessagingService {
   /// Handle notification navigation from message
   static Future<void> _handleNotificationNavigation(
       RemoteMessage message) async {
-    final notificationType = message.data['type'];
+    final notificationType = message.data['type'] as String?;
     if (notificationType != null) {
-      final type = NotificationType.values.firstWhere(
-        (e) => e.name == notificationType,
-        orElse: () => NotificationType.system,
-      );
-
+      final type = _parseType(notificationType);
       await _navigateToScreen(type, message.data);
     }
   }
@@ -530,10 +572,7 @@ class FirebaseMessagingService {
 
       if (notification == null) return null;
 
-      final type = NotificationType.values.firstWhere(
-        (e) => e.name == data['type'],
-        orElse: () => NotificationType.system,
-      );
+      final type = _parseType(data['type'] as String?);
 
       return BarkDateNotification(
         id: message.messageId ??
