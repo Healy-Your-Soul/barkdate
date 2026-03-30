@@ -1,5 +1,5 @@
 # 🤖 AI Handoff Document: "Walk Together" Feature
-**Current Status: Sprint 0 & 1 Complete. Ready for Sprint 2.**
+**Current Status: Sprints 0, 1 & 2 Complete. Ready for Sprint 3.**
 
 > **Dear Next AI Assistant:**
 > This document is designed to give you complete context on the ongoing implementation of the "Walk Together" feature. An architectural misalignment was discovered between two separate walk systems in the app (System A and System B). We are currently in the middle of a 5-sprint plan to unify them.
@@ -36,11 +36,33 @@
 *   **Critical DB Bug Fixed**: Supabase table `messages` uses column `match_id` for its conversation foreign key (NOT `conversation_id`). `ConversationService.postSystemMessage` was crashing. This is fixed.
 *   **Status**: Compiled iOS without errors. Database schema verified.
 
-### ⏳ Sprint 2: Walk Details Sheet Fixes (NEXT)
+### ✅ Sprint 2: Walk Details Sheet Fixes (DONE)
 *   **Goal**: Make `walk_details_sheet.dart` agnostic so it can gracefully display data coming from the `playdates` table (not just `checkins`).
-*   **Task List**:
-    *   Update `WalkDetailsSheet`.
-    *   Update `friend_activity_service.dart` (`_getUserOwnUpcomingWalkAlerts()`) to properly pass `parkId` from `playdates.location`.
+*   **What was done**:
+    *   `WalkDetailsSheet` now accepts an optional `playdateId` parameter. When provided, it loads walk data from the `playdates` + `playdate_participants` tables instead of `checkins`.
+    *   Real participant data (dog photos, dog names, owner names) now shown from `playdate_participants`.
+    *   "Join the Walk" inserts into `playdate_participants` and ensures the user is added to the conversation.
+    *   "Leave This Walk" removes the user from `playdate_participants` and the conversation.
+    *   Added an "Open Walk Chat" button that navigates to the linked group conversation when one exists.
+    *   Locked state: the header turns grey and buttons are hidden once the walk time passes or the playdate is cancelled.
+    *   Shows "Organizer" badge next to the organizer's name.
+    *   `_getUserOwnUpcomingWalkAlerts()` now queries `latitude`, `longitude`, filters by `['pending', 'confirmed']` status, fetches actual participant count from `playdate_participants`, and passes `playdateId` in metadata.
+    *   Added `FriendActivityService.getPlaydateWalkParticipants()` method.
+    *   Added `playdateId` field to `FriendAlert.walkTogether` factory and metadata.
+    *   `PackAlertsCarousel._handleCtaTap()` now passes `playdateId` through to `showWalkDetailsSheet`.
+    *   `ChatWalkCard._viewDetails()` now passes `playdateId` instead of `checkInId`.
+    *   `ChatScreen` pinned header tap now passes `playdateId` instead of `checkInId`.
+    *   **Feed "Upcoming Walks" section**: Tapping a playdate card now opens `showWalkDetailsSheet` (with `playdateId`) instead of `PlaydateDetailsRoute`. This means the feed cards get the same rich walk details UI with participants, chat button, and join/leave — not just the generic playdate view.
+    *   Accept/Decline buttons in the feed now also invalidate `friendAlertsProvider` so the Pack Activity carousel refreshes immediately.
+*   **Files Touched**:
+    *   `lib/widgets/walk_details_sheet.dart` (rewritten)
+    *   `lib/services/friend_activity_service.dart` (fixed + new method)
+    *   `lib/models/friend_alert.dart` (added playdateId)
+    *   `lib/widgets/pack_alerts_carousel.dart` (updated CTA handler)
+    *   `lib/widgets/chat_walk_card.dart` (fixed _viewDetails)
+    *   `lib/features/messages/presentation/screens/chat_screen.dart` (pass playdateId)
+    *   `lib/features/feed/presentation/screens/feed_screen.dart` (playdate card tap + accept/decline refresh)
+*   **Status**: `flutter analyze` — No issues found.
 
 ### ⏳ Sprint 3: Feed Carousel & Map Entry Point (TODO)
 *   **Goal**: Ensure walk cards show in the feed carousel correctly. Switch `PlanWalkSheet` to use System A instead of System B.

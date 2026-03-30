@@ -149,7 +149,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     parkName: _playdateData!['location'] ?? 'Walk Location',
                     scheduledFor: scheduledFor,
                     organizerDogName: widget.recipientName,
-                    checkInId: _playdateId,
+                    playdateId: _playdateId,
                   );
                 },
               ),

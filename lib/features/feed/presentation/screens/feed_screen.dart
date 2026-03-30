@@ -19,8 +19,10 @@ import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart'
     hide DogFriendshipService;
+import 'package:barkdate/features/feed/presentation/providers/friend_activity_provider.dart';
 import 'package:barkdate/widgets/pack_alerts_carousel.dart';
 import 'package:barkdate/widgets/send_walk_sheet.dart';
+import 'package:barkdate/widgets/walk_details_sheet.dart';
 
 class FeedFeatureScreen extends ConsumerWidget {
   const FeedFeatureScreen({super.key});
@@ -625,7 +627,18 @@ class FeedFeatureScreen extends ConsumerWidget {
     return GestureDetector(
       onTap: () {
         if (playdateId != null) {
-          PlaydateDetailsRoute($extra: playdate).push(context);
+          final organizer = playdate['organizer'] as Map<String, dynamic>?;
+          final organizerName = organizer?['name'] as String? ?? 'Organizer';
+          showWalkDetailsSheet(
+            context,
+            parkId: playdate['location'] as String? ?? '',
+            parkName: playdate['location'] as String? ?? 'Walk Location',
+            scheduledFor: date,
+            organizerDogName: organizerName,
+            playdateId: playdateId,
+            latitude: (playdate['latitude'] as num?)?.toDouble(),
+            longitude: (playdate['longitude'] as num?)?.toDouble(),
+          );
         }
       },
       child: Container(
@@ -816,13 +829,13 @@ class FeedFeatureScreen extends ConsumerWidget {
       );
 
       if (context.mounted && success) {
-        // Refresh the playdates list
         ref.invalidate(userPlaydatesProvider);
+        ref.invalidate(friendAlertsProvider);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content:
-                Text(accept ? '✅ Playdate accepted!' : '❌ Playdate declined'),
+                Text(accept ? '✅ Walk accepted!' : '❌ Walk declined'),
             backgroundColor: accept ? Colors.green : Colors.red,
           ),
         );

@@ -153,6 +153,7 @@ class FriendAlert {
     int joinCount = 0,
     String? parkId,
     String? checkInId,
+    String? playdateId,
   }) {
     final hour = scheduledFor.hour;
     final minute = scheduledFor.minute.toString().padLeft(2, '0');
@@ -178,6 +179,7 @@ class FriendAlert {
         'park_id': parkId,
         'scheduled_for': scheduledFor.toIso8601String(),
         'check_in_id': checkInId,
+        'playdate_id': playdateId,
         'join_count': joinCount,
       },
     );

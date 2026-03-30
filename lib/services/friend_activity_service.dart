@@ -443,31 +443,67 @@ class FriendActivityService {
     try {
       final now = DateTime.now().toIso8601String();
 
-      // Get upcoming playdates organized by this user
       final data = await SupabaseConfig.client
           .from('playdates')
-          .select('id, location, scheduled_at, status, title')
+          .select('id, location, scheduled_at, status, title, latitude, longitude')
           .eq('organizer_id', userId)
+          .inFilter('status', ['pending', 'confirmed'])
           .gte('scheduled_at', now)
           .order('scheduled_at', ascending: true)
           .limit(3);
 
-      return (data as List).map((playdate) {
+      final alerts = <FriendAlert>[];
+      for (final playdate in data) {
         final dateStr = playdate['scheduled_at'] ?? '';
         final startsAt = DateTime.tryParse(dateStr) ?? DateTime.now();
+        final playdateId = playdate['id'] as String;
+        final location = playdate['location'] as String? ?? 'Scheduled Location';
 
-        return FriendAlert.walkTogether(
-          id: 'own_walk_${playdate['id']}',
+        int participantCount = 0;
+        try {
+          final participants = await SupabaseConfig.client
+              .from('playdate_participants')
+              .select('id')
+              .eq('playdate_id', playdateId);
+          participantCount = (participants as List).length;
+        } catch (_) {}
+
+        alerts.add(FriendAlert.walkTogether(
+          id: 'own_walk_$playdateId',
           dogName: 'You',
-          parkName: playdate['location'] ?? 'Scheduled Location',
+          parkName: location,
           scheduledFor: startsAt,
-          joinCount: 1, // At least the user is going
-          parkId: null,
-          checkInId: playdate['id'],
-        );
-      }).toList();
+          joinCount: participantCount > 1 ? participantCount - 1 : 0,
+          parkId: location,
+          checkInId: playdateId,
+          playdateId: playdateId,
+        ));
+      }
+
+      return alerts;
     } catch (e) {
       debugPrint('Error fetching own walk alerts: $e');
+      return [];
+    }
+  }
+
+  /// Get participants for a playdate-based walk (from playdate_participants table)
+  static Future<List<Map<String, dynamic>>> getPlaydateWalkParticipants(
+      String playdateId) async {
+    try {
+      final data = await SupabaseConfig.client
+          .from('playdate_participants')
+          .select('''
+            *,
+            user:user_id(id, name, avatar_url),
+            dog:dog_id(id, name, breed, main_photo_url)
+          ''')
+          .eq('playdate_id', playdateId)
+          .order('joined_at', ascending: true);
+
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      debugPrint('Error getting playdate walk participants: $e');
       return [];
     }
   }

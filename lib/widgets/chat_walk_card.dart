@@ -416,9 +416,6 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
   void _viewDetails(BuildContext context) {
     if (_playdateData == null) return;
 
-    final parkId = _playdateData!['park_id'] as String? ??
-        _playdateData!['location'] as String? ??
-        '';
     final parkName = _playdateData!['location'] as String? ?? 'Walk Location';
     final scheduledFor =
         DateTime.tryParse(_playdateData!['scheduled_at'] ?? '') ??
@@ -429,11 +426,11 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
 
     showWalkDetailsSheet(
       context,
-      parkId: parkId,
+      parkId: parkName,
       parkName: parkName,
       scheduledFor: scheduledFor,
       organizerDogName: organizerName,
-      checkInId: widget.playdateId,
+      playdateId: widget.playdateId,
     );
   }
 }

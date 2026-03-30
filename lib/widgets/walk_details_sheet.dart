@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/services/friend_activity_service.dart';
 import 'package:barkdate/services/checkin_service.dart';
+import 'package:barkdate/services/conversation_service.dart';
+import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/design_system/app_spacing.dart';
-import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 
 /// Bottom sheet showing details of a planned walk — who's going, time, park.
-/// Includes a "Join the Walk" button for friends.
+/// Supports both checkin-based walks (System B) and playdate-based walks (System A).
+/// When playdateId is provided, loads from the playdates table and enables
+/// chat navigation and playdate-style join/cancel.
 class WalkDetailsSheet extends StatefulWidget {
   final String parkId;
   final String parkName;
   final DateTime scheduledFor;
   final String organizerDogName;
   final String? checkInId;
+  final String? playdateId;
   final double? latitude;
   final double? longitude;
 
@@ -23,9 +29,12 @@ class WalkDetailsSheet extends StatefulWidget {
     required this.scheduledFor,
     required this.organizerDogName,
     this.checkInId,
+    this.playdateId,
     this.latitude,
     this.longitude,
   });
+
+  bool get _isPlaydateBased => playdateId != null && playdateId!.isNotEmpty;
 
   @override
   State<WalkDetailsSheet> createState() => _WalkDetailsSheetState();
@@ -36,21 +45,68 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
   bool _isLoading = true;
   bool _isJoining = false;
   bool _hasJoined = false;
+  bool _isOrganizer = false;
+  String? _conversationId;
+  Map<String, dynamic>? _playdateData;
 
   @override
   void initState() {
     super.initState();
-    _loadParticipants();
+    _loadData();
   }
 
-  Future<void> _loadParticipants() async {
+  Future<void> _loadData() async {
+    if (widget._isPlaydateBased) {
+      await _loadPlaydateData();
+    } else {
+      await _loadCheckinParticipants();
+    }
+  }
+
+  Future<void> _loadPlaydateData() async {
+    try {
+      final currentUserId = SupabaseConfig.auth.currentUser?.id;
+
+      final playdateResult = await SupabaseConfig.client
+          .from('playdates')
+          .select('*, organizer:organizer_id(id, name, avatar_url)')
+          .eq('id', widget.playdateId!)
+          .maybeSingle();
+
+      final participants =
+          await FriendActivityService.getPlaydateWalkParticipants(
+              widget.playdateId!);
+
+      final conversation =
+          await ConversationService.getPlaydateConversation(widget.playdateId!);
+
+      final joined =
+          participants.any((p) => p['user_id'] == currentUserId);
+      final isOrg = playdateResult?['organizer_id'] == currentUserId;
+
+      if (mounted) {
+        setState(() {
+          _playdateData = playdateResult;
+          _participants = participants;
+          _isLoading = false;
+          _hasJoined = joined || isOrg;
+          _isOrganizer = isOrg;
+          _conversationId = conversation?['id'] as String?;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading playdate walk data: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadCheckinParticipants() async {
     try {
       final participants = await FriendActivityService.getWalkParticipants(
         widget.parkId,
         widget.scheduledFor,
       );
 
-      // Check if current user has already joined
       final currentUserId = SupabaseConfig.auth.currentUser?.id;
       final joined = participants.any((p) => p['user_id'] == currentUserId);
 
@@ -62,9 +118,7 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -72,31 +126,10 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
     setState(() => _isJoining = true);
 
     try {
-      final success = await FriendActivityService.joinScheduledWalk(
-        parkId: widget.parkId,
-        parkName: widget.parkName,
-        scheduledFor: widget.scheduledFor,
-        latitude: widget.latitude,
-        longitude: widget.longitude,
-      );
-
-      if (!mounted) return;
-
-      if (success) {
-        setState(() {
-          _hasJoined = true;
-          _isJoining = false;
-        });
-        // Reload participants
-        _loadParticipants();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('🐕 You joined the walk at ${widget.parkName}!'),
-            backgroundColor: const Color(0xFF0D47A1),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+      if (widget._isPlaydateBased) {
+        await _joinPlaydateWalk();
+      } else {
+        await _joinCheckinWalk();
       }
     } catch (e) {
       if (mounted) {
@@ -108,31 +141,137 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
     }
   }
 
+  Future<void> _joinPlaydateWalk() async {
+    final currentUserId = SupabaseConfig.auth.currentUser?.id;
+    if (currentUserId == null) return;
+
+    final dogs = await BarkDateUserService.getUserDogs(currentUserId);
+    if (dogs.isEmpty) {
+      if (mounted) {
+        setState(() => _isJoining = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please create a dog profile first')),
+        );
+      }
+      return;
+    }
+
+    final dogId = dogs.first['id'] as String;
+
+    try {
+      await SupabaseConfig.client.from('playdate_participants').insert({
+        'playdate_id': widget.playdateId,
+        'user_id': currentUserId,
+        'dog_id': dogId,
+      });
+    } catch (e) {
+      if (e.toString().contains('duplicate key')) {
+        // Already joined
+      } else {
+        rethrow;
+      }
+    }
+
+    await ConversationService.ensurePlaydateParticipant(
+      playdateId: widget.playdateId!,
+      userId: currentUserId,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _hasJoined = true;
+      _isJoining = false;
+    });
+    _loadData();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('You joined the walk at ${widget.parkName}!'),
+        backgroundColor: const Color(0xFF4CAF50),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _joinCheckinWalk() async {
+    final success = await FriendActivityService.joinScheduledWalk(
+      parkId: widget.parkId,
+      parkName: widget.parkName,
+      scheduledFor: widget.scheduledFor,
+      latitude: widget.latitude,
+      longitude: widget.longitude,
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      setState(() {
+        _hasJoined = true;
+        _isJoining = false;
+      });
+      _loadData();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('You joined the walk at ${widget.parkName}!'),
+          backgroundColor: const Color(0xFF4CAF50),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   Future<void> _cancelMyJoin() async {
     final currentUserId = SupabaseConfig.auth.currentUser?.id;
     if (currentUserId == null) return;
 
-    // Find the user's check-in
-    final myCheckIn = _participants.firstWhere(
-      (p) => p['user_id'] == currentUserId,
-      orElse: () => {},
-    );
-    if (myCheckIn.isEmpty || myCheckIn['id'] == null) return;
-
     setState(() => _isJoining = true);
 
     try {
-      await CheckInService.cancelScheduledCheckIn(myCheckIn['id']);
+      if (widget._isPlaydateBased) {
+        await SupabaseConfig.client
+            .from('playdate_participants')
+            .delete()
+            .eq('playdate_id', widget.playdateId!)
+            .eq('user_id', currentUserId);
+
+        await ConversationService.removePlaydateParticipant(
+          playdateId: widget.playdateId!,
+          userId: currentUserId,
+        );
+      } else {
+        final myCheckIn = _participants.firstWhere(
+          (p) => p['user_id'] == currentUserId,
+          orElse: () => {},
+        );
+        if (myCheckIn.isNotEmpty && myCheckIn['id'] != null) {
+          await CheckInService.cancelScheduledCheckIn(myCheckIn['id']);
+        }
+      }
+
       if (mounted) {
         setState(() {
           _hasJoined = false;
           _isJoining = false;
         });
-        _loadParticipants();
+        _loadData();
       }
     } catch (e) {
       if (mounted) setState(() => _isJoining = false);
     }
+  }
+
+  void _openChat() {
+    if (_conversationId == null || _playdateData == null) return;
+    final organizer = _playdateData!['organizer'] as Map<String, dynamic>?;
+    Navigator.of(context).pop();
+    ChatRoute(
+      matchId: _conversationId!,
+      recipientId: organizer?['id'] as String? ?? '',
+      recipientName: _playdateData!['title'] as String? ?? 'Walk Chat',
+      recipientAvatarUrl: organizer?['avatar_url'] as String? ?? '',
+    ).push(context);
   }
 
   @override
@@ -142,6 +281,10 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
     final amPm = hour >= 12 ? 'PM' : 'AM';
     final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
     final timeStr = '$displayHour:$minute $amPm';
+
+    final isExpired = DateTime.now().isAfter(widget.scheduledFor);
+    final isCancelled = _playdateData?['status'] == 'cancelled';
+    final isLocked = isExpired || isCancelled;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
@@ -170,19 +313,26 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF0D47A1),
+              color: isLocked
+                  ? Colors.grey.shade400
+                  : const Color(0xFF0D47A1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               children: [
-                const Text('🕐', style: TextStyle(fontSize: 28)),
+                Text(
+                  isLocked ? (isCancelled ? '🚫' : '✅') : '🕐',
+                  style: const TextStyle(fontSize: 28),
+                ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Walk Together',
+                        isLocked
+                            ? (isCancelled ? 'Walk Cancelled' : 'Walk Completed')
+                            : 'Walk Together',
                         style: AppTypography.h3(color: Colors.white)
                             .copyWith(fontWeight: FontWeight.w700),
                       ),
@@ -225,11 +375,28 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
               ),
               const SizedBox(width: 12),
               Text(
-                widget.organizerDogName,
+                _isOrganizer ? 'You' : widget.organizerDogName,
                 style: AppTypography.bodyLarge(
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              if (_isOrganizer)
+                Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4CAF50).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Organizer',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF4CAF50),
+                    ),
+                  ),
+                ),
             ],
           ),
 
@@ -268,14 +435,15 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
           else
             ...(_participants.take(5).map((p) {
               final dog = p['dog'] as Map<String, dynamic>?;
+              final user = p['user'] as Map<String, dynamic>?;
               final dogName = dog?['name'] ?? 'A dog';
               final photoUrl = dog?['main_photo_url'] as String?;
+              final ownerName = user?['name'] as String?;
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
-                    // Avatar
                     Container(
                       width: 32,
                       height: 32,
@@ -295,72 +463,121 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
                           : null,
                     ),
                     const SizedBox(width: 10),
-                    Text(
-                      dogName,
-                      style: AppTypography.bodyMedium(),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            dogName,
+                            style: AppTypography.bodyMedium(),
+                          ),
+                          if (ownerName != null)
+                            Text(
+                              'with $ownerName',
+                              style: AppTypography.bodySmall(
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               );
             })),
 
-          const SizedBox(height: AppSpacing.xxl),
+          if (_participants.length > 5)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                '+${_participants.length - 5} more',
+                style: AppTypography.bodySmall(color: Colors.grey[500]),
+              ),
+            ),
 
-          // Join / Cancel button
-          SizedBox(
-            width: double.infinity,
-            child: _hasJoined
-                ? OutlinedButton(
-                    onPressed: _isJoining ? null : _cancelMyJoin,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: _isJoining
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.red,
-                            ),
-                          )
-                        : Text(
-                            'Cancel My Walk',
-                            style: AppTypography.button(color: Colors.red),
-                          ),
-                  )
-                : ElevatedButton.icon(
-                    onPressed: _isJoining ? null : _joinWalk,
-                    icon: const Text('🐕', style: TextStyle(fontSize: 18)),
-                    label: _isJoining
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            'Join the Walk',
-                            style: AppTypography.button(color: Colors.white),
-                          ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0D47A1),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      elevation: 0,
-                    ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // Open Chat button (only for playdate-based walks with a conversation)
+          if (_conversationId != null && !isLocked) ...[
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _openChat,
+                icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                label: const Text('Open Walk Chat'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF0D47A1),
+                  side: const BorderSide(color: Color(0xFF0D47A1)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
-          ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+
+          // Join / Cancel button (hidden when locked)
+          if (!isLocked)
+            SizedBox(
+              width: double.infinity,
+              child: _hasJoined && !_isOrganizer
+                  ? OutlinedButton(
+                      onPressed: _isJoining ? null : _cancelMyJoin,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: _isJoining
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.red,
+                              ),
+                            )
+                          : Text(
+                              'Leave This Walk',
+                              style: AppTypography.button(color: Colors.red),
+                            ),
+                    )
+                  : !_hasJoined
+                      ? ElevatedButton.icon(
+                          onPressed: _isJoining ? null : _joinWalk,
+                          icon:
+                              const Text('🐕', style: TextStyle(fontSize: 18)),
+                          label: _isJoining
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Text(
+                                  'Join the Walk',
+                                  style:
+                                      AppTypography.button(color: Colors.white),
+                                ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4CAF50),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            elevation: 0,
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+            ),
         ],
       ),
     );
@@ -375,6 +592,7 @@ void showWalkDetailsSheet(
   required DateTime scheduledFor,
   required String organizerDogName,
   String? checkInId,
+  String? playdateId,
   double? latitude,
   double? longitude,
 }) {
@@ -388,6 +606,7 @@ void showWalkDetailsSheet(
       scheduledFor: scheduledFor,
       organizerDogName: organizerDogName,
       checkInId: checkInId,
+      playdateId: playdateId,
       latitude: latitude,
       longitude: longitude,
     ),
