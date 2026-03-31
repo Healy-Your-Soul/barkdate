@@ -82,7 +82,11 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
 
       final joined =
           participants.any((p) => p['user_id'] == currentUserId);
-      final isOrg = playdateResult?['organizer_id'] == currentUserId;
+      final rawOrganizerId = playdateResult?['organizer_id'];
+      final nestedOrganizerId =
+          (playdateResult?['organizer'] as Map<String, dynamic>?)?['id'];
+      final isOrg =
+          rawOrganizerId == currentUserId || nestedOrganizerId == currentUserId;
 
       if (mounted) {
         setState(() {

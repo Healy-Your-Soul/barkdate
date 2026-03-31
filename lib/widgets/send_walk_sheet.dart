@@ -232,6 +232,18 @@ class _SendWalkSheetState extends ConsumerState<SendWalkSheet> {
       if (!_isValidUuid(widget.targetDog.ownerId)) {
         throw Exception('Could not send invite: recipient account is invalid');
       }
+      if (widget.targetDog.ownerId == userId) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You can\'t send a walk invite to your own dog!'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
 
       // Create main request for target dog
       final playdateId = await PlaydateRequestService.createPlaydateRequest(

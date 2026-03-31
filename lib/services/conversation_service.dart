@@ -119,8 +119,15 @@ class ConversationService {
       return null;
     }
 
+    final uniqueParticipants = participantUserIds.toSet().toList();
+
     debugPrint(
-        '🎾 Creating playdate conversation for $playdateId with ${participantUserIds.length} participants');
+        '🎾 Creating playdate conversation for $playdateId with ${uniqueParticipants.length} unique participants');
+
+    if (uniqueParticipants.length < 2) {
+      debugPrint('❌ Need at least 2 distinct users for a conversation');
+      return null;
+    }
 
     try {
       // Check if conversation already exists for this playdate
@@ -135,10 +142,8 @@ class ConversationService {
         return existing['id'] as String;
       }
 
-      // Determine if this is a group (2+ participants) or 1:1
-      final isGroup = participantUserIds.length > 2;
+      final isGroup = uniqueParticipants.length > 2;
 
-      // Create new conversation
       final conversationData = <String, dynamic>{
         'is_group': isGroup,
         'playdate_id': playdateId,
@@ -146,9 +151,8 @@ class ConversationService {
         'last_message_at': DateTime.now().toIso8601String(),
       };
 
-      // For 2-person playdates, also set user1_id and user2_id for compatibility
-      if (participantUserIds.length == 2) {
-        final ids = [...participantUserIds]..sort();
+      if (uniqueParticipants.length == 2) {
+        final ids = [...uniqueParticipants]..sort();
         conversationData['user1_id'] = ids[0];
         conversationData['user2_id'] = ids[1];
       }
@@ -162,18 +166,15 @@ class ConversationService {
       final conversationId = created['id'] as String;
       debugPrint('✅ Created playdate conversation: $conversationId');
 
-      // Add all participants
-      for (int i = 0; i < participantUserIds.length; i++) {
-        final userId = participantUserIds[i];
+      for (int i = 0; i < uniqueParticipants.length; i++) {
+        final userId = uniqueParticipants[i];
         await _client.from('conversation_participants').insert({
           'conversation_id': conversationId,
           'user_id': userId,
-          'role': i == 0
-              ? 'admin'
-              : 'member', // First participant is admin (organizer)
+          'role': i == 0 ? 'admin' : 'member',
         });
       }
-      debugPrint('✅ Added ${participantUserIds.length} participants');
+      debugPrint('✅ Added ${uniqueParticipants.length} participants');
 
       // Post welcome system message
       await postSystemMessage(

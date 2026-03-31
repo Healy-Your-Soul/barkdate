@@ -550,6 +550,9 @@ class BarkDateMatchService {
         (response).map((item) => Map<String, dynamic>.from(item as Map)),
       );
 
+      // Exclude user's own dogs from the results
+      dogs.removeWhere((d) => d['user_id'] == userId);
+
       debugPrint('✅ Nearby dogs fetched: ${dogs.length}');
       return dogs;
     } catch (e) {
@@ -882,7 +885,9 @@ class BarkDatePlaydateService {
       filter += ',id.in.(${pendingPlaydateIds.join(',')})';
     }
 
-    // 3. Fetch playdates
+    // 3. Fetch playdates (only upcoming / not-yet-passed)
+    final now = DateTime.now().toIso8601String();
+
     return await SupabaseConfig.client
         .from('playdates')
         .select('''
@@ -906,7 +911,8 @@ class BarkDatePlaydateService {
         ''')
         .or(filter)
         .neq('status', 'cancelled')
-        .order('scheduled_at', ascending: false);
+        .gte('scheduled_at', now)
+        .order('scheduled_at', ascending: true);
   }
 
   /// Join playdate
