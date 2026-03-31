@@ -142,20 +142,14 @@ class ConversationService {
         return existing['id'] as String;
       }
 
-      final isGroup = uniqueParticipants.length > 2;
-
+      // Playdate conversations are always treated as group chats so they
+      // don't collide with existing DM conversations between the same users.
       final conversationData = <String, dynamic>{
-        'is_group': isGroup,
+        'is_group': true,
         'playdate_id': playdateId,
         'group_name': groupName,
         'last_message_at': DateTime.now().toIso8601String(),
       };
-
-      if (uniqueParticipants.length == 2) {
-        final ids = [...uniqueParticipants]..sort();
-        conversationData['user1_id'] = ids[0];
-        conversationData['user2_id'] = ids[1];
-      }
 
       final created = await _client
           .from('conversations')
