@@ -7,7 +7,6 @@ import 'package:barkdate/design_system/app_theme.dart';
 import 'package:barkdate/services/realtime_service.dart';
 import 'package:barkdate/widgets/achievement_toast.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/services/app_badge_service.dart';
 import 'package:barkdate/supabase/notification_service.dart';
 
 class BarkDateApp extends ConsumerStatefulWidget {
@@ -82,8 +81,7 @@ class _BarkDateAppState extends ConsumerState<BarkDateApp>
     final userId = SupabaseConfig.auth.currentUser?.id;
     if (userId != null) {
       try {
-        final count = await NotificationService.getUnreadCount(userId);
-        await AppBadgeService.setBadgeCount(count);
+        await NotificationService.syncBadgeCount(userId);
       } catch (e) {
         debugPrint('Failed to sync badge on resume: $e');
       }

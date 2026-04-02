@@ -11,17 +11,20 @@ class AppBadgeService {
   static Future<void> setBadgeCount(int count) async {
     if (!_isSupported) return;
 
-    final safeCount = count < 0 ? 0 : count;
+    final safeCount = (count < 0 ? 0 : count);
+    debugPrint('🔴 [AppBadge] setBadgeCount → $safeCount');
     try {
       await _channel.invokeMethod<void>('setBadgeCount', {
         'count': safeCount,
       });
+      debugPrint('🔴 [AppBadge] badge successfully set to $safeCount');
     } catch (e) {
-      debugPrint('Failed to set app badge count: $e');
+      debugPrint('🔴 [AppBadge] Failed to set badge count: $e');
     }
   }
 
   static Future<void> clearBadge() async {
+    debugPrint('🔴 [AppBadge] clearBadge → setting to 0');
     await setBadgeCount(0);
   }
 }
