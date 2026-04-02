@@ -196,7 +196,8 @@ class NotificationService {
   /// Call this whenever the badge may be out of sync.
   static Future<void> syncBadgeCount(String userId) async {
     final unreadCount = await getUnreadCount(userId);
-    debugPrint('🔴 [NotificationService] syncBadgeCount: unreadCount=$unreadCount');
+    debugPrint(
+        '🔴 [NotificationService] syncBadgeCount: unreadCount=$unreadCount');
     await AppBadgeService.setBadgeCount(unreadCount);
   }
 
