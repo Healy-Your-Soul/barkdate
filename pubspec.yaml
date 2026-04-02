@@ -9,14 +9,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^1.0.9
   google_fonts: ^8.0.1
-  supabase_flutter: '>=1.10.0'
-  firebase_core: ^4.4.0
-  firebase_messaging: ^16.1.1
+  supabase_flutter: ^2.12.2
+  firebase_core: ^4.6.0
+  firebase_messaging: ^16.1.3
   flutter_local_notifications: ^20.1.0
   image_picker: ^1.0.7
-  shared_preferences: ^2.2.2
+  shared_preferences: ^2.5.5
   flutter_image_compress: ^2.1.0
   photo_view: ^0.15.0
   cached_network_image: ^3.3.1
@@ -26,13 +26,13 @@ dependencies:
   permission_handler: ^12.0.1
   intl: ^0.20.2
   # Google Maps dependencies
-  google_maps_flutter: ^2.10.0
+  google_maps_flutter: ^2.17.0
   location: ^8.0.1
   geolocator: ^14.0.2
   # Gemini AI
   google_generative_ai: ^0.4.6
   # State management
-  flutter_riverpod: ^3.2.1
+  flutter_riverpod: ^3.3.1
   # Lazy loading
   visibility_detector: ^0.4.0+2
   go_router: ^17.0.0
@@ -40,8 +40,8 @@ dependencies:
   json_annotation: ^4.9.0
   timeago: ^3.7.1
   url_launcher: ^6.3.2
-  flutter_svg: ^2.2.3
-  material_symbols_icons: ^4.2892.0
+  flutter_svg: ^2.2.4
+  material_symbols_icons: ^4.2928.1
   # Platform View gesture fix for Flutter Web
   pointer_interceptor: ^0.10.1+2
   qr_flutter: ^4.1.0
@@ -57,11 +57,11 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  build_runner: ^2.10.4
+  build_runner: ^2.13.1
   freezed: ^3.2.3
-  json_serializable: ^6.11.2
+  json_serializable: ^6.13.1
   flutter_launcher_icons: ^0.14.3
-  go_router_builder: ^4.2.0
+  go_router_builder: ^4.2.1
 
 # App icon configuration
 flutter_launcher_icons:
