@@ -1101,7 +1101,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             )
           else
             GoogleMap(
-              cloudMapId:
+              mapId:
                   '745ef4f99c0756c12303e928', // Enables Vector Map & AdvancedMarkerElement
               onMapCreated: _onMapCreated,
               onCameraMove: _onCameraMove,
