@@ -60,7 +60,7 @@ class NotificationService {
 
       final userId = SupabaseConfig.auth.currentUser?.id;
       if (userId != null) {
-        await _syncUnreadBadgeCount(userId);
+        await syncBadgeCount(userId);
       }
     } catch (e) {
       debugPrint('Error marking notification as read: $e');
@@ -168,7 +168,7 @@ class NotificationService {
 
       final userId = SupabaseConfig.auth.currentUser?.id;
       if (userId != null) {
-        await _syncUnreadBadgeCount(userId);
+        await syncBadgeCount(userId);
       }
     } catch (e) {
       debugPrint('Error deleting notification: $e');
@@ -192,8 +192,12 @@ class NotificationService {
     }
   }
 
-  static Future<void> _syncUnreadBadgeCount(String userId) async {
+  /// Fetches the current unread count from the database and updates the iOS badge.
+  /// Call this whenever the badge may be out of sync.
+  static Future<void> syncBadgeCount(String userId) async {
     final unreadCount = await getUnreadCount(userId);
+    debugPrint(
+        '🔴 [NotificationService] syncBadgeCount: unreadCount=$unreadCount');
     await AppBadgeService.setBadgeCount(unreadCount);
   }
 
