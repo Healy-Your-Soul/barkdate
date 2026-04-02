@@ -83,6 +83,7 @@ class _BarkDateAppState extends ConsumerState<BarkDateApp>
     if (userId != null) {
       try {
         final count = await NotificationService.getUnreadCount(userId);
+        debugPrint('🔴 [app.dart] _syncBadgeCount (app resumed): unreadCount=$count');
         await AppBadgeService.setBadgeCount(count);
       } catch (e) {
         debugPrint('Failed to sync badge on resume: $e');

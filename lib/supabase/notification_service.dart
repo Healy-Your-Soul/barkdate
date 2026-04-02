@@ -194,6 +194,7 @@ class NotificationService {
 
   static Future<void> _syncUnreadBadgeCount(String userId) async {
     final unreadCount = await getUnreadCount(userId);
+    debugPrint('🔴 [NotificationService] _syncUnreadBadgeCount: unreadCount=$unreadCount');
     await AppBadgeService.setBadgeCount(unreadCount);
   }
 

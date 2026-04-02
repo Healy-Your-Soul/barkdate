@@ -23,6 +23,7 @@ class NotificationManager {
       final currentUser = SupabaseConfig.auth.currentUser;
       if (currentUser != null) {
         await NotificationService.getUnreadCount(currentUser.id).then((count) {
+          debugPrint('🔴 [NotificationManager] init badge sync: unreadCount=$count');
           AppBadgeService.setBadgeCount(count);
         }).catchError((e) {
           debugPrint('Failed to sync badge on initialization: $e');
