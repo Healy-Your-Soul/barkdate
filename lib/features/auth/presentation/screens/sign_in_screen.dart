@@ -96,8 +96,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         // Open in external Safari so iOS can intercept the custom URL scheme
         // redirect and return to the app. The in-app SFSafariViewController
         // shows a white page because it can't handle io.supabase.bark://
-        authScreenLaunchMode:
-            kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
+        authScreenLaunchMode: kIsWeb
+            ? LaunchMode.platformDefault
+            : LaunchMode.externalApplication,
       );
     } catch (e) {
       if (mounted) {
