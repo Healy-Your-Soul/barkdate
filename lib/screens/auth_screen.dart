@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:barkdate/utils/validators.dart';
+import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -36,14 +37,11 @@ class _AuthScreenState extends State<AuthScreen> {
   Future<void> _signInWithGoogle() async {
     setState(() => isLoading = true);
     try {
-      final response = await Supabase.instance.client.auth.signInWithOAuth(
+      await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: 'io.supabase.barkdate://login-callback',
+        redirectTo: 'io.supabase.bark://login-callback/',
+        authScreenLaunchMode: LaunchMode.externalApplication,
       );
-
-      if (mounted && response == true) {
-        Navigator.of(context).pushReplacementNamed('/home');
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

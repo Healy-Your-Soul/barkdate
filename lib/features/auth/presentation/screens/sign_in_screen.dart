@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 import 'package:barkdate/features/auth/presentation/providers/auth_provider.dart';
 import 'package:barkdate/services/preload_service.dart';
 
@@ -27,50 +28,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _obscurePassword = true;
   bool _rememberMe = false;
 
-  // Auth state subscription for OAuth redirect handling
-  late final dynamic _authSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-    // Listen for auth state changes (important for OAuth redirects)
-    _authSubscription =
-        Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
-      if (data.event == AuthChangeEvent.signedIn &&
-          data.session?.user != null &&
-          mounted) {
-        debugPrint('✅ OAuth sign-in detected via auth state change');
-
-        // Pre-warm feed caches
-        await PreloadService.warmFeedCaches(data.session!.user.id);
-
-        // Check if user has completed onboarding (has dog profile)
-        if (mounted) {
-          final dogs = await Supabase.instance.client
-              .from('dogs')
-              .select('id')
-              .eq('user_id', data.session!.user.id)
-              .limit(1);
-
-          if (mounted) {
-            if (dogs.isEmpty) {
-              // New user - go to onboarding
-              const WelcomeRoute().go(context);
-            } else {
-              // Existing user - go to home
-              const HomeRoute().go(context);
-            }
-          }
-        }
-      }
-    });
-  }
+  // NOTE: Do NOT add an auth state listener here.
+  // SupabaseAuthWrapper (at route '/') is the single source of truth for
+  // auth-driven navigation. A second listener here causes a double-navigation
+  // crash in GoRouter after OAuth (Google/Apple) completes.
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _authSubscription.cancel();
     super.dispose();
   }
 
@@ -124,15 +90,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     setState(() => _isGoogleLoading = true);
 
     try {
-      // For web, we don't need a redirect URL - it handles it automatically
-      // For mobile, we'd need deep link configuration
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: kIsWeb ? null : 'io.supabase.bark://login-callback/',
+        // Open in external Safari so iOS can intercept the custom URL scheme
+        // redirect and return to the app. The in-app SFSafariViewController
+        // shows a white page because it can't handle io.supabase.bark://
+        authScreenLaunchMode:
+            kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
       );
-
-      // Note: On web, this will redirect to Google's consent page
-      // The SupabaseAuthWrapper will handle the session when we return
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
