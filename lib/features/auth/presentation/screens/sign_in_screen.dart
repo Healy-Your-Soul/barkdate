@@ -9,6 +9,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 import 'package:barkdate/features/auth/presentation/providers/auth_provider.dart';
 import 'package:barkdate/services/preload_service.dart';
+import 'package:barkdate/core/config/app_constants.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -92,12 +93,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     try {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: kIsWeb ? null : 'io.supabase.bark://login-callback/',
+        redirectTo: kIsWeb ? null : AppConstants.supabaseAuthSiteUrl,
         // Open in external Safari so iOS can intercept the custom URL scheme
         // redirect and return to the app. The in-app SFSafariViewController
         // shows a white page because it can't handle io.supabase.bark://
-        authScreenLaunchMode:
-            kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
+        authScreenLaunchMode: kIsWeb
+            ? LaunchMode.platformDefault
+            : LaunchMode.externalApplication,
       );
     } catch (e) {
       if (mounted) {

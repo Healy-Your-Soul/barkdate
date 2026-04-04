@@ -5,6 +5,7 @@ import '../theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:barkdate/utils/validators.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
+import 'package:barkdate/core/config/app_constants.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -39,7 +40,7 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: 'io.supabase.bark://login-callback/',
+        redirectTo: AppConstants.supabaseAuthSiteUrl,
         authScreenLaunchMode: LaunchMode.externalApplication,
       );
     } catch (e) {
