@@ -4,7 +4,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:barkdate/utils/validators.dart';
-import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 import 'package:barkdate/core/config/app_constants.dart';
 
 class AuthScreen extends StatefulWidget {
