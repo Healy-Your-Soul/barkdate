@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/walk_details_sheet.dart';
 import 'package:intl/intl.dart';
@@ -25,11 +26,41 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
   List<Map<String, dynamic>> _participants = [];
   bool _isLoading = true;
   bool _hasError = false;
+  RealtimeChannel? _playdateChannel;
 
   @override
   void initState() {
     super.initState();
     _loadPlaydateData();
+    _subscribeToPlaydateChanges();
+  }
+
+  @override
+  void dispose() {
+    if (_playdateChannel != null) {
+      SupabaseConfig.client.removeChannel(_playdateChannel!);
+      _playdateChannel = null;
+    }
+    super.dispose();
+  }
+
+  void _subscribeToPlaydateChanges() {
+    _playdateChannel = SupabaseConfig.client
+        .channel('chat_walk_card_${widget.playdateId}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'playdates',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: widget.playdateId,
+          ),
+          callback: (payload) {
+            if (mounted) _loadPlaydateData();
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _loadPlaydateData() async {
@@ -90,6 +121,7 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
     final status = _playdateData?['status'] ?? 'pending';
     switch (status) {
       case 'confirmed':
+      case 'accepted':
         return 'Confirmed';
       case 'pending':
         return 'Pending';
@@ -105,6 +137,7 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
     final status = _playdateData?['status'] ?? 'pending';
     switch (status) {
       case 'confirmed':
+      case 'accepted':
         return const Color(0xFF4CAF50);
       case 'pending':
         return Colors.orange;
@@ -413,7 +446,7 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
     return '$dayPart at ${DateFormat('h:mm a').format(dt)}';
   }
 
-  void _viewDetails(BuildContext context) {
+  Future<void> _viewDetails(BuildContext context) async {
     if (_playdateData == null) return;
 
     final parkName = _playdateData!['location'] as String? ?? 'Walk Location';
@@ -424,7 +457,7 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
         _playdateData!['organizer'] as Map<String, dynamic>?;
     final organizerName = organizer?['name'] ?? 'Walk Organizer';
 
-    showWalkDetailsSheet(
+    await showWalkDetailsSheet(
       context,
       parkId: parkName,
       parkName: parkName,
@@ -432,6 +465,11 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
       organizerDogName: organizerName,
       playdateId: widget.playdateId,
     );
+
+    if (mounted) {
+      _loadPlaydateData();
+      widget.onUpdated?.call();
+    }
   }
 }
 
@@ -462,6 +500,7 @@ class ChatWalkPinnedHeader extends StatelessWidget {
     if (_isExpired) return Colors.grey;
     switch (status) {
       case 'confirmed':
+      case 'accepted':
         return const Color(0xFF4CAF50);
       case 'pending':
         return Colors.orange;
@@ -475,6 +514,7 @@ class ChatWalkPinnedHeader extends StatelessWidget {
     if (_isExpired) return 'Completed';
     switch (status) {
       case 'confirmed':
+      case 'accepted':
         return 'Confirmed ✓';
       case 'pending':
         return 'Pending...';

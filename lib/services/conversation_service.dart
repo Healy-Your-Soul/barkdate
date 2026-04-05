@@ -107,8 +107,12 @@ class ConversationService {
 
   // ============ GROUP CHAT / PLAYDATE CONVERSATION METHODS ============
 
-  /// Create or get conversation for a playdate
-  /// Works for any playdate (single or multi-participant)
+  /// Create or get conversation for a playdate.
+  ///
+  /// The conversations table requires both user1_id and user2_id (NOT NULL)
+  /// with a UNIQUE(user1_id, user2_id) constraint. When these two users
+  /// already have a DM, we reuse that DM and link it to the playdate via
+  /// playdate_id so [getPlaydateConversation] can find it.
   static Future<String?> getOrCreatePlaydateConversation({
     required String playdateId,
     required List<String> participantUserIds,
@@ -130,7 +134,7 @@ class ConversationService {
     }
 
     try {
-      // Check if conversation already exists for this playdate
+      // 1. Already linked to this playdate?
       final existing = await _client
           .from('conversations')
           .select('id')
@@ -142,39 +146,77 @@ class ConversationService {
         return existing['id'] as String;
       }
 
-      // Playdate conversations are always treated as group chats so they
-      // don't collide with existing DM conversations between the same users.
-      final conversationData = <String, dynamic>{
-        'is_group': true,
-        'playdate_id': playdateId,
-        'group_name': groupName,
-        'last_message_at': DateTime.now().toIso8601String(),
-      };
+      // 2. Sort IDs to satisfy CHECK(user1_id < user2_id)
+      final ids = [...uniqueParticipants]..sort();
+      final user1 = ids[0];
+      final user2 = ids[1];
 
-      final created = await _client
-          .from('conversations')
-          .insert(conversationData)
-          .select('id')
-          .single();
+      String conversationId;
 
-      final conversationId = created['id'] as String;
-      debugPrint('✅ Created playdate conversation: $conversationId');
+      // 3. Try creating a fresh conversation with both user IDs
+      try {
+        final created = await _client
+            .from('conversations')
+            .insert({
+              'user1_id': user1,
+              'user2_id': user2,
+              'is_group': true,
+              'playdate_id': playdateId,
+              'group_name': groupName,
+              'last_message_at': DateTime.now().toIso8601String(),
+            })
+            .select('id')
+            .single();
 
+        conversationId = created['id'] as String;
+        debugPrint('✅ Created new playdate conversation: $conversationId');
+      } catch (insertError) {
+        final msg = insertError.toString();
+        final isDuplicate =
+            msg.contains('unique_conversation') || msg.contains('23505');
+
+        if (!isDuplicate) rethrow;
+
+        // 4. A DM already exists between these users — reuse it.
+        debugPrint('ℹ️ DM already exists, linking it to playdate $playdateId');
+
+        final dm = await _client
+            .from('conversations')
+            .select('id')
+            .eq('user1_id', user1)
+            .eq('user2_id', user2)
+            .maybeSingle();
+
+        if (dm == null) {
+          debugPrint('❌ Could not find existing DM after unique conflict');
+          return null;
+        }
+
+        conversationId = dm['id'] as String;
+
+        // Link the existing DM to this playdate
+        await _client
+            .from('conversations')
+            .update({'playdate_id': playdateId})
+            .eq('id', conversationId);
+
+        debugPrint('✅ Linked existing DM $conversationId to playdate');
+      }
+
+      // 5. Ensure both users are in conversation_participants
       for (int i = 0; i < uniqueParticipants.length; i++) {
         final userId = uniqueParticipants[i];
-        await _client.from('conversation_participants').insert({
-          'conversation_id': conversationId,
-          'user_id': userId,
-          'role': i == 0 ? 'admin' : 'member',
-        });
+        try {
+          await _client.from('conversation_participants').insert({
+            'conversation_id': conversationId,
+            'user_id': userId,
+            'role': i == 0 ? 'admin' : 'member',
+          });
+        } catch (e) {
+          if (!e.toString().contains('duplicate key')) rethrow;
+        }
       }
-      debugPrint('✅ Added ${uniqueParticipants.length} participants');
-
-      // Post welcome system message
-      await postSystemMessage(
-        conversationId,
-        '🎾 Playdate chat created! Coordinate details here.',
-      );
+      debugPrint('✅ Ensured ${uniqueParticipants.length} participants');
 
       return conversationId;
     } catch (e) {
@@ -183,20 +225,87 @@ class ConversationService {
     }
   }
 
-  /// Get conversation for a specific playdate
+  /// Get conversation for a specific playdate.
+  ///
+  /// Lookup chain:
+  /// 1. `conversations.playdate_id` (fast if RLS allowed the UPDATE)
+  /// 2. DM between [participantUserIds] (when caller knows the pair)
+  /// 3. Auto-discover via playdate organizer + first invitee (always works)
   static Future<Map<String, dynamic>?> getPlaydateConversation(
-      String playdateId) async {
-    try {
-      final data = await _client.from('conversations').select('''
-            id,
-            is_group,
-            group_name,
-            playdate_id,
-            last_message_at,
-            created_at
-          ''').eq('playdate_id', playdateId).maybeSingle();
+    String playdateId, {
+    List<String>? participantUserIds,
+  }) async {
+    const columns = '''
+          id,
+          is_group,
+          group_name,
+          playdate_id,
+          last_message_at,
+          created_at
+        ''';
 
-      return data;
+    try {
+      // 1. Direct playdate_id lookup
+      final data = await _client
+          .from('conversations')
+          .select(columns)
+          .eq('playdate_id', playdateId)
+          .maybeSingle();
+
+      if (data != null) return data;
+
+      // 2. Caller-provided user IDs
+      if (participantUserIds != null && participantUserIds.length >= 2) {
+        final ids = [...participantUserIds]..sort();
+        final fallback = await _client
+            .from('conversations')
+            .select(columns)
+            .eq('user1_id', ids[0])
+            .eq('user2_id', ids[1])
+            .maybeSingle();
+
+        if (fallback != null) {
+          debugPrint(
+              'ℹ️ Found conversation via user-ID fallback: ${fallback['id']}');
+          return fallback;
+        }
+      }
+
+      // 3. Auto-discover: look up organizer + first invitee from the playdate
+      final playdate = await _client
+          .from('playdates')
+          .select('organizer_id')
+          .eq('id', playdateId)
+          .maybeSingle();
+
+      if (playdate != null) {
+        final organizerId = playdate['organizer_id'] as String;
+        final request = await _client
+            .from('playdate_requests')
+            .select('invitee_id')
+            .eq('playdate_id', playdateId)
+            .limit(1)
+            .maybeSingle();
+
+        if (request != null) {
+          final inviteeId = request['invitee_id'] as String;
+          final ids = [organizerId, inviteeId]..sort();
+          final discovered = await _client
+              .from('conversations')
+              .select(columns)
+              .eq('user1_id', ids[0])
+              .eq('user2_id', ids[1])
+              .maybeSingle();
+
+          if (discovered != null) {
+            debugPrint(
+                'ℹ️ Found conversation via auto-discover: ${discovered['id']}');
+            return discovered;
+          }
+        }
+      }
+
+      return null;
     } catch (e) {
       debugPrint('❌ Error fetching playdate conversation: $e');
       return null;
@@ -250,10 +359,14 @@ class ConversationService {
   static Future<bool> ensurePlaydateParticipant({
     required String playdateId,
     required String userId,
+    List<String>? participantUserIds,
     String role = 'member',
   }) async {
     try {
-      final conversation = await getPlaydateConversation(playdateId);
+      final conversation = await getPlaydateConversation(
+        playdateId,
+        participantUserIds: participantUserIds,
+      );
       if (conversation == null || conversation['id'] == null) {
         debugPrint('ℹ️ No playdate conversation to sync participant yet');
         return false;

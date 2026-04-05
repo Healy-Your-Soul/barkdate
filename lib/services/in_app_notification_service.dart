@@ -24,7 +24,7 @@ class InAppNotificationService {
 
   /// Show a notification banner
   static Future<void> showNotification(
-      BarkDateNotification notification) async {
+      BarkDateNotification notification, {VoidCallback? onTapAction}) async {
     final overlayState =
         _overlayState ?? rootNavigatorKey.currentState?.overlay;
     if (overlayState == null) {
@@ -43,9 +43,8 @@ class InAppNotificationService {
       builder: (context) => NotificationBanner(
         notification: notification,
         onTap: () {
-          // TODO: Handle navigation based on notification.actionType
-          // For now just dismiss
           _dismissOverlay();
+          onTapAction?.call();
         },
         onDismiss: () {
           _currentOverlay?.remove();
@@ -90,7 +89,8 @@ class InAppNotificationService {
   }
 
   /// Show a notification banner (alternative signature)
-  static Future<void> showBanner(BarkDateNotification notification) async {
-    await showNotification(notification);
+  static Future<void> showBanner(BarkDateNotification notification,
+      {VoidCallback? onTapAction}) async {
+    await showNotification(notification, onTapAction: onTapAction);
   }
 }

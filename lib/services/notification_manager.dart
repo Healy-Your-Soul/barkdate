@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:barkdate/services/app_badge_service.dart';
 import 'package:barkdate/services/firebase_messaging_service.dart';
 import 'package:barkdate/services/in_app_notification_service.dart';
@@ -6,6 +6,8 @@ import 'package:barkdate/services/notification_sound_service.dart';
 import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/models/notification.dart';
+import 'package:barkdate/core/router/app_router.dart';
+import 'package:barkdate/widgets/receive_walk_sheet.dart';
 
 /// Central notification manager that coordinates all notification services
 class NotificationManager {
@@ -68,7 +70,37 @@ class NotificationManager {
             try {
               final notification =
                   BarkDateNotification.fromMap(latestNotification);
-              InAppNotificationService.showNotification(notification);
+              InAppNotificationService.showNotification(
+                notification,
+                onTapAction: () {
+                  if (notification.type != NotificationType.playdateRequest) {
+                    return;
+                  }
+                  final ctx = rootNavigatorKey.currentContext;
+                  if (ctx == null) return;
+                  final meta = notification.metadata ?? {};
+                  final payload = <String, dynamic>{
+                    ...meta,
+                    'related_id': notification.relatedId,
+                    'type': 'playdate_request',
+                  };
+                  openReceiveWalkSheetFromInvitePayload(ctx, payload);
+                },
+              );
+              if (notification.type == NotificationType.playdateRequest) {
+                final meta = notification.metadata ?? {};
+                final payload = <String, dynamic>{
+                  ...meta,
+                  'related_id': notification.relatedId,
+                  'type': 'playdate_request',
+                };
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  final ctx = rootNavigatorKey.currentContext;
+                  if (ctx != null) {
+                    openReceiveWalkSheetFromInvitePayload(ctx, payload);
+                  }
+                });
+              }
             } catch (e) {
               debugPrint('Error showing real-time notification: $e');
             }

@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart' hide Priority;
+import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
@@ -276,18 +278,45 @@ class FirebaseMessagingService {
     debugPrint('📱 Body: ${message.notification?.body}');
     debugPrint('📱 Data: ${message.data}');
 
-    // Create BarkDateNotification from FCM message
     final notification = _createNotificationFromMessage(message);
 
     if (notification != null) {
-      // Show in-app banner notification
-      await InAppNotificationService.showBanner(notification);
+      final type = _parseType(message.data['type'] as String?);
 
-      // Play notification sound
+      // Build a tap action so the in-app banner navigates on tap
+      void bannerTapAction() {
+        final ctx = rootNavigatorKey.currentContext;
+        if (ctx != null) _navigateToScreen(type, message.data);
+      }
+
+      await InAppNotificationService.showBanner(notification,
+          onTapAction: bannerTapAction);
       await NotificationSoundService.playNotificationSound(notification.type);
-
-      // Show local notification if app is not in focus
       await _showLocalNotification(message, notification);
+
+      // Auto-show the Walk Invite sheet for playdate_request (resolves request_id
+      // from playdate_id when FCM data payload is incomplete — e.g. web/data-only).
+      if (type == NotificationType.playdateRequest) {
+        final data = message.data;
+        final metadataRaw = data['metadata'];
+        Map<String, dynamic> metadata = {};
+        if (metadataRaw is Map<String, dynamic>) {
+          metadata = metadataRaw;
+        } else if (metadataRaw is String && metadataRaw.isNotEmpty) {
+          try {
+            final parsed = jsonDecode(metadataRaw);
+            if (parsed is Map<String, dynamic>) metadata = parsed;
+          } catch (_) {}
+        }
+
+        final payload = <String, dynamic>{...metadata, ...data};
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final c = rootNavigatorKey.currentContext;
+          if (c != null) {
+            unawaited(openReceiveWalkSheetFromInvitePayload(c, payload));
+          }
+        });
+      }
     }
   }
 
@@ -467,17 +496,7 @@ class FirebaseMessagingService {
         }
 
         final payload = <String, dynamic>{...metadata, ...data};
-        final hasSheetData = payload['request_id'] != null &&
-            payload['organizer_dog_name'] != null &&
-            payload['scheduled_at'] != null;
-
-        if (hasSheetData) {
-          showReceiveWalkSheetFromPayload(context, payload);
-        } else if (data['related_id'] != null) {
-          // Fallback when payload is incomplete
-          GoRouter.of(context)
-              .push('/playdate-details', extra: {'id': data['related_id']});
-        }
+        await openReceiveWalkSheetFromInvitePayload(context, payload);
         break;
       case NotificationType.playdate:
         final playdateActionType = data['action_type'] as String?;
@@ -570,16 +589,29 @@ class FirebaseMessagingService {
       final data = message.data;
       final notification = message.notification;
 
-      if (notification == null) return null;
+      final title = notification?.title ??
+          (data['title'] as String?) ??
+          '';
+      final body =
+          notification?.body ?? (data['body'] as String?) ?? '';
 
-      final type = _parseType(data['type'] as String?);
+      final typeStr = data['type'] as String?;
+      final hasType = typeStr != null && typeStr.isNotEmpty;
+      if (notification == null &&
+          !hasType &&
+          title.isEmpty &&
+          body.isEmpty) {
+        return null;
+      }
+
+      final type = _parseType(typeStr);
 
       return BarkDateNotification(
         id: message.messageId ??
             DateTime.now().millisecondsSinceEpoch.toString(),
         userId: data['user_id'] ?? '',
-        title: notification.title ?? '',
-        body: notification.body ?? '',
+        title: title.isNotEmpty ? title : 'BarkDate',
+        body: body.isNotEmpty ? body : '',
         type: type,
         actionType: data['action_type'],
         relatedId: data['related_id'],

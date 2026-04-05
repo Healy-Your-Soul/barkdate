@@ -905,6 +905,8 @@ class BarkDatePlaydateService {
           requests:playdate_requests(
             id,
             status,
+            requester_id,
+            invitee_id,
             invitee_dog:dogs!playdate_requests_invitee_dog_id_fkey(id, name, main_photo_url),
             requester_dog:dogs!playdate_requests_requester_dog_id_fkey(id, name, main_photo_url)
           )

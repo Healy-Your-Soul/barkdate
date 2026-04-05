@@ -346,12 +346,17 @@ class PlaydateRequestService {
       );
 
       // Create playdate conversation for the participants
-      await ConversationService.getOrCreatePlaydateConversation(
+      final convId = await ConversationService.getOrCreatePlaydateConversation(
         playdateId: playdateId,
         participantUserIds: [organizerId, inviteeId],
         groupName: title,
       );
-      debugPrint('Created playdate conversation for chat');
+      if (convId != null) {
+        debugPrint('✅ Created playdate conversation: $convId');
+      } else {
+        debugPrint(
+            '⚠️ Conversation creation deferred – will retry on accept');
+      }
 
       debugPrint('Playdate request created successfully!');
       return playdateId;
@@ -447,6 +452,7 @@ class PlaydateRequestService {
       await ConversationService.ensurePlaydateParticipant(
         playdateId: playdateId,
         userId: inviteeId,
+        participantUserIds: [requesterId, inviteeId],
       );
 
       return true;
@@ -516,9 +522,30 @@ class PlaydateRequestService {
           if (!duplicate) rethrow;
         }
 
+        // Ensure the playdate conversation exists (it may have failed at
+        // creation time due to RLS or constraint issues). If missing, create it
+        // now so both organizer and invitee can chat.
+        final participantIds = [
+          request['requester_id'] as String,
+          request['invitee_id'] as String,
+        ];
+        final existingConv = await ConversationService.getPlaydateConversation(
+          request['playdate_id'],
+          participantUserIds: participantIds,
+        );
+        if (existingConv == null) {
+          await ConversationService.getOrCreatePlaydateConversation(
+            playdateId: request['playdate_id'],
+            participantUserIds: participantIds,
+            groupName:
+                request['playdate']?['title'] as String? ?? 'Walk Together',
+          );
+        }
+
         await ConversationService.ensurePlaydateParticipant(
           playdateId: request['playdate_id'],
           userId: request['invitee_id'],
+          participantUserIds: participantIds,
         );
 
         final invDogName = request['invitee_dog']?['name'] as String? ?? 'A pup';

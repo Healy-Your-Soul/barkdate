@@ -66,19 +66,25 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
   Future<void> _loadPlaydateData() async {
     try {
       final currentUserId = SupabaseConfig.auth.currentUser?.id;
+      final pid = widget.playdateId!;
 
-      final playdateResult = await SupabaseConfig.client
+      final playdateFuture = SupabaseConfig.client
           .from('playdates')
           .select('*, organizer:organizer_id(id, name, avatar_url)')
-          .eq('id', widget.playdateId!)
+          .eq('id', pid)
           .maybeSingle();
+      final participantsFuture =
+          FriendActivityService.getPlaydateWalkParticipants(pid);
+      final conversationFuture =
+          ConversationService.getPlaydateConversation(pid);
 
+      final results = await Future.wait<dynamic>(
+          [playdateFuture, participantsFuture, conversationFuture]);
+
+      final playdateResult = results[0] as Map<String, dynamic>?;
       final participants =
-          await FriendActivityService.getPlaydateWalkParticipants(
-              widget.playdateId!);
-
-      final conversation =
-          await ConversationService.getPlaydateConversation(widget.playdateId!);
+          results[1] as List<Map<String, dynamic>>? ?? <Map<String, dynamic>>[];
+      final conversation = results[2] as Map<String, dynamic>?;
 
       final joined =
           participants.any((p) => p['user_id'] == currentUserId);
@@ -408,7 +414,9 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
 
           // Participants
           Text(
-            'Who\'s joining (${_participants.length})',
+            _isLoading
+                ? 'Who\'s joining'
+                : 'Who\'s joining (${_participants.length})',
             style: AppTypography.labelMedium(
               color: Colors.grey[600],
             ),
@@ -589,7 +597,7 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
 }
 
 /// Show the Walk Details bottom sheet
-void showWalkDetailsSheet(
+Future<void> showWalkDetailsSheet(
   BuildContext context, {
   required String parkId,
   required String parkName,
@@ -600,7 +608,7 @@ void showWalkDetailsSheet(
   double? latitude,
   double? longitude,
 }) {
-  showModalBottomSheet(
+  return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

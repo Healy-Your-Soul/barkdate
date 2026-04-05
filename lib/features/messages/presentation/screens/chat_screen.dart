@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 import 'package:barkdate/models/message.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
@@ -26,7 +27,8 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends ConsumerState<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen>
+    with WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSending = false;
@@ -36,27 +38,56 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Map<String, dynamic>? _playdateData;
   String? _playdateId;
   bool _loadingPlaydate = true;
+  RealtimeChannel? _playdateChannel;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _messageController.addListener(_checkInputDirection);
     _loadLinkedPlaydate();
   }
 
-  /// Check if this conversation is linked to a playdate
+  /// Check if this conversation is linked to a playdate.
+  ///
+  /// First tries `conversations.playdate_id`. When that is null (RLS may
+  /// block the UPDATE that sets it), falls back to looking up the most recent
+  /// active playdate between the two conversation users.
   Future<void> _loadLinkedPlaydate() async {
     try {
-      // Query the conversation to check for a linked playdate_id
+      String? pId;
+
+      // 1. Primary: conversation.playdate_id
       final conversation = await SupabaseConfig.client
           .from('conversations')
           .select('playdate_id')
           .eq('id', widget.matchId)
           .maybeSingle();
 
-      if (conversation != null && conversation['playdate_id'] != null) {
-        final pId = conversation['playdate_id'] as String;
-        // Load the playdate details
+      pId = conversation?['playdate_id'] as String?;
+
+      // 2. Fallback: find playdate via playdate_requests between the two users
+      if (pId == null) {
+        final currentUserId = SupabaseConfig.auth.currentUser?.id;
+        final recipientId = widget.recipientId;
+        if (currentUserId != null && recipientId.isNotEmpty) {
+          final request = await SupabaseConfig.client
+              .from('playdate_requests')
+              .select('playdate_id, playdates!inner(id, status, scheduled_at)')
+              .or(
+                'and(requester_id.eq.$currentUserId,invitee_id.eq.$recipientId),'
+                'and(requester_id.eq.$recipientId,invitee_id.eq.$currentUserId)',
+              )
+              .inFilter('status', ['pending', 'accepted'])
+              .order('created_at', ascending: false)
+              .limit(1)
+              .maybeSingle();
+
+          pId = request?['playdate_id'] as String?;
+        }
+      }
+
+      if (pId != null) {
         final playdate = await SupabaseConfig.client
             .from('playdates')
             .select('id, title, location, scheduled_at, status')
@@ -69,6 +100,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             _playdateData = playdate;
             _loadingPlaydate = false;
           });
+          _subscribeToPlaydate(pId);
         }
       } else {
         if (mounted) setState(() => _loadingPlaydate = false);
@@ -77,6 +109,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       debugPrint('Error loading linked playdate: $e');
       if (mounted) setState(() => _loadingPlaydate = false);
     }
+  }
+
+  void _subscribeToPlaydate(String playdateId) {
+    if (_playdateChannel != null) return;
+    _playdateChannel = SupabaseConfig.client
+        .channel('chat_screen_playdate_$playdateId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'playdates',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: playdateId,
+          ),
+          callback: (payload) {
+            if (mounted) _loadLinkedPlaydate();
+          },
+        )
+        .subscribe();
   }
 
   void _checkInputDirection() {
@@ -90,7 +142,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _playdateId != null) {
+      _loadLinkedPlaydate();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    if (_playdateChannel != null) {
+      SupabaseConfig.client.removeChannel(_playdateChannel!);
+      _playdateChannel = null;
+    }
     _messageController.removeListener(_checkInputDirection);
     _messageController.dispose();
     _scrollController.dispose();

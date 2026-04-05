@@ -7,6 +7,7 @@ import 'package:barkdate/services/conversation_service.dart';
 import 'package:barkdate/services/calendar_integration_service.dart';
 import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/features/feed/presentation/providers/friend_activity_provider.dart';
+import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 
 class ReceiveWalkSheet extends ConsumerStatefulWidget {
   final String requestId;
@@ -149,6 +150,7 @@ class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
 
       if (success) {
         ref.invalidate(friendAlertsProvider);
+        ref.invalidate(userPlaydatesProvider);
 
         Map<String, String>? chatTarget;
         Map<String, dynamic>? requestContext;
@@ -609,21 +611,110 @@ class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
 // Global helper to show the sheet directly given a notification JSON payload
 void showReceiveWalkSheetFromPayload(
     BuildContext context, Map<String, dynamic> data) {
+  final rid = data['request_id'] as String?;
+  if (rid == null || rid.isEmpty) return;
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (context) => ReceiveWalkSheet(
-      requestId: data['request_id'] ??
-          data['playdate_id'] ??
-          '',
+      requestId: rid,
       organizerName: data['organizer_name'] ?? 'BarkDate User',
       dogName: data['organizer_dog_name'] ?? 'A dog',
       dogPhotoUrl: data['organizer_dog_photo'] as String?,
       location: data['location'] ?? 'Unknown location',
       scheduledAt: data['scheduled_at'] != null
-          ? DateTime.tryParse(data['scheduled_at']) ?? DateTime.now()
+          ? DateTime.tryParse(data['scheduled_at'].toString()) ??
+              DateTime.now()
           : DateTime.now(),
+    ),
+  );
+}
+
+/// Dedupes rapid double-opens (FCM foreground + DB realtime both firing).
+String? _walkInviteSheetDedupeKey;
+DateTime? _walkInviteSheetDedupeAt;
+
+/// Opens the walk-invite sheet, resolving [request_id] from the DB when FCM only
+/// sends [related_id]/[playdate_id] (common for push payloads).
+Future<void> openReceiveWalkSheetFromInvitePayload(
+    BuildContext context, Map<String, dynamic> data) async {
+  final uid = SupabaseConfig.auth.currentUser?.id;
+  if (uid == null) return;
+
+  final dedupeHint = (data['request_id'] ??
+          data['related_id'] ??
+          data['playdate_id'])
+      ?.toString();
+  if (dedupeHint != null && dedupeHint.isNotEmpty) {
+    final now = DateTime.now();
+    if (_walkInviteSheetDedupeKey == dedupeHint &&
+        _walkInviteSheetDedupeAt != null &&
+        now.difference(_walkInviteSheetDedupeAt!) <
+            const Duration(seconds: 4)) {
+      return;
+    }
+  }
+
+  var requestId = data['request_id'] as String?;
+  final playdateId = (data['playdate_id'] ?? data['related_id']) as String?;
+
+  if (requestId == null || requestId.isEmpty) {
+    if (playdateId != null && playdateId.isNotEmpty) {
+      final row = await SupabaseConfig.client
+          .from('playdate_requests')
+          .select('id')
+          .eq('playdate_id', playdateId)
+          .eq('invitee_id', uid)
+          .eq('status', 'pending')
+          .maybeSingle();
+      requestId = row?['id'] as String?;
+    }
+  }
+
+  if (requestId == null || requestId.isEmpty) return;
+  final resolvedRequestId = requestId;
+
+  var location = data['location'] as String? ?? 'Unknown location';
+  var dogName = data['organizer_dog_name'] as String? ?? 'A dog';
+  final dogPhoto = data['organizer_dog_photo'] as String?;
+  var organizerName = data['organizer_name'] as String? ?? 'BarkDate User';
+  var scheduledAt = data['scheduled_at'] != null
+      ? DateTime.tryParse(data['scheduled_at'].toString()) ?? DateTime.now()
+      : DateTime.now();
+
+  if (playdateId != null &&
+      (data['location'] == null ||
+          data['scheduled_at'] == null ||
+          dogName == 'A dog')) {
+    final pd = await SupabaseConfig.client
+        .from('playdates')
+        .select('location, scheduled_at, title, organizer:organizer_id(name)')
+        .eq('id', playdateId)
+        .maybeSingle();
+    if (pd != null) {
+      location = pd['location'] as String? ?? location;
+      scheduledAt =
+          DateTime.tryParse(pd['scheduled_at']?.toString() ?? '') ?? scheduledAt;
+      final org = pd['organizer'] as Map<String, dynamic>?;
+      organizerName = org?['name'] as String? ?? organizerName;
+    }
+  }
+
+  if (!context.mounted) return;
+  _walkInviteSheetDedupeKey = resolvedRequestId;
+  _walkInviteSheetDedupeAt = DateTime.now();
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) => ReceiveWalkSheet(
+      requestId: resolvedRequestId,
+      organizerName: organizerName,
+      dogName: dogName,
+      dogPhotoUrl: dogPhoto,
+      location: location,
+      scheduledAt: scheduledAt,
     ),
   );
 }
