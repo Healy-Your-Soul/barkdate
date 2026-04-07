@@ -211,6 +211,8 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
     final receiver = conversation['receiver'] as Map<String, dynamic>?;
 
     final senderId = conversation['sender_id'];
+    final hasUnread = conversation['has_unread'] == true;
+    final unreadCount = conversation['unread_count'] as int? ?? 0;
 
     // If I am the sender, show receiver. If I am receiver, show sender.
     final otherUser = (senderId == currentUserId) ? receiver : sender;
@@ -245,13 +247,32 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-            backgroundColor: Colors.grey[200],
-            child: avatarUrl == null
-                ? const Icon(Icons.person, color: Colors.grey)
-                : null,
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundImage:
+                    avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                backgroundColor: Colors.grey[200],
+                child: avatarUrl == null
+                    ? const Icon(Icons.person, color: Colors.grey)
+                    : null,
+              ),
+              if (hasUnread)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0D47A1),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -265,19 +286,47 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                       child: Text(
                         displayName,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontWeight:
+                              hasUnread ? FontWeight.w800 : FontWeight.bold,
                           color: Colors.black87,
                         ),
                       ),
                     ),
-                    Text(
-                      timeago.format(createdAt, locale: 'en_short'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (unreadCount > 0) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0D47A1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              unreadCount > 99 ? '99+' : '$unreadCount',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        Text(
+                          timeago.format(createdAt, locale: 'en_short'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color:
+                                hasUnread ? const Color(0xFF0D47A1) : Colors.grey[600],
+                            fontWeight:
+                                hasUnread ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -288,14 +337,11 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors
-                        .grey[600], // Always grey for preview in Airbnb style
-                    fontWeight: FontWeight.normal,
+                    color: hasUnread ? Colors.black87 : Colors.grey[600],
+                    fontWeight:
+                        hasUnread ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
-                // Status line (optional)
-                // const SizedBox(height: 4),
-                // Text('Response time: 1 hr', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
               ],
             ),
           ),

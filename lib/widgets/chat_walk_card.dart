@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/models/friend_alert.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
@@ -219,6 +220,21 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
     }
   }
 
+  bool get _isOrganizer {
+    final currentUserId = SupabaseConfig.auth.currentUser?.id;
+    if (currentUserId == null || _playdateData == null) return false;
+    final organizerId = _playdateData!['organizer_id'] as String?;
+    final nestedOrganizer =
+        (_playdateData!['organizer'] as Map<String, dynamic>?)?['id'];
+    return organizerId == currentUserId || nestedOrganizer == currentUserId;
+  }
+
+  String get _ctaLabel {
+    final isLocked = _isExpired || _isCancelled;
+    if (isLocked) return 'View details';
+    return _isOrganizer ? 'Manage walk' : 'View / edit walk';
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -234,10 +250,47 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
     final scheduledAt =
         DateTime.tryParse(_playdateData!['scheduled_at'] ?? '') ??
             DateTime.now();
+
+    if (isLocked) {
+      final timeStr = _formatDateTime(scheduledAt);
+      final statusStr = _statusText;
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _isCancelled ? Icons.block : Icons.check_circle_outline,
+                  size: 14,
+                  color: Colors.grey.shade700,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '$statusStr Walk: $location • $timeStr',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final title = _playdateData!['title'] ?? 'Walk Together';
 
     final walkBlue = FriendAlert.colorForType(FriendAlertType.walkTogether);
-    final surfaceColor = isLocked ? Colors.grey.shade600 : walkBlue;
+    final surfaceColor = walkBlue;
     final onSurface = Colors.white;
     final onSurfaceMuted = Colors.white.withValues(alpha: 0.85);
 
@@ -298,7 +351,7 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => _openWalkDetails(context),
+                    onTap: () => _openLocationOnMap(context),
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -317,7 +370,7 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Icon(Icons.chevron_right, color: onSurfaceMuted, size: 20),
+                          Icon(Icons.directions_outlined, color: onSurfaceMuted, size: 20),
                         ],
                       ),
                     ),
@@ -392,6 +445,7 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
                           }).toList(),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           '${_participants.length} ${_participants.length == 1 ? 'participant' : 'participants'}',
@@ -423,7 +477,7 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
                   ),
                 ),
                 child: Text(
-                  isLocked ? 'View details' : 'View / edit walk',
+                  _ctaLabel,
                   style: AppTypography.labelMedium(
                     color: isLocked ? Colors.grey.shade700 : walkBlue,
                   ).copyWith(fontWeight: FontWeight.w600),
@@ -497,6 +551,77 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
       widget.onUpdated?.call();
     }
   }
+
+  /// Open the walk location in the in-app map or offer external directions.
+  Future<void> _openLocationOnMap(BuildContext context) async {
+    if (_playdateData == null) return;
+
+    final lat = (_playdateData!['latitude'] as num?)?.toDouble();
+    final lng = (_playdateData!['longitude'] as num?)?.toDouble();
+    final location = _playdateData!['location'] as String? ?? 'Location';
+
+    if (lat != null && lng != null) {
+      // Offer directions via external maps app
+      final encodedName = Uri.encodeComponent(location);
+      final googleMapsUrl =
+          'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&destination_place_id=$encodedName';
+      final appleMapsUrl =
+          'https://maps.apple.com/?daddr=$lat,$lng&dirflg=w';
+
+      if (!context.mounted) return;
+
+      final choice = await showModalBottomSheet<String>(
+        context: context,
+        builder: (ctx) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.directions_walk,
+                      color: Color(0xFF0D47A1)),
+                  title: const Text('Get Directions (Google Maps)'),
+                  onTap: () => Navigator.pop(ctx, 'google'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.map_outlined,
+                      color: Color(0xFF0D47A1)),
+                  title: const Text('Get Directions (Apple Maps)'),
+                  onTap: () => Navigator.pop(ctx, 'apple'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.info_outline,
+                      color: Color(0xFF0D47A1)),
+                  title: const Text('View Walk Details'),
+                  onTap: () => Navigator.pop(ctx, 'details'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      if (choice == null || !context.mounted) return;
+
+      switch (choice) {
+        case 'google':
+          await launchUrl(Uri.parse(googleMapsUrl),
+              mode: LaunchMode.externalApplication);
+          break;
+        case 'apple':
+          await launchUrl(Uri.parse(appleMapsUrl),
+              mode: LaunchMode.externalApplication);
+          break;
+        case 'details':
+          await _openWalkDetails(context);
+          break;
+      }
+    } else {
+      // No coordinates — just open walk details
+      await _openWalkDetails(context);
+    }
+  }
 }
 
 /// Compact pinned header bar shown at the top of a walk chat.
@@ -554,7 +679,7 @@ class ChatWalkPinnedHeader extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Icon(
                 _isLocked ? Icons.lock_outline : Icons.location_on_outlined,

@@ -8,6 +8,7 @@ import 'package:barkdate/services/realtime_service.dart';
 import 'package:barkdate/widgets/achievement_toast.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/app_badge_service.dart';
+import 'package:barkdate/services/notification_manager.dart';
 import 'package:barkdate/supabase/notification_service.dart';
 
 class BarkDateApp extends ConsumerStatefulWidget {
@@ -75,6 +76,7 @@ class _BarkDateAppState extends ConsumerState<BarkDateApp>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _syncBadgeCount();
+      NotificationManager.onAppResumed();
     }
   }
 

@@ -38,6 +38,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   String? _playdateId;
   bool _loadingPlaydate = true;
   RealtimeChannel? _playdateChannel;
+  RealtimeChannel? _requestWatchChannel;
 
   @override
   void initState() {
@@ -90,7 +91,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         final playdate = await SupabaseConfig.client
             .from('playdates')
             .select(
-              'id, title, location, scheduled_at, status, latitude, longitude, '
+              'id, title, location, scheduled_at, status, latitude, longitude, created_at, '
               'organizer:organizer_id(id, name, avatar_url), '
               'participants:playdate_participants(user_id), '
               'requests:playdate_requests(id, status, invitee_id, requester_id)',
@@ -108,6 +109,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         }
       } else {
         if (mounted) setState(() => _loadingPlaydate = false);
+        // No playdate found yet — watch for one being created
+        _watchForNewPlaydateRequests();
       }
     } catch (e) {
       debugPrint('Error loading linked playdate: $e');
@@ -117,6 +120,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   void _subscribeToPlaydate(String playdateId) {
     if (_playdateChannel != null) return;
+    // Once we're watching a specific playdate, stop watching for new requests
+    if (_requestWatchChannel != null) {
+      SupabaseConfig.client.removeChannel(_requestWatchChannel!);
+      _requestWatchChannel = null;
+    }
+
     _playdateChannel = SupabaseConfig.client
         .channel('chat_screen_playdate_$playdateId')
         .onPostgresChanges(
@@ -148,6 +157,38 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         .subscribe();
   }
 
+  /// Watch for new playdate_requests being created between the conversation
+  /// participants. This is useful when the chat screen is open before a walk
+  /// invite is sent, so the card appears without requiring a manual refresh.
+  void _watchForNewPlaydateRequests() {
+    if (_requestWatchChannel != null || _playdateId != null) return;
+    final currentUserId = SupabaseConfig.auth.currentUser?.id;
+    if (currentUserId == null || widget.recipientId.isEmpty) return;
+
+    _requestWatchChannel = SupabaseConfig.client
+        .channel('chat_screen_watch_requests_${widget.matchId}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'playdate_requests',
+          callback: (payload) {
+            if (!mounted) return;
+            final newRow = payload.newRecord;
+            final reqId = newRow['requester_id'] as String?;
+            final invId = newRow['invitee_id'] as String?;
+            // Check if this request involves us and the other user
+            final pair = {currentUserId, widget.recipientId};
+            if (reqId != null &&
+                invId != null &&
+                pair.contains(reqId) &&
+                pair.contains(invId)) {
+              _loadLinkedPlaydate();
+            }
+          },
+        )
+        .subscribe();
+  }
+
   void _checkInputDirection() {
     final text = _messageController.text;
     final isRtl = intl.Bidi.detectRtlDirectionality(text);
@@ -171,6 +212,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     if (_playdateChannel != null) {
       SupabaseConfig.client.removeChannel(_playdateChannel!);
       _playdateChannel = null;
+    }
+    if (_requestWatchChannel != null) {
+      SupabaseConfig.client.removeChannel(_requestWatchChannel!);
+      _requestWatchChannel = null;
     }
     _messageController.removeListener(_checkInputDirection);
     _messageController.dispose();
@@ -211,29 +256,39 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         ),
         body: Column(
           children: [
-            // Pinned walk header (if this chat is linked to a playdate)
+            // Pinned walk header (if this chat is linked to an active playdate)
             if (!_loadingPlaydate && _playdateData != null && _playdateId != null)
-              ChatWalkPinnedHeader(
-                playdateId: _playdateId!,
-                location: _playdateData!['location'] ?? 'Walk',
-                scheduledFor:
-                    DateTime.tryParse(_playdateData!['scheduled_at'] ?? '') ??
-                        DateTime.now(),
-                status: effectiveWalkDisplayStatus(
+              Builder(builder: (context) {
+                final status = effectiveWalkDisplayStatus(
                   playdateRow: _playdateData!,
                   participants: List<Map<String, dynamic>>.from(
                     _playdateData!['participants'] ?? [],
                   ),
-                ),
-                onTap: () {
-                  openChatWalkDetails(
-                    context,
-                    playdateId: _playdateId!,
-                    playdateData: _playdateData!,
-                    fallbackOrganizerName: widget.recipientName,
-                  );
-                },
-              ),
+                );
+                final scheduledFor =
+                    DateTime.tryParse(_playdateData!['scheduled_at'] ?? '') ??
+                        DateTime.now();
+                final isExpired = DateTime.now().isAfter(scheduledFor);
+                final isCancelled = status == 'cancelled';
+
+                // Auto-hide the pinned header if the walk is no longer active
+                if (isExpired || isCancelled) return const SizedBox.shrink();
+
+                return ChatWalkPinnedHeader(
+                  playdateId: _playdateId!,
+                  location: _playdateData!['location'] ?? 'Walk',
+                  scheduledFor: scheduledFor,
+                  status: status,
+                  onTap: () {
+                    openChatWalkDetails(
+                      context,
+                      playdateId: _playdateId!,
+                      playdateData: _playdateData!,
+                      fallbackOrganizerName: widget.recipientName,
+                    );
+                  },
+                );
+              }),
             Expanded(
               child: messagesAsync.when(
                 data: (messagesData) {
@@ -252,14 +307,50 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     );
                   }).toList();
 
+                  // Inject the Walk Card chronologically if we have a playdate
+                  if (_playdateId != null && !_loadingPlaydate && _playdateData != null) {
+                    final playdateCreatedAtStr = _playdateData!['created_at'] as String?;
+                    // Fallback to exactly right now if missing so it sits at the bottom
+                    final playdateDate = playdateCreatedAtStr != null 
+                        ? DateTime.tryParse(playdateCreatedAtStr) ?? DateTime.now() 
+                        : DateTime.now();
+
+                    messages.add(
+                      Message(
+                        id: 'playdate_$_playdateId',
+                        senderId: '',
+                        receiverId: '',
+                        text: '',
+                        timestamp: playdateDate,
+                        type: MessageType.playdateCard,
+                      ),
+                    );
+                  }
+
+                  // Chronological sort: oldest first (index 0 is at the top)
+                  messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+                  // Mark any incoming unread messages as read
+                  if (currentUser != null) {
+                    final hasUnread = messages.any(
+                        (m) => m.receiverId == currentUser.id && !m.isRead);
+                    if (hasUnread) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          ref.read(messageRepositoryProvider).markMessagesAsRead(
+                              widget.matchId, currentUser.id);
+                        }
+                      });
+                    }
+                  }
+
                   // Auto-scroll to bottom after messages load
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     _scrollToBottom();
                   });
 
-                  // Build the message list with an optional walk card at the top
-                  final hasWalkCard = _playdateId != null && !_loadingPlaydate;
-                  final totalItems = messages.length + (hasWalkCard ? 1 : 0);
+                  // Build the message list natively
+                  final totalItems = messages.length;
 
                   if (totalItems == 0) {
                     return const Center(
@@ -272,21 +363,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     padding: const EdgeInsets.all(16),
                     itemCount: totalItems,
                     itemBuilder: (context, index) {
-                      // First item: walk card (if linked to playdate)
-                      if (hasWalkCard && index == 0) {
-                        return ChatWalkCard(
-                          playdateId: _playdateId!,
-                          onUpdated: _loadLinkedPlaydate,
+                      final message = messages[index];
+                      
+                      // Render the chronological walk card
+                      if (message.type == MessageType.playdateCard) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: ChatWalkCard(
+                            playdateId: _playdateId!,
+                            onUpdated: _loadLinkedPlaydate,
+                          ),
                         );
                       }
 
-                      final messageIndex =
-                          hasWalkCard ? index - 1 : index;
-                      final message = messages[messageIndex];
                       // Render system messages as centered cards
                       if (message.type == MessageType.system) {
                         return _buildSystemMessage(context, message);
                       }
+                      
                       final isMe = message.senderId == currentUser?.id;
                       return _buildMessageBubble(context, message, isMe);
                     },
@@ -451,7 +545,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
+    // Optimistic clear — remove text and scroll immediately so the UI
+    // feels instant. We'll restore on failure.
+    _messageController.clear();
     setState(() => _isSending = true);
+    _scrollToBottom();
 
     try {
       await ref.read(messageRepositoryProvider).sendMessage(
@@ -460,11 +558,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             receiverId: widget.recipientId,
             content: text,
           );
-      _messageController.clear();
-      // Scroll to bottom after sending
+      // Scroll again after the stream delivers the new message
       _scrollToBottom();
     } catch (e) {
+      // Restore the text so the user doesn't lose their message
       if (mounted) {
+        _messageController.text = text;
+        _messageController.selection = TextSelection.fromPosition(
+          TextPosition(offset: text.length),
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to send message: $e')),
         );

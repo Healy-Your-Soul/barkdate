@@ -449,8 +449,9 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
                   color: const Color(0xFF0D47A1).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Center(
-                  child: Text('🐕', style: TextStyle(fontSize: 18)),
+                child: Center(
+                  child: Icon(Icons.pets, size: 18,
+                      color: const Color(0xFF0D47A1)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -573,7 +574,7 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
                       ),
                       child: photoUrl == null
                           ? const Center(
-                              child: Text('🐶', style: TextStyle(fontSize: 16)))
+                              child: Icon(Icons.pets, size: 16, color: Colors.grey))
                           : null,
                     ),
                     const SizedBox(width: 10),
@@ -665,7 +666,7 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
                       ? ElevatedButton.icon(
                           onPressed: _isJoining ? null : _joinWalk,
                           icon:
-                              const Text('🐕', style: TextStyle(fontSize: 18)),
+                              const Icon(Icons.pets, size: 18),
                           label: _isJoining
                               ? const SizedBox(
                                   width: 20,
