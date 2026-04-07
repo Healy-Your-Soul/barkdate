@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/conversation_service.dart';
 import 'package:barkdate/services/calendar_integration_service.dart';
 import 'package:barkdate/core/router/app_routes.dart';
+import 'package:barkdate/features/feed/presentation/providers/friend_activity_provider.dart';
+import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 
-class ReceiveWalkSheet extends StatefulWidget {
+class ReceiveWalkSheet extends ConsumerStatefulWidget {
   final String requestId;
   final String organizerName;
   final String dogName;
@@ -24,10 +28,10 @@ class ReceiveWalkSheet extends StatefulWidget {
   });
 
   @override
-  State<ReceiveWalkSheet> createState() => _ReceiveWalkSheetState();
+  ConsumerState<ReceiveWalkSheet> createState() => _ReceiveWalkSheetState();
 }
 
-class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
+class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
   bool _isLoading = false;
   final TextEditingController _counterLocationController =
       TextEditingController();
@@ -100,6 +104,35 @@ class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
     }
   }
 
+  Future<void> _postWalkSystemMessage(
+      String playdateId, String userId, String status) async {
+    try {
+      final conversation =
+          await ConversationService.getPlaydateConversation(playdateId);
+      if (conversation == null) return;
+      final conversationId = conversation['id'] as String;
+
+      final dogs = await BarkDateUserService.getUserDogs(userId);
+      final myDogName =
+          dogs.isNotEmpty ? (dogs.first['name'] as String? ?? 'A pup') : 'A pup';
+
+      final userRow = await SupabaseConfig.client
+          .from('users')
+          .select('name')
+          .eq('id', userId)
+          .maybeSingle();
+      final humanName = userRow?['name'] as String? ?? 'their human';
+
+      final message = status == 'accepted'
+          ? "$myDogName's human, $humanName, joined the walk!"
+          : "$myDogName's human, $humanName, can't make it to the walk";
+
+      await ConversationService.postSystemMessage(conversationId, message);
+    } catch (e) {
+      debugPrint('Error posting walk system message: $e');
+    }
+  }
+
   Future<void> _handleResponse(String status) async {
     setState(() => _isLoading = true);
 
@@ -116,10 +149,14 @@ class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
       if (!mounted) return;
 
       if (success) {
+        ref.invalidate(friendAlertsProvider);
+        ref.invalidate(userPlaydatesProvider);
+
         Map<String, String>? chatTarget;
         Map<String, dynamic>? requestContext;
+        requestContext = await _fetchRequestContext();
+
         if (status == 'accepted') {
-          requestContext = await _fetchRequestContext();
           chatTarget = await _resolveAcceptedChatTarget();
           if (!mounted) return;
 
@@ -128,6 +165,8 @@ class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
                 requestContext['playdate'] as Map<String, dynamic>? ?? const {};
             final playdateId = (requestContext['playdate_id'] as String?) ?? '';
             if (playdateId.isNotEmpty) {
+              await _postWalkSystemMessage(playdateId, userId, status);
+
               await _showPostAcceptActions(
                 userId: userId,
                 playdateId: playdateId,
@@ -142,9 +181,15 @@ class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
               if (!mounted) return;
             }
           }
+        } else if (status == 'declined' && requestContext != null) {
+          final playdateId = (requestContext['playdate_id'] as String?) ?? '';
+          if (playdateId.isNotEmpty) {
+            await _postWalkSystemMessage(playdateId, userId, status);
+          }
         }
 
-        Navigator.pop(context); // Close sheet
+        if (!mounted) return;
+        Navigator.pop(context);
 
         if (status == 'accepted') {
           if (chatTarget != null && mounted) {
@@ -159,7 +204,7 @@ class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Walk Confirmed! 🎉 Chat is ready.'),
-              backgroundColor: Color(0xFFE89E5F),
+              backgroundColor: Color(0xFF4CAF50),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -566,20 +611,110 @@ class _ReceiveWalkSheetState extends State<ReceiveWalkSheet> {
 // Global helper to show the sheet directly given a notification JSON payload
 void showReceiveWalkSheetFromPayload(
     BuildContext context, Map<String, dynamic> data) {
+  final rid = data['request_id'] as String?;
+  if (rid == null || rid.isEmpty) return;
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (context) => ReceiveWalkSheet(
-      requestId: data['request_id'] ??
-          data['playdate_id'] ??
-          '', // Prefer request_id if available
+      requestId: rid,
       organizerName: data['organizer_name'] ?? 'BarkDate User',
       dogName: data['organizer_dog_name'] ?? 'A dog',
+      dogPhotoUrl: data['organizer_dog_photo'] as String?,
       location: data['location'] ?? 'Unknown location',
       scheduledAt: data['scheduled_at'] != null
-          ? DateTime.tryParse(data['scheduled_at']) ?? DateTime.now()
+          ? DateTime.tryParse(data['scheduled_at'].toString()) ??
+              DateTime.now()
           : DateTime.now(),
+    ),
+  );
+}
+
+/// Dedupes rapid double-opens (FCM foreground + DB realtime both firing).
+String? _walkInviteSheetDedupeKey;
+DateTime? _walkInviteSheetDedupeAt;
+
+/// Opens the walk-invite sheet, resolving [request_id] from the DB when FCM only
+/// sends [related_id]/[playdate_id] (common for push payloads).
+Future<void> openReceiveWalkSheetFromInvitePayload(
+    BuildContext context, Map<String, dynamic> data) async {
+  final uid = SupabaseConfig.auth.currentUser?.id;
+  if (uid == null) return;
+
+  final dedupeHint = (data['request_id'] ??
+          data['related_id'] ??
+          data['playdate_id'])
+      ?.toString();
+  if (dedupeHint != null && dedupeHint.isNotEmpty) {
+    final now = DateTime.now();
+    if (_walkInviteSheetDedupeKey == dedupeHint &&
+        _walkInviteSheetDedupeAt != null &&
+        now.difference(_walkInviteSheetDedupeAt!) <
+            const Duration(seconds: 4)) {
+      return;
+    }
+  }
+
+  var requestId = data['request_id'] as String?;
+  final playdateId = (data['playdate_id'] ?? data['related_id']) as String?;
+
+  if (requestId == null || requestId.isEmpty) {
+    if (playdateId != null && playdateId.isNotEmpty) {
+      final row = await SupabaseConfig.client
+          .from('playdate_requests')
+          .select('id')
+          .eq('playdate_id', playdateId)
+          .eq('invitee_id', uid)
+          .eq('status', 'pending')
+          .maybeSingle();
+      requestId = row?['id'] as String?;
+    }
+  }
+
+  if (requestId == null || requestId.isEmpty) return;
+  final resolvedRequestId = requestId;
+
+  var location = data['location'] as String? ?? 'Unknown location';
+  var dogName = data['organizer_dog_name'] as String? ?? 'A dog';
+  final dogPhoto = data['organizer_dog_photo'] as String?;
+  var organizerName = data['organizer_name'] as String? ?? 'BarkDate User';
+  var scheduledAt = data['scheduled_at'] != null
+      ? DateTime.tryParse(data['scheduled_at'].toString()) ?? DateTime.now()
+      : DateTime.now();
+
+  if (playdateId != null &&
+      (data['location'] == null ||
+          data['scheduled_at'] == null ||
+          dogName == 'A dog')) {
+    final pd = await SupabaseConfig.client
+        .from('playdates')
+        .select('location, scheduled_at, title, organizer:organizer_id(name)')
+        .eq('id', playdateId)
+        .maybeSingle();
+    if (pd != null) {
+      location = pd['location'] as String? ?? location;
+      scheduledAt =
+          DateTime.tryParse(pd['scheduled_at']?.toString() ?? '') ?? scheduledAt;
+      final org = pd['organizer'] as Map<String, dynamic>?;
+      organizerName = org?['name'] as String? ?? organizerName;
+    }
+  }
+
+  if (!context.mounted) return;
+  _walkInviteSheetDedupeKey = resolvedRequestId;
+  _walkInviteSheetDedupeAt = DateTime.now();
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) => ReceiveWalkSheet(
+      requestId: resolvedRequestId,
+      organizerName: organizerName,
+      dogName: dogName,
+      dogPhotoUrl: dogPhoto,
+      location: location,
+      scheduledAt: scheduledAt,
     ),
   );
 }

@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart' hide Priority;
+import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
@@ -11,6 +13,8 @@ import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/widgets/receive_walk_sheet.dart';
 
 import 'package:barkdate/core/router/app_router.dart';
+import 'package:barkdate/core/router/app_routes.dart';
+import 'package:barkdate/services/conversation_service.dart';
 import 'package:go_router/go_router.dart';
 
 /// Firebase Cloud Messaging service for BarkDate
@@ -24,6 +28,23 @@ class FirebaseMessagingService {
 
   static bool _isInitialized = false;
   static String? _cachedToken;
+
+  static const _typeMap = <String, NotificationType>{
+    'bark': NotificationType.bark,
+    'playdate': NotificationType.playdate,
+    'playdate_request': NotificationType.playdateRequest,
+    'playdateRequest': NotificationType.playdateRequest,
+    'message': NotificationType.message,
+    'match': NotificationType.match,
+    'social': NotificationType.social,
+    'achievement': NotificationType.achievement,
+    'system': NotificationType.system,
+  };
+
+  static NotificationType _parseType(String? raw) {
+    if (raw == null) return NotificationType.system;
+    return _typeMap[raw] ?? NotificationType.system;
+  }
 
   /// Initialize Firebase messaging service
   static Future<void> initialize() async {
@@ -257,18 +278,45 @@ class FirebaseMessagingService {
     debugPrint('📱 Body: ${message.notification?.body}');
     debugPrint('📱 Data: ${message.data}');
 
-    // Create BarkDateNotification from FCM message
     final notification = _createNotificationFromMessage(message);
 
     if (notification != null) {
-      // Show in-app banner notification
-      await InAppNotificationService.showBanner(notification);
+      final type = _parseType(message.data['type'] as String?);
 
-      // Play notification sound
+      // Build a tap action so the in-app banner navigates on tap
+      void bannerTapAction() {
+        final ctx = rootNavigatorKey.currentContext;
+        if (ctx != null) _navigateToScreen(type, message.data);
+      }
+
+      await InAppNotificationService.showBanner(notification,
+          onTapAction: bannerTapAction);
       await NotificationSoundService.playNotificationSound(notification.type);
-
-      // Show local notification if app is not in focus
       await _showLocalNotification(message, notification);
+
+      // Auto-show the Walk Invite sheet for playdate_request (resolves request_id
+      // from playdate_id when FCM data payload is incomplete — e.g. web/data-only).
+      if (type == NotificationType.playdateRequest) {
+        final data = message.data;
+        final metadataRaw = data['metadata'];
+        Map<String, dynamic> metadata = {};
+        if (metadataRaw is Map<String, dynamic>) {
+          metadata = metadataRaw;
+        } else if (metadataRaw is String && metadataRaw.isNotEmpty) {
+          try {
+            final parsed = jsonDecode(metadataRaw);
+            if (parsed is Map<String, dynamic>) metadata = parsed;
+          } catch (_) {}
+        }
+
+        final payload = <String, dynamic>{...metadata, ...data};
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final c = rootNavigatorKey.currentContext;
+          if (c != null) {
+            unawaited(openReceiveWalkSheetFromInvitePayload(c, payload));
+          }
+        });
+      }
     }
   }
 
@@ -406,10 +454,7 @@ class FirebaseMessagingService {
     if (response.payload != null) {
       try {
         final data = jsonDecode(response.payload!);
-        final type = NotificationType.values.firstWhere(
-          (e) => e.name == data['type'],
-          orElse: () => NotificationType.system,
-        );
+        final type = _parseType(data['type'] as String?);
 
         // Navigate based on notification type
         await _navigateToScreen(type, data);
@@ -451,21 +496,41 @@ class FirebaseMessagingService {
         }
 
         final payload = <String, dynamic>{...metadata, ...data};
-        final hasSheetData = payload['request_id'] != null &&
-            payload['organizer_dog_name'] != null &&
-            payload['scheduled_at'] != null;
-
-        if (hasSheetData) {
-          showReceiveWalkSheetFromPayload(context, payload);
-        } else if (data['related_id'] != null) {
-          // Fallback when payload is incomplete
-          GoRouter.of(context)
-              .push('/playdate-details', extra: {'id': data['related_id']});
-        }
+        await openReceiveWalkSheetFromInvitePayload(context, payload);
         break;
       case NotificationType.playdate:
-        // Navigate to playdate details
-        if (data['related_id'] != null) {
+        final playdateActionType = data['action_type'] as String?;
+        final metaRaw2 = data['metadata'];
+        Map<String, dynamic> meta2 = {};
+        if (metaRaw2 is Map<String, dynamic>) {
+          meta2 = metaRaw2;
+        } else if (metaRaw2 is String && metaRaw2.isNotEmpty) {
+          try {
+            final p = jsonDecode(metaRaw2);
+            if (p is Map<String, dynamic>) meta2 = p;
+          } catch (_) {}
+        }
+        final merged2 = <String, dynamic>{...meta2, ...data};
+        final pId = merged2['playdate_id'] as String?;
+
+        if (playdateActionType == 'playdate_accepted' && pId != null) {
+          try {
+            final conv =
+                await ConversationService.getPlaydateConversation(pId);
+            if (conv != null && context.mounted) {
+              final responderName =
+                  merged2['responder_name'] as String? ?? 'Walk buddy';
+              ChatRoute(
+                matchId: conv['id'] as String,
+                recipientId: '',
+                recipientName: responderName,
+                recipientAvatarUrl: '',
+              ).push(context);
+              break;
+            }
+          } catch (_) {}
+        }
+        if (data['related_id'] != null && context.mounted) {
           GoRouter.of(context)
               .push('/playdate-details', extra: {'id': data['related_id']});
         }
@@ -510,13 +575,9 @@ class FirebaseMessagingService {
   /// Handle notification navigation from message
   static Future<void> _handleNotificationNavigation(
       RemoteMessage message) async {
-    final notificationType = message.data['type'];
+    final notificationType = message.data['type'] as String?;
     if (notificationType != null) {
-      final type = NotificationType.values.firstWhere(
-        (e) => e.name == notificationType,
-        orElse: () => NotificationType.system,
-      );
-
+      final type = _parseType(notificationType);
       await _navigateToScreen(type, message.data);
     }
   }
@@ -528,19 +589,29 @@ class FirebaseMessagingService {
       final data = message.data;
       final notification = message.notification;
 
-      if (notification == null) return null;
+      final title = notification?.title ??
+          (data['title'] as String?) ??
+          '';
+      final body =
+          notification?.body ?? (data['body'] as String?) ?? '';
 
-      final type = NotificationType.values.firstWhere(
-        (e) => e.name == data['type'],
-        orElse: () => NotificationType.system,
-      );
+      final typeStr = data['type'] as String?;
+      final hasType = typeStr != null && typeStr.isNotEmpty;
+      if (notification == null &&
+          !hasType &&
+          title.isEmpty &&
+          body.isEmpty) {
+        return null;
+      }
+
+      final type = _parseType(typeStr);
 
       return BarkDateNotification(
         id: message.messageId ??
             DateTime.now().millisecondsSinceEpoch.toString(),
         userId: data['user_id'] ?? '',
-        title: notification.title ?? '',
-        body: notification.body ?? '',
+        title: title.isNotEmpty ? title : 'BarkDate',
+        body: body.isNotEmpty ? body : '',
         type: type,
         actionType: data['action_type'],
         relatedId: data['related_id'],
