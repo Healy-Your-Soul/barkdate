@@ -5,7 +5,6 @@ import 'package:barkdate/features/playdates/presentation/providers/playdate_prov
 import 'package:barkdate/models/message.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/chat_walk_card.dart';
-import 'package:barkdate/widgets/walk_details_sheet.dart';
 
 import 'package:intl/intl.dart' as intl;
 
@@ -90,7 +89,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       if (pId != null) {
         final playdate = await SupabaseConfig.client
             .from('playdates')
-            .select('id, title, location, scheduled_at, status')
+            .select(
+              'id, title, location, scheduled_at, status, latitude, longitude, '
+              'organizer:organizer_id(id, name, avatar_url), '
+              'participants:playdate_participants(user_id), '
+              'requests:playdate_requests(id, status, invitee_id, requester_id)',
+            )
             .eq('id', pId)
             .maybeSingle();
 
@@ -122,6 +126,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
             column: 'id',
+            value: playdateId,
+          ),
+          callback: (payload) {
+            if (mounted) _loadLinkedPlaydate();
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'playdate_requests',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'playdate_id',
             value: playdateId,
           ),
           callback: (payload) {
@@ -202,18 +219,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                 scheduledFor:
                     DateTime.tryParse(_playdateData!['scheduled_at'] ?? '') ??
                         DateTime.now(),
-                status: _playdateData!['status'] ?? 'pending',
+                status: effectiveWalkDisplayStatus(
+                  playdateRow: _playdateData!,
+                  participants: List<Map<String, dynamic>>.from(
+                    _playdateData!['participants'] ?? [],
+                  ),
+                ),
                 onTap: () {
-                  final scheduledFor = DateTime.tryParse(
-                          _playdateData!['scheduled_at'] ?? '') ??
-                      DateTime.now();
-                  showWalkDetailsSheet(
+                  openChatWalkDetails(
                     context,
-                    parkId: _playdateData!['location'] ?? '',
-                    parkName: _playdateData!['location'] ?? 'Walk Location',
-                    scheduledFor: scheduledFor,
-                    organizerDogName: widget.recipientName,
-                    playdateId: _playdateId,
+                    playdateId: _playdateId!,
+                    playdateData: _playdateData!,
+                    fallbackOrganizerName: widget.recipientName,
                   );
                 },
               ),

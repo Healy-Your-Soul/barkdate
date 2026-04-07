@@ -211,6 +211,53 @@ class PlaydateRequestService {
     return !now.isBefore(triggerAt);
   }
 
+  /// Updates walk/playdate place (`location` and optional coordinates).
+  /// Only the organizer may change the place. Returns `false` if the user is
+  /// not the organizer or the playdate row is missing.
+  static Future<bool> updatePlaydateLocation({
+    required String playdateId,
+    required String userId,
+    required String location,
+    double? latitude,
+    double? longitude,
+  }) async {
+    try {
+      final row = await SupabaseConfig.client
+          .from('playdates')
+          .select('organizer_id')
+          .eq('id', playdateId)
+          .maybeSingle();
+
+      if (row == null) {
+        debugPrint('updatePlaydateLocation: playdate not found');
+        return false;
+      }
+
+      final organizerId = row['organizer_id'] as String?;
+      if (organizerId != userId) {
+        debugPrint('updatePlaydateLocation: user is not organizer');
+        return false;
+      }
+
+      final update = <String, dynamic>{
+        'location': location,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      if (latitude != null) update['latitude'] = latitude;
+      if (longitude != null) update['longitude'] = longitude;
+
+      await SupabaseConfig.client
+          .from('playdates')
+          .update(update)
+          .eq('id', playdateId);
+
+      return true;
+    } catch (e) {
+      debugPrint('updatePlaydateLocation error: $e');
+      rethrow;
+    }
+  }
+
   /// Create a new playdate request
   static Future<String?> createPlaydateRequest({
     required String organizerId,
@@ -504,11 +551,18 @@ class PlaydateRequestService {
           ''').eq('id', requestId).single();
 
       if (response == 'accepted') {
-        // Update playdate to include participant and set status to confirmed
-        await SupabaseConfig.client.from('playdates').update({
-          'participant_id': request['invitee_id'], // Set the main participant
-          'status': 'confirmed'
-        }).eq('id', request['playdate_id']);
+        // Update playdate (organizer-only RLS may block invitee; DB trigger can sync).
+        try {
+          await SupabaseConfig.client.from('playdates').update({
+            'participant_id': request['invitee_id'],
+            'status': 'confirmed',
+            'updated_at': DateTime.now().toIso8601String(),
+          }).eq('id', request['playdate_id']);
+        } catch (e) {
+          debugPrint(
+            'playdates update after accept (ok if RLS; use DB trigger): $e',
+          );
+        }
 
         // Add invitee as participant (for many-to-many relationships if needed later)
         try {
@@ -588,13 +642,23 @@ class PlaydateRequestService {
         });
 
         if (hasStillActive) {
-          await SupabaseConfig.client
-              .from('playdates')
-              .update({'status': 'confirmed'}).eq('id', request['playdate_id']);
+          try {
+            await SupabaseConfig.client.from('playdates').update({
+              'status': 'confirmed',
+              'updated_at': DateTime.now().toIso8601String(),
+            }).eq('id', request['playdate_id']);
+          } catch (e) {
+            debugPrint('playdates update after decline (RLS may apply): $e');
+          }
         } else {
-          await SupabaseConfig.client
-              .from('playdates')
-              .update({'status': 'cancelled'}).eq('id', request['playdate_id']);
+          try {
+            await SupabaseConfig.client.from('playdates').update({
+              'status': 'cancelled',
+              'updated_at': DateTime.now().toIso8601String(),
+            }).eq('id', request['playdate_id']);
+          } catch (e) {
+            debugPrint('playdates cancel after decline (RLS may apply): $e');
+          }
         }
 
         final decDogName = request['invitee_dog']?['name'] as String? ?? 'A pup';

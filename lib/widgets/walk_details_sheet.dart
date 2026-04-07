@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:barkdate/services/friend_activity_service.dart';
 import 'package:barkdate/services/checkin_service.dart';
 import 'package:barkdate/services/conversation_service.dart';
+import 'package:barkdate/services/places_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
+import 'package:barkdate/supabase/bark_playdate_services.dart';
+import 'package:barkdate/features/playdates/presentation/screens/map_picker_screen.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/design_system/app_spacing.dart';
 import 'package:barkdate/core/router/app_routes.dart';
@@ -48,6 +51,7 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
   bool _isOrganizer = false;
   String? _conversationId;
   Map<String, dynamic>? _playdateData;
+  bool _isUpdatingPlace = false;
 
   @override
   void initState() {
@@ -272,6 +276,65 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
     }
   }
 
+  Future<void> _changePlace() async {
+    final currentUserId = SupabaseConfig.auth.currentUser?.id;
+    if (currentUserId == null ||
+        widget.playdateId == null ||
+        !widget._isPlaydateBased ||
+        !_isOrganizer) {
+      return;
+    }
+
+    final isExpired = DateTime.now().isAfter(widget.scheduledFor);
+    final isCancelled = _playdateData?['status'] == 'cancelled';
+    if (isExpired || isCancelled) return;
+
+    final PlaceResult? result = await Navigator.of(context).push<PlaceResult>(
+      MaterialPageRoute(
+        builder: (context) => const MapPickerScreen(),
+      ),
+    );
+    if (result == null || !mounted) return;
+
+    setState(() => _isUpdatingPlace = true);
+    try {
+      final locationText = result.name.trim().isNotEmpty
+          ? result.name.trim()
+          : result.address.trim();
+      final ok = await PlaydateRequestService.updatePlaydateLocation(
+        playdateId: widget.playdateId!,
+        userId: currentUserId,
+        location: locationText,
+        latitude: result.latitude,
+        longitude: result.longitude,
+      );
+      if (!mounted) return;
+      if (!ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Only the organizer can change the place.'),
+          ),
+        );
+        return;
+      }
+      await _loadPlaydateData();
+      if (_conversationId != null) {
+        await ConversationService.postSystemMessage(
+          _conversationId!,
+          'Walk location updated to $locationText',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not update place: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdatingPlace = false);
+    }
+  }
+
   void _openChat() {
     if (_conversationId == null || _playdateData == null) return;
     final organizer = _playdateData!['organizer'] as Map<String, dynamic>?;
@@ -295,6 +358,8 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
     final isExpired = DateTime.now().isAfter(widget.scheduledFor);
     final isCancelled = _playdateData?['status'] == 'cancelled';
     final isLocked = isExpired || isCancelled;
+    final displayLocation =
+        _playdateData?['location'] as String? ?? widget.parkName;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
@@ -330,9 +395,14 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
             ),
             child: Row(
               children: [
-                Text(
-                  isLocked ? (isCancelled ? '🚫' : '✅') : '🕐',
-                  style: const TextStyle(fontSize: 28),
+                Icon(
+                  isLocked
+                      ? (isCancelled
+                          ? Icons.block
+                          : Icons.check_circle_outline)
+                      : Icons.schedule_outlined,
+                  size: 32,
+                  color: Colors.white,
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -348,7 +418,7 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${widget.parkName} at $timeStr',
+                        '$displayLocation at $timeStr',
                         style: AppTypography.bodySmall(
                           color: Colors.white.withValues(alpha: 0.9),
                         ),
@@ -409,6 +479,38 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
                 ),
             ],
           ),
+
+          if (widget._isPlaydateBased && _isOrganizer && !isLocked) ...[
+            const SizedBox(height: AppSpacing.xl),
+            Text(
+              'Place',
+              style: AppTypography.labelMedium(
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    displayLocation,
+                    style: AppTypography.bodyLarge(),
+                  ),
+                ),
+                TextButton(
+                  onPressed: _isUpdatingPlace ? null : _changePlace,
+                  child: _isUpdatingPlace
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Change place'),
+                ),
+              ],
+            ),
+          ],
 
           const SizedBox(height: AppSpacing.xl),
 
