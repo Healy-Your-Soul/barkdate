@@ -1,14 +1,20 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+import 'package:flutter/widgets.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/services/firebase_messaging_service.dart';
 import 'package:barkdate/services/in_app_notification_service.dart';
 import 'package:barkdate/services/notification_sound_service.dart';
 import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/models/notification.dart';
+import 'package:barkdate/core/router/app_router.dart';
+import 'package:barkdate/widgets/receive_walk_sheet.dart';
 
 /// Central notification manager that coordinates all notification services
 class NotificationManager {
   static bool _initialized = false;
+  static StreamSubscription<AuthState>? _authSubscription;
+  static StreamSubscription<List<Map<String, dynamic>>>? _realtimeSubscription;
 
   /// Initialize all notification services
   static Future<void> initialize() async {
@@ -33,6 +39,26 @@ class NotificationManager {
       // Set up real-time subscription for current user notifications
       _setupRealtimeNotifications();
 
+      // Listen for auth state changes to re-initialize notifications
+      _authSubscription?.cancel();
+      _authSubscription =
+          SupabaseConfig.auth.onAuthStateChange.listen((data) async {
+        if (data.event == AuthChangeEvent.signedIn &&
+            data.session?.user.id != null) {
+          debugPrint('🔄 Auth sign-in detected, re-initializing notifications');
+          _setupRealtimeNotifications();
+          // Scan for pending walk invites after sign-in with a small delay
+          // to let the navigator mount.
+          Future.delayed(const Duration(milliseconds: 800), () {
+            _scanPendingWalkInvites();
+          });
+        }
+      });
+
+      // Also scan immediately on first init (covers app cold start with
+      // an existing session).
+      _scanPendingWalkInvites();
+
       _initialized = true;
       debugPrint('✅ NotificationManager initialized successfully');
     } catch (e) {
@@ -41,29 +67,126 @@ class NotificationManager {
     }
   }
 
+  /// Called when the app resumes from background.
+  /// Re-scans for pending walk invites the user may have missed.
+  static void onAppResumed() {
+    _scanPendingWalkInvites();
+  }
+
+  /// One-time fetch of unread playdate_request notifications for the current
+  /// user.  If any pending walk invite is found, open the ReceiveWalkSheet.
+  /// Uses the same dedupe guard as the realtime path so we never double-open.
+  static Future<void> _scanPendingWalkInvites() async {
+    try {
+      final uid = SupabaseConfig.auth.currentUser?.id;
+      if (uid == null) return;
+
+      // Fetch unread playdate_request notifications
+      final rows = await SupabaseConfig.client
+          .from('notifications')
+          .select('*')
+          .eq('user_id', uid)
+          .eq('is_read', false)
+          .eq('type', 'playdate_request')
+          .order('created_at', ascending: false)
+          .limit(1);
+
+      if (rows.isEmpty) return;
+      final row = rows.first;
+
+      // Build payload for the sheet opener
+      final notification = BarkDateNotification.fromMap(row);
+      final meta = notification.metadata ?? {};
+      final payload = <String, dynamic>{
+        ...meta,
+        'related_id': notification.relatedId,
+        'type': 'playdate_request',
+      };
+
+      // Wait for navigator to be ready (post-frame callback + retry)
+      void tryOpen([int attempt = 0]) {
+        final ctx = rootNavigatorKey.currentContext;
+        if (ctx != null) {
+          openReceiveWalkSheetFromInvitePayload(ctx, payload);
+        } else if (attempt < 3) {
+          // Retry after a short delay if navigator isn't mounted yet
+          Future.delayed(
+            Duration(milliseconds: 300 * (attempt + 1)),
+            () => WidgetsBinding.instance
+                .addPostFrameCallback((_) => tryOpen(attempt + 1)),
+          );
+        }
+      }
+
+      WidgetsBinding.instance.addPostFrameCallback((_) => tryOpen());
+    } catch (e) {
+      debugPrint('Error scanning pending walk invites: $e');
+    }
+  }
+
   /// Set up real-time notification listening for the current user
   static void _setupRealtimeNotifications() {
     final currentUser = SupabaseConfig.auth.currentUser;
     if (currentUser == null) return;
 
+    // Cancel any previous subscription before creating a new one
+    _realtimeSubscription?.cancel();
+
     // Listen to real-time notifications
-    NotificationService.streamUserNotifications(currentUser.id).listen(
+    _realtimeSubscription =
+        NotificationService.streamUserNotifications(currentUser.id).listen(
       (notifications) {
         if (notifications.isNotEmpty) {
           // Get the latest notification
           final latestNotification = notifications.first;
 
-          // Check if it's unread and recent (within last 10 seconds)
           final isUnread = latestNotification['is_read'] == false;
           final createdAt = DateTime.parse(latestNotification['created_at']);
           final isRecent = DateTime.now().difference(createdAt).inSeconds < 10;
 
-          if (isUnread && isRecent) {
-            // Show in-app notification for recent unread notifications
+          if (isUnread) {
             try {
               final notification =
                   BarkDateNotification.fromMap(latestNotification);
-              InAppNotificationService.showNotification(notification);
+
+              // Show in-app banner only for fresh notifications (10s window)
+              if (isRecent) {
+                InAppNotificationService.showNotification(
+                  notification,
+                  onTapAction: () {
+                    if (notification.type != NotificationType.playdateRequest) {
+                      return;
+                    }
+                    final ctx = rootNavigatorKey.currentContext;
+                    if (ctx == null) return;
+                    final meta = notification.metadata ?? {};
+                    final payload = <String, dynamic>{
+                      ...meta,
+                      'related_id': notification.relatedId,
+                      'type': 'playdate_request',
+                    };
+                    openReceiveWalkSheetFromInvitePayload(ctx, payload);
+                  },
+                );
+              }
+
+              // Auto-open walk invite sheet for playdate_request regardless
+              // of age — the dedupe guard inside
+              // openReceiveWalkSheetFromInvitePayload prevents doubles.
+              if (notification.type == NotificationType.playdateRequest) {
+                final meta = notification.metadata ?? {};
+                final payload = <String, dynamic>{
+                  ...meta,
+                  'related_id': notification.relatedId,
+                  'type': 'playdate_request',
+                };
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  final ctx = rootNavigatorKey.currentContext;
+                  if (ctx != null) {
+                    openReceiveWalkSheetFromInvitePayload(ctx, payload);
+                  }
+                });
+              }
             } catch (e) {
               debugPrint('Error showing real-time notification: $e');
             }
@@ -347,6 +470,10 @@ class NotificationManager {
 
   /// Clean up notification services
   static void dispose() {
+    _authSubscription?.cancel();
+    _authSubscription = null;
+    _realtimeSubscription?.cancel();
+    _realtimeSubscription = null;
     _initialized = false;
   }
 }

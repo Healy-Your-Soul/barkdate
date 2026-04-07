@@ -54,6 +54,24 @@ class FriendAlert {
     }
   }
 
+  /// Flat Material icon for pack/feed alert cards (prefer over emoji in UI).
+  static IconData iconForType(FriendAlertType type) {
+    switch (type) {
+      case FriendAlertType.friendCheckIn:
+        return Icons.place_outlined;
+      case FriendAlertType.nearbySpot:
+        return Icons.pets_outlined;
+      case FriendAlertType.walkTogether:
+        return Icons.schedule_outlined;
+      case FriendAlertType.newFriend:
+        return Icons.person_add_alt_1_outlined;
+      case FriendAlertType.playdateStarting:
+        return Icons.celebration_outlined;
+      case FriendAlertType.friendPost:
+        return Icons.photo_camera_outlined;
+    }
+  }
+
   /// Get the default emoji for each alert type
   static String emojiForType(FriendAlertType type) {
     switch (type) {
@@ -153,6 +171,7 @@ class FriendAlert {
     int joinCount = 0,
     String? parkId,
     String? checkInId,
+    String? playdateId,
   }) {
     final hour = scheduledFor.hour;
     final minute = scheduledFor.minute.toString().padLeft(2, '0');
@@ -178,6 +197,7 @@ class FriendAlert {
         'park_id': parkId,
         'scheduled_for': scheduledFor.toIso8601String(),
         'check_in_id': checkInId,
+        'playdate_id': playdateId,
         'join_count': joinCount,
       },
     );

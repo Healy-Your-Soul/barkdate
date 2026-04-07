@@ -8,6 +8,8 @@ import 'package:barkdate/features/notifications/presentation/widgets/notificatio
 import 'package:barkdate/core/router/app_routes.dart';
 
 import 'package:barkdate/supabase/notification_service.dart';
+import 'package:barkdate/widgets/receive_walk_sheet.dart';
+import 'package:barkdate/services/conversation_service.dart';
 
 /// Provider for notifications
 final notificationsProvider =
@@ -131,8 +133,35 @@ class NotificationsScreen extends ConsumerWidget {
 
         switch (type) {
           case 'playdate_request':
+            if (metadata != null &&
+                metadata['organizer_dog_name'] != null &&
+                metadata['location'] != null) {
+              showReceiveWalkSheetFromPayload(context, metadata);
+            } else {
+              const PlaydatesRoute().push(context);
+            }
+            break;
           case 'playdate_confirmed':
-            // Navigate to playdates tab
+          case 'playdate':
+            final pId = metadata?['playdate_id'] as String?;
+            if (pId != null) {
+              try {
+                final conv =
+                    await ConversationService.getPlaydateConversation(pId);
+                if (conv != null && context.mounted) {
+                  final respName =
+                      metadata?['responder_name'] as String? ?? 'Walk buddy';
+                  ChatRoute(
+                    matchId: conv['id'] as String,
+                    recipientId: '',
+                    recipientName: respName,
+                    recipientAvatarUrl: '',
+                  ).push(context);
+                  break;
+                }
+              } catch (_) {}
+            }
+            if (!context.mounted) return;
             const PlaydatesRoute().push(context);
             break;
           case 'message':

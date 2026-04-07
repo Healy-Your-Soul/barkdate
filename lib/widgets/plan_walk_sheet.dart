@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:barkdate/services/checkin_service.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/design_system/app_spacing.dart';
+import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
+import 'package:barkdate/services/conversation_service.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 
 /// Bottom sheet for scheduling a future walk at a park.
 /// Pre-fills park info if opened from map selection.
@@ -56,31 +59,82 @@ class _PlanWalkSheetState extends State<PlanWalkSheet> {
     setState(() => _isLoading = true);
 
     try {
-      final result = await CheckInService.scheduleFutureCheckIn(
-        parkId: widget.parkId,
-        parkName: widget.parkName,
-        scheduledFor: _scheduledDateTime,
-        latitude: widget.latitude,
-        longitude: widget.longitude,
+      final user = SupabaseConfig.auth.currentUser;
+      if (user == null) throw Exception('Not logged in');
+
+      final dogs = await BarkDateUserService.getUserDogs(user.id);
+      if (dogs.isEmpty) throw Exception('No dog profile found');
+      final myDog = dogs.first;
+      final myDogId = myDog['id'] as String;
+      final myDogName = myDog['name'] as String? ?? 'My dog';
+
+      final title = 'Walk at ${widget.parkName}';
+
+      final playdateResult = await SupabaseConfig.client
+          .from('playdates')
+          .insert({
+            'organizer_id': user.id,
+            'title': title,
+            'location': widget.parkName,
+            'scheduled_at': _scheduledDateTime.toIso8601String(),
+            'status': 'pending',
+            'latitude': widget.latitude,
+            'longitude': widget.longitude,
+          })
+          .select('id')
+          .single();
+
+      final playdateId = playdateResult['id'] as String;
+
+      try {
+        await SupabaseConfig.client.from('playdate_participants').insert({
+          'playdate_id': playdateId,
+          'user_id': user.id,
+          'dog_id': myDogId,
+        });
+      } catch (e) {
+        if (!e.toString().contains('duplicate key')) rethrow;
+      }
+
+      final conversationId =
+          await ConversationService.getOrCreatePlaydateConversation(
+        playdateId: playdateId,
+        participantUserIds: [user.id],
+        groupName: title,
       );
+
+      if (conversationId != null) {
+        await ConversationService.postSystemMessage(
+          conversationId,
+          '$myDogName scheduled a walk at ${widget.parkName}!',
+        );
+      }
 
       if (!mounted) return;
 
-      if (result != null) {
-        Navigator.of(context).pop(true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                '🕐 Walk planned at ${widget.parkName}! Your pack will be notified.'),
-            backgroundColor: const Color(0xFF0D47A1),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to schedule walk')),
-        );
+      final userName =
+          user.userMetadata?['name'] as String? ?? 'Walk organizer';
+      final avatarUrl = user.userMetadata?['avatar_url'] as String? ?? '';
+
+      Navigator.of(context).pop(true);
+
+      if (conversationId != null) {
+        ChatRoute(
+          matchId: conversationId,
+          recipientId: user.id,
+          recipientName: userName,
+          recipientAvatarUrl: avatarUrl,
+        ).push(context);
       }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              '🕐 Walk planned at ${widget.parkName}! Your pack will be notified.'),
+          backgroundColor: const Color(0xFF4CAF50),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

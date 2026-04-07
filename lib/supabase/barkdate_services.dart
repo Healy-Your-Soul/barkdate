@@ -550,6 +550,9 @@ class BarkDateMatchService {
         (response).map((item) => Map<String, dynamic>.from(item as Map)),
       );
 
+      // Exclude user's own dogs from the results
+      dogs.removeWhere((d) => d['user_id'] == userId);
+
       debugPrint('✅ Nearby dogs fetched: ${dogs.length}');
       return dogs;
     } catch (e) {
@@ -748,12 +751,19 @@ class BarkDateMessageService {
         .or('sender_id.eq.$userId,receiver_id.eq.$userId')
         .order('created_at', ascending: false);
 
-    // Group by match_id and return latest message for each conversation
+    // Group by match_id and return latest message for each conversation.
+    // Also count unread messages for this user per conversation.
     final conversations = <String, Map<String, dynamic>>{};
+    final unreadCounts = <String, int>{};
     for (final message in data) {
-      final matchId = message['match_id'];
+      final matchId = message['match_id'] as String;
       if (!conversations.containsKey(matchId)) {
         conversations[matchId] = message;
+        unreadCounts[matchId] = 0;
+      }
+      // Count unread messages where current user is the receiver
+      if (message['receiver_id'] == userId && message['is_read'] == false) {
+        unreadCounts[matchId] = (unreadCounts[matchId] ?? 0) + 1;
       }
     }
 
@@ -763,6 +773,11 @@ class BarkDateMessageService {
       final conv = conversationsList[i];
       final senderId = conv['sender_id'];
       final receiverId = conv['receiver_id'];
+
+      // Attach unread count
+      final matchId = conv['match_id'] as String;
+      conv['unread_count'] = unreadCounts[matchId] ?? 0;
+      conv['has_unread'] = (unreadCounts[matchId] ?? 0) > 0;
 
       // Get the other user's ID (not our user)
       final otherUserId = senderId == userId ? receiverId : senderId;
@@ -784,6 +799,13 @@ class BarkDateMessageService {
         // Ignore errors fetching dog data
       }
     }
+
+    // Sort: strictly by created_at (most recent first)
+    conversationsList.sort((a, b) {
+      final aTime = a['created_at'] as String? ?? '';
+      final bTime = b['created_at'] as String? ?? '';
+      return bTime.compareTo(aTime);
+    });
 
     return conversationsList;
   }
@@ -882,7 +904,9 @@ class BarkDatePlaydateService {
       filter += ',id.in.(${pendingPlaydateIds.join(',')})';
     }
 
-    // 3. Fetch playdates
+    // 3. Fetch playdates (only upcoming / not-yet-passed)
+    final now = DateTime.now().toIso8601String();
+
     return await SupabaseConfig.client
         .from('playdates')
         .select('''
@@ -900,13 +924,16 @@ class BarkDatePlaydateService {
           requests:playdate_requests(
             id,
             status,
+            requester_id,
+            invitee_id,
             invitee_dog:dogs!playdate_requests_invitee_dog_id_fkey(id, name, main_photo_url),
             requester_dog:dogs!playdate_requests_requester_dog_id_fkey(id, name, main_photo_url)
           )
         ''')
         .or(filter)
         .neq('status', 'cancelled')
-        .order('scheduled_at', ascending: false);
+        .gte('scheduled_at', now)
+        .order('scheduled_at', ascending: true);
   }
 
   /// Join playdate

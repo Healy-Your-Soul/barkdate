@@ -7,7 +7,7 @@ import 'dart:async';
 
 class DogCard extends StatefulWidget {
   final Dog dog;
-  final VoidCallback onBarkPressed;
+  final VoidCallback onWalkPressed;
   final VoidCallback? onPlaydatePressed;
   final VoidCallback? onOpenProfile;
   final VoidCallback? onTap;
@@ -19,7 +19,7 @@ class DogCard extends StatefulWidget {
   const DogCard({
     super.key,
     required this.dog,
-    required this.onBarkPressed,
+    required this.onWalkPressed,
     this.onPlaydatePressed,
     this.onOpenProfile,
     this.onTap,
@@ -77,7 +77,7 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
     setState(() => _hasBarked = true);
 
     // Call original callback
-    widget.onBarkPressed();
+    widget.onWalkPressed();
 
     // Reset after 3 seconds
     _barkResetTimer?.cancel();
@@ -392,7 +392,7 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
           width: 80,
           height: 32,
           child: ElevatedButton(
-            onPressed: widget.onAddToPackPressed ?? widget.onBarkPressed,
+            onPressed: widget.onAddToPackPressed ?? widget.onWalkPressed,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFE89E5F), // Orange brand color
               foregroundColor: Colors.white,
@@ -604,7 +604,7 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
 
   Widget _buildNonFriendButtonsCompact(ThemeData theme) {
     return ElevatedButton(
-      onPressed: widget.onAddToPackPressed ?? widget.onBarkPressed,
+      onPressed: widget.onAddToPackPressed ?? widget.onWalkPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFFE89E5F), // Orange brand color
         foregroundColor: Colors.white,

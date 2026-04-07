@@ -64,27 +64,24 @@ class _PackAlertsCarouselState extends ConsumerState<PackAlertsCarousel> {
       final scheduledForRaw = metadata['scheduled_for'] as String?;
       final organizerDogName = metadata['dog_name'] as String? ?? 'A friend';
       final checkInId = metadata['check_in_id'] as String?;
+      final playdateId = metadata['playdate_id'] as String?;
 
       final scheduledFor =
           scheduledForRaw != null ? DateTime.tryParse(scheduledForRaw) : null;
 
-      if (parkId != null &&
-          parkId.isNotEmpty &&
-          parkName != null &&
-          parkName.isNotEmpty &&
-          scheduledFor != null) {
+      if (scheduledFor != null && parkName != null && parkName.isNotEmpty) {
         showWalkDetailsSheet(
           context,
-          parkId: parkId,
+          parkId: parkId ?? parkName,
           parkName: parkName,
           scheduledFor: scheduledFor,
           organizerDogName: organizerDogName,
           checkInId: checkInId,
+          playdateId: playdateId,
         );
         return;
       }
 
-      // Fallback for own playdate-based walk cards without check-in metadata.
       const PlaydatesRoute().go(context);
       return;
     }

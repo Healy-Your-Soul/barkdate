@@ -211,6 +211,53 @@ class PlaydateRequestService {
     return !now.isBefore(triggerAt);
   }
 
+  /// Updates walk/playdate place (`location` and optional coordinates).
+  /// Only the organizer may change the place. Returns `false` if the user is
+  /// not the organizer or the playdate row is missing.
+  static Future<bool> updatePlaydateLocation({
+    required String playdateId,
+    required String userId,
+    required String location,
+    double? latitude,
+    double? longitude,
+  }) async {
+    try {
+      final row = await SupabaseConfig.client
+          .from('playdates')
+          .select('organizer_id')
+          .eq('id', playdateId)
+          .maybeSingle();
+
+      if (row == null) {
+        debugPrint('updatePlaydateLocation: playdate not found');
+        return false;
+      }
+
+      final organizerId = row['organizer_id'] as String?;
+      if (organizerId != userId) {
+        debugPrint('updatePlaydateLocation: user is not organizer');
+        return false;
+      }
+
+      final update = <String, dynamic>{
+        'location': location,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      if (latitude != null) update['latitude'] = latitude;
+      if (longitude != null) update['longitude'] = longitude;
+
+      await SupabaseConfig.client
+          .from('playdates')
+          .update(update)
+          .eq('id', playdateId);
+
+      return true;
+    } catch (e) {
+      debugPrint('updatePlaydateLocation error: $e');
+      rethrow;
+    }
+  }
+
   /// Create a new playdate request
   static Future<String?> createPlaydateRequest({
     required String organizerId,
@@ -299,10 +346,10 @@ class PlaydateRequestService {
         }
       }
 
-      // Get dog names for notification
+      // Get dog info + organizer human name for notification
       final organizerDog = await SupabaseConfig.client
           .from('dogs')
-          .select('name')
+          .select('name, main_photo_url')
           .eq('id', organizerDogId)
           .single();
 
@@ -312,21 +359,33 @@ class PlaydateRequestService {
           .eq('id', inviteeDogId)
           .single();
 
+      final organizerUser = await SupabaseConfig.client
+          .from('users')
+          .select('name')
+          .eq('id', organizerId)
+          .single();
+
+      final orgDogName = organizerDog['name'] as String? ?? 'A dog';
+      final orgHumanName = organizerUser['name'] as String? ?? 'their human';
+      final invDogName = inviteeDog['name'] as String? ?? 'your pup';
+
       // Create notification for invitee
       await NotificationService.createNotification(
         userId: inviteeId,
         type: 'playdate_request',
         actionType: 'playdate_invited',
-        title: 'New Playdate Invitation! 🐕',
+        title: '$orgDogName wants to walk! 🐕',
         body:
-            '${organizerDog['name']} invited ${inviteeDog['name']} for a playdate at $location',
+            '$orgDogName\'s human, $orgHumanName, invited $invDogName for a walk at $location',
         relatedId: playdateId,
         metadata: {
-          'request_id': requestId, // Crucial for responding to the request
+          'request_id': requestId,
           'playdate_id': playdateId,
           'organizer_id': organizerId,
           'organizer_dog_id': organizerDogId,
-          'organizer_dog_name': organizerDog['name'],
+          'organizer_dog_name': orgDogName,
+          'organizer_name': orgHumanName,
+          'organizer_dog_photo': organizerDog['main_photo_url'],
           'title': title,
           'location': location,
           'scheduled_at': scheduledAt.toIso8601String(),
@@ -334,12 +393,16 @@ class PlaydateRequestService {
       );
 
       // Create playdate conversation for the participants
-      await ConversationService.getOrCreatePlaydateConversation(
+      final convId = await ConversationService.getOrCreatePlaydateConversation(
         playdateId: playdateId,
         participantUserIds: [organizerId, inviteeId],
         groupName: title,
       );
-      debugPrint('Created playdate conversation for chat');
+      if (convId != null) {
+        debugPrint('✅ Created playdate conversation: $convId');
+      } else {
+        debugPrint('⚠️ Conversation creation deferred – will retry on accept');
+      }
 
       debugPrint('Playdate request created successfully!');
       return playdateId;
@@ -435,6 +498,7 @@ class PlaydateRequestService {
       await ConversationService.ensurePlaydateParticipant(
         playdateId: playdateId,
         userId: inviteeId,
+        participantUserIds: [requesterId, inviteeId],
       );
 
       return true;
@@ -482,15 +546,22 @@ class PlaydateRequestService {
             playdate:playdates(*),
             requester:users!playdate_requests_requester_id_fkey(name),
             invitee:users!playdate_requests_invitee_id_fkey(name),
-            invitee_dog:dogs!playdate_requests_invitee_dog_id_fkey(name)
+            invitee_dog:dogs!playdate_requests_invitee_dog_id_fkey(name, main_photo_url)
           ''').eq('id', requestId).single();
 
       if (response == 'accepted') {
-        // Update playdate to include participant and set status to confirmed
-        await SupabaseConfig.client.from('playdates').update({
-          'participant_id': request['invitee_id'], // Set the main participant
-          'status': 'confirmed'
-        }).eq('id', request['playdate_id']);
+        // Update playdate (organizer-only RLS may block invitee; DB trigger can sync).
+        try {
+          await SupabaseConfig.client.from('playdates').update({
+            'participant_id': request['invitee_id'],
+            'status': 'confirmed',
+            'updated_at': DateTime.now().toIso8601String(),
+          }).eq('id', request['playdate_id']);
+        } catch (e) {
+          debugPrint(
+            'playdates update after accept (ok if RLS; use DB trigger): $e',
+          );
+        }
 
         // Add invitee as participant (for many-to-many relationships if needed later)
         try {
@@ -504,24 +575,53 @@ class PlaydateRequestService {
           if (!duplicate) rethrow;
         }
 
+        // Ensure the playdate conversation exists (it may have failed at
+        // creation time due to RLS or constraint issues). If missing, create it
+        // now so both organizer and invitee can chat.
+        final participantIds = [
+          request['requester_id'] as String,
+          request['invitee_id'] as String,
+        ];
+        final existingConv = await ConversationService.getPlaydateConversation(
+          request['playdate_id'],
+          participantUserIds: participantIds,
+        );
+        if (existingConv == null) {
+          await ConversationService.getOrCreatePlaydateConversation(
+            playdateId: request['playdate_id'],
+            participantUserIds: participantIds,
+            groupName:
+                request['playdate']?['title'] as String? ?? 'Walk Together',
+          );
+        }
+
         await ConversationService.ensurePlaydateParticipant(
           playdateId: request['playdate_id'],
           userId: request['invitee_id'],
+          participantUserIds: participantIds,
         );
 
-        // Notify organizer
+        final invDogName =
+            request['invitee_dog']?['name'] as String? ?? 'A pup';
+        final invHumanName =
+            request['invitee']?['name'] as String? ?? 'their human';
+        final playdateLocation =
+            request['playdate']?['location'] as String? ?? 'the walk';
+
+        // Notify organizer (dog-centric)
         await NotificationService.createNotification(
           userId: request['requester_id'],
           type: 'playdate',
           actionType: 'playdate_accepted',
-          title: 'Playdate Accepted! 🎉',
+          title: '$invDogName is joining the walk! 🎉',
           body:
-              '${request['invitee']['name']} accepted your playdate invitation!',
+              '$invDogName\'s human, $invHumanName, accepted the walk at $playdateLocation',
           relatedId: request['playdate_id'],
           metadata: {
             'playdate_id': request['playdate_id'],
-            'responder_name': request['invitee']['name'],
-            'dog_name': request['invitee_dog']['name'],
+            'responder_name': invHumanName,
+            'dog_name': invDogName,
+            'dog_photo': request['invitee_dog']?['main_photo_url'],
           },
         );
       } else if (response == 'declined') {
@@ -543,43 +643,63 @@ class PlaydateRequestService {
         });
 
         if (hasStillActive) {
-          await SupabaseConfig.client
-              .from('playdates')
-              .update({'status': 'confirmed'}).eq('id', request['playdate_id']);
+          try {
+            await SupabaseConfig.client.from('playdates').update({
+              'status': 'confirmed',
+              'updated_at': DateTime.now().toIso8601String(),
+            }).eq('id', request['playdate_id']);
+          } catch (e) {
+            debugPrint('playdates update after decline (RLS may apply): $e');
+          }
         } else {
-          await SupabaseConfig.client
-              .from('playdates')
-              .update({'status': 'cancelled'}).eq('id', request['playdate_id']);
+          try {
+            await SupabaseConfig.client.from('playdates').update({
+              'status': 'cancelled',
+              'updated_at': DateTime.now().toIso8601String(),
+            }).eq('id', request['playdate_id']);
+          } catch (e) {
+            debugPrint('playdates cancel after decline (RLS may apply): $e');
+          }
         }
 
-        // Notify organizer
+        final decDogName =
+            request['invitee_dog']?['name'] as String? ?? 'A pup';
+        final decHumanName =
+            request['invitee']?['name'] as String? ?? 'their human';
+
+        // Notify organizer (dog-centric)
         await NotificationService.createNotification(
           userId: request['requester_id'],
           type: 'playdate',
           actionType: 'playdate_declined',
-          title: 'Playdate Declined',
-          body:
-              '${request['invitee']['name']} declined your playdate invitation',
+          title: '$decDogName can\'t make it',
+          body: '$decDogName\'s human, $decHumanName, declined the walk',
           relatedId: request['playdate_id'],
           metadata: {
             'playdate_id': request['playdate_id'],
-            'responder_name': request['invitee']['name'],
+            'responder_name': decHumanName,
+            'dog_name': decDogName,
             'message': message,
           },
         );
       } else if (response == 'counter_proposed') {
-        // Notify organizer about counter-proposal
+        final ctrDogName =
+            request['invitee_dog']?['name'] as String? ?? 'A pup';
+        final ctrHumanName =
+            request['invitee']?['name'] as String? ?? 'their human';
+
+        // Notify organizer about counter-proposal (dog-centric)
         await NotificationService.createNotification(
           userId: request['requester_id'],
           type: 'playdate',
           actionType: 'playdate_counter_proposed',
-          title: 'Playdate Counter-Proposal',
+          title: '$ctrDogName suggested a change',
           body:
-              '${request['invitee']['name']} suggested changes to your playdate',
+              '$ctrDogName\'s human, $ctrHumanName, suggested changes to the walk',
           relatedId: request['playdate_id'],
           metadata: {
             'playdate_id': request['playdate_id'],
-            'responder_name': request['invitee']['name'],
+            'responder_name': ctrHumanName,
             'counter_proposal': counterProposal,
             'message': message,
           },
