@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:barkdate/services/app_badge_service.dart';
 import 'package:barkdate/services/firebase_messaging_service.dart';
 import 'package:barkdate/services/in_app_notification_service.dart';
 import 'package:barkdate/services/notification_sound_service.dart';
@@ -28,11 +27,7 @@ class NotificationManager {
       // Sync badge count on initialization for iOS
       final currentUser = SupabaseConfig.auth.currentUser;
       if (currentUser != null) {
-        await NotificationService.getUnreadCount(currentUser.id).then((count) {
-          AppBadgeService.setBadgeCount(count);
-        }).catchError((e) {
-          debugPrint('Failed to sync badge on initialization: $e');
-        });
+        await NotificationService.syncBadgeCount(currentUser.id);
       }
 
       // Initialize in-app notification service
@@ -159,8 +154,7 @@ class NotificationManager {
                 InAppNotificationService.showNotification(
                   notification,
                   onTapAction: () {
-                    if (notification.type !=
-                        NotificationType.playdateRequest) {
+                    if (notification.type != NotificationType.playdateRequest) {
                       return;
                     }
                     final ctx = rootNavigatorKey.currentContext;

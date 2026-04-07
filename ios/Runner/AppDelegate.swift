@@ -32,44 +32,44 @@ import FirebaseMessaging
     // Set Firebase Messaging delegate
     Messaging.messaging().delegate = self
 
-    if let controller = window?.rootViewController as? FlutterViewController {
-      let badgeChannel = FlutterMethodChannel(
-        name: appBadgeChannelName,
-        binaryMessenger: controller.binaryMessenger
-      )
-
-      badgeChannel.setMethodCallHandler { call, result in
-        switch call.method {
-        case "setBadgeCount":
-          guard
-            let args = call.arguments as? [String: Any],
-            let rawCount = args["count"] as? Int
-          else {
-            result(
-              FlutterError(
-                code: "bad_args",
-                message: "Missing or invalid badge count",
-                details: nil
-              )
-            )
-            return
-          }
-
-          DispatchQueue.main.async {
-            UIApplication.shared.applicationIconBadgeNumber = max(0, rawCount)
-            result(nil)
-          }
-        default:
-          result(FlutterMethodNotImplemented)
-        }
-      }
-    }
-    
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    // Register the badge channel here — engineBridge.pluginRegistry is the
+    // recommended API (avoids the rootViewController deprecation warning).
+    guard let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "BarkAppBadgePlugin") else {
+      print("🔴 [AppDelegate] ⚠️ Could not get registrar for BarkAppBadgePlugin")
+      return
+    }
+
+    let badgeChannel = FlutterMethodChannel(
+      name: appBadgeChannelName,
+      binaryMessenger: registrar.messenger()  // messenger() is a function in this Flutter version
+    )
+
+    badgeChannel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "setBadgeCount":
+        guard
+          let args = call.arguments as? [String: Any],
+          let rawCount = args["count"] as? Int
+        else {
+          result(FlutterError(code: "bad_args", message: "Missing or invalid badge count", details: nil))
+          return
+        }
+        let safeCount = max(0, rawCount)
+        print("🔴 [AppDelegate] setBadgeCount → \(safeCount)")
+        DispatchQueue.main.async {
+          UIApplication.shared.applicationIconBadgeNumber = safeCount
+          result(nil)
+        }
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
   }
   
   // Handle APNs token registration
