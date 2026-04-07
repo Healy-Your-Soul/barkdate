@@ -697,12 +697,11 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
     final isInvitee = currentUserId != null &&
         organizerId != null &&
         organizerId != currentUserId;
-    final showActionButtons = isInvitee &&
-        (rs == 'pending' || (rs == null && ps == 'pending'));
+    final showActionButtons =
+        isInvitee && (rs == 'pending' || (rs == null && ps == 'pending'));
 
-    final isConfirmed = ps == 'confirmed' ||
-        ps == 'accepted' ||
-        rs == 'accepted';
+    final isConfirmed =
+        ps == 'confirmed' || ps == 'accepted' || rs == 'accepted';
 
     // Get dog photos for display - prioritize invited dogs from requests
     final participants = playdate['participants'] as List<dynamic>? ?? [];
@@ -890,8 +889,7 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
                   onPressed: () => _openWalkChat(
                       context, playdateId, currentUserId, organizerId),
                   icon: const Icon(Icons.chat_bubble_outline, size: 14),
-                  label:
-                      const Text('Chat', style: TextStyle(fontSize: 11)),
+                  label: const Text('Chat', style: TextStyle(fontSize: 11)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF4CAF50),
                     foregroundColor: Colors.white,
@@ -956,8 +954,7 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text(accept ? '✅ Walk accepted!' : '❌ Walk declined'),
+            content: Text(accept ? '✅ Walk accepted!' : '❌ Walk declined'),
             backgroundColor: accept ? Colors.green : Colors.red,
           ),
         );
@@ -976,8 +973,7 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
 
             if (playdate != null && context.mounted) {
               final organizerId = playdate['organizer_id'] as String;
-              final organizer =
-                  playdate['organizer'] as Map<String, dynamic>?;
+              final organizer = playdate['organizer'] as Map<String, dynamic>?;
 
               // Look up conversation using both user IDs as fallback
               final conversation =
@@ -990,10 +986,8 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
                 ChatRoute(
                   matchId: conversation['id'] as String,
                   recipientId: organizer?['id'] as String? ?? organizerId,
-                  recipientName:
-                      playdate['title'] as String? ?? 'Walk Chat',
-                  recipientAvatarUrl:
-                      organizer?['avatar_url'] as String? ?? '',
+                  recipientName: playdate['title'] as String? ?? 'Walk Chat',
+                  recipientAvatarUrl: organizer?['avatar_url'] as String? ?? '',
                 ).push(context);
               }
             }
@@ -1016,7 +1010,8 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
     try {
       final playdate = await SupabaseConfig.client
           .from('playdates')
-          .select('title, organizer_id, organizer:organizer_id(id, name, avatar_url)')
+          .select(
+              'title, organizer_id, organizer:organizer_id(id, name, avatar_url)')
           .eq('id', playdateId)
           .maybeSingle();
 
@@ -1024,8 +1019,7 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
 
       final orgId = playdate['organizer_id'] as String;
       final organizer = playdate['organizer'] as Map<String, dynamic>?;
-      final recipientUserId =
-          (currentUserId == orgId) ? '' : orgId;
+      final recipientUserId = (currentUserId == orgId) ? '' : orgId;
       final userIds = [
         if (currentUserId != null) currentUserId,
         orgId,

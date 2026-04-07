@@ -70,16 +70,19 @@ class _PlanWalkSheetState extends State<PlanWalkSheet> {
 
       final title = 'Walk at ${widget.parkName}';
 
-      final playdateResult =
-          await SupabaseConfig.client.from('playdates').insert({
-        'organizer_id': user.id,
-        'title': title,
-        'location': widget.parkName,
-        'scheduled_at': _scheduledDateTime.toIso8601String(),
-        'status': 'pending',
-        'latitude': widget.latitude,
-        'longitude': widget.longitude,
-      }).select('id').single();
+      final playdateResult = await SupabaseConfig.client
+          .from('playdates')
+          .insert({
+            'organizer_id': user.id,
+            'title': title,
+            'location': widget.parkName,
+            'scheduled_at': _scheduledDateTime.toIso8601String(),
+            'status': 'pending',
+            'latitude': widget.latitude,
+            'longitude': widget.longitude,
+          })
+          .select('id')
+          .single();
 
       final playdateId = playdateResult['id'] as String;
 

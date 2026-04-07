@@ -401,8 +401,7 @@ class PlaydateRequestService {
       if (convId != null) {
         debugPrint('✅ Created playdate conversation: $convId');
       } else {
-        debugPrint(
-            '⚠️ Conversation creation deferred – will retry on accept');
+        debugPrint('⚠️ Conversation creation deferred – will retry on accept');
       }
 
       debugPrint('Playdate request created successfully!');
@@ -602,8 +601,10 @@ class PlaydateRequestService {
           participantUserIds: participantIds,
         );
 
-        final invDogName = request['invitee_dog']?['name'] as String? ?? 'A pup';
-        final invHumanName = request['invitee']?['name'] as String? ?? 'their human';
+        final invDogName =
+            request['invitee_dog']?['name'] as String? ?? 'A pup';
+        final invHumanName =
+            request['invitee']?['name'] as String? ?? 'their human';
         final playdateLocation =
             request['playdate']?['location'] as String? ?? 'the walk';
 
@@ -661,8 +662,10 @@ class PlaydateRequestService {
           }
         }
 
-        final decDogName = request['invitee_dog']?['name'] as String? ?? 'A pup';
-        final decHumanName = request['invitee']?['name'] as String? ?? 'their human';
+        final decDogName =
+            request['invitee_dog']?['name'] as String? ?? 'A pup';
+        final decHumanName =
+            request['invitee']?['name'] as String? ?? 'their human';
 
         // Notify organizer (dog-centric)
         await NotificationService.createNotification(
@@ -670,8 +673,7 @@ class PlaydateRequestService {
           type: 'playdate',
           actionType: 'playdate_declined',
           title: '$decDogName can\'t make it',
-          body:
-              '$decDogName\'s human, $decHumanName, declined the walk',
+          body: '$decDogName\'s human, $decHumanName, declined the walk',
           relatedId: request['playdate_id'],
           metadata: {
             'playdate_id': request['playdate_id'],
@@ -681,8 +683,10 @@ class PlaydateRequestService {
           },
         );
       } else if (response == 'counter_proposed') {
-        final ctrDogName = request['invitee_dog']?['name'] as String? ?? 'A pup';
-        final ctrHumanName = request['invitee']?['name'] as String? ?? 'their human';
+        final ctrDogName =
+            request['invitee_dog']?['name'] as String? ?? 'A pup';
+        final ctrHumanName =
+            request['invitee']?['name'] as String? ?? 'their human';
 
         // Notify organizer about counter-proposal (dog-centric)
         await NotificationService.createNotification(

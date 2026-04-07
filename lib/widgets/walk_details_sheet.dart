@@ -90,8 +90,7 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
           results[1] as List<Map<String, dynamic>>? ?? <Map<String, dynamic>>[];
       final conversation = results[2] as Map<String, dynamic>?;
 
-      final joined =
-          participants.any((p) => p['user_id'] == currentUserId);
+      final joined = participants.any((p) => p['user_id'] == currentUserId);
       final rawOrganizerId = playdateResult?['organizer_id'];
       final nestedOrganizerId =
           (playdateResult?['organizer'] as Map<String, dynamic>?)?['id'];
@@ -388,18 +387,14 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isLocked
-                  ? Colors.grey.shade400
-                  : const Color(0xFF0D47A1),
+              color: isLocked ? Colors.grey.shade400 : const Color(0xFF0D47A1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               children: [
                 Icon(
                   isLocked
-                      ? (isCancelled
-                          ? Icons.block
-                          : Icons.check_circle_outline)
+                      ? (isCancelled ? Icons.block : Icons.check_circle_outline)
                       : Icons.schedule_outlined,
                   size: 32,
                   color: Colors.white,
@@ -411,7 +406,9 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
                     children: [
                       Text(
                         isLocked
-                            ? (isCancelled ? 'Walk Cancelled' : 'Walk Completed')
+                            ? (isCancelled
+                                ? 'Walk Cancelled'
+                                : 'Walk Completed')
                             : 'Walk Together',
                         style: AppTypography.h3(color: Colors.white)
                             .copyWith(fontWeight: FontWeight.w700),
@@ -450,8 +447,8 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
                   shape: BoxShape.circle,
                 ),
                 child: Center(
-                  child: Icon(Icons.pets, size: 18,
-                      color: const Color(0xFF0D47A1)),
+                  child: Icon(Icons.pets,
+                      size: 18, color: const Color(0xFF0D47A1)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -464,7 +461,8 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
               if (_isOrganizer)
                 Container(
                   margin: const EdgeInsets.only(left: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: const Color(0xFF4CAF50).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
@@ -574,7 +572,8 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
                       ),
                       child: photoUrl == null
                           ? const Center(
-                              child: Icon(Icons.pets, size: 16, color: Colors.grey))
+                              child: Icon(Icons.pets,
+                                  size: 16, color: Colors.grey))
                           : null,
                     ),
                     const SizedBox(width: 10),
@@ -665,8 +664,7 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
                   : !_hasJoined
                       ? ElevatedButton.icon(
                           onPressed: _isJoining ? null : _joinWalk,
-                          icon:
-                              const Icon(Icons.pets, size: 18),
+                          icon: const Icon(Icons.pets, size: 18),
                           label: _isJoining
                               ? const SizedBox(
                                   width: 20,

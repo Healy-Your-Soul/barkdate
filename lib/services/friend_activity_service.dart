@@ -177,7 +177,8 @@ class FriendActivityService {
 
       final data = await SupabaseConfig.client
           .from('playdates')
-          .select('id, location, scheduled_at, status, title, latitude, longitude, organizer_id')
+          .select(
+              'id, location, scheduled_at, status, title, latitude, longitude, organizer_id')
           .inFilter('organizer_id', friendUserIds)
           .inFilter('status', ['pending', 'confirmed'])
           .gte('scheduled_at', now)
@@ -447,7 +448,8 @@ class FriendActivityService {
 
       final data = await SupabaseConfig.client
           .from('playdates')
-          .select('id, location, scheduled_at, status, title, latitude, longitude')
+          .select(
+              'id, location, scheduled_at, status, title, latitude, longitude')
           .eq('organizer_id', userId)
           .inFilter('status', ['pending', 'confirmed'])
           .gte('scheduled_at', now)
@@ -459,7 +461,8 @@ class FriendActivityService {
         final dateStr = playdate['scheduled_at'] ?? '';
         final startsAt = DateTime.tryParse(dateStr) ?? DateTime.now();
         final playdateId = playdate['id'] as String;
-        final location = playdate['location'] as String? ?? 'Scheduled Location';
+        final location =
+            playdate['location'] as String? ?? 'Scheduled Location';
 
         int participantCount = 0;
         try {

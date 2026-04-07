@@ -142,9 +142,7 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
 
   Future<void> _loadPlaydateData() async {
     try {
-      final data = await SupabaseConfig.client
-          .from('playdates')
-          .select('''
+      final data = await SupabaseConfig.client.from('playdates').select('''
             *,
             organizer:organizer_id(id, name, avatar_url),
             participants:playdate_participants(
@@ -158,15 +156,13 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
               invitee_id,
               requester_id
             )
-          ''')
-          .eq('id', widget.playdateId)
-          .maybeSingle();
+          ''').eq('id', widget.playdateId).maybeSingle();
 
       if (data != null && mounted) {
         setState(() {
           _playdateData = data;
-          _participants = List<Map<String, dynamic>>.from(
-              data['participants'] ?? []);
+          _participants =
+              List<Map<String, dynamic>>.from(data['participants'] ?? []);
           _isLoading = false;
         });
       } else if (mounted) {
@@ -195,8 +191,7 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
   }
 
   bool get _isCancelled {
-    return (_playdateData?['status'] as String?)?.toLowerCase() ==
-        'cancelled';
+    return (_playdateData?['status'] as String?)?.toLowerCase() == 'cancelled';
   }
 
   String get _statusText {
@@ -342,7 +337,6 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
               ],
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
             child: Column(
@@ -370,7 +364,8 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Icon(Icons.directions_outlined, color: onSurfaceMuted, size: 20),
+                          Icon(Icons.directions_outlined,
+                              color: onSurfaceMuted, size: 20),
                         ],
                       ),
                     ),
@@ -417,17 +412,17 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
                               .map((entry) {
                             final idx = entry.key;
                             final participant = entry.value;
-                            final dog = participant['dog']
-                                as Map<String, dynamic>?;
-                            final photoUrl =
-                                dog?['main_photo_url'] as String?;
+                            final dog =
+                                participant['dog'] as Map<String, dynamic>?;
+                            final photoUrl = dog?['main_photo_url'] as String?;
 
                             return Positioned(
                               left: idx * 22.0,
                               child: Container(
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: onSurface, width: 2),
+                                  border:
+                                      Border.all(color: onSurface, width: 2),
                                 ),
                                 child: CircleAvatar(
                                   radius: 14,
@@ -458,7 +453,6 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
               ],
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
             child: SizedBox(
@@ -466,10 +460,10 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
               child: ElevatedButton(
                 onPressed: () => _openWalkDetails(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      isLocked ? Colors.white.withValues(alpha: 0.92) : Colors.white,
-                  foregroundColor:
-                      isLocked ? Colors.grey.shade700 : walkBlue,
+                  backgroundColor: isLocked
+                      ? Colors.white.withValues(alpha: 0.92)
+                      : Colors.white,
+                  foregroundColor: isLocked ? Colors.grey.shade700 : walkBlue,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -565,8 +559,7 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
       final encodedName = Uri.encodeComponent(location);
       final googleMapsUrl =
           'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&destination_place_id=$encodedName';
-      final appleMapsUrl =
-          'https://maps.apple.com/?daddr=$lat,$lng&dirflg=w';
+      final appleMapsUrl = 'https://maps.apple.com/?daddr=$lat,$lng&dirflg=w';
 
       if (!context.mounted) return;
 
@@ -585,14 +578,14 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
                   onTap: () => Navigator.pop(ctx, 'google'),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.map_outlined,
-                      color: Color(0xFF0D47A1)),
+                  leading:
+                      const Icon(Icons.map_outlined, color: Color(0xFF0D47A1)),
                   title: const Text('Get Directions (Apple Maps)'),
                   onTap: () => Navigator.pop(ctx, 'apple'),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.info_outline,
-                      color: Color(0xFF0D47A1)),
+                  leading:
+                      const Icon(Icons.info_outline, color: Color(0xFF0D47A1)),
                   title: const Text('View Walk Details'),
                   onTap: () => Navigator.pop(ctx, 'details'),
                 ),
@@ -709,8 +702,7 @@ class ChatWalkPinnedHeader extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(8),

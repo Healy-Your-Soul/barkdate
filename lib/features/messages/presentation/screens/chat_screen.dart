@@ -257,7 +257,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         body: Column(
           children: [
             // Pinned walk header (if this chat is linked to an active playdate)
-            if (!_loadingPlaydate && _playdateData != null && _playdateId != null)
+            if (!_loadingPlaydate &&
+                _playdateData != null &&
+                _playdateId != null)
               Builder(builder: (context) {
                 final status = effectiveWalkDisplayStatus(
                   playdateRow: _playdateData!,
@@ -308,11 +310,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   }).toList();
 
                   // Inject the Walk Card chronologically if we have a playdate
-                  if (_playdateId != null && !_loadingPlaydate && _playdateData != null) {
-                    final playdateCreatedAtStr = _playdateData!['created_at'] as String?;
+                  if (_playdateId != null &&
+                      !_loadingPlaydate &&
+                      _playdateData != null) {
+                    final playdateCreatedAtStr =
+                        _playdateData!['created_at'] as String?;
                     // Fallback to exactly right now if missing so it sits at the bottom
-                    final playdateDate = playdateCreatedAtStr != null 
-                        ? DateTime.tryParse(playdateCreatedAtStr) ?? DateTime.now() 
+                    final playdateDate = playdateCreatedAtStr != null
+                        ? DateTime.tryParse(playdateCreatedAtStr) ??
+                            DateTime.now()
                         : DateTime.now();
 
                     messages.add(
@@ -337,8 +343,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     if (hasUnread) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (mounted) {
-                          ref.read(messageRepositoryProvider).markMessagesAsRead(
-                              widget.matchId, currentUser.id);
+                          ref
+                              .read(messageRepositoryProvider)
+                              .markMessagesAsRead(
+                                  widget.matchId, currentUser.id);
                         }
                       });
                     }
@@ -364,7 +372,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     itemCount: totalItems,
                     itemBuilder: (context, index) {
                       final message = messages[index];
-                      
+
                       // Render the chronological walk card
                       if (message.type == MessageType.playdateCard) {
                         return Padding(
@@ -380,16 +388,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                       if (message.type == MessageType.system) {
                         return _buildSystemMessage(context, message);
                       }
-                      
+
                       final isMe = message.senderId == currentUser?.id;
                       return _buildMessageBubble(context, message, isMe);
                     },
                   );
                 },
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
-                error: (error, stack) =>
-                    Center(child: Text('Error: $error')),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(child: Text('Error: $error')),
               ),
             ),
             _buildMessageInput(currentUser?.id),

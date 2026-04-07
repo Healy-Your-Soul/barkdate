@@ -23,8 +23,8 @@ class InAppNotificationService {
   }
 
   /// Show a notification banner
-  static Future<void> showNotification(
-      BarkDateNotification notification, {VoidCallback? onTapAction}) async {
+  static Future<void> showNotification(BarkDateNotification notification,
+      {VoidCallback? onTapAction}) async {
     final overlayState =
         _overlayState ?? rootNavigatorKey.currentState?.overlay;
     if (overlayState == null) {

@@ -515,8 +515,7 @@ class FirebaseMessagingService {
 
         if (playdateActionType == 'playdate_accepted' && pId != null) {
           try {
-            final conv =
-                await ConversationService.getPlaydateConversation(pId);
+            final conv = await ConversationService.getPlaydateConversation(pId);
             if (conv != null && context.mounted) {
               final responderName =
                   merged2['responder_name'] as String? ?? 'Walk buddy';
@@ -589,18 +588,12 @@ class FirebaseMessagingService {
       final data = message.data;
       final notification = message.notification;
 
-      final title = notification?.title ??
-          (data['title'] as String?) ??
-          '';
-      final body =
-          notification?.body ?? (data['body'] as String?) ?? '';
+      final title = notification?.title ?? (data['title'] as String?) ?? '';
+      final body = notification?.body ?? (data['body'] as String?) ?? '';
 
       final typeStr = data['type'] as String?;
       final hasType = typeStr != null && typeStr.isNotEmpty;
-      if (notification == null &&
-          !hasType &&
-          title.isEmpty &&
-          body.isEmpty) {
+      if (notification == null && !hasType && title.isEmpty && body.isEmpty) {
         return null;
       }
 

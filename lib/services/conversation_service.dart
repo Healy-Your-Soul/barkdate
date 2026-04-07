@@ -197,8 +197,7 @@ class ConversationService {
         // Link the existing DM to this playdate
         await _client
             .from('conversations')
-            .update({'playdate_id': playdateId})
-            .eq('id', conversationId);
+            .update({'playdate_id': playdateId}).eq('id', conversationId);
 
         debugPrint('✅ Linked existing DM $conversationId to playdate');
       }

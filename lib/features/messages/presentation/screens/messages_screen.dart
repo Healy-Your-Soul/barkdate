@@ -320,8 +320,9 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                           timeago.format(createdAt, locale: 'en_short'),
                           style: TextStyle(
                             fontSize: 12,
-                            color:
-                                hasUnread ? const Color(0xFF0D47A1) : Colors.grey[600],
+                            color: hasUnread
+                                ? const Color(0xFF0D47A1)
+                                : Colors.grey[600],
                             fontWeight:
                                 hasUnread ? FontWeight.w600 : FontWeight.normal,
                           ),
@@ -338,8 +339,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     color: hasUnread ? Colors.black87 : Colors.grey[600],
-                    fontWeight:
-                        hasUnread ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
               ],

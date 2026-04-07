@@ -113,8 +113,9 @@ class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
       final conversationId = conversation['id'] as String;
 
       final dogs = await BarkDateUserService.getUserDogs(userId);
-      final myDogName =
-          dogs.isNotEmpty ? (dogs.first['name'] as String? ?? 'A pup') : 'A pup';
+      final myDogName = dogs.isNotEmpty
+          ? (dogs.first['name'] as String? ?? 'A pup')
+          : 'A pup';
 
       final userRow = await SupabaseConfig.client
           .from('users')
@@ -624,8 +625,7 @@ void showReceiveWalkSheetFromPayload(
       dogPhotoUrl: data['organizer_dog_photo'] as String?,
       location: data['location'] ?? 'Unknown location',
       scheduledAt: data['scheduled_at'] != null
-          ? DateTime.tryParse(data['scheduled_at'].toString()) ??
-              DateTime.now()
+          ? DateTime.tryParse(data['scheduled_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
     ),
   );
@@ -642,10 +642,9 @@ Future<void> openReceiveWalkSheetFromInvitePayload(
   final uid = SupabaseConfig.auth.currentUser?.id;
   if (uid == null) return;
 
-  final dedupeHint = (data['request_id'] ??
-          data['related_id'] ??
-          data['playdate_id'])
-      ?.toString();
+  final dedupeHint =
+      (data['request_id'] ?? data['related_id'] ?? data['playdate_id'])
+          ?.toString();
   if (dedupeHint != null && dedupeHint.isNotEmpty) {
     final now = DateTime.now();
     if (_walkInviteSheetDedupeKey == dedupeHint &&
@@ -694,8 +693,8 @@ Future<void> openReceiveWalkSheetFromInvitePayload(
         .maybeSingle();
     if (pd != null) {
       location = pd['location'] as String? ?? location;
-      scheduledAt =
-          DateTime.tryParse(pd['scheduled_at']?.toString() ?? '') ?? scheduledAt;
+      scheduledAt = DateTime.tryParse(pd['scheduled_at']?.toString() ?? '') ??
+          scheduledAt;
       final org = pd['organizer'] as Map<String, dynamic>?;
       organizerName = org?['name'] as String? ?? organizerName;
     }
