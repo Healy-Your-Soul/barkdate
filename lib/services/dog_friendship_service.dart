@@ -223,7 +223,7 @@ class DogFriendshipService {
       final result = await _supabase
           .from('dog_friendships')
           .select(
-              '*, friend_dog:dogs!dog_friendships_friend_dog_id_fkey(id, name, breed, main_photo_url, user_id)')
+              '*, friend_dog:dogs!dog_friendships_friend_dog_id_fkey(id, name, breed, main_photo_url, user_id, user:users!dogs_user_id_fkey(id, name, avatar_url))')
           .eq('dog_id', dogId)
           .eq('status', statusPending);
 
@@ -241,7 +241,7 @@ class DogFriendshipService {
       final result = await _supabase
           .from('dog_friendships')
           .select(
-              '*, dog:dogs!dog_friendships_dog_id_fkey(id, name, breed, main_photo_url, user_id), friend_dog:dogs!dog_friendships_friend_dog_id_fkey(id, name, breed, main_photo_url, user_id)')
+              '*, dog:dogs!dog_friendships_dog_id_fkey(id, name, breed, main_photo_url, user_id, user:users!dogs_user_id_fkey(id, name, avatar_url)), friend_dog:dogs!dog_friendships_friend_dog_id_fkey(id, name, breed, main_photo_url, user_id, user:users!dogs_user_id_fkey(id, name, avatar_url))')
           .eq('status', statusAccepted)
           .or('dog_id.eq.$dogId,friend_dog_id.eq.$dogId');
 
