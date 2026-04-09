@@ -30,6 +30,7 @@ import 'package:barkdate/screens/qr_checkin_screen.dart';
 import 'package:barkdate/screens/qr_scan_screen.dart';
 import 'package:barkdate/screens/create_event_screen.dart';
 import 'package:barkdate/features/notifications/presentation/screens/notifications_screen.dart';
+import 'package:barkdate/services/notification_manager.dart';
 import 'package:go_router/go_router.dart';
 
 part 'app_routes.g.dart';
@@ -160,6 +161,7 @@ class AppShellRouteData extends StatefulShellRouteData {
   @override
   Widget builder(BuildContext context, GoRouterState state,
       StatefulNavigationShell navigationShell) {
+    NotificationManager.startNotificationStreams();
     return ScaffoldWithNavBar(navigationShell: navigationShell);
   }
 }
