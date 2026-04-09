@@ -15,8 +15,9 @@ class NotificationManager {
   static bool _initialized = false;
   static StreamSubscription<AuthState>? _authSubscription;
   static StreamSubscription<List<Map<String, dynamic>>>? _realtimeSubscription;
+  static bool _streamsStarted = false;
 
-  /// Initialize all notification services
+  /// Initialize all core notification services
   static Future<void> initialize() async {
     if (_initialized) return;
 
@@ -36,28 +37,15 @@ class NotificationManager {
       // Initialize sound service (fallback if no custom sounds)
       await NotificationSoundService.initialize();
 
-      // Set up real-time subscription for current user notifications
-      _setupRealtimeNotifications();
-
-      // Listen for auth state changes to re-initialize notifications
+      // Listen for auth state changes to clean up notifications on sign-out
       _authSubscription?.cancel();
       _authSubscription =
           SupabaseConfig.auth.onAuthStateChange.listen((data) async {
-        if (data.event == AuthChangeEvent.signedIn &&
-            data.session?.user.id != null) {
-          debugPrint('🔄 Auth sign-in detected, re-initializing notifications');
-          _setupRealtimeNotifications();
-          // Scan for pending walk invites after sign-in with a small delay
-          // to let the navigator mount.
-          Future.delayed(const Duration(milliseconds: 800), () {
-            _scanPendingWalkInvites();
-          });
+        if (data.event == AuthChangeEvent.signedOut) {
+          debugPrint('🔄 Auth sign-out detected, stopping notification streams');
+          stopNotificationStreams();
         }
       });
-
-      // Also scan immediately on first init (covers app cold start with
-      // an existing session).
-      _scanPendingWalkInvites();
 
       _initialized = true;
       debugPrint('✅ NotificationManager initialized successfully');
@@ -67,10 +55,35 @@ class NotificationManager {
     }
   }
 
+  /// Called after the initial loading screen has completely finished
+  /// This prevents unnecessary network calls during splash and ensures
+  /// banners only show once the user is actually in the app.
+  static void startNotificationStreams() {
+    if (_streamsStarted) return;
+    
+    final currentUser = SupabaseConfig.auth.currentUser;
+    if (currentUser == null) return;
+
+    debugPrint('🚀 Starting notification streams for ${currentUser.id}');
+    _setupRealtimeNotifications();
+    _scanPendingWalkInvites();
+    
+    _streamsStarted = true;
+  }
+
+  /// Stops ongoing network streams for notifications 
+  static void stopNotificationStreams() {
+    _realtimeSubscription?.cancel();
+    _realtimeSubscription = null;
+    _streamsStarted = false;
+  }
+
   /// Called when the app resumes from background.
   /// Re-scans for pending walk invites the user may have missed.
   static void onAppResumed() {
-    _scanPendingWalkInvites();
+    if (_streamsStarted) {
+      _scanPendingWalkInvites();
+    }
   }
 
   /// One-time fetch of unread playdate_request notifications for the current
