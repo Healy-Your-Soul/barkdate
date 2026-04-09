@@ -42,7 +42,8 @@ class NotificationManager {
       _authSubscription =
           SupabaseConfig.auth.onAuthStateChange.listen((data) async {
         if (data.event == AuthChangeEvent.signedOut) {
-          debugPrint('🔄 Auth sign-out detected, stopping notification streams');
+          debugPrint(
+              '🔄 Auth sign-out detected, stopping notification streams');
           stopNotificationStreams();
         }
       });
@@ -60,18 +61,18 @@ class NotificationManager {
   /// banners only show once the user is actually in the app.
   static void startNotificationStreams() {
     if (_streamsStarted) return;
-    
+
     final currentUser = SupabaseConfig.auth.currentUser;
     if (currentUser == null) return;
 
     debugPrint('🚀 Starting notification streams for ${currentUser.id}');
     _setupRealtimeNotifications();
     _scanPendingWalkInvites();
-    
+
     _streamsStarted = true;
   }
 
-  /// Stops ongoing network streams for notifications 
+  /// Stops ongoing network streams for notifications
   static void stopNotificationStreams() {
     _realtimeSubscription?.cancel();
     _realtimeSubscription = null;
