@@ -6,7 +6,6 @@ import 'package:barkdate/features/auth/presentation/screens/sign_in_screen.dart'
 import 'package:barkdate/screens/onboarding/welcome_screen.dart';
 import 'package:barkdate/services/preload_service.dart';
 import 'package:barkdate/widgets/dog_loading_widget.dart';
-import 'package:barkdate/services/notification_manager.dart';
 
 enum ProfileStatus {
   complete,
@@ -97,7 +96,6 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
                       // Use addPostFrameCallback to avoid navigation during build
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (context.mounted) {
-                          NotificationManager.startNotificationStreams();
                           const HomeRoute().go(context);
                         }
                       });
