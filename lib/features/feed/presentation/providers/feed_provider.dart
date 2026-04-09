@@ -130,7 +130,7 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
         bio: friendDogMap['bio'] ?? '',
         photos: photos,
         ownerId: friendDogMap['user_id'] ?? '', // RPC returns user_id
-        ownerName: 'Friend', // We might need to fetch this if missing
+        ownerName: friendDogMap['user']?['name'] ?? 'Unknown Owner',
         distanceKm: 0.0, // Friends don't need distance in this view
         isFriend: true,
       );
