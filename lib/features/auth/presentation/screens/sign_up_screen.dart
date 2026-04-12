@@ -9,6 +9,7 @@ import 'package:barkdate/features/auth/presentation/providers/auth_provider.dart
 import 'package:barkdate/utils/validators.dart';
 import 'package:barkdate/services/preload_service.dart';
 import 'package:go_router/go_router.dart';
+import 'package:barkdate/core/config/app_constants.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -79,7 +80,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     try {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: kIsWeb ? null : 'io.supabase.bark://login-callback/',
+        redirectTo: kIsWeb ? null : AppConstants.supabaseAuthSiteUrl,
       );
       // On web, this redirects to Google. On return, SupabaseAuthWrapper handles the session.
     } catch (e) {
