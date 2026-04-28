@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
+import 'package:barkdate/screens/onboarding/welcome_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/screens/auth/sign_in_screen.dart';
 import 'package:barkdate/services/location_service.dart';
+import 'package:barkdate/design_system/app_typography.dart';
 
 class LocationPermissionScreen extends StatefulWidget {
   const LocationPermissionScreen({super.key});
@@ -18,29 +18,10 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
   bool _notificationsEnabled = false;
 
   Future<void> _navigateNext() async {
-    final user = SupabaseConfig.auth.currentUser;
-    if (user == null) {
-      // Not signed in → go to Sign In
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const SignInScreen()),
-      );
-      return;
-    }
-
-    // Signed in → proceed to profile setup with userId
+    // Permissions done → go to tour screens
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (context) => CreateProfileScreen(
-          userId: user.id,
-          userName: user.userMetadata?['name'],
-          userEmail: user.email,
-          locationEnabled: _locationEnabled,
-          editMode: EditMode
-              .createProfile, // Use createProfile mode to navigate to /home after
-        ),
-      ),
+      MaterialPageRoute(builder: (context) => const WelcomeScreen()),
     );
   }
 
@@ -109,16 +90,21 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
     }
   }
 
-  Future<void> _enableAllPermissions() async {
-    await _requestLocationPermission();
-    await _requestNotificationPermission();
-    await _navigateNext();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          'Bark',
+          style: AppTypography.brandTitle(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        centerTitle: false,
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -184,10 +170,10 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
               // Title
               Text(
                 'Set Up Permissions',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                style: AppTypography.h2(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w500,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
@@ -195,12 +181,12 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
               // Description
               Text(
                 'Enable these for the best experience',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.7),
-                    ),
+                style: AppTypography.bodyLarge(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
@@ -226,22 +212,25 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
 
               const Spacer(),
 
-              // Enable All button
+              // Continue button
               SizedBox(
                 width: double.infinity,
+                height: 56,
                 child: ElevatedButton(
-                  onPressed: _enableAllPermissions,
+                  onPressed: _navigateNext,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Continue',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: AppTypography.button(
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
                   ),
                 ),
               ),
@@ -262,18 +251,16 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: enabled
-              ? Colors.green.withValues(alpha: 0.1)
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: enabled ? Colors.green : Colors.transparent,
-            width: 2,
-          ),
+              ? Colors.green.withValues(alpha: 0.08)
+              : const Color(0xFFECECEC),
+          borderRadius: BorderRadius.circular(16),
+          // No border — flat style
         ),
         child: Row(
           children: [
@@ -283,7 +270,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
                 color: enabled
                     ? Colors.green
                     : Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: Colors.white, size: 24),
             ),
@@ -294,18 +281,19 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
                 children: [
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                    style: AppTypography.h4(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   Text(
                     subtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
+                    style: AppTypography.bodySmall(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
                   ),
                 ],
               ),

@@ -287,6 +287,10 @@ class BarkDateUserService {
     debugPrint('Adding dog for user ID: $userId');
     debugPrint('Dog data being saved: $dogData');
 
+    if (userId.trim().isEmpty) {
+      throw Exception('Cannot add dog: missing user ID');
+    }
+
     dogData['user_id'] = userId;
     dogData['created_at'] = DateTime.now().toIso8601String();
     dogData['updated_at'] = DateTime.now().toIso8601String();
@@ -302,6 +306,9 @@ class BarkDateUserService {
     debugPrint('Final dog data with user_id and is_active: $dogData');
 
     final result = await SupabaseService.insert('dogs', dogData);
+
+    // Invalidate cached dog list so newly added dogs appear immediately.
+    clearUserDogsCache(userId);
 
     debugPrint('Dog saved successfully: ${result.first}');
     debugPrint('=== END ADD DOG DEBUG ===');
@@ -405,6 +412,8 @@ class BarkDateUserService {
         updateData,
         filters: {'id': dogId}, // Update by dog ID, not user ID
       );
+      // Clear cached dog list so profile pages reflect edits immediately.
+      clearUserDogsCache(userId);
       debugPrint('✅ Database update completed successfully');
     } catch (e) {
       debugPrint('❌ Database update failed: $e');

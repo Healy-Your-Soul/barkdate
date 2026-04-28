@@ -12,6 +12,7 @@ import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/screens/help_screen.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
+import 'package:barkdate/features/profile/presentation/screens/dog_details_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -27,6 +28,7 @@ class ProfileScreen extends ConsumerWidget {
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(profileRepositoryProvider);
+            ref.invalidate(userStatsProvider);
           },
           child: CustomScrollView(
             slivers: [
@@ -150,67 +152,83 @@ class ProfileScreen extends ConsumerWidget {
                           children: [
                             Row(
                               children: [
-                                CircleAvatar(
-                                  radius: 24,
-                                  backgroundImage: profile['avatar_url'] != null
-                                      ? NetworkImage(profile['avatar_url'])
-                                      : null,
-                                  backgroundColor: Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainerHighest,
-                                  child: profile['avatar_url'] == null
-                                      ? const Icon(Icons.person,
-                                          size: 24, color: Colors.grey)
-                                      : null,
-                                ),
-                                const SizedBox(width: 16),
+                                // Avatar + name column act as one tap target
+                                // that jumps straight to the full-page owner
+                                // edit (dog-details style). No bottom sheet.
                                 Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        profile['name'] ?? 'User',
-                                        style: AppTypography.h3()
-                                            .copyWith(fontSize: 18),
+                                  child: InkWell(
+                                    onTap: () => _openOwnerEdit(context),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 4),
+                                      child: Row(
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 24,
+                                            backgroundImage:
+                                                profile['avatar_url'] != null
+                                                    ? NetworkImage(
+                                                        profile['avatar_url'])
+                                                    : null,
+                                            backgroundColor: Theme.of(context)
+                                                .colorScheme
+                                                .surfaceContainerHighest,
+                                            child: profile['avatar_url'] == null
+                                                ? const Icon(Icons.person,
+                                                    size: 24,
+                                                    color: Colors.grey)
+                                                : null,
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  profile['name'] ?? 'User',
+                                                  style: AppTypography.h3()
+                                                      .copyWith(fontSize: 18),
+                                                ),
+                                                Text(
+                                                  profile['relationship_status'] ??
+                                                      'Human',
+                                                  style:
+                                                      AppTypography.bodySmall()
+                                                          .copyWith(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withValues(alpha: 0.6),
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      Text(
-                                        profile['relationship_status'] ??
-                                            'Human',
-                                        style:
-                                            AppTypography.bodySmall().copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6),
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.edit,
                                       size: 20, color: Colors.grey),
-                                  onPressed: () {
-                                    const CreateProfileRoute(
-                                      editMode: EditMode.editOwner,
-                                    ).push(context);
-                                  },
+                                  tooltip: 'Edit profile',
+                                  onPressed: () => _openOwnerEdit(context),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 12),
                             Row(
                               children: [
-                                // Add Dog Button
+                                // Add Dog Button — opens the DogDetailsScreen
+                                // in "new dog" mode for the current user, so
+                                // the add-a-dog UI matches the edit UI.
                                 Expanded(
                                   child: OutlinedButton.icon(
-                                    onPressed: () {
-                                      const CreateProfileRoute(
-                                        editMode: EditMode.addNewDog,
-                                      ).push(context);
-                                    },
+                                    onPressed: () => _openAddDog(context, ref),
                                     icon: const Icon(Icons.add, size: 16),
                                     label: const Text('Add Dog',
                                         style: TextStyle(fontSize: 12)),
@@ -349,6 +367,31 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  /// Open the full-page owner edit screen (dog-details style) that replaces
+  /// the old quick-edit bottom sheet. Invoked from both the owner row tap
+  /// target and the pencil icon.
+  void _openOwnerEdit(BuildContext context) {
+    CreateProfileRoute(
+      editMode: EditMode.editOwner,
+      userId: SupabaseConfig.auth.currentUser?.id,
+    ).push(context);
+  }
+
+  /// Launch the "Add a new dog" flow using the DogDetailsScreen in
+  /// [DogDetailsScreen.newDog] mode so the add UI matches the edit UI.
+  Future<void> _openAddDog(BuildContext context, WidgetRef ref) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DogDetailsScreen.newDog(),
+      ),
+    );
+    // When the user successfully adds a dog the screen already invalidates
+    // providers; these redundant calls are cheap and cover any early-return
+    // paths (e.g. if the navigator popped without saving).
+    ref.invalidate(userDogsProvider);
+    ref.invalidate(userProfileProvider);
+  }
+
   Widget _buildLargeDogCard(BuildContext context, WidgetRef ref, dynamic dog) {
     return GestureDetector(
       onTap: () {
@@ -370,148 +413,25 @@ class ProfileScreen extends ConsumerWidget {
         ),
         child: Stack(
           children: [
-            // 3-dots Menu (Edit + Delete)
+            // Direct edit shortcut -> DogDetailsScreen in edit mode.
+            // Delete intentionally lives only inside the full dog profile page.
             Positioned(
               top: 8,
               right: 8,
-              child: PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, size: 24, color: Colors.grey),
-                onSelected: (value) async {
-                  if (value == 'edit') {
-                    final result = await CreateProfileRoute(
-                      editMode: EditMode.editDog,
-                      dogId: dog.id,
-                    ).push<bool>(context);
-                    // Refresh dog list when returning from edit
-                    if (result == true) {
-                      ref.invalidate(userDogsProvider);
-                      ref.invalidate(userProfileProvider);
-                    }
-                  } else if (value == 'delete') {
-                    // Show confirmation dialog
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Delete Dog Profile'),
-                        content: Text(
-                            'Are you sure you want to delete ${dog.name}\'s profile? This action cannot be undone.'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            style: TextButton.styleFrom(
-                                foregroundColor: Colors.red),
-                            child: const Text('Delete'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirm == true) {
-                      try {
-                        // Get dog ID - handle both Dog model and Map
-                        final dogId = dog is Map ? dog['id'] : dog.id;
-                        debugPrint('🗑️ Deleting dog with ID: $dogId');
-                        debugPrint('🗑️ Dog type: ${dog.runtimeType}');
-
-                        if (dogId == null) {
-                          throw Exception('Dog ID is null');
-                        }
-
-                        // Soft delete - set is_active to false
-                        await SupabaseConfig.client
-                            .from('dogs')
-                            .update({'is_active': false}).eq('id', dogId);
-
-                        debugPrint('✅ Dog marked as inactive');
-
-                        // Clean up related records that reference this dog
-                        try {
-                          // Remove from playdate_participants
-                          await SupabaseConfig.client
-                              .from('playdate_participants')
-                              .delete()
-                              .eq('dog_id', dogId);
-                          debugPrint(
-                              '✅ Removed dog from playdate_participants');
-
-                          // Remove from playdate_requests (where this dog was invited)
-                          await SupabaseConfig.client
-                              .from('playdate_requests')
-                              .delete()
-                              .eq('invitee_dog_id', dogId);
-                          debugPrint(
-                              '✅ Removed dog from playdate_requests (invitee)');
-
-                          // Also clean up requester_dog_id if exists
-                          await SupabaseConfig.client
-                              .from('playdate_requests')
-                              .delete()
-                              .eq('requester_dog_id', dogId);
-                          debugPrint(
-                              '✅ Removed dog from playdate_requests (requester)');
-                        } catch (cleanupError) {
-                          debugPrint('⚠️ Cleanup warning: $cleanupError');
-                        }
-
-                        // Clear cache and refresh
-                        final userId = SupabaseConfig.auth.currentUser?.id;
-                        if (userId != null) {
-                          BarkDateUserService.clearUserDogsCache(userId);
-                        }
-                        ref.invalidate(userDogsProvider);
-                        ref.invalidate(userProfileProvider);
-                        ref.invalidate(userStatsProvider);
-                        ref.invalidate(profileRepositoryProvider);
-                        ref.invalidate(
-                            userPlaydatesProvider); // Also refresh playdates
-
-                        debugPrint('✅ Cache cleared and providers invalidated');
-
-                        if (context.mounted) {
-                          final dogName = dog is Map ? dog['name'] : dog.name;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text("$dogName's profile deleted")),
-                          );
-                        }
-                      } catch (e) {
-                        debugPrint('❌ Error deleting dog: $e');
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text('Error deleting: $e'),
-                                backgroundColor: Colors.red),
-                          );
-                        }
-                      }
-                    }
-                  }
+              child: IconButton(
+                icon: const Icon(Icons.edit_outlined,
+                    size: 22, color: Colors.grey),
+                tooltip: 'Edit dog profile',
+                splashRadius: 22,
+                onPressed: () {
+                  DogDetailsRoute(
+                    $extra: dog,
+                    startInEditMode: true,
+                  ).push(context).then((_) {
+                    ref.invalidate(userDogsProvider);
+                    ref.invalidate(userProfileProvider);
+                  });
                 },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit, size: 20),
-                        SizedBox(width: 8),
-                        Text('Edit'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete, size: 20, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text('Delete', style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
-                  ),
-                ],
               ),
             ),
 
@@ -585,7 +505,14 @@ class ProfileScreen extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildAirbnbStat('6', 'Playdates'),
+                      // Playdates - fetches count dynamically
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final statsAsync = ref.watch(userStatsProvider);
+                          final count = statsAsync.value?['playdates'] ?? 0;
+                          return _buildAirbnbStat('$count', 'Playdates');
+                        },
+                      ),
                       // Dogs in Pack - fetches friend count dynamically
                       FutureBuilder<List<Map<String, dynamic>>>(
                         future: DogFriendshipService.getFriends(dog.id),

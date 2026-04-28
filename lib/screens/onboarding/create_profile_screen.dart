@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:barkdate/core/router/app_routes.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
+import 'package:barkdate/features/profile/presentation/providers/profile_provider.dart';
 // import 'package:barkdate/screens/main_navigation.dart'; // Removed unused import to fix circular dependency
 import 'package:barkdate/services/selected_image.dart';
 import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 import 'package:barkdate/services/dog_breed_service.dart';
 import 'package:barkdate/widgets/location_picker_field.dart';
+import 'package:barkdate/screens/map_location_picker_screen.dart';
 
 enum EditMode { createProfile, editDog, editOwner, editBoth, addNewDog }
 
-class CreateProfileScreen extends StatefulWidget {
+class CreateProfileScreen extends ConsumerStatefulWidget {
   final String? userId;
   final EditMode editMode;
   final String? userName;
@@ -32,10 +35,11 @@ class CreateProfileScreen extends StatefulWidget {
   });
 
   @override
-  State<CreateProfileScreen> createState() => _CreateProfileScreenState();
+  ConsumerState<CreateProfileScreen> createState() =>
+      _CreateProfileScreenState();
 }
 
-class _CreateProfileScreenState extends State<CreateProfileScreen> {
+class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
   final PageController _pageController = PageController();
   int _currentStep = 0;
 
@@ -60,6 +64,16 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   Map<String, dynamic>? _dogProfile; // Track existing dog data
 
   bool _isLoading = false;
+
+  // --- Owner edit (EditMode.editOwner) state ---
+  /// Set true whenever the user touches any owner field so we can warn
+  /// on back-press and avoid redundant uploads when nothing changed.
+  bool _ownerDirty = false;
+  double? _ownerLatitude;
+  double? _ownerLongitude;
+  // Used to anchor the connection-status popup menu under the field at
+  // matching width.
+  final GlobalKey _connectionFieldKey = GlobalKey();
 
   // --- Normalization helpers to keep UI and DB in sync for dropdown/segmented fields ---
   String _normalizeSize(dynamic raw) {
@@ -99,10 +113,24 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     _ownerNameController.text = widget.userName ?? '';
     // Note: We don't pre-fill email in any field since users should enter their own info
 
+    // For the redesigned owner-edit page we track dirtiness so we can prompt
+    // Save/Discard on back-press.
+    if (widget.editMode == EditMode.editOwner) {
+      _ownerNameController.addListener(_markOwnerDirty);
+      _ownerBioController.addListener(_markOwnerDirty);
+      _ownerLocationController.addListener(_markOwnerDirty);
+    }
+
     // Load existing data if in edit mode (not for new creation or adding new dog)
     if (widget.editMode != EditMode.createProfile &&
         widget.editMode != EditMode.addNewDog) {
       _loadExistingData();
+    }
+  }
+
+  void _markOwnerDirty() {
+    if (!_ownerDirty && mounted) {
+      setState(() => _ownerDirty = true);
     }
   }
 
@@ -140,6 +168,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         if (userProfile['relationship_status'] != null) {
           _relationshipStatus = userProfile['relationship_status'];
         }
+        _ownerLatitude = (userProfile['latitude'] as num?)?.toDouble();
+        _ownerLongitude = (userProfile['longitude'] as num?)?.toDouble();
 
         // Load existing owner avatar
         if (userProfile['avatar_url'] != null &&
@@ -220,7 +250,12 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          // Reset dirty after initial load so listeners triggered by
+          // controller.text assignments above don't count as user edits.
+          _ownerDirty = false;
+        });
       }
     }
   }
@@ -572,14 +607,18 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       return _buildSingleEditScreen(isDogEdit: true);
     }
     if (widget.editMode == EditMode.editOwner) {
-      return _buildSingleEditScreen(isDogEdit: false);
+      // Redesigned to match the DogDetailsScreen visual language:
+      // SliverAppBar with a large circular avatar on top + in-appbar save,
+      // sectioned fields, no fixed bottom button (keyboard-safe).
+      return _buildOwnerDetailsStyleScreen();
     }
-    // For adding a new dog (not editing existing), show only dog form
-    if (widget.editMode == EditMode.addNewDog) {
-      return _buildAddNewDogScreen();
-    }
-
-    // Keep existing 2-step UI for creation and editBoth
+    // Note: EditMode.addNewDog is no longer reachable from the UI — the
+    // "Add Dog" flow now uses `DogDetailsScreen.newDog()` so the add UI
+    // matches the edit UI. The enum value is kept so the generated router
+    // code compiles; if it's ever hit (e.g. deep link), fall back to the
+    // standard two-step screen.
+    // Keep existing 2-step UI for creation and editBoth (and the orphaned
+    // addNewDog fallback).
     return _buildTwoStepScreen();
   }
 
@@ -698,64 +737,6 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                               ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-
-                    // Skip buttons (only for creation mode)
-                    if (widget.editMode == EditMode.createProfile) ...[
-                      if (_currentStep == 0) ...[
-                        // Skip dog step
-                        SizedBox(
-                          width: double.infinity,
-                          child: TextButton(
-                            onPressed: _isLoading ? null : _skipDogStep,
-                            child: Text(
-                              'Skip for now - Just set up my profile',
-                              style: TextStyle(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.7),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ] else ...[
-                        // Option to go back and add dog
-                        SizedBox(
-                          width: double.infinity,
-                          child: TextButton(
-                            onPressed: _isLoading
-                                ? null
-                                : () {
-                                    setState(() => _currentStep = 0);
-                                    _pageController.animateToPage(
-                                      0,
-                                      duration:
-                                          const Duration(milliseconds: 300),
-                                      curve: Curves.easeInOut,
-                                    );
-                                  },
-                            child: const Text('← Back to add dog info'),
-                          ),
-                        ),
-                      ],
-
-                      // Enter app without full setup
-                      TextButton(
-                        onPressed:
-                            _isLoading ? null : _enterAppWithMinimalSetup,
-                        child: Text(
-                          'Enter app with basic setup',
-                          style: TextStyle(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.8),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -1502,171 +1483,474 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     });
   }
 
-  /// Build screen for adding a NEW dog (not editing existing)
-  Widget _buildAddNewDogScreen() {
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
+  // _buildAddNewDogScreen() and _addNewDog() were retired — the "Add Dog"
+  // flow now uses DogDetailsScreen.newDog() so the add UI matches the edit
+  // UI. See lib/features/profile/presentation/screens/dog_details_screen.dart.
+
+  /// Build single-screen edit UI (dog or owner only)
+  /// Redesigned owner edit screen (used for EditMode.editOwner).
+  /// Mirrors DogDetailsScreen: SliverAppBar with a large circular avatar on
+  /// top, save action in the app bar, sectioned fields below — so the keyboard
+  /// never fights a fixed bottom button.
+  Widget _buildOwnerDetailsStyleScreen() {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return PopScope(
+      canPop: !_ownerDirty || _isLoading,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final shouldDiscard = await _confirmDiscardOwnerChanges();
+        if (shouldDiscard && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
       child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          title: Text(
-            'Add New Dog',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          centerTitle: true,
-        ),
-        body: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                // Form step's own SingleChildScrollView handles scrolling with keyboard padding
-                child: _buildDogInfoStep(),
-              ),
-              Container(
-                padding: const EdgeInsets.all(24),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _addNewDog,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                      minimumSize: const Size(double.infinity, 56),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Add Dog to My Pack',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+        backgroundColor: Colors.white,
+        body: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 260,
+              pinned: true,
+              backgroundColor: Colors.white,
+              elevation: 0,
+              scrolledUnderElevation: 1,
+              leading: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.white,
+                  child: IconButton(
+                    iconSize: 20,
+                    icon: const Icon(Icons.arrow_back, color: Colors.black),
+                    onPressed: _onOwnerBackPressed,
+                    constraints:
+                        const BoxConstraints(minWidth: 36, minHeight: 36),
+                    padding: EdgeInsets.zero,
                   ),
                 ),
               ),
-            ],
-          ),
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 4.0, vertical: 8.0),
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.white,
+                    child: IconButton(
+                      iconSize: 20,
+                      icon: _isLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.check, color: Colors.black),
+                      tooltip: 'Save',
+                      onPressed: _isLoading ? null : _saveSingleEdit,
+                      constraints:
+                          const BoxConstraints(minWidth: 36, minHeight: 36),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
+              flexibleSpace: FlexibleSpaceBar(
+                background: _buildOwnerAvatarHeader(),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  24,
+                  24,
+                  24,
+                  24 + MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      controller: _ownerNameController,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(
+                        labelText: 'Your Name*',
+                        hintText: 'John Doe',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                        fillColor: colorScheme.surface,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _ownerBioController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: 'Bio (optional)',
+                        hintText: 'Tell other dog owners about yourself...',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                        fillColor: colorScheme.surface,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Location row: autocomplete field + map picker button
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: LocationPickerField(
+                            controller: _ownerLocationController,
+                            hintText: widget.locationEnabled
+                                ? 'Auto-detected or search...'
+                                : 'Search your city...',
+                            onPlaceSelected: (place) {
+                              debugPrint(
+                                  '📍 Location selected: ${place.structuredFormatting.mainText}');
+                              // Free-typed fallback clears any previous map pin;
+                              // we'll only persist lat/lng when the map picker
+                              // is used.
+                              setState(() {
+                                _ownerLatitude = null;
+                                _ownerLongitude = null;
+                              });
+                              _markOwnerDirty();
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildMapPickerButton(),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildConnectionStatusPicker(),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-      ), // Close GestureDetector
+      ),
     );
   }
 
-  /// Add a NEW dog to the user's profile (doesn't edit existing)
-  Future<void> _addNewDog() async {
-    // Validate dog info
-    if (_dogNameController.text.isEmpty || _dogBreedController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please enter your dog\'s name and breed')),
-      );
-      return;
-    }
+  /// Small "pick on map" affordance next to the location field. Matches the
+  /// compact style used on the Create Event screen: an IconButton inside a
+  /// rounded, tinted container so the icon drives the size.
+  Widget _buildMapPickerButton() {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Container(
+      decoration: BoxDecoration(
+        color: primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: IconButton(
+        onPressed: _openMapPicker,
+        icon: Icon(Icons.map, color: primary),
+        tooltip: 'Pick on Map',
+      ),
+    );
+  }
 
-    if (_dogPhotos.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please add at least one photo of your dog')),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      String? userId = widget.userId ?? SupabaseConfig.auth.currentUser?.id;
-      if (userId == null) {
-        throw Exception('User not authenticated');
+  Future<void> _openMapPicker() async {
+    final result = await Navigator.of(context).push<MapLocationResult>(
+      MaterialPageRoute(
+        builder: (_) => MapLocationPickerScreen(
+          initialLatitude: _ownerLatitude,
+          initialLongitude: _ownerLongitude,
+          initialLabel: _ownerLocationController.text.isNotEmpty
+              ? _ownerLocationController.text
+              : null,
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      _ownerLatitude = result.latitude;
+      _ownerLongitude = result.longitude;
+      final label = result.placeName ?? result.address;
+      if (label != null && label.isNotEmpty) {
+        _ownerLocationController.text = label;
       }
+    });
+    _markOwnerDirty();
+  }
 
-      // Upload dog photos
-      List<String> dogPhotoUrls = [];
-      String? mainPhotoUrl;
-      List<String> extraPhotoUrls = [];
+  /// Tappable field that opens a rounded popup menu anchored directly under
+  /// the field at matching width. Uses colored Material icons per option
+  /// (no emojis), matching the rounded menu style used elsewhere.
+  Widget _buildConnectionStatusPicker() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final selected = _kConnectionOptions.firstWhere(
+      (o) => o.value == _relationshipStatus,
+      orElse: () => const _ConnectionOption(
+        value: null,
+        label: '',
+        icon: Icons.favorite_outline,
+        color: Colors.grey,
+      ),
+    );
 
-      if (_dogPhotos.isNotEmpty) {
-        try {
-          // Generate unique timestamp for this dog's photos to avoid conflicts
-          final timestamp = DateTime.now().millisecondsSinceEpoch;
-          dogPhotoUrls = await PhotoUploadService.uploadMultipleImages(
-            imageFiles: _dogPhotos,
-            bucketName: PhotoUploadService.dogPhotosBucket,
-            baseFilePath: '$userId/dog_$timestamp/photo',
-          );
-          mainPhotoUrl = dogPhotoUrls.isNotEmpty ? dogPhotoUrls[0] : null;
-          extraPhotoUrls = dogPhotoUrls.length > 1
-              ? dogPhotoUrls.sublist(1, dogPhotoUrls.length.clamp(1, 4))
-              : [];
-        } catch (e) {
-          debugPrint('Error uploading dog photos: $e');
-        }
-      }
+    return InkWell(
+      key: _connectionFieldKey,
+      borderRadius: BorderRadius.circular(12),
+      onTap: _openConnectionStatusMenu,
+      child: IgnorePointer(
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: 'Human Connection Status',
+            helperText: 'Optional: Let others know your vibe',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            filled: true,
+            fillColor: colorScheme.surface,
+            prefixIcon: selected.value == null
+                ? const Icon(Icons.favorite_outline)
+                : Icon(selected.icon, color: selected.color),
+            suffixIcon: const Icon(Icons.arrow_drop_down),
+          ),
+          child: Text(
+            selected.value ?? 'Pick your vibe',
+            style: TextStyle(
+              color: selected.value == null
+                  ? colorScheme.onSurface.withValues(alpha: 0.5)
+                  : colorScheme.onSurface,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-      // Always create a NEW dog (never update existing)
-      final dogData = {
-        'name': _dogNameController.text.trim(),
-        'breed': _dogBreedController.text.trim(),
-        'age': int.tryParse(_dogAgeController.text) ?? 1,
-        'size': _dogSize,
-        'gender': _dogGender,
-        'bio': _dogBioController.text.trim(),
-        'main_photo_url': mainPhotoUrl,
-        'extra_photo_urls': extraPhotoUrls,
-        'photo_urls': dogPhotoUrls,
-        'is_active': true, // Ensure the dog is active
-        'is_public': _isPublic, // Privacy setting
-      };
+  Future<void> _openConnectionStatusMenu() async {
+    final fieldCtx = _connectionFieldKey.currentContext;
+    if (fieldCtx == null) return;
+    final fieldBox = fieldCtx.findRenderObject() as RenderBox;
+    final overlay =
+        Overlay.of(fieldCtx).context.findRenderObject() as RenderBox;
+    final fieldTopLeft = fieldBox.localToGlobal(Offset.zero, ancestor: overlay);
+    final fieldSize = fieldBox.size;
 
-      debugPrint('🐕 Adding new dog to pack: $dogData');
-      await BarkDateUserService.addDog(userId, dogData);
-
-      // Clear the cache so the new dog shows up
-      BarkDateUserService.clearUserDogsCache(userId);
-      debugPrint('🗑️ Cleared dogs cache after adding new dog');
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${_dogNameController.text} added to your pack! 🐕'),
-            backgroundColor: Colors.green,
+    final chosen = await showMenu<String>(
+      context: fieldCtx,
+      // Position the menu directly under the field, matching its width.
+      position: RelativeRect.fromLTRB(
+        fieldTopLeft.dx,
+        fieldTopLeft.dy + fieldSize.height + 4,
+        overlay.size.width - (fieldTopLeft.dx + fieldSize.width),
+        overlay.size.height - (fieldTopLeft.dy + fieldSize.height),
+      ),
+      constraints: BoxConstraints(
+        minWidth: fieldSize.width,
+        maxWidth: fieldSize.width,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
+      elevation: 8,
+      items: _kConnectionOptions.map((opt) {
+        final isSelected = opt.value == _relationshipStatus;
+        return PopupMenuItem<String>(
+          value: opt.value!,
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: opt.color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(opt.icon, color: opt.color, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  opt.label,
+                  style: TextStyle(
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+              if (isSelected) Icon(Icons.check, size: 18, color: opt.color),
+            ],
           ),
         );
+      }).toList(),
+    );
 
-        // Return success to refresh the profile screen
-        Navigator.pop(context, true);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Failed to add dog: $e'),
-              backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    if (chosen != null && mounted) {
+      setState(() => _relationshipStatus = chosen);
+      _markOwnerDirty();
     }
   }
 
-  /// Build single-screen edit UI (dog or owner only)
+  /// Centralized back-button handler for the owner edit screen. Handles both
+  /// the in-appbar arrow and programmatic pops. System back gestures still
+  /// fall through the outer [PopScope].
+  Future<void> _onOwnerBackPressed() async {
+    if (_isLoading) return;
+    if (!_ownerDirty) {
+      Navigator.of(context).pop();
+      return;
+    }
+    final shouldLeave = await _confirmDiscardOwnerChanges();
+    if (shouldLeave && mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  /// Show a Save/Discard/Cancel dialog when the user tries to leave the
+  /// owner edit screen with unsaved changes. Returns true if the caller
+  /// should proceed with the pop (either because changes were saved or
+  /// because the user explicitly chose to discard).
+  Future<bool> _confirmDiscardOwnerChanges() async {
+    final result = await showDialog<_OwnerLeaveAction>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Unsaved changes'),
+        content: const Text(
+            'You have unsaved changes to your profile. Do you want to save them before leaving?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, _OwnerLeaveAction.cancel),
+            child: const Text('Keep editing'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, _OwnerLeaveAction.discard),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Discard'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, _OwnerLeaveAction.save),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null || result == _OwnerLeaveAction.cancel) return false;
+    if (result == _OwnerLeaveAction.discard) return true;
+
+    // _OwnerLeaveAction.save — run the normal save path, which already
+    // navigates back on success. We return false so PopScope doesn't also
+    // try to pop again on top of that navigation.
+    await _saveSingleEdit();
+    return false;
+  }
+
+  /// Large circular avatar + "tap to change" hint, shown in the flexibleSpace
+  /// of the owner edit screen. Avatar is explicitly optional.
+  Widget _buildOwnerAvatarHeader() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final hasPhoto = _ownerPhoto != null;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                colorScheme.primaryContainer.withValues(alpha: 0.25),
+                Colors.white,
+              ],
+            ),
+          ),
+        ),
+        Align(
+          alignment: Alignment.center,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    final img = await context.showImagePicker();
+                    if (img != null && mounted) {
+                      setState(() => _ownerPhoto = img);
+                      _markOwnerDirty();
+                    }
+                  },
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: colorScheme.primaryContainer,
+                          image: hasPhoto
+                              ? DecorationImage(
+                                  image: MemoryImage(_ownerPhoto!.bytes),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: hasPhoto
+                            ? null
+                            : Icon(Icons.person,
+                                size: 56, color: colorScheme.primary),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primary,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.camera_alt,
+                              color: Colors.white, size: 18),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  hasPhoto
+                      ? 'Tap to change photo'
+                      : 'Tap to add photo (optional)',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSingleEditScreen({required bool isDogEdit}) {
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -1692,8 +1976,15 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                 // Form step's own SingleChildScrollView handles scrolling with keyboard padding
                 child: isDogEdit ? _buildDogInfoStep() : _buildOwnerInfoStep(),
               ),
-              Container(
-                padding: const EdgeInsets.all(24),
+              AnimatedPadding(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                padding: EdgeInsets.fromLTRB(
+                  24,
+                  12,
+                  24,
+                  keyboardHeight > 0 ? keyboardHeight + 12 : 24,
+                ),
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -1888,13 +2179,37 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         }
 
         // Update owner profile
-        await BarkDateUserService.updateUserProfile(userId, {
+        final ownerUpdate = <String, dynamic>{
           'name': _ownerNameController.text.trim(),
           'bio': _ownerBioController.text.trim(),
           'location': _ownerLocationController.text.trim(),
-          'avatar_url': avatarUrl,
-        });
+          'relationship_status': _relationshipStatus,
+        };
+        // Only touch avatar_url when we actually uploaded a new one, so we
+        // don't wipe an existing avatar if the upload failed or the user
+        // didn't change the image.
+        if (avatarUrl != null) {
+          ownerUpdate['avatar_url'] = avatarUrl;
+        }
+        // Persist lat/lng when the user picked a location on the map.
+        if (_ownerLatitude != null && _ownerLongitude != null) {
+          ownerUpdate['latitude'] = _ownerLatitude;
+          ownerUpdate['longitude'] = _ownerLongitude;
+          ownerUpdate['location_updated_at'] = DateTime.now().toIso8601String();
+        }
+        await BarkDateUserService.updateUserProfile(userId, ownerUpdate);
+        if (mounted) {
+          setState(() => _ownerDirty = false);
+        }
       }
+
+      // Invalidate caches + Riverpod providers so any screen watching this
+      // data (Profile tab, Feed, pack card, etc.) rebuilds with the latest
+      // values the moment we pop back — no pull-to-refresh required.
+      BarkDateUserService.clearUserDogsCache(userId);
+      ref.invalidate(userProfileProvider);
+      ref.invalidate(userDogsProvider);
+      ref.invalidate(profileRepositoryProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1923,3 +2238,61 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     debugPrint('=== END SAVE SINGLE EDIT DEBUG ===');
   }
 }
+
+/// Action chosen by the user in the "Unsaved changes" dialog.
+enum _OwnerLeaveAction { cancel, discard, save }
+
+/// Static definition of the human connection status options: value,
+/// display label, and a colored icon to render instead of the old emojis.
+class _ConnectionOption {
+  final String? value;
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const _ConnectionOption({
+    required this.value,
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+}
+
+const List<_ConnectionOption> _kConnectionOptions = [
+  _ConnectionOption(
+    value: 'Walk Buddy',
+    label: 'Walk Buddy',
+    icon: Icons.directions_walk,
+    color: Color(0xFF388E3C), // green 700
+  ),
+  _ConnectionOption(
+    value: 'Playdates only',
+    label: 'Playdates only',
+    icon: Icons.sports_tennis,
+    color: Color(0xFFF57C00), // orange 700
+  ),
+  _ConnectionOption(
+    value: 'Coffee & Chaos',
+    label: 'Coffee & Chaos',
+    icon: Icons.local_cafe,
+    color: Color(0xFF8D6E63), // brown 400
+  ),
+  _ConnectionOption(
+    value: 'Single & Dog-Loving',
+    label: 'Single & Dog-Loving',
+    icon: Icons.favorite,
+    color: Color(0xFFEC407A), // pink 400
+  ),
+  _ConnectionOption(
+    value: 'Ask my dog',
+    label: 'Ask my dog',
+    icon: Icons.pets,
+    color: Color(0xFFFFA000), // amber 700
+  ),
+  _ConnectionOption(
+    value: 'Just here for the dogs',
+    label: 'Just here for the dogs',
+    icon: Icons.lock_outline,
+    color: Color(0xFF607D8B), // blue grey 500
+  ),
+];

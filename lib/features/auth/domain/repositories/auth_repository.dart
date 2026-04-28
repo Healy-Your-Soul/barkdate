@@ -8,6 +8,7 @@ abstract class AuthRepository {
   Future<AuthResponse> signUp(
       {required String email,
       required String password,
-      Map<String, dynamic>? data});
+      Map<String, dynamic>? data,
+      String? emailRedirectTo});
   Future<void> signOut();
 }
