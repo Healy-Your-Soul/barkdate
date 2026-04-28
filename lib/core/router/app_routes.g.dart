@@ -10,6 +10,7 @@ List<RouteBase> get $appRoutes => [
       $splashRoute,
       $authRoute,
       $welcomeRoute,
+      $fastTrackOnboardingRoute,
       $createProfileRoute,
       $acceptShareRoute,
       $appShellRouteData,
@@ -67,6 +68,10 @@ RouteBase get $authRoute => GoRouteData.$route(
         GoRouteData.$route(
           path: 'forgot-password',
           factory: $ForgotPasswordRoute._fromState,
+        ),
+        GoRouteData.$route(
+          path: 'verify-email',
+          factory: $VerifyEmailRoute._fromState,
         ),
       ],
     );
@@ -138,6 +143,35 @@ mixin $ForgotPasswordRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
+mixin $VerifyEmailRoute on GoRouteData {
+  static VerifyEmailRoute _fromState(GoRouterState state) => VerifyEmailRoute(
+        email: state.uri.queryParameters['email']!,
+      );
+
+  VerifyEmailRoute get _self => this as VerifyEmailRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+        '/auth/verify-email',
+        queryParams: {
+          'email': _self.email,
+        },
+      );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
 RouteBase get $welcomeRoute => GoRouteData.$route(
       path: '/welcome',
       factory: $WelcomeRoute._fromState,
@@ -149,6 +183,43 @@ mixin $WelcomeRoute on GoRouteData {
   @override
   String get location => GoRouteData.$location(
         '/welcome',
+      );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $fastTrackOnboardingRoute => GoRouteData.$route(
+      path: '/fast-track-onboarding',
+      factory: $FastTrackOnboardingRoute._fromState,
+    );
+
+mixin $FastTrackOnboardingRoute on GoRouteData {
+  static FastTrackOnboardingRoute _fromState(GoRouterState state) =>
+      FastTrackOnboardingRoute(
+        userId: state.uri.queryParameters['user-id'],
+        userName: state.uri.queryParameters['user-name'],
+      );
+
+  FastTrackOnboardingRoute get _self => this as FastTrackOnboardingRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+        '/fast-track-onboarding',
+        queryParams: {
+          if (_self.userId != null) 'user-id': _self.userId,
+          if (_self.userName != null) 'user-name': _self.userName,
+        },
       );
 
   @override
@@ -584,6 +655,9 @@ RouteBase get $dogDetailsRoute => GoRouteData.$route(
 
 mixin $DogDetailsRoute on GoRouteData {
   static DogDetailsRoute _fromState(GoRouterState state) => DogDetailsRoute(
+        startInEditMode: _$convertMapValue('start-in-edit-mode',
+                state.uri.queryParameters, _$boolConverter) ??
+            false,
         $extra: state.extra as Dog,
       );
 
@@ -592,6 +666,10 @@ mixin $DogDetailsRoute on GoRouteData {
   @override
   String get location => GoRouteData.$location(
         '/dog-details',
+        queryParams: {
+          if (_self.startInEditMode != false)
+            'start-in-edit-mode': _self.startInEditMode.toString(),
+        },
       );
 
   @override
@@ -608,6 +686,17 @@ mixin $DogDetailsRoute on GoRouteData {
   @override
   void replace(BuildContext context) =>
       context.replace(location, extra: _self.$extra);
+}
+
+bool _$boolConverter(String value) {
+  switch (value) {
+    case 'true':
+      return true;
+    case 'false':
+      return false;
+    default:
+      throw UnsupportedError('Cannot convert "$value" into a bool.');
+  }
 }
 
 RouteBase get $createPlaydateRoute => GoRouteData.$route(
@@ -850,17 +939,6 @@ mixin $SocialFeedRoute on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
-}
-
-bool _$boolConverter(String value) {
-  switch (value) {
-    case 'true':
-      return true;
-    case 'false':
-      return false;
-    default:
-      throw UnsupportedError('Cannot convert "$value" into a bool.');
-  }
 }
 
 RouteBase get $notificationsRoute => GoRouteData.$route(

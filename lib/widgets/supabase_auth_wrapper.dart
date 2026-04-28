@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:barkdate/core/router/app_routes.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/features/auth/presentation/screens/sign_in_screen.dart';
-// import 'package:barkdate/screens/main_navigation.dart';
-import 'package:barkdate/screens/onboarding/welcome_screen.dart';
+import 'package:barkdate/screens/onboarding/fast_track_onboarding_screen.dart';
 import 'package:barkdate/services/preload_service.dart';
 import 'package:barkdate/widgets/dog_loading_widget.dart';
 
@@ -111,15 +110,21 @@ class _SupabaseAuthWrapperState extends State<SupabaseAuthWrapper> {
                   );
 
                 case ProfileStatus.needsDogProfile:
-                  // User exists but needs dog profile
-                  // Show onboarding screens first for new users (Google sign-in skips to here)
-                  // WelcomeScreen will then navigate to CreateProfileScreen
-                  return const WelcomeScreen();
+                  // User exists but needs dog profile — go to dog setup first
+                  return FastTrackOnboardingScreen(
+                    userId: session.user.id,
+                    userName: session.user.userMetadata?['name'] ??
+                        session.user.userMetadata?['full_name'],
+                  );
 
                 case ProfileStatus.needsFullSetup:
                 default:
-                  // Needs full setup, show welcome then onboarding
-                  return const WelcomeScreen();
+                  // Needs full setup — dog profile first
+                  return FastTrackOnboardingScreen(
+                    userId: session.user.id,
+                    userName: session.user.userMetadata?['name'] ??
+                        session.user.userMetadata?['full_name'],
+                  );
               }
             },
           );

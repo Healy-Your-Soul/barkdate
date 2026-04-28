@@ -25,6 +25,8 @@ import 'package:barkdate/widgets/send_walk_sheet.dart';
 import 'package:barkdate/widgets/walk_details_sheet.dart';
 import 'package:barkdate/services/conversation_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:barkdate/features/profile/presentation/screens/dog_details_screen.dart';
+import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 
 class FeedFeatureScreen extends ConsumerStatefulWidget {
   const FeedFeatureScreen({super.key});
@@ -117,7 +119,6 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
     final playdatesAsync = ref.watch(userPlaydatesProvider);
     final eventsAsync = ref.watch(nearbyEventsProvider);
     final userStatsAsync = ref.watch(userStatsProvider);
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -185,9 +186,11 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
                 ),
               ),
 
-              // 🆕 Pack Alerts — live friend activity
-              const SliverToBoxAdapter(
-                child: PackAlertsCarousel(),
+              // 🆕 Pack Alerts — live friend activity + profile completion
+              SliverToBoxAdapter(
+                child: PackAlertsCarousel(
+                  onCompletionCta: (c) => _handleCompletionCta(context, c),
+                ),
               ),
 
               // 2. Nearby Dogs Section with integrated search
@@ -465,6 +468,24 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Handle the "Complete profile" / "Add dog" CTA on the profile-completion
+  /// card. Owner-first, then dog.
+  void _handleCompletionCta(BuildContext context, ProfileCompletion c) {
+    if (!c.ownerComplete) {
+      CreateProfileRoute(
+        editMode: EditMode.editOwner,
+        userId: SupabaseConfig.auth.currentUser?.id,
+      ).push(context);
+      return;
+    }
+    // Owner complete — push the new Add Dog flow (same one the Profile tab uses)
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DogDetailsScreen.newDog(),
       ),
     );
   }
