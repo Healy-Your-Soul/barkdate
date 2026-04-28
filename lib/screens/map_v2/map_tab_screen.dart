@@ -340,11 +340,13 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       if (liveUsers.isEmpty) {
         debugPrint(
             '🔧 DEBUG: No live users nearby, adding self marker for testing');
-        // Get current user's dog info and user name
+        // Get current user's primary dog (oldest created, active)
         final userDogs = await Supabase.instance.client
             .from('dogs')
             .select('name, main_photo_url')
             .eq('user_id', userId)
+            .eq('is_active', true)
+            .order('created_at', ascending: true)
             .limit(1);
 
         // Get user name

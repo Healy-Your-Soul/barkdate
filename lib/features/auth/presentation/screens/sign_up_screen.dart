@@ -8,6 +8,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:barkdate/features/auth/presentation/providers/auth_provider.dart';
 import 'package:barkdate/utils/validators.dart';
 import 'package:barkdate/services/preload_service.dart';
+import 'package:barkdate/design_system/app_typography.dart';
 import 'package:go_router/go_router.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -119,7 +120,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       if (mounted && response.user != null) {
         await PreloadService.warmFeedCaches(response.user!.id);
         if (mounted) {
-          const HomeRoute().go(context);
+          const SplashRoute().go(context);
         }
       }
     } on SignInWithAppleAuthorizationException catch (e) {
@@ -173,16 +174,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
       if (mounted) {
         if (response.user != null) {
-          // Navigate to home or verification
-          // For now, let's go to home, assuming auto-login or no verification needed for dev
-          // Or we can show a dialog
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Account created! Please check your email.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          const AuthRoute().go(context); // Go back to sign in
+          // Navigate to verify email screen
+          VerifyEmailRoute(email: _emailController.text.trim()).go(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -224,32 +217,46 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             ),
             onPressed: () => context.pop(),
           ),
+          title: Text(
+            'Bark',
+            style: AppTypography.brandTitle(
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          centerTitle: false,
+          titleSpacing: 0,
         ),
         body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
                   Text(
                     'Create Account',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
+                    style: AppTypography.h2(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Join the BarkDate community',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.7),
-                        ),
+                    'Your pup\'s social life starts here',
+                    style: AppTypography.bodyMedium(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
@@ -259,24 +266,17 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     height: 50,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(25),
                       border: Border.all(
-                        color: const Color(0xFFDADCE0),
+                        color: Colors.black.withValues(alpha: 0.15),
                         width: 1,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 1,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
                     ),
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: _isGoogleLoading ? null : _signUpWithGoogle,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(25),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: _isGoogleLoading
@@ -315,7 +315,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
 
                   // Apple Sign Up Button - Only show on iOS
                   if (!kIsWeb && Platform.isIOS)
@@ -323,13 +323,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       height: 50,
                       decoration: BoxDecoration(
                         color: Colors.black,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(25),
                       ),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: _isAppleLoading ? null : _signUpWithApple,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(25),
                           child: _isAppleLoading
                               ? const Center(
                                   child: SizedBox(
@@ -400,15 +400,36 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   TextFormField(
                     controller: _nameController,
                     textCapitalization: TextCapitalization.words,
+                    style: AppTypography.bodyMedium(),
                     decoration: InputDecoration(
                       labelText: 'Full Name',
                       hintText: 'John Doe',
-                      prefixIcon: const Icon(Icons.person_outline),
+                      hintStyle: const TextStyle(color: Color(0xFFB6B6B6)),
+                      labelStyle: const TextStyle(color: Color(0xFFB6B6B6)),
+                      floatingLabelStyle: const TextStyle(color: Color(0xFF757575)),
+                      prefixIcon: Icon(Icons.person_outline, color: const Color(0xFFB6B6B6), size: 20),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.surface,
+                      fillColor: const Color(0xFFECECEC),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -424,15 +445,36 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
+                    style: AppTypography.bodyMedium(),
                     decoration: InputDecoration(
                       labelText: 'Email',
                       hintText: 'your@email.com',
-                      prefixIcon: const Icon(Icons.email_outlined),
+                      hintStyle: const TextStyle(color: Color(0xFFB6B6B6)),
+                      labelStyle: const TextStyle(color: Color(0xFFB6B6B6)),
+                      floatingLabelStyle: const TextStyle(color: Color(0xFF757575)),
+                      prefixIcon: Icon(Icons.email_outlined, color: const Color(0xFFB6B6B6), size: 20),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.surface,
+                      fillColor: const Color(0xFFECECEC),
                     ),
                     validator: Validators.validateEmail,
                   ),
@@ -443,14 +485,20 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
+                        style: AppTypography.bodyMedium(),
                         decoration: InputDecoration(
                           labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock_outline),
+                          hintStyle: const TextStyle(color: Color(0xFFB6B6B6)),
+                          labelStyle: const TextStyle(color: Color(0xFFB6B6B6)),
+                          floatingLabelStyle: const TextStyle(color: Color(0xFF757575)),
+                          prefixIcon: Icon(Icons.lock_outline, color: const Color(0xFFB6B6B6), size: 20),
                           suffixIcon: IconButton(
+                            iconSize: 20,
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility_off
                                   : Icons.visibility,
+                              color: const Color(0xFFB6B6B6),
                             ),
                             onPressed: () {
                               setState(
@@ -458,10 +506,27 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             },
                           ),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
                           ),
                           filled: true,
-                          fillColor: Theme.of(context).colorScheme.surface,
+                          fillColor: const Color(0xFFECECEC),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -500,14 +565,20 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   TextFormField(
                     controller: _confirmPasswordController,
                     obscureText: _obscureConfirmPassword,
+                    style: AppTypography.bodyMedium(),
                     decoration: InputDecoration(
                       labelText: 'Confirm Password',
-                      prefixIcon: const Icon(Icons.lock_outline),
+                      hintStyle: const TextStyle(color: Color(0xFFB6B6B6)),
+                      labelStyle: const TextStyle(color: Color(0xFFB6B6B6)),
+                      floatingLabelStyle: const TextStyle(color: Color(0xFF757575)),
+                      prefixIcon: Icon(Icons.lock_outline, color: const Color(0xFFB6B6B6), size: 20),
                       suffixIcon: IconButton(
+                        iconSize: 20,
                         icon: Icon(
                           _obscureConfirmPassword
                               ? Icons.visibility_off
                               : Icons.visibility,
+                          color: const Color(0xFFB6B6B6),
                         ),
                         onPressed: () {
                           setState(() => _obscureConfirmPassword =
@@ -515,10 +586,27 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         },
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.surface,
+                      fillColor: const Color(0xFFECECEC),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -581,6 +669,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -629,7 +718,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   ),
                 ],
               ),
-            ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ), // Close GestureDetector

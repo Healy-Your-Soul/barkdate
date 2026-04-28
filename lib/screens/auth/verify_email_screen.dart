@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/screens/main_navigation.dart';
-import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
+import 'package:barkdate/core/router/app_routes.dart';
+import 'package:barkdate/design_system/app_typography.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
@@ -58,11 +58,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
               'Session expired. Please sign in again to verify your email.';
         });
 
-        // Optional: Navigate back to sign in after a delay
+        // Navigate back to sign in after a delay
         Future.delayed(const Duration(seconds: 3), () {
           if (mounted) {
-            Navigator.of(context)
-                .pop(); // Go back to previous screen (likely sign in)
+            const AuthRoute().go(context);
           }
         });
         return;
@@ -72,25 +71,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       if (user.emailConfirmedAt != null) {
         debugPrint('User already verified, proceeding to app');
         if (mounted) {
-          // Email verified! Check if user has completed profile setup
-          final nav = Navigator.of(context);
-          final hasProfile = await _checkUserProfile(user.id);
-          if (!mounted) return;
-          if (hasProfile) {
-            nav.pushReplacement(
-              MaterialPageRoute(builder: (context) => const MainNavigation()),
-            );
-          } else {
-            nav.pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => CreateProfileScreen(
-                  userName: user?.userMetadata?['name'] ?? '',
-                  userEmail: user?.email ?? '',
-                  userId: user?.id ?? '',
-                ),
-              ),
-            );
-          }
+          // Email verified! Route through SupabaseAuthWrapper which
+          // handles profile status check and onboarding routing.
+          const SplashRoute().go(context);
         }
         return;
       }
@@ -104,26 +87,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
             'After refresh - User: ${user?.id}, Email confirmed: ${user?.emailConfirmedAt != null}');
 
         if (user?.emailConfirmedAt != null) {
-          // Now verified! Proceed to app
+          // Now verified! Route through SupabaseAuthWrapper
           if (mounted) {
-            final nav = Navigator.of(context);
-            final hasProfile = await _checkUserProfile(user!.id);
-            if (!mounted) return;
-            if (hasProfile) {
-              nav.pushReplacement(
-                MaterialPageRoute(builder: (context) => const MainNavigation()),
-              );
-            } else {
-              nav.pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => CreateProfileScreen(
-                    userName: user?.userMetadata?['name'] ?? '',
-                    userEmail: user?.email ?? '',
-                    userId: user?.id ?? '',
-                  ),
-                ),
-              );
-            }
+            const SplashRoute().go(context);
           }
         } else {
           // Still not verified
@@ -149,76 +115,124 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     }
   }
 
-  Future<bool> _checkUserProfile(String userId) async {
-    try {
-      final profile = await SupabaseService.selectSingle(
-        'users',
-        filters: {'id': userId},
-      );
-      return profile != null;
-    } catch (e) {
-      return false;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Verify your email'),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).colorScheme.onSurface),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(32, 24, 32, 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('We sent a verification link to:',
-                style: theme.textTheme.titleMedium),
+            Text(
+              'Verify your email',
+              style: AppTypography.display2(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'We sent a verification link to:',
+              style: AppTypography.bodyLarge(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(widget.email,
-                style: theme.textTheme.titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              widget.email,
+              style: AppTypography.h3(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: 16),
             Text(
-              'Open your inbox and tap the link to verify. Once done, come back and press “I\'ve verified”.',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.8)),
+              'Open your inbox and tap the link to verify. Once done, come back and press "I\'ve verified".',
+              style: AppTypography.bodyMedium(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
+              ),
             ),
             const Spacer(),
             if (_message != null)
               Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(_message!,
-                    style: TextStyle(color: theme.colorScheme.tertiary)),
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(
+                  _message!,
+                  style: AppTypography.bodySmall(
+                    color: Theme.of(context).colorScheme.tertiary,
+                  ),
+                ),
               ),
             SizedBox(
               width: double.infinity,
+              height: 56,
               child: ElevatedButton(
                 onPressed: _checking ? null : _checkVerified,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4CAF50),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: const Color(0xFFECECEC),
+                  disabledForegroundColor: const Color(0xFFB6B6B6),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
                 child: _checking
                     ? const SizedBox(
-                        width: 20,
-                        height: 20,
+                        width: 22,
+                        height: 22,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Text("I've verified"),
+                            strokeWidth: 2.5, color: Colors.white))
+                    : Text(
+                        "I've verified",
+                        style: AppTypography.button(color: Colors.white),
+                      ),
               ),
             ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
+              height: 56,
               child: OutlinedButton(
                 onPressed: _resending ? null : _resendEmail,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  side: BorderSide(
+                    color: const Color(0xFFECECEC),
+                    width: 1.5,
+                  ),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
                 child: _resending
                     ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text("Resend Email"),
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.5))
+                    : Text(
+                        'Resend Email',
+                        style: AppTypography.button(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
               ),
             ),
           ],
