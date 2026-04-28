@@ -8,6 +8,7 @@ enum FriendAlertType {
   newFriend, // A friend request was accepted
   playdateStarting, // A friend's playdate is about to start
   friendPost, // A friend shared a new post
+  profileCompletion, // User still needs to finish owner/dog profile
 }
 
 /// A real-time alert about friend/pack activity
@@ -46,11 +47,33 @@ class FriendAlert {
       case FriendAlertType.walkTogether:
         return const Color(0xFF0D47A1); // Deep blue
       case FriendAlertType.newFriend:
-        return const Color(0xFFE65100); // Deep orange
+        return const Color(0xFF00695C); // Deep teal — keeps palette distinct
       case FriendAlertType.playdateStarting:
         return const Color(0xFF4A148C); // Deep purple
       case FriendAlertType.friendPost:
         return const Color(0xFF880E4F); // Deep pink
+      case FriendAlertType.profileCompletion:
+        return const Color(0xFFC62828); // Deep red — user action required
+    }
+  }
+
+  /// Flat Material icon for pack/feed alert cards (prefer over emoji in UI).
+  static IconData iconForType(FriendAlertType type) {
+    switch (type) {
+      case FriendAlertType.friendCheckIn:
+        return Icons.place_outlined;
+      case FriendAlertType.nearbySpot:
+        return Icons.pets_outlined;
+      case FriendAlertType.walkTogether:
+        return Icons.schedule_outlined;
+      case FriendAlertType.newFriend:
+        return Icons.person_add_alt_1_outlined;
+      case FriendAlertType.playdateStarting:
+        return Icons.celebration_outlined;
+      case FriendAlertType.friendPost:
+        return Icons.photo_camera_outlined;
+      case FriendAlertType.profileCompletion:
+        return Icons.account_circle_outlined;
     }
   }
 
@@ -69,6 +92,8 @@ class FriendAlert {
         return '🎉';
       case FriendAlertType.friendPost:
         return '📸';
+      case FriendAlertType.profileCompletion:
+        return '🐾';
     }
   }
 
@@ -87,6 +112,8 @@ class FriendAlert {
         return 'View Details';
       case FriendAlertType.friendPost:
         return 'View Post';
+      case FriendAlertType.profileCompletion:
+        return 'Continue';
     }
   }
 
@@ -153,6 +180,7 @@ class FriendAlert {
     int joinCount = 0,
     String? parkId,
     String? checkInId,
+    String? playdateId,
   }) {
     final hour = scheduledFor.hour;
     final minute = scheduledFor.minute.toString().padLeft(2, '0');
@@ -178,6 +206,7 @@ class FriendAlert {
         'park_id': parkId,
         'scheduled_for': scheduledFor.toIso8601String(),
         'check_in_id': checkInId,
+        'playdate_id': playdateId,
         'join_count': joinCount,
       },
     );
@@ -261,6 +290,50 @@ class FriendAlert {
         'dog_name': dogName,
         'post_id': postId,
       },
+    );
+  }
+
+  /// Factory for the "finish your profile" nudge on the feed. Returns `null`
+  /// when both owner and dog profiles are already complete.
+  ///
+  /// Owner completeness is lenient (just `name` on the user row), so in
+  /// practice this card only fires when the user hasn't added a dog yet (or
+  /// the dog is missing required fields like a photo). If you want to start
+  /// nudging owner fields again, add an owner branch here and extend
+  /// `profileCompletionProvider` to match.
+  static FriendAlert? profileCompletion({
+    required bool ownerComplete,
+    required bool dogComplete,
+  }) {
+    if (ownerComplete && dogComplete) return null;
+
+    // In practice only the dog branch fires today, but we still return a
+    // sensible card if ownerComplete is ever false (e.g. a legacy user with
+    // no name on their row) instead of silently returning null.
+    if (!ownerComplete) {
+      return FriendAlert(
+        id: 'profile-completion-owner',
+        type: FriendAlertType.profileCompletion,
+        headline: 'Finish setting up your account',
+        body: 'Add your name so other dog parents can say hi.',
+        ctaLabel: 'Complete profile',
+        ctaRoute: 'profile-completion:owner',
+        iconEmoji: '🐾',
+        backgroundColor: colorForType(FriendAlertType.profileCompletion),
+        createdAt: DateTime.now(),
+      );
+    }
+
+    return FriendAlert(
+      id: 'profile-completion-dog',
+      type: FriendAlertType.profileCompletion,
+      headline: 'Add your dog to the pack',
+      body: 'Your pack is empty — add your dog so friends can play.',
+      ctaLabel: 'Add dog',
+      ctaRoute: 'profile-completion:dog',
+      iconEmoji: '🐾',
+      backgroundColor: colorForType(FriendAlertType.profileCompletion),
+      createdAt: DateTime.now(),
     );
   }
 }

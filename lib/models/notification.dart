@@ -1,5 +1,14 @@
 import 'package:flutter/material.dart';
 
+NotificationType _notificationTypeFromString(dynamic raw) {
+  final s = raw?.toString() ?? '';
+  if (s == 'playdate_request') return NotificationType.playdateRequest;
+  return NotificationType.values.firstWhere(
+    (e) => e.name == s,
+    orElse: () => NotificationType.system,
+  );
+}
+
 /// Comprehensive notification model for BarkDate
 /// Supports all notification types: barks, playdates, social interactions, messages
 class BarkDateNotification {
@@ -34,10 +43,7 @@ class BarkDateNotification {
       userId: data['user_id'] ?? '',
       title: data['title'] ?? '',
       body: data['body'] ?? '',
-      type: NotificationType.values.firstWhere(
-        (e) => e.name == data['type'],
-        orElse: () => NotificationType.system,
-      ),
+      type: _notificationTypeFromString(data['type']),
       actionType: data['action_type'],
       relatedId: data['related_id'],
       metadata: data['metadata'] != null

@@ -37,7 +37,7 @@ class Message {
       );
 }
 
-enum MessageType { text, image, quickReply }
+enum MessageType { text, image, quickReply, system, playdateCard }
 
 class ChatPreview {
   final String chatId;

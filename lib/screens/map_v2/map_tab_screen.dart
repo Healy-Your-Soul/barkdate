@@ -27,6 +27,7 @@ import 'package:barkdate/screens/map_v2/widgets/place_mini_card.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
+import 'package:barkdate/widgets/walk_details_sheet.dart';
 
 /// New map tab with AI assistant, event integration, and improved UX
 class MapTabScreenV2 extends ConsumerStatefulWidget {
@@ -339,11 +340,13 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       if (liveUsers.isEmpty) {
         debugPrint(
             '🔧 DEBUG: No live users nearby, adding self marker for testing');
-        // Get current user's dog info and user name
+        // Get current user's primary dog (oldest created, active)
         final userDogs = await Supabase.instance.client
             .from('dogs')
             .select('name, main_photo_url')
             .eq('user_id', userId)
+            .eq('is_active', true)
+            .order('created_at', ascending: true)
             .limit(1);
 
         // Get user name
@@ -530,7 +533,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       }
     }
 
-    // Add scheduled future walk markers (clock markers)
+    // Add scheduled future walk markers (green walk markers)
     for (final walk in _scheduledWalks) {
       final lat = walk['latitude'] as double?;
       final lng = walk['longitude'] as double?;
@@ -542,6 +545,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       final dog = walk['dog'] as Map<String, dynamic>?;
       final dogName = dog?['name'] as String? ?? 'Someone';
       final parkName = walk['park_name'] as String? ?? 'a park';
+      final playdateId = walk['playdate_id'] as String?;
 
       final hour = scheduledFor.hour;
       final minute = scheduledFor.minute.toString().padLeft(2, '0');
@@ -554,10 +558,22 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         position: LatLng(lat, lng),
         infoWindow: InfoWindow(
           title: '🕐 $dogName • $timeStr',
-          snippet: 'Future walk at $parkName',
+          snippet: 'Walk at $parkName',
         ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
         zIndexInt: 40,
+        onTap: () {
+          showWalkDetailsSheet(
+            context,
+            parkId: parkName,
+            parkName: parkName,
+            scheduledFor: scheduledFor,
+            organizerDogName: dogName,
+            playdateId: playdateId,
+            latitude: lat,
+            longitude: lng,
+          );
+        },
       ));
     }
 

@@ -36,10 +36,10 @@ class PackAlertCard extends StatelessWidget {
             // Icon + Headline row
             Row(
               children: [
-                // Emoji icon
-                Text(
-                  alert.iconEmoji ?? FriendAlert.emojiForType(alert.type),
-                  style: const TextStyle(fontSize: 20),
+                Icon(
+                  FriendAlert.iconForType(alert.type),
+                  size: 22,
+                  color: Colors.white,
                 ),
                 const SizedBox(width: 10),
                 // Headline

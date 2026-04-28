@@ -4,6 +4,7 @@ import 'package:barkdate/screens/auth/forgot_password_screen.dart';
 import 'package:barkdate/features/profile/presentation/screens/dog_details_screen.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/models/event.dart';
+import 'package:barkdate/screens/auth/verify_email_screen.dart';
 import 'package:barkdate/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:barkdate/features/auth/presentation/screens/sign_up_screen.dart';
 import 'package:barkdate/features/feed/presentation/screens/feed_screen.dart';
@@ -23,6 +24,7 @@ import 'package:barkdate/features/gamification/presentation/screens/achievements
 import 'package:barkdate/core/presentation/widgets/scaffold_with_nav_bar.dart';
 import 'package:barkdate/screens/onboarding/welcome_screen.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
+import 'package:barkdate/screens/onboarding/fast_track_onboarding_screen.dart';
 import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 import 'package:barkdate/features/profile/presentation/screens/accept_share_screen.dart';
 import 'package:barkdate/screens/admin_screen.dart';
@@ -30,6 +32,7 @@ import 'package:barkdate/screens/qr_checkin_screen.dart';
 import 'package:barkdate/screens/qr_scan_screen.dart';
 import 'package:barkdate/screens/create_event_screen.dart';
 import 'package:barkdate/features/notifications/presentation/screens/notifications_screen.dart';
+import 'package:barkdate/services/notification_manager.dart';
 import 'package:go_router/go_router.dart';
 
 part 'app_routes.g.dart';
@@ -47,6 +50,7 @@ class SplashRoute extends GoRouteData with $SplashRoute {
   routes: [
     TypedGoRoute<SignUpRoute>(path: 'sign-up'),
     TypedGoRoute<ForgotPasswordRoute>(path: 'forgot-password'),
+    TypedGoRoute<VerifyEmailRoute>(path: 'verify-email'),
   ],
 )
 class AuthRoute extends GoRouteData with $AuthRoute {
@@ -70,12 +74,33 @@ class SignUpRoute extends GoRouteData with $SignUpRoute {
       const SignUpScreen();
 }
 
+class VerifyEmailRoute extends GoRouteData with $VerifyEmailRoute {
+  final String email;
+  const VerifyEmailRoute({required this.email});
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      VerifyEmailScreen(email: email);
+}
+
 @TypedGoRoute<WelcomeRoute>(path: '/welcome')
 class WelcomeRoute extends GoRouteData with $WelcomeRoute {
   const WelcomeRoute();
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       const WelcomeScreen();
+}
+
+@TypedGoRoute<FastTrackOnboardingRoute>(path: '/fast-track-onboarding')
+class FastTrackOnboardingRoute extends GoRouteData
+    with $FastTrackOnboardingRoute {
+  final String? userId;
+  final String? userName;
+
+  const FastTrackOnboardingRoute({this.userId, this.userName});
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      FastTrackOnboardingScreen(userId: userId, userName: userName);
 }
 
 @TypedGoRoute<CreateProfileRoute>(path: '/create-profile')
@@ -160,6 +185,7 @@ class AppShellRouteData extends StatefulShellRouteData {
   @override
   Widget builder(BuildContext context, GoRouterState state,
       StatefulNavigationShell navigationShell) {
+    NotificationManager.startNotificationStreams();
     return ScaffoldWithNavBar(navigationShell: navigationShell);
   }
 }
@@ -316,10 +342,11 @@ class DogDetailsByIdRoute extends GoRouteData with $DogDetailsByIdRoute {
 @TypedGoRoute<DogDetailsRoute>(path: '/dog-details')
 class DogDetailsRoute extends GoRouteData with $DogDetailsRoute {
   final Dog $extra;
-  const DogDetailsRoute({required this.$extra});
+  final bool startInEditMode;
+  const DogDetailsRoute({required this.$extra, this.startInEditMode = false});
   @override
   Widget build(BuildContext context, GoRouterState state) =>
-      DogDetailsScreen(dog: $extra);
+      DogDetailsScreen(dog: $extra, startInEditMode: startInEditMode);
 }
 
 @TypedGoRoute<CreatePlaydateRoute>(path: '/create-playdate')

@@ -9,6 +9,7 @@ import 'package:barkdate/screens/map_v2/widgets/dog_mini_card.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
+import 'package:barkdate/widgets/plan_walk_sheet.dart';
 
 /// Shows a simple place details sheet (DEPRECATED - use PlaceSheetContent instead)
 void showPlaceSheet(BuildContext context, PlaceResult place) {
@@ -441,6 +442,33 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             SizedBox(
               width: double.infinity,
               child: _buildCheckInButton(isHere, isElsewhere),
+            ),
+            const SizedBox(height: 10),
+
+            // PLAN A WALK BUTTON
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  showPlanWalkSheet(
+                    context,
+                    parkId: widget.place.placeId,
+                    parkName: widget.place.name,
+                    latitude: widget.place.latitude,
+                    longitude: widget.place.longitude,
+                  );
+                },
+                icon: const Text('🕐', style: TextStyle(fontSize: 16)),
+                label: const Text('Plan a Walk'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF0D47A1),
+                  side: const BorderSide(color: Color(0xFF0D47A1)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
 

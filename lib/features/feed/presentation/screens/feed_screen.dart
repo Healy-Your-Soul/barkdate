@@ -19,19 +19,106 @@ import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart'
     hide DogFriendshipService;
+import 'package:barkdate/features/feed/presentation/providers/friend_activity_provider.dart';
 import 'package:barkdate/widgets/pack_alerts_carousel.dart';
 import 'package:barkdate/widgets/send_walk_sheet.dart';
+import 'package:barkdate/widgets/walk_details_sheet.dart';
+import 'package:barkdate/services/conversation_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:barkdate/features/profile/presentation/screens/dog_details_screen.dart';
+import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 
-class FeedFeatureScreen extends ConsumerWidget {
+class FeedFeatureScreen extends ConsumerStatefulWidget {
   const FeedFeatureScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FeedFeatureScreen> createState() => _FeedFeatureScreenState();
+}
+
+class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
+  RealtimeChannel? _playdateFeedChannel;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _attachPlaydateFeedRealtime());
+  }
+
+  void _attachPlaydateFeedRealtime() {
+    final uid = SupabaseConfig.auth.currentUser?.id;
+    if (uid == null) return;
+
+    void invalidateFeedPlaydates() {
+      if (mounted) ref.invalidate(userPlaydatesProvider);
+    }
+
+    _playdateFeedChannel =
+        SupabaseConfig.client.channel('feed_playdates_rt_$uid');
+
+    _playdateFeedChannel!
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'playdate_requests',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'invitee_id',
+            value: uid,
+          ),
+          callback: (_) => invalidateFeedPlaydates(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'playdate_requests',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'requester_id',
+            value: uid,
+          ),
+          callback: (_) => invalidateFeedPlaydates(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'playdates',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'organizer_id',
+            value: uid,
+          ),
+          callback: (_) => invalidateFeedPlaydates(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'playdates',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'participant_id',
+            value: uid,
+          ),
+          callback: (_) => invalidateFeedPlaydates(),
+        )
+        .subscribe();
+  }
+
+  @override
+  void dispose() {
+    if (_playdateFeedChannel != null) {
+      SupabaseConfig.client.removeChannel(_playdateFeedChannel!);
+      _playdateFeedChannel = null;
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final nearbyDogsAsync = ref.watch(nearbyDogsProvider);
     final playdatesAsync = ref.watch(userPlaydatesProvider);
     final eventsAsync = ref.watch(nearbyEventsProvider);
     final userStatsAsync = ref.watch(userStatsProvider);
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -99,9 +186,11 @@ class FeedFeatureScreen extends ConsumerWidget {
                 ),
               ),
 
-              // 🆕 Pack Alerts — live friend activity
-              const SliverToBoxAdapter(
-                child: PackAlertsCarousel(),
+              // 🆕 Pack Alerts — live friend activity + profile completion
+              SliverToBoxAdapter(
+                child: PackAlertsCarousel(
+                  onCompletionCta: (c) => _handleCompletionCta(context, c),
+                ),
               ),
 
               // 2. Nearby Dogs Section with integrated search
@@ -383,6 +472,24 @@ class FeedFeatureScreen extends ConsumerWidget {
     );
   }
 
+  /// Handle the "Complete profile" / "Add dog" CTA on the profile-completion
+  /// card. Owner-first, then dog.
+  void _handleCompletionCta(BuildContext context, ProfileCompletion c) {
+    if (!c.ownerComplete) {
+      CreateProfileRoute(
+        editMode: EditMode.editOwner,
+        userId: SupabaseConfig.auth.currentUser?.id,
+      ).push(context);
+      return;
+    }
+    // Owner complete — push the new Add Dog flow (same one the Profile tab uses)
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DogDetailsScreen.newDog(),
+      ),
+    );
+  }
+
   Widget _buildDashboard(
     BuildContext context,
     AsyncValue<Map<String, dynamic>> statsAsync,
@@ -594,13 +701,30 @@ class FeedFeatureScreen extends ConsumerWidget {
     final currentUserId = SupabaseConfig.auth.currentUser?.id;
     final organizerId = playdate['organizer_id'] as String?;
 
-    // Show action buttons if pending and user is NOT the organizer
-    final showActionButtons = status?.toLowerCase() == 'pending' &&
-        currentUserId != null &&
+    // Prefer per-user request row over playdates.status (avoids stale UI when the
+    // request is accepted but playdate row lags or cache is old).
+    final requests = playdate['requests'] as List<dynamic>? ?? [];
+    Map<String, dynamic>? myRequest;
+    for (final r in requests) {
+      if (r is Map<String, dynamic> && r['invitee_id'] == currentUserId) {
+        myRequest = r;
+        break;
+      }
+    }
+    final requestStatus = myRequest?['status'] as String?;
+    final rs = requestStatus?.toLowerCase();
+    final ps = status?.toLowerCase();
+
+    final isInvitee = currentUserId != null &&
+        organizerId != null &&
         organizerId != currentUserId;
+    final showActionButtons =
+        isInvitee && (rs == 'pending' || (rs == null && ps == 'pending'));
+
+    final isConfirmed =
+        ps == 'confirmed' || ps == 'accepted' || rs == 'accepted';
 
     // Get dog photos for display - prioritize invited dogs from requests
-    final requests = playdate['requests'] as List<dynamic>? ?? [];
     final participants = playdate['participants'] as List<dynamic>? ?? [];
     final avatarPhotos = <String>[];
 
@@ -625,7 +749,18 @@ class FeedFeatureScreen extends ConsumerWidget {
     return GestureDetector(
       onTap: () {
         if (playdateId != null) {
-          PlaydateDetailsRoute($extra: playdate).push(context);
+          final organizer = playdate['organizer'] as Map<String, dynamic>?;
+          final organizerName = organizer?['name'] as String? ?? 'Organizer';
+          showWalkDetailsSheet(
+            context,
+            parkId: playdate['location'] as String? ?? '',
+            parkName: playdate['location'] as String? ?? 'Walk Location',
+            scheduledFor: date,
+            organizerDogName: organizerName,
+            playdateId: playdateId,
+            latitude: (playdate['latitude'] as num?)?.toDouble(),
+            longitude: (playdate['longitude'] as num?)?.toDouble(),
+          );
         }
       },
       child: Container(
@@ -767,6 +902,26 @@ class FeedFeatureScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+            ] else if (isConfirmed && playdateId != null) ...[
+              SizedBox(
+                height: 28,
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _openWalkChat(
+                      context, playdateId, currentUserId, organizerId),
+                  icon: const Icon(Icons.chat_bubble_outline, size: 14),
+                  label: const Text('Chat', style: TextStyle(fontSize: 11)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4CAF50),
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.zero,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
             ] else ...[
               Text(
                 status ?? 'pending',
@@ -787,7 +942,6 @@ class FeedFeatureScreen extends ConsumerWidget {
       final currentUserId = SupabaseConfig.auth.currentUser?.id;
       if (currentUserId == null) return;
 
-      // First, find the playdate_request for this playdate where user is the invitee
       final requests = await SupabaseConfig.client
           .from('playdate_requests')
           .select('id')
@@ -816,16 +970,52 @@ class FeedFeatureScreen extends ConsumerWidget {
       );
 
       if (context.mounted && success) {
-        // Refresh the playdates list
         ref.invalidate(userPlaydatesProvider);
+        ref.invalidate(friendAlertsProvider);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text(accept ? '✅ Playdate accepted!' : '❌ Playdate declined'),
+            content: Text(accept ? '✅ Walk accepted!' : '❌ Walk declined'),
             backgroundColor: accept ? Colors.green : Colors.red,
           ),
         );
+
+        // Let the providers rebuild with fresh data before navigating away
+        await Future.delayed(Duration.zero);
+
+        if (accept) {
+          try {
+            final playdate = await SupabaseConfig.client
+                .from('playdates')
+                .select(
+                    'title, organizer_id, organizer:organizer_id(id, name, avatar_url)')
+                .eq('id', playdateId)
+                .maybeSingle();
+
+            if (playdate != null && context.mounted) {
+              final organizerId = playdate['organizer_id'] as String;
+              final organizer = playdate['organizer'] as Map<String, dynamic>?;
+
+              // Look up conversation using both user IDs as fallback
+              final conversation =
+                  await ConversationService.getPlaydateConversation(
+                playdateId,
+                participantUserIds: [organizerId, currentUserId],
+              );
+
+              if (conversation != null && context.mounted) {
+                ChatRoute(
+                  matchId: conversation['id'] as String,
+                  recipientId: organizer?['id'] as String? ?? organizerId,
+                  recipientName: playdate['title'] as String? ?? 'Walk Chat',
+                  recipientAvatarUrl: organizer?['avatar_url'] as String? ?? '',
+                ).push(context);
+              }
+            }
+          } catch (e) {
+            debugPrint('Could not navigate to walk chat: $e');
+          }
+        }
       }
     } catch (e) {
       if (context.mounted) {
@@ -833,6 +1023,44 @@ class FeedFeatureScreen extends ConsumerWidget {
           SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
+    }
+  }
+
+  Future<void> _openWalkChat(BuildContext context, String playdateId,
+      String? currentUserId, String? organizerId) async {
+    try {
+      final playdate = await SupabaseConfig.client
+          .from('playdates')
+          .select(
+              'title, organizer_id, organizer:organizer_id(id, name, avatar_url)')
+          .eq('id', playdateId)
+          .maybeSingle();
+
+      if (playdate == null || !context.mounted) return;
+
+      final orgId = playdate['organizer_id'] as String;
+      final organizer = playdate['organizer'] as Map<String, dynamic>?;
+      final recipientUserId = (currentUserId == orgId) ? '' : orgId;
+      final userIds = [
+        if (currentUserId != null) currentUserId,
+        orgId,
+      ];
+
+      final conversation = await ConversationService.getPlaydateConversation(
+        playdateId,
+        participantUserIds: userIds.length >= 2 ? userIds : null,
+      );
+
+      if (conversation != null && context.mounted) {
+        ChatRoute(
+          matchId: conversation['id'] as String,
+          recipientId: recipientUserId,
+          recipientName: playdate['title'] as String? ?? 'Walk Chat',
+          recipientAvatarUrl: organizer?['avatar_url'] as String? ?? '',
+        ).push(context);
+      }
+    } catch (e) {
+      debugPrint('Could not open walk chat: $e');
     }
   }
 
@@ -1688,7 +1916,7 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
               isFriend: false,
               onTap: () =>
                   DogDetailsRoute($extra: Dog.fromJson(dog)).push(context),
-              onBarkPressed: () async {
+              onWalkPressed: () async {
                 final currentUser = SupabaseConfig.auth.currentUser;
                 if (currentUser == null) return;
                 try {
@@ -1777,7 +2005,7 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
             isFriend: false,
             onTap: () =>
                 DogDetailsRoute($extra: Dog.fromJson(dog)).push(context),
-            onBarkPressed: () async {
+            onWalkPressed: () async {
               // Implement actual bark functionality
               final currentUser = SupabaseConfig.auth.currentUser;
               if (currentUser == null) {
@@ -1916,7 +2144,7 @@ class _HorizontalDogListState extends State<_HorizontalDogList> {
                     onTap: () {
                       DogDetailsRoute($extra: dog).push(context);
                     },
-                    onBarkPressed: () {
+                    onWalkPressed: () {
                       showModalBottomSheet(
                         context: context,
                         isScrollControlled: true,

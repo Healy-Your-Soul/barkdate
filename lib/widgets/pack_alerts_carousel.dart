@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:barkdate/models/friend_alert.dart';
 import 'package:barkdate/features/feed/presentation/providers/friend_activity_provider.dart';
+import 'package:barkdate/features/profile/presentation/providers/profile_provider.dart';
 import 'package:barkdate/widgets/pack_alert_card.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/design_system/app_spacing.dart';
@@ -15,7 +16,12 @@ import 'package:barkdate/widgets/walk_details_sheet.dart';
 /// Auto-advances every 5 seconds with page indicator dots.
 /// Hides completely when there are no alerts.
 class PackAlertsCarousel extends ConsumerStatefulWidget {
-  const PackAlertsCarousel({super.key});
+  /// Handler for the profile-completion slide's CTA. Receives the current
+  /// [ProfileCompletion] snapshot so the feed can route to the correct
+  /// missing-piece screen (owner edit or new-dog).
+  final void Function(ProfileCompletion completion)? onCompletionCta;
+
+  const PackAlertsCarousel({super.key, this.onCompletionCta});
 
   @override
   ConsumerState<PackAlertsCarousel> createState() => _PackAlertsCarouselState();
@@ -57,6 +63,17 @@ class _PackAlertsCarouselState extends ConsumerState<PackAlertsCarousel> {
   }
 
   void _handleCtaTap(BuildContext context, FriendAlert alert) {
+    if (alert.type == FriendAlertType.profileCompletion) {
+      // Delegate to the feed screen so it can push the right edit flow.
+      final completion = ref.read(profileCompletionProvider).maybeWhen(
+            data: (c) => c,
+            orElse: () => null,
+          );
+      if (completion != null) {
+        widget.onCompletionCta?.call(completion);
+      }
+      return;
+    }
     if (alert.type == FriendAlertType.walkTogether) {
       final metadata = alert.metadata ?? const <String, dynamic>{};
       final parkId = metadata['park_id'] as String?;
@@ -64,27 +81,24 @@ class _PackAlertsCarouselState extends ConsumerState<PackAlertsCarousel> {
       final scheduledForRaw = metadata['scheduled_for'] as String?;
       final organizerDogName = metadata['dog_name'] as String? ?? 'A friend';
       final checkInId = metadata['check_in_id'] as String?;
+      final playdateId = metadata['playdate_id'] as String?;
 
       final scheduledFor =
           scheduledForRaw != null ? DateTime.tryParse(scheduledForRaw) : null;
 
-      if (parkId != null &&
-          parkId.isNotEmpty &&
-          parkName != null &&
-          parkName.isNotEmpty &&
-          scheduledFor != null) {
+      if (scheduledFor != null && parkName != null && parkName.isNotEmpty) {
         showWalkDetailsSheet(
           context,
-          parkId: parkId,
+          parkId: parkId ?? parkName,
           parkName: parkName,
           scheduledFor: scheduledFor,
           organizerDogName: organizerDogName,
           checkInId: checkInId,
+          playdateId: playdateId,
         );
         return;
       }
 
-      // Fallback for own playdate-based walk cards without check-in metadata.
       const PlaydatesRoute().go(context);
       return;
     }
@@ -120,9 +134,23 @@ class _PackAlertsCarouselState extends ConsumerState<PackAlertsCarousel> {
   @override
   Widget build(BuildContext context) {
     final alertsAsync = ref.watch(friendAlertsProvider);
+    final completionAsync = ref.watch(profileCompletionProvider);
+    final completionAlert = completionAsync.maybeWhen(
+      data: (c) => FriendAlert.profileCompletion(
+        ownerComplete: c.ownerComplete,
+        dogComplete: c.dogComplete,
+      ),
+      orElse: () => null,
+    );
 
     return alertsAsync.when(
-      data: (alerts) {
+      data: (rawAlerts) {
+        // Prepend the profile-completion slide when it's present so it rides
+        // with the real pack activity (auto-advance, indicator dots, etc.).
+        final alerts = <FriendAlert>[
+          if (completionAlert != null) completionAlert,
+          ...rawAlerts,
+        ];
         if (alerts.isEmpty) {
           return const SizedBox.shrink();
         }
@@ -232,8 +260,38 @@ class _PackAlertsCarouselState extends ConsumerState<PackAlertsCarousel> {
           ],
         );
       },
-      loading: () => _buildShimmer(),
-      error: (_, __) => const SizedBox.shrink(),
+      loading: () {
+        // Real activity is still loading, but if we already know the
+        // profile's incomplete we can show just the completion slide rather
+        // than a shimmer — more useful, less jarring.
+        if (completionAlert != null) {
+          return _buildSingleCard(completionAlert);
+        }
+        return _buildShimmer();
+      },
+      error: (_, __) {
+        if (completionAlert != null) {
+          return _buildSingleCard(completionAlert);
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  /// Render a single PackAlertCard (no PageView / dots), used when real
+  /// alerts aren't available yet but we still want to show the
+  /// profile-completion slide.
+  Widget _buildSingleCard(FriendAlert alert) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: SizedBox(
+        height: 190,
+        child: PackAlertCard(
+          alert: alert,
+          onCardTapped: () => _handleCtaTap(context, alert),
+          onCtaTapped: () => _handleCtaTap(context, alert),
+        ),
+      ),
     );
   }
 

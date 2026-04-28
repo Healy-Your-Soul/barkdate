@@ -287,6 +287,10 @@ class BarkDateUserService {
     debugPrint('Adding dog for user ID: $userId');
     debugPrint('Dog data being saved: $dogData');
 
+    if (userId.trim().isEmpty) {
+      throw Exception('Cannot add dog: missing user ID');
+    }
+
     dogData['user_id'] = userId;
     dogData['created_at'] = DateTime.now().toIso8601String();
     dogData['updated_at'] = DateTime.now().toIso8601String();
@@ -302,6 +306,9 @@ class BarkDateUserService {
     debugPrint('Final dog data with user_id and is_active: $dogData');
 
     final result = await SupabaseService.insert('dogs', dogData);
+
+    // Invalidate cached dog list so newly added dogs appear immediately.
+    clearUserDogsCache(userId);
 
     debugPrint('Dog saved successfully: ${result.first}');
     debugPrint('=== END ADD DOG DEBUG ===');
@@ -405,6 +412,8 @@ class BarkDateUserService {
         updateData,
         filters: {'id': dogId}, // Update by dog ID, not user ID
       );
+      // Clear cached dog list so profile pages reflect edits immediately.
+      clearUserDogsCache(userId);
       debugPrint('✅ Database update completed successfully');
     } catch (e) {
       debugPrint('❌ Database update failed: $e');
@@ -549,6 +558,9 @@ class BarkDateMatchService {
       final dogs = List<Map<String, dynamic>>.from(
         (response).map((item) => Map<String, dynamic>.from(item as Map)),
       );
+
+      // Exclude user's own dogs from the results
+      dogs.removeWhere((d) => d['user_id'] == userId);
 
       debugPrint('✅ Nearby dogs fetched: ${dogs.length}');
       return dogs;
@@ -748,12 +760,19 @@ class BarkDateMessageService {
         .or('sender_id.eq.$userId,receiver_id.eq.$userId')
         .order('created_at', ascending: false);
 
-    // Group by match_id and return latest message for each conversation
+    // Group by match_id and return latest message for each conversation.
+    // Also count unread messages for this user per conversation.
     final conversations = <String, Map<String, dynamic>>{};
+    final unreadCounts = <String, int>{};
     for (final message in data) {
-      final matchId = message['match_id'];
+      final matchId = message['match_id'] as String;
       if (!conversations.containsKey(matchId)) {
         conversations[matchId] = message;
+        unreadCounts[matchId] = 0;
+      }
+      // Count unread messages where current user is the receiver
+      if (message['receiver_id'] == userId && message['is_read'] == false) {
+        unreadCounts[matchId] = (unreadCounts[matchId] ?? 0) + 1;
       }
     }
 
@@ -763,6 +782,11 @@ class BarkDateMessageService {
       final conv = conversationsList[i];
       final senderId = conv['sender_id'];
       final receiverId = conv['receiver_id'];
+
+      // Attach unread count
+      final matchId = conv['match_id'] as String;
+      conv['unread_count'] = unreadCounts[matchId] ?? 0;
+      conv['has_unread'] = (unreadCounts[matchId] ?? 0) > 0;
 
       // Get the other user's ID (not our user)
       final otherUserId = senderId == userId ? receiverId : senderId;
@@ -784,6 +808,13 @@ class BarkDateMessageService {
         // Ignore errors fetching dog data
       }
     }
+
+    // Sort: strictly by created_at (most recent first)
+    conversationsList.sort((a, b) {
+      final aTime = a['created_at'] as String? ?? '';
+      final bTime = b['created_at'] as String? ?? '';
+      return bTime.compareTo(aTime);
+    });
 
     return conversationsList;
   }
@@ -882,7 +913,9 @@ class BarkDatePlaydateService {
       filter += ',id.in.(${pendingPlaydateIds.join(',')})';
     }
 
-    // 3. Fetch playdates
+    // 3. Fetch playdates (only upcoming / not-yet-passed)
+    final now = DateTime.now().toIso8601String();
+
     return await SupabaseConfig.client
         .from('playdates')
         .select('''
@@ -900,13 +933,16 @@ class BarkDatePlaydateService {
           requests:playdate_requests(
             id,
             status,
+            requester_id,
+            invitee_id,
             invitee_dog:dogs!playdate_requests_invitee_dog_id_fkey(id, name, main_photo_url),
             requester_dog:dogs!playdate_requests_requester_dog_id_fkey(id, name, main_photo_url)
           )
         ''')
         .or(filter)
         .neq('status', 'cancelled')
-        .order('scheduled_at', ascending: false);
+        .gte('scheduled_at', now)
+        .order('scheduled_at', ascending: true);
   }
 
   /// Join playdate
