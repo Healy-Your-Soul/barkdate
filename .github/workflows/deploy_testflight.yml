@@ -34,6 +34,12 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Update CocoaPods Specs
+        run: |
+          cd ios
+          pod repo update
+          pod install --repo-update
+
       - name: Setup Ruby and Fastlane
         uses: ruby/setup-ruby@v1
         with:
