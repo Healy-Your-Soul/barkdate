@@ -11,7 +11,6 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/features/profile/presentation/providers/profile_provider.dart';
 import 'package:barkdate/features/feed/presentation/providers/feed_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:go_router/go_router.dart';
 import 'package:barkdate/widgets/send_walk_sheet.dart';
 import 'package:barkdate/services/selected_image.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
@@ -737,7 +736,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         final shouldLeave = await _confirmDiscardNewDog();
-        if (shouldLeave && mounted) {
+        if (shouldLeave && context.mounted) {
           Navigator.of(context).pop();
         }
       },
@@ -1112,9 +1111,10 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                                           if (mounted && !_ownerAvatarError) {
                                             WidgetsBinding.instance
                                                 .addPostFrameCallback((_) {
-                                              if (mounted)
+                                              if (mounted) {
                                                 setState(() =>
                                                     _ownerAvatarError = true);
+                                              }
                                             });
                                             debugPrint(
                                                 'Error loading owner avatar: $e');
@@ -1128,9 +1128,10 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                                   if (mounted && !_ownerAvatarError) {
                                     WidgetsBinding.instance
                                         .addPostFrameCallback((_) {
-                                      if (mounted)
+                                      if (mounted) {
                                         setState(
                                             () => _ownerAvatarError = true);
+                                      }
                                     });
                                   }
                                 },
