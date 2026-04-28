@@ -38,7 +38,7 @@ jobs:
         run: |
           cd ios
           pod repo update
-          pod install --repo-update
+          pod update
 
       - name: Setup Ruby and Fastlane
         uses: ruby/setup-ruby@v1
