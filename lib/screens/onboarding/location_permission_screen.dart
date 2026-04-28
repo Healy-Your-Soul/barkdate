@@ -90,7 +90,6 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

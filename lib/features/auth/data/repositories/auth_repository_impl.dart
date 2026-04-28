@@ -29,9 +29,10 @@ class AuthRepositoryImpl implements AuthRepository {
       email: email,
       password: password,
       data: data,
-      emailRedirectTo: emailRedirectTo ?? (kIsWeb
-          ? null  // web uses the Site URL default
-          : 'io.supabase.bark://login-callback/'),
+      emailRedirectTo: emailRedirectTo ??
+          (kIsWeb
+              ? null // web uses the Site URL default
+              : 'io.supabase.bark://login-callback/'),
     );
   }
 

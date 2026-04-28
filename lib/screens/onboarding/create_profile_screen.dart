@@ -1505,134 +1505,134 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
         }
       },
       child: Scaffold(
-      backgroundColor: Colors.white,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 260,
-            pinned: true,
-            backgroundColor: Colors.white,
-            elevation: 0,
-            scrolledUnderElevation: 1,
-            leading: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 4.0, vertical: 8.0),
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.white,
-                child: IconButton(
-                  iconSize: 20,
-                  icon: const Icon(Icons.arrow_back, color: Colors.black),
-                  onPressed: _onOwnerBackPressed,
-                  constraints:
-                      const BoxConstraints(minWidth: 36, minHeight: 36),
-                  padding: EdgeInsets.zero,
-                ),
-              ),
-            ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 4.0, vertical: 8.0),
+        backgroundColor: Colors.white,
+        body: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 260,
+              pinned: true,
+              backgroundColor: Colors.white,
+              elevation: 0,
+              scrolledUnderElevation: 1,
+              leading: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
                 child: CircleAvatar(
                   radius: 18,
                   backgroundColor: Colors.white,
                   child: IconButton(
                     iconSize: 20,
-                    icon: _isLoading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.check, color: Colors.black),
-                    tooltip: 'Save',
-                    onPressed: _isLoading ? null : _saveSingleEdit,
+                    icon: const Icon(Icons.arrow_back, color: Colors.black),
+                    onPressed: _onOwnerBackPressed,
                     constraints:
                         const BoxConstraints(minWidth: 36, minHeight: 36),
                     padding: EdgeInsets.zero,
                   ),
                 ),
               ),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: _buildOwnerAvatarHeader(),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                24,
-                24,
-                24,
-                24 + MediaQuery.of(context).viewInsets.bottom,
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 4.0, vertical: 8.0),
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.white,
+                    child: IconButton(
+                      iconSize: 20,
+                      icon: _isLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.check, color: Colors.black),
+                      tooltip: 'Save',
+                      onPressed: _isLoading ? null : _saveSingleEdit,
+                      constraints:
+                          const BoxConstraints(minWidth: 36, minHeight: 36),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
+              flexibleSpace: FlexibleSpaceBar(
+                background: _buildOwnerAvatarHeader(),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextFormField(
-                    controller: _ownerNameController,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: InputDecoration(
-                      labelText: 'Your Name*',
-                      hintText: 'John Doe',
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      filled: true,
-                      fillColor: colorScheme.surface,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _ownerBioController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: 'Bio (optional)',
-                      hintText: 'Tell other dog owners about yourself...',
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      filled: true,
-                      fillColor: colorScheme.surface,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Location row: autocomplete field + map picker button
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: LocationPickerField(
-                          controller: _ownerLocationController,
-                          hintText: widget.locationEnabled
-                              ? 'Auto-detected or search...'
-                              : 'Search your city...',
-                          onPlaceSelected: (place) {
-                            debugPrint(
-                                '📍 Location selected: ${place.structuredFormatting.mainText}');
-                            // Free-typed fallback clears any previous map pin;
-                            // we'll only persist lat/lng when the map picker
-                            // is used.
-                            setState(() {
-                              _ownerLatitude = null;
-                              _ownerLongitude = null;
-                            });
-                            _markOwnerDirty();
-                          },
-                        ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  24,
+                  24,
+                  24,
+                  24 + MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      controller: _ownerNameController,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(
+                        labelText: 'Your Name*',
+                        hintText: 'John Doe',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                        fillColor: colorScheme.surface,
                       ),
-                      const SizedBox(width: 8),
-                      _buildMapPickerButton(),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _buildConnectionStatusPicker(),
-                ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _ownerBioController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: 'Bio (optional)',
+                        hintText: 'Tell other dog owners about yourself...',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                        fillColor: colorScheme.surface,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Location row: autocomplete field + map picker button
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: LocationPickerField(
+                            controller: _ownerLocationController,
+                            hintText: widget.locationEnabled
+                                ? 'Auto-detected or search...'
+                                : 'Search your city...',
+                            onPlaceSelected: (place) {
+                              debugPrint(
+                                  '📍 Location selected: ${place.structuredFormatting.mainText}');
+                              // Free-typed fallback clears any previous map pin;
+                              // we'll only persist lat/lng when the map picker
+                              // is used.
+                              setState(() {
+                                _ownerLatitude = null;
+                                _ownerLongitude = null;
+                              });
+                              _markOwnerDirty();
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildMapPickerButton(),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildConnectionStatusPicker(),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -1702,8 +1702,7 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
           decoration: InputDecoration(
             labelText: 'Human Connection Status',
             helperText: 'Optional: Let others know your vibe',
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             filled: true,
             fillColor: colorScheme.surface,
             prefixIcon: selected.value == null
@@ -1773,13 +1772,11 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
                 child: Text(
                   opt.label,
                   style: TextStyle(
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
               ),
-              if (isSelected)
-                Icon(Icons.check, size: 18, color: opt.color),
+              if (isSelected) Icon(Icons.check, size: 18, color: opt.color),
             ],
           ),
         );
@@ -1815,8 +1812,7 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
     final result = await showDialog<_OwnerLeaveAction>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Unsaved changes'),
         content: const Text(
             'You have unsaved changes to your profile. Do you want to save them before leaving?'),
@@ -1894,8 +1890,7 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
                           color: colorScheme.primaryContainer,
                           image: hasPhoto
                               ? DecorationImage(
-                                  image:
-                                      MemoryImage(_ownerPhoto!.bytes),
+                                  image: MemoryImage(_ownerPhoto!.bytes),
                                   fit: BoxFit.cover,
                                 )
                               : null,
@@ -1910,8 +1905,7 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
                         child: hasPhoto
                             ? null
                             : Icon(Icons.person,
-                                size: 56,
-                                color: colorScheme.primary),
+                                size: 56, color: colorScheme.primary),
                       ),
                       Positioned(
                         bottom: 0,
@@ -1938,7 +1932,9 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  hasPhoto ? 'Tap to change photo' : 'Tap to add photo (optional)',
+                  hasPhoto
+                      ? 'Tap to change photo'
+                      : 'Tap to add photo (optional)',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurface.withValues(alpha: 0.6),
                         fontWeight: FontWeight.w500,
@@ -2199,8 +2195,7 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
         if (_ownerLatitude != null && _ownerLongitude != null) {
           ownerUpdate['latitude'] = _ownerLatitude;
           ownerUpdate['longitude'] = _ownerLongitude;
-          ownerUpdate['location_updated_at'] =
-              DateTime.now().toIso8601String();
+          ownerUpdate['location_updated_at'] = DateTime.now().toIso8601String();
         }
         await BarkDateUserService.updateUserProfile(userId, ownerUpdate);
         if (mounted) {

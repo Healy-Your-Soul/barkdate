@@ -112,7 +112,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   itemBuilder: (context, index) {
                     final page = _pages[index];
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 32, vertical: 24),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -136,8 +137,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           Text(
                             page.title,
                             style: AppTypography.h2(
-                              color:
-                                  Theme.of(context).colorScheme.onSurface,
+                              color: Theme.of(context).colorScheme.onSurface,
                               fontWeight: FontWeight.w500,
                             ),
                             textAlign: TextAlign.center,

@@ -91,7 +91,8 @@ class WelcomeRoute extends GoRouteData with $WelcomeRoute {
 }
 
 @TypedGoRoute<FastTrackOnboardingRoute>(path: '/fast-track-onboarding')
-class FastTrackOnboardingRoute extends GoRouteData with $FastTrackOnboardingRoute {
+class FastTrackOnboardingRoute extends GoRouteData
+    with $FastTrackOnboardingRoute {
   final String? userId;
   final String? userName;
 

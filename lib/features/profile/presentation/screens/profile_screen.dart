@@ -192,8 +192,7 @@ class ProfileScreen extends ConsumerWidget {
                                                       .copyWith(fontSize: 18),
                                                 ),
                                                 Text(
-                                                  profile[
-                                                          'relationship_status'] ??
+                                                  profile['relationship_status'] ??
                                                       'Human',
                                                   style:
                                                       AppTypography.bodySmall()

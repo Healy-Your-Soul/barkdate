@@ -116,10 +116,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
     // Any newly picked image counts as a change.
     if (_editPhotoSlots.any((s) => s.isPicked)) return true;
     // Otherwise compare ordered existing URLs against the displayed list.
-    final editUrls = _editPhotoSlots
-        .where((s) => s.isFilled)
-        .map((s) => s.url!)
-        .toList();
+    final editUrls =
+        _editPhotoSlots.where((s) => s.isFilled).map((s) => s.url!).toList();
     if (editUrls.length != _displayPhotos.length) return true;
     for (var i = 0; i < editUrls.length; i++) {
       if (editUrls[i] != _displayPhotos[i]) return true;
@@ -186,7 +184,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
 
   Future<void> _loadFriendshipStatus() async {
     final userId = SupabaseConfig.auth.currentUser?.id;
-    
+
     // Always load owner profile first (for both own dogs and others' dogs)
     try {
       final ownerProfile =
@@ -402,8 +400,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Delete $_displayName\'s profile?',
-            style: AppTypography.h3()),
+        title:
+            Text('Delete $_displayName\'s profile?', style: AppTypography.h3()),
         content: Text(
           'This will remove $_displayName from your pack. This action cannot be undone.',
           style: AppTypography.bodyMedium()
@@ -418,8 +416,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: Text('Delete',
-                style: AppTypography.bodyMedium()
-                    .copyWith(color: AppColors.error, fontWeight: FontWeight.w600)),
+                style: AppTypography.bodyMedium().copyWith(
+                    color: AppColors.error, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -501,8 +499,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
     final choice = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Discard new dog?'),
         content: const Text(
             'You have unsaved details for this new dog. Leave without adding it to your pack?'),
@@ -531,7 +528,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
 
     if (name.isEmpty || breed.isEmpty || age < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter valid name, breed, and age')),
+        const SnackBar(
+            content: Text('Please enter valid name, breed, and age')),
       );
       return;
     }
@@ -554,8 +552,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
         if (newImages.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content:
-                    Text('Please add at least one photo of your dog')),
+                content: Text('Please add at least one photo of your dog')),
           );
           setState(() => _isSavingEdit = false);
           return;
@@ -704,7 +701,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUserId = SupabaseConfig.auth.currentUser?.id;
-    final isOwnDog = currentUserId != null && currentUserId == widget.dog.ownerId;
+    final isOwnDog =
+        currentUserId != null && currentUserId == widget.dog.ownerId;
 
     final photos = _displayPhotos.isNotEmpty
         ? _displayPhotos
@@ -744,408 +742,344 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
         }
       },
       child: Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          Expanded(
-            child: CustomScrollView(
-              slivers: [
-                // 1. Sliver App Bar with Image Carousel
-                SliverAppBar(
-                  expandedHeight: 300,
-                  pinned: true,
-                  backgroundColor: Colors.white,
-                  leading: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
-                    child: CircleAvatar(
-                      radius: 18,
-                      backgroundColor: Colors.white,
-                      child: IconButton(
-                        iconSize: 20,
-                        icon: const Icon(Icons.arrow_back, color: Colors.black),
-                        onPressed: _onBackPressed,
-                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                        padding: EdgeInsets.zero,
+        backgroundColor: Colors.white,
+        body: Column(
+          children: [
+            Expanded(
+              child: CustomScrollView(
+                slivers: [
+                  // 1. Sliver App Bar with Image Carousel
+                  SliverAppBar(
+                    expandedHeight: 300,
+                    pinned: true,
+                    backgroundColor: Colors.white,
+                    leading: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4.0, vertical: 8.0),
+                      child: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Colors.white,
+                        child: IconButton(
+                          iconSize: 20,
+                          icon:
+                              const Icon(Icons.arrow_back, color: Colors.black),
+                          onPressed: _onBackPressed,
+                          constraints:
+                              const BoxConstraints(minWidth: 36, minHeight: 36),
+                          padding: EdgeInsets.zero,
+                        ),
                       ),
                     ),
-                  ),
-                  actions: [
-                    if (isOwnDog)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
-                        child: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: Colors.white,
-                          child: IconButton(
-                            key: ValueKey('edit_btn_$_isEditMode'),
-                            iconSize: 20,
-                            icon: Icon(
-                              widget.isNewDog
-                                  ? Icons.check
+                    actions: [
+                      if (isOwnDog)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4.0, vertical: 8.0),
+                          child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Colors.white,
+                            child: IconButton(
+                              key: ValueKey('edit_btn_$_isEditMode'),
+                              iconSize: 20,
+                              icon: Icon(
+                                widget.isNewDog
+                                    ? Icons.check
+                                    : (_isEditMode
+                                        ? (_hasUnsavedChanges
+                                            ? Icons.check
+                                            : Icons.close)
+                                        : Icons.edit_outlined),
+                                color: _hasUnsavedChanges
+                                    ? Colors.green
+                                    : Colors.black,
+                              ),
+                              tooltip: widget.isNewDog
+                                  ? 'Save new dog'
                                   : (_isEditMode
                                       ? (_hasUnsavedChanges
-                                          ? Icons.check
-                                          : Icons.close)
-                                      : Icons.edit_outlined),
-                              color: _hasUnsavedChanges
-                                  ? Colors.green
-                                  : Colors.black,
-                            ),
-                            tooltip: widget.isNewDog
-                                ? 'Save new dog'
-                                : (_isEditMode
-                                    ? (_hasUnsavedChanges
-                                        ? 'Save changes'
-                                        : 'Cancel editing')
-                                    : 'Edit dog profile'),
-                            onPressed: () {
-                              debugPrint('🔵 EDIT BUTTON TAPPED - _isEditMode=$_isEditMode isNewDog=${widget.isNewDog}');
-                              if (widget.isNewDog) {
-                                _saveInlineDogEdits();
-                                return;
-                              }
-                              if (_isEditMode) {
-                                if (_hasUnsavedChanges) {
+                                          ? 'Save changes'
+                                          : 'Cancel editing')
+                                      : 'Edit dog profile'),
+                              onPressed: () {
+                                debugPrint(
+                                    '🔵 EDIT BUTTON TAPPED - _isEditMode=$_isEditMode isNewDog=${widget.isNewDog}');
+                                if (widget.isNewDog) {
                                   _saveInlineDogEdits();
-                                } else {
-                                  _cancelEditMode();
+                                  return;
                                 }
-                              } else {
-                                _enterEditMode();
-                              }
-                            },
-                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                            padding: EdgeInsets.zero,
-                          ),
-                        ),
-                      ),
-                    // Share is only useful for existing dogs in view mode.
-                    if (!_isEditMode && !widget.isNewDog)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
-                        child: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: Colors.white,
-                          child: IconButton(
-                            iconSize: 20,
-                            icon: const Icon(Icons.share_outlined,
-                                color: Colors.black),
-                            onPressed: () {
-                              // TODO: Share
-                            },
-                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                            padding: EdgeInsets.zero,
-                          ),
-                        ),
-                      ),
-                    // Three-dots menu for own dog (Delete option). Hidden for
-                    // a brand-new dog — there's nothing to delete yet.
-                    if (isOwnDog && !_isEditMode && !widget.isNewDog)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
-                        child: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: Colors.white,
-                          child: PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert,
-                                color: Colors.black, size: 20),
-                            padding: EdgeInsets.zero,
-                            position: PopupMenuPosition.under,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 8,
-                            surfaceTintColor: Colors.white,
-                            onSelected: (value) async {
-                              if (value == 'delete') {
-                                await _showDeleteConfirmation();
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.delete_outline,
-                                        size: 20,
-                                        color: AppColors.error),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'Delete profile',
-                                      style: AppTypography.bodyMedium()
-                                          .copyWith(color: AppColors.error),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    // Removed Heart icon as per user request
-                  ],
-                  flexibleSpace: FlexibleSpaceBar(
-                    background: _isEditMode
-                        ? _buildPhotoEditor()
-                        : Stack(
-                            children: [
-                              PageView.builder(
-                                controller: _pageController,
-                                onPageChanged: (index) => setState(
-                                    () => _currentPhotoIndex = index),
-                                itemCount: photos.length,
-                                itemBuilder: (context, index) {
-                                  return Image.network(
-                                    photos[index],
-                                    fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) {
-                                      return Container(
-                                        color: Colors.grey[100],
-                                        child: Center(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(Icons.pets,
-                                                  size: 64,
-                                                  color: Colors.grey[300]),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                _displayName,
-                                                style: AppTypography.h3()
-                                                    .copyWith(
-                                                        color:
-                                                            Colors.grey[400]),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                              Positioned(
-                                bottom: 16,
-                                right: 16,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.7),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    '${_currentPhotoIndex + 1} / ${photos.length}',
-                                    style: const TextStyle(
-                                        color: Colors.white, fontSize: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-
-                // 2. Content
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Title Section
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (_isEditMode) ...[
-                                    TextField(
-                                      controller: _editNameController,
-                                      textCapitalization:
-                                          TextCapitalization.words,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Dog name',
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildBreedAutocomplete(),
-                                    const SizedBox(height: 8),
-                                    // Age stepper (no keyboard)
-                                    Row(
-                                      children: [
-                                        Text('Age',
-                                            style: AppTypography.bodyMedium()
-                                                .copyWith(
-                                                    color: Colors.grey[600])),
-                                        const SizedBox(width: 16),
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            border: Border.all(
-                                                color: Colors.grey[300]!),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              IconButton(
-                                                icon: const Icon(Icons.remove,
-                                                    size: 20),
-                                                onPressed: _editAge > 0
-                                                    ? () => setState(
-                                                        () => _editAge--)
-                                                    : null,
-                                                splashRadius: 20,
-                                                constraints:
-                                                    const BoxConstraints(
-                                                        minWidth: 40,
-                                                        minHeight: 40),
-                                              ),
-                                              Container(
-                                                constraints:
-                                                    const BoxConstraints(
-                                                        minWidth: 48),
-                                                alignment: Alignment.center,
-                                                child: Text(
-                                                  '$_editAge yrs',
-                                                  style: AppTypography.h3()
-                                                      .copyWith(fontSize: 16),
-                                                ),
-                                              ),
-                                              IconButton(
-                                                icon: const Icon(Icons.add,
-                                                    size: 20),
-                                                onPressed: _editAge < 21
-                                                    ? () => setState(
-                                                        () => _editAge++)
-                                                    : null,
-                                                splashRadius: 20,
-                                                constraints:
-                                                    const BoxConstraints(
-                                                        minWidth: 40,
-                                                        minHeight: 40),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ] else ...[
-                                    Text(
-                                      _displayName,
-                                      style: AppTypography.h1()
-                                          .copyWith(fontSize: 32),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '$_displayBreed • $_displayAge years old',
-                                      style: AppTypography.h3().copyWith(
-                                          fontWeight: FontWeight.normal),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            // Distance badge
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer
-                                    .withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.location_on,
-                                      size: 14,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${widget.dog.distanceKm.toStringAsFixed(1)} km',
-                                    style: AppTypography.labelSmall().copyWith(
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const Divider(height: 48),
-
-                        // Human Section
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor: Colors.grey[200],
-                              // Use CachedNetworkImageProvider for better error handling
-                              backgroundImage: (!_ownerAvatarError &&
-                                      ownerAvatarUrl != null &&
-                                      ownerAvatarUrl.toString().isNotEmpty)
-                                  ? CachedNetworkImageProvider(
-                                      ownerAvatarUrl,
-                                      errorListener: (e) {
-                                        if (mounted && !_ownerAvatarError) {
-                                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                                            if (mounted) setState(() => _ownerAvatarError = true);
-                                          });
-                                          debugPrint('Error loading owner avatar: $e');
-                                        }
-                                      },
-                                    )
-                                  : NetworkImage(
-                                      'https://i.pravatar.cc/150?u=${widget.dog.ownerId}'),
-                              onBackgroundImageError: (exception, stackTrace) {
-                                if (mounted && !_ownerAvatarError) {
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                                    if (mounted) setState(() => _ownerAvatarError = true);
-                                  });
+                                if (_isEditMode) {
+                                  if (_hasUnsavedChanges) {
+                                    _saveInlineDogEdits();
+                                  } else {
+                                    _cancelEditMode();
+                                  }
+                                } else {
+                                  _enterEditMode();
                                 }
                               },
+                              constraints: const BoxConstraints(
+                                  minWidth: 36, minHeight: 36),
+                              padding: EdgeInsets.zero,
                             ),
-                            const SizedBox(width: 16),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                        ),
+                      // Share is only useful for existing dogs in view mode.
+                      if (!_isEditMode && !widget.isNewDog)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4.0, vertical: 8.0),
+                          child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Colors.white,
+                            child: IconButton(
+                              iconSize: 20,
+                              icon: const Icon(Icons.share_outlined,
+                                  color: Colors.black),
+                              onPressed: () {
+                                // TODO: Share
+                              },
+                              constraints: const BoxConstraints(
+                                  minWidth: 36, minHeight: 36),
+                              padding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ),
+                      // Three-dots menu for own dog (Delete option). Hidden for
+                      // a brand-new dog — there's nothing to delete yet.
+                      if (isOwnDog && !_isEditMode && !widget.isNewDog)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4.0, vertical: 8.0),
+                          child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Colors.white,
+                            child: PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_vert,
+                                  color: Colors.black, size: 20),
+                              padding: EdgeInsets.zero,
+                              position: PopupMenuPosition.under,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 8,
+                              surfaceTintColor: Colors.white,
+                              onSelected: (value) async {
+                                if (value == 'delete') {
+                                  await _showDeleteConfirmation();
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete_outline,
+                                          size: 20, color: AppColors.error),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'Delete profile',
+                                        style: AppTypography.bodyMedium()
+                                            .copyWith(color: AppColors.error),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      // Removed Heart icon as per user request
+                    ],
+                    flexibleSpace: FlexibleSpaceBar(
+                      background: _isEditMode
+                          ? _buildPhotoEditor()
+                          : Stack(
                               children: [
-                                Text('My human $ownerName',
-                                    style: AppTypography.h3()
-                                        .copyWith(fontSize: 16)),
-                                if (_ownerProfile != null &&
-                                    _ownerProfile!['relationship_status'] !=
-                                        null)
-                                  Container(
-                                    margin: const EdgeInsets.only(top: 4),
+                                PageView.builder(
+                                  controller: _pageController,
+                                  onPageChanged: (index) => setState(
+                                      () => _currentPhotoIndex = index),
+                                  itemCount: photos.length,
+                                  itemBuilder: (context, index) {
+                                    return Image.network(
+                                      photos[index],
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        return Container(
+                                          color: Colors.grey[100],
+                                          child: Center(
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.pets,
+                                                    size: 64,
+                                                    color: Colors.grey[300]),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  _displayName,
+                                                  style: AppTypography.h3()
+                                                      .copyWith(
+                                                          color:
+                                                              Colors.grey[400]),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                                Positioned(
+                                  bottom: 16,
+                                  right: 16,
+                                  child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 2),
+                                        horizontal: 12, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary
-                                          .withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary
-                                              .withValues(alpha: 0.2)),
+                                      color:
+                                          Colors.black.withValues(alpha: 0.7),
+                                      borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
-                                      _ownerProfile!['relationship_status'],
+                                      '${_currentPhotoIndex + 1} / ${photos.length}',
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 12),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+
+                  // 2. Content
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Title Section
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (_isEditMode) ...[
+                                      TextField(
+                                        controller: _editNameController,
+                                        textCapitalization:
+                                            TextCapitalization.words,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Dog name',
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _buildBreedAutocomplete(),
+                                      const SizedBox(height: 8),
+                                      // Age stepper (no keyboard)
+                                      Row(
+                                        children: [
+                                          Text('Age',
+                                              style: AppTypography.bodyMedium()
+                                                  .copyWith(
+                                                      color: Colors.grey[600])),
+                                          const SizedBox(width: 16),
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                  color: Colors.grey[300]!),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                IconButton(
+                                                  icon: const Icon(Icons.remove,
+                                                      size: 20),
+                                                  onPressed: _editAge > 0
+                                                      ? () => setState(
+                                                          () => _editAge--)
+                                                      : null,
+                                                  splashRadius: 20,
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                          minWidth: 40,
+                                                          minHeight: 40),
+                                                ),
+                                                Container(
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                          minWidth: 48),
+                                                  alignment: Alignment.center,
+                                                  child: Text(
+                                                    '$_editAge yrs',
+                                                    style: AppTypography.h3()
+                                                        .copyWith(fontSize: 16),
+                                                  ),
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(Icons.add,
+                                                      size: 20),
+                                                  onPressed: _editAge < 21
+                                                      ? () => setState(
+                                                          () => _editAge++)
+                                                      : null,
+                                                  splashRadius: 20,
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                          minWidth: 40,
+                                                          minHeight: 40),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ] else ...[
+                                      Text(
+                                        _displayName,
+                                        style: AppTypography.h1()
+                                            .copyWith(fontSize: 32),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '$_displayBreed • $_displayAge years old',
+                                        style: AppTypography.h3().copyWith(
+                                            fontWeight: FontWeight.normal),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              // Distance badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primaryContainer
+                                      .withValues(alpha: 0.3),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.location_on,
+                                        size: 14,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${widget.dog.distanceKm.toStringAsFixed(1)} km',
                                       style:
                                           AppTypography.labelSmall().copyWith(
                                         color: Theme.of(context)
@@ -1154,256 +1088,342 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const Divider(height: 48),
+
+                          // Human Section
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: Colors.grey[200],
+                                // Use CachedNetworkImageProvider for better error handling
+                                backgroundImage: (!_ownerAvatarError &&
+                                        ownerAvatarUrl != null &&
+                                        ownerAvatarUrl.toString().isNotEmpty)
+                                    ? CachedNetworkImageProvider(
+                                        ownerAvatarUrl,
+                                        errorListener: (e) {
+                                          if (mounted && !_ownerAvatarError) {
+                                            WidgetsBinding.instance
+                                                .addPostFrameCallback((_) {
+                                              if (mounted)
+                                                setState(() =>
+                                                    _ownerAvatarError = true);
+                                            });
+                                            debugPrint(
+                                                'Error loading owner avatar: $e');
+                                          }
+                                        },
+                                      )
+                                    : NetworkImage(
+                                        'https://i.pravatar.cc/150?u=${widget.dog.ownerId}'),
+                                onBackgroundImageError:
+                                    (exception, stackTrace) {
+                                  if (mounted && !_ownerAvatarError) {
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                      if (mounted)
+                                        setState(
+                                            () => _ownerAvatarError = true);
+                                    });
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 16),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('My human $ownerName',
+                                      style: AppTypography.h3()
+                                          .copyWith(fontSize: 16)),
+                                  if (_ownerProfile != null &&
+                                      _ownerProfile!['relationship_status'] !=
+                                          null)
+                                    Container(
+                                      margin: const EdgeInsets.only(top: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withValues(alpha: 0.2)),
+                                      ),
+                                      child: Text(
+                                        _ownerProfile!['relationship_status'],
+                                        style:
+                                            AppTypography.labelSmall().copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  Text('$_displayAge years walking together',
+                                      style: AppTypography.bodySmall()
+                                          .copyWith(color: Colors.grey[600])),
+                                ],
+                              ),
+                            ],
+                          ),
+
+                          const Divider(height: 48),
+
+                          // About Section
+                          Text('About $_displayName',
+                              style: AppTypography.h2()),
+                          const SizedBox(height: 16),
+                          if (_isEditMode)
+                            TextField(
+                              controller: _editBioController,
+                              maxLines: 3,
+                              decoration: const InputDecoration(
+                                hintText: 'Write a short bio',
+                              ),
+                            )
+                          else if (_displayBio.isNotEmpty)
+                            Text(
+                              _displayBio,
+                              style: AppTypography.bodyLarge()
+                                  .copyWith(color: Colors.grey[800]),
+                            )
+                          else if (isOwnDog)
+                            // Crimson ! badge for missing bio — only shown to
+                            // the dog's owner so other users don't see a
+                            // "missing field" alert about someone else's dog.
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDC143C)
+                                    .withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: const Color(0xFFDC143C)
+                                        .withValues(alpha: 0.2)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.error_outline,
+                                      size: 18, color: Color(0xFFDC143C)),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Add a bio to help others find $_displayName',
+                                      style:
+                                          AppTypography.bodyMedium().copyWith(
+                                        color: const Color(0xFFDC143C),
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
                                   ),
-                                Text('$_displayAge years walking together',
-                                    style: AppTypography.bodySmall()
-                                        .copyWith(color: Colors.grey[600])),
+                                ],
+                              ),
+                            )
+                          else
+                            const SizedBox.shrink(),
+
+                          const Divider(height: 48),
+
+                          // Details Grid
+                          Text('Details', style: AppTypography.h2()),
+                          const SizedBox(height: 16),
+
+                          // Size — editable in-place
+                          if (_isEditMode)
+                            _buildEditableDetailRow(
+                              Icons.straighten,
+                              'Size',
+                              Wrap(
+                                spacing: 8,
+                                children: ['Small', 'Medium', 'Large']
+                                    .map(
+                                      (size) => ChoiceChip(
+                                        label: Text(size),
+                                        selected: _editSize == size,
+                                        onSelected: (_) =>
+                                            setState(() => _editSize = size),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            )
+                          else
+                            _buildDetailRow(
+                                Icons.straighten, 'Size', _displaySize),
+
+                          // Gender — editable in-place
+                          if (_isEditMode)
+                            _buildEditableDetailRow(
+                              Icons.transgender,
+                              'Gender',
+                              Wrap(
+                                spacing: 8,
+                                children: ['Male', 'Female']
+                                    .map(
+                                      (gender) => ChoiceChip(
+                                        label: Text(gender),
+                                        selected: _editGender == gender,
+                                        onSelected: (_) => setState(
+                                            () => _editGender = gender),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            )
+                          else
+                            _buildDetailRow(
+                                Icons.transgender, 'Gender', _displayGender),
+
+                          // Save/Cancel buttons (after all editable fields)
+                          if (_isEditMode) ...[
+                            const SizedBox(height: 24),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: _cancelEditMode,
+                                    child: const Text('Cancel'),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: _isSavingEdit
+                                        ? null
+                                        : _saveInlineDogEdits,
+                                    child: _isSavingEdit
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : const Text('Save'),
+                                  ),
+                                ),
                               ],
                             ),
                           ],
-                        ),
 
-                        const Divider(height: 48),
+                          const SizedBox(height: 32),
 
-                        // About Section
-                        Text('About $_displayName',
-                            style: AppTypography.h2()),
-                        const SizedBox(height: 16),
-                        if (_isEditMode)
-                          TextField(
-                            controller: _editBioController,
-                            maxLines: 3,
-                            decoration: const InputDecoration(
-                              hintText: 'Write a short bio',
-                            ),
-                          )
-                        else if (_displayBio.isNotEmpty)
-                          Text(
-                            _displayBio,
-                            style: AppTypography.bodyLarge()
-                                .copyWith(color: Colors.grey[800]),
-                          )
-                        else if (isOwnDog)
-                          // Crimson ! badge for missing bio — only shown to
-                          // the dog's owner so other users don't see a
-                          // "missing field" alert about someone else's dog.
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFDC143C)
-                                  .withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: const Color(0xFFDC143C)
-                                      .withValues(alpha: 0.2)),
-                            ),
-                            child: Row(
+                          // Action Buttons (only show for other people's dogs)
+                          if (_myDogId != null &&
+                              _myDogId != widget.dog.id) ...[
+                            Row(
                               children: [
-                                const Icon(Icons.error_outline,
-                                    size: 18, color: Color(0xFFDC143C)),
-                                const SizedBox(width: 8),
+                                // Add to Pack Button (Primary)
                                 Expanded(
-                                  child: Text(
-                                    'Add a bio to help others find $_displayName',
-                                    style: AppTypography.bodyMedium().copyWith(
-                                      color: const Color(0xFFDC143C),
-                                      fontStyle: FontStyle.italic,
+                                  child: ElevatedButton.icon(
+                                    onPressed: _isLoading ? null : _onAddToPack,
+                                    icon: _isLoading
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2),
+                                          )
+                                        : Icon(
+                                            _isBarked
+                                                ? Icons.check
+                                                : Icons.group_add,
+                                            color:
+                                                _isBarked ? Colors.white : null,
+                                          ),
+                                    label: Text(_getAddButtonText()),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _isBarked
+                                          ? (_friendshipStatus == 'accepted'
+                                              ? Colors.green
+                                              : Colors.grey)
+                                          : null,
+                                      foregroundColor:
+                                          _isBarked ? Colors.white : null,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Message Button
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: _onMessage,
+                                    icon: const Icon(Icons.chat_bubble_outline),
+                                    label: const Text('Message'),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                          )
-                        else
-                          const SizedBox.shrink(),
+                            const SizedBox(height: 12),
 
-                        const Divider(height: 48),
-
-                        // Details Grid
-                        Text('Details', style: AppTypography.h2()),
-                        const SizedBox(height: 16),
-
-                        // Size — editable in-place
-                        if (_isEditMode)
-                          _buildEditableDetailRow(
-                            Icons.straighten,
-                            'Size',
-                            Wrap(
-                              spacing: 8,
-                              children: ['Small', 'Medium', 'Large']
-                                  .map(
-                                    (size) => ChoiceChip(
-                                      label: Text(size),
-                                      selected: _editSize == size,
-                                      onSelected: (_) =>
-                                          setState(() => _editSize = size),
+                            // Secondary Row: Bark + Playdate
+                            Row(
+                              children: [
+                                // Bark Poke Button
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: _onBarkPoke,
+                                    icon: const Icon(Icons.pets,
+                                        color: Colors.orange),
+                                    label: const Text('Walk?'),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14),
+                                      side: BorderSide(
+                                          color: Colors.orange
+                                              .withValues(alpha: 0.5)),
                                     ),
-                                  )
-                                  .toList(),
-                            ),
-                          )
-                        else
-                          _buildDetailRow(
-                              Icons.straighten, 'Size', _displaySize),
-
-                        // Gender — editable in-place
-                        if (_isEditMode)
-                          _buildEditableDetailRow(
-                            Icons.transgender,
-                            'Gender',
-                            Wrap(
-                              spacing: 8,
-                              children: ['Male', 'Female']
-                                  .map(
-                                    (gender) => ChoiceChip(
-                                      label: Text(gender),
-                                      selected: _editGender == gender,
-                                      onSelected: (_) => setState(
-                                          () => _editGender = gender),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Playdate Button
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: _onSuggestPlaydate,
+                                    icon: const Icon(Icons.calendar_today),
+                                    label: const Text('Playdate'),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14),
                                     ),
-                                  )
-                                  .toList(),
+                                  ),
+                                ),
+                              ],
                             ),
-                          )
-                        else
-                          _buildDetailRow(
-                              Icons.transgender, 'Gender', _displayGender),
+                          ],
 
-                        // Save/Cancel buttons (after all editable fields)
-                        if (_isEditMode) ...[
-                          const SizedBox(height: 24),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: _cancelEditMode,
-                                  child: const Text('Cancel'),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed:
-                                      _isSavingEdit ? null : _saveInlineDogEdits,
-                                  child: _isSavingEdit
-                                      ? const SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white,
-                                          ),
-                                        )
-                                      : const Text('Save'),
-                                ),
-                              ),
-                            ],
-                          ),
+                          const SizedBox(height: 32),
                         ],
-
-                        const SizedBox(height: 32),
-
-                        // Action Buttons (only show for other people's dogs)
-                        if (_myDogId != null && _myDogId != widget.dog.id) ...[
-                          Row(
-                            children: [
-                              // Add to Pack Button (Primary)
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: _isLoading ? null : _onAddToPack,
-                                  icon: _isLoading
-                                      ? const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2),
-                                        )
-                                      : Icon(
-                                          _isBarked
-                                              ? Icons.check
-                                              : Icons.group_add,
-                                          color:
-                                              _isBarked ? Colors.white : null,
-                                        ),
-                                  label: Text(_getAddButtonText()),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _isBarked
-                                        ? (_friendshipStatus == 'accepted'
-                                            ? Colors.green
-                                            : Colors.grey)
-                                        : null,
-                                    foregroundColor:
-                                        _isBarked ? Colors.white : null,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // Message Button
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: _onMessage,
-                                  icon: const Icon(Icons.chat_bubble_outline),
-                                  label: const Text('Message'),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Secondary Row: Bark + Playdate
-                          Row(
-                            children: [
-                              // Bark Poke Button
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: _onBarkPoke,
-                                  icon: const Icon(Icons.pets,
-                                      color: Colors.orange),
-                                  label: const Text('Walk?'),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                    side: BorderSide(
-                                        color: Colors.orange
-                                            .withValues(alpha: 0.5)),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // Playdate Button
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: _onSuggestPlaydate,
-                                  icon: const Icon(Icons.calendar_today),
-                                  label: const Text('Playdate'),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-
-                        const SizedBox(height: 32),
-                      ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -1540,8 +1560,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
               errorBuilder: (_, __, ___) => Container(
                 color: Colors.grey[100],
                 child: Center(
-                    child: Icon(Icons.pets,
-                        size: 64, color: Colors.grey[300])),
+                    child: Icon(Icons.pets, size: 64, color: Colors.grey[300])),
               ),
             ),
           // Edit affordance when filled (keeps the large slot tappable)
@@ -1550,8 +1569,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
               bottom: 16,
               left: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(20),
@@ -1606,8 +1625,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
     if (slot.isEmpty) {
       return Container(
         color: Colors.grey[200],
-        child: Icon(Icons.add_a_photo_outlined,
-            color: Colors.grey[600], size: 22),
+        child:
+            Icon(Icons.add_a_photo_outlined, color: Colors.grey[600], size: 22),
       );
     }
     if (slot.isPicked) {
@@ -1618,8 +1637,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => Container(
         color: Colors.grey[200],
-        child: Icon(Icons.broken_image,
-            size: 20, color: Colors.grey[500]),
+        child: Icon(Icons.broken_image, size: 20, color: Colors.grey[500]),
       ),
     );
   }
@@ -1669,8 +1687,7 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
             ),
             ListTile(
               leading: Icon(Icons.delete_outline, color: AppColors.error),
-              title: Text('Remove',
-                  style: TextStyle(color: AppColors.error)),
+              title: Text('Remove', style: TextStyle(color: AppColors.error)),
               onTap: () => Navigator.pop(ctx, 'remove'),
             ),
             const SizedBox(height: 8),

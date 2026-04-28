@@ -643,9 +643,8 @@ class _FastTrackOnboardingScreenState extends State<FastTrackOnboardingScreen> {
         child: ElevatedButton(
           onPressed: enabled ? onPressed : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: enabled
-                ? const Color(0xFF4CAF50)
-                : const Color(0xFFECECEC),
+            backgroundColor:
+                enabled ? const Color(0xFF4CAF50) : const Color(0xFFECECEC),
             foregroundColor: enabled ? Colors.white : const Color(0xFFB6B6B6),
             disabledBackgroundColor: const Color(0xFFECECEC),
             disabledForegroundColor: const Color(0xFFB6B6B6),
@@ -654,21 +653,21 @@ class _FastTrackOnboardingScreenState extends State<FastTrackOnboardingScreen> {
               borderRadius: BorderRadius.circular(14),
             ),
           ),
-        child: isLoading
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: Colors.white,
+          child: isLoading
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  label,
+                  style: AppTypography.button(
+                    color: enabled ? Colors.white : const Color(0xFFB6B6B6),
+                  ),
                 ),
-              )
-            : Text(
-                label,
-                style: AppTypography.button(
-                  color: enabled ? Colors.white : const Color(0xFFB6B6B6),
-                ),
-              ),
         ),
       ),
     );

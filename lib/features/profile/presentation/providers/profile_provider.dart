@@ -61,8 +61,7 @@ final profileCompletionProvider =
   final profile = await ref.watch(userProfileProvider.future);
   final dogs = await ref.watch(userDogsProvider.future);
 
-  bool nonEmpty(dynamic v) =>
-      v != null && v.toString().trim().isNotEmpty;
+  bool nonEmpty(dynamic v) => v != null && v.toString().trim().isNotEmpty;
 
   // Owner completeness is intentionally lenient: only the DB-required `name`
   // gates the red card. Avatar + bio are still nice-to-have but they no
