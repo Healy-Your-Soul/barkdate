@@ -504,8 +504,6 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
     }
   }
 
-
-
   void _previousStep() {
     if (_currentStep > 0) {
       _pageController.previousPage(
