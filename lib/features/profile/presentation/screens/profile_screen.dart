@@ -8,10 +8,8 @@ import 'package:barkdate/core/config/app_constants.dart';
 
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
-import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/screens/help_screen.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
-import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 import 'package:barkdate/features/profile/presentation/screens/dog_details_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
