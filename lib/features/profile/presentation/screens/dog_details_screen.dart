@@ -1252,7 +1252,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                               FlatToggle(
                                 options: const ['Small', 'Medium', 'Large'],
                                 selected: _editSize,
-                                onChanged: (val) => setState(() => _editSize = val),
+                                onChanged: (val) =>
+                                    setState(() => _editSize = val),
                               ),
                             )
                           else
@@ -1269,7 +1270,8 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                                 labels: const ['Boy', 'Girl'],
                                 icons: const [Icons.male, Icons.female],
                                 selected: _editGender,
-                                onChanged: (val) => setState(() => _editGender = val),
+                                onChanged: (val) =>
+                                    setState(() => _editGender = val),
                               ),
                             )
                           else

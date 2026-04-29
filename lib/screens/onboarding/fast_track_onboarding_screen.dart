@@ -552,7 +552,6 @@ class _FastTrackOnboardingScreenState extends State<FastTrackOnboardingScreen> {
     );
   }
 
-
   Future<void> _pickPhoto() async {
     final image = await context.showImagePicker();
     if (image != null) setState(() => _photo = image);

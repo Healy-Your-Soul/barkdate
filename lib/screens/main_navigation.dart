@@ -221,8 +221,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                       width: 24,
                       height: 24,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Symbols.person, weight: 600, fill: 1, size: 24),
+                      errorBuilder: (_, __, ___) => const Icon(Symbols.person,
+                          weight: 600, fill: 1, size: 24),
                     ),
                   )
                 : const Icon(Symbols.person, weight: 600, fill: 1);
