@@ -309,7 +309,14 @@ class FirebaseMessagingService {
           } catch (_) {}
         }
 
-        final payload = <String, dynamic>{...metadata, ...data};
+        final payload = <String, dynamic>{
+          ...metadata,
+          ...data,
+          // Sprint 1: pass the local notification id so the funnel can mark
+          // as read. The DB row may not exist on this device yet for FCM
+          // foreground, so the funnel falls back to related_id if missing.
+          'notification_id': notification.id,
+        };
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final c = rootNavigatorKey.currentContext;
           if (c != null) {

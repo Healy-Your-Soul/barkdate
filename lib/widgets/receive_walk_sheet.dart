@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:barkdate/supabase/bark_playdate_services.dart';
+import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/conversation_service.dart';
@@ -609,11 +610,27 @@ class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
   }
 }
 
-// Global helper to show the sheet directly given a notification JSON payload
-void showReceiveWalkSheetFromPayload(
-    BuildContext context, Map<String, dynamic> data) {
+// Global helper to show the sheet directly given a notification JSON payload.
+// Used by the bell-list tap path. The bell-list call site already marks the
+// notification as read at the row level — this defensive mark-read is
+// belt-and-suspenders, idempotent, and keeps the contract consistent across
+// every entry point.
+Future<void> showReceiveWalkSheetFromPayload(
+    BuildContext context, Map<String, dynamic> data) async {
   final rid = data['request_id'] as String?;
   if (rid == null || rid.isEmpty) return;
+
+  // Sprint 1: defensive mark-as-read by request_id (related_id).
+  final uid = SupabaseConfig.auth.currentUser?.id;
+  if (uid != null) {
+    await NotificationService.markAsReadByRelatedId(
+      userId: uid,
+      relatedId: rid,
+      type: 'playdate_request',
+    );
+  }
+
+  if (!context.mounted) return;
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -703,6 +720,31 @@ Future<void> openReceiveWalkSheetFromInvitePayload(
   if (!context.mounted) return;
   _walkInviteSheetDedupeKey = resolvedRequestId;
   _walkInviteSheetDedupeAt = DateTime.now();
+
+  // Sprint 1: mark the source notification(s) as read at the funnel entry so
+  // this sheet never auto-pops twice for the same invite. We try the most
+  // specific identifier first (notification_id from payload), then fall back
+  // to related_id matches (request_id and playdate_id) for FCM-tap-from-bg
+  // paths that don't carry the local notification id.
+  final notifId = data['notification_id'] as String?;
+  if (notifId != null && notifId.isNotEmpty) {
+    await NotificationService.markAsRead(notifId);
+  } else {
+    await NotificationService.markAsReadByRelatedId(
+      userId: uid,
+      relatedId: resolvedRequestId,
+      type: 'playdate_request',
+    );
+    if (playdateId != null && playdateId.isNotEmpty) {
+      await NotificationService.markAsReadByRelatedId(
+        userId: uid,
+        relatedId: playdateId,
+        type: 'playdate_request',
+      );
+    }
+  }
+
+  if (!context.mounted) return;
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
