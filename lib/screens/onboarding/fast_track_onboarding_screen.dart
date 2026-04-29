@@ -7,6 +7,7 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/screens/onboarding/location_permission_screen.dart';
+import 'package:barkdate/widgets/flat_toggle.dart';
 
 class FastTrackOnboardingScreen extends StatefulWidget {
   final String? userId;
@@ -496,8 +497,8 @@ class _FastTrackOnboardingScreenState extends State<FastTrackOnboardingScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _buildFlatToggle(
-            options: ['Small', 'Medium', 'Large'],
+          FlatToggle(
+            options: const ['Small', 'Medium', 'Large'],
             selected: _dogSize,
             onChanged: (val) => setState(() => _dogSize = val),
           ),
@@ -512,10 +513,10 @@ class _FastTrackOnboardingScreenState extends State<FastTrackOnboardingScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _buildFlatToggle(
-            options: ['Male', 'Female'],
-            labels: ['Boy', 'Girl'],
-            icons: [Icons.male, Icons.female],
+          FlatToggle(
+            options: const ['Male', 'Female'],
+            labels: const ['Boy', 'Girl'],
+            icons: const [Icons.male, Icons.female],
             selected: _dogGender,
             onChanged: (val) => setState(() => _dogGender = val),
           ),
@@ -551,77 +552,6 @@ class _FastTrackOnboardingScreenState extends State<FastTrackOnboardingScreen> {
     );
   }
 
-  /// Flat pill-style toggle (replaces SegmentedButton)
-  Widget _buildFlatToggle({
-    required List<String> options,
-    List<String>? labels,
-    List<IconData>? icons,
-    required String selected,
-    required ValueChanged<String> onChanged,
-  }) {
-    return Container(
-      height: 52,
-      decoration: BoxDecoration(
-        color: const Color(0xFFECECEC),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: const EdgeInsets.all(4),
-      child: Row(
-        children: List.generate(options.length, (index) {
-          final isSelected = options[index] == selected;
-          final label = labels != null ? labels[index] : options[index];
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => onChanged(options[index]),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                curve: Curves.easeOut,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (icons != null) ...[
-                        Icon(
-                          icons[index],
-                          size: 18,
-                          color: isSelected
-                              ? Colors.white
-                              : Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.6),
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                      Text(
-                        label,
-                        style: AppTypography.labelMedium(
-                          color: isSelected
-                              ? Colors.white
-                              : Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.7),
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
 
   Future<void> _pickPhoto() async {
     final image = await context.showImagePicker();

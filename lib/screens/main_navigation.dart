@@ -149,25 +149,25 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     return [
       NavigationItem(
         icon: const Icon(Symbols.home, weight: 300),
-        activeIcon: const Icon(Symbols.home, weight: 500, fill: 1),
+        activeIcon: const Icon(Symbols.home, weight: 600, fill: 1),
         label: 'Feed',
         screen: const FeedScreen(),
       ),
       NavigationItem(
         icon: const Icon(Symbols.map, weight: 300),
-        activeIcon: const Icon(Symbols.map, weight: 500, fill: 1),
+        activeIcon: const Icon(Symbols.map, weight: 600, fill: 1),
         label: 'Map',
         screen: _useMapV2 ? const MapTabScreenV2() : const MapScreen(),
       ),
       NavigationItem(
         icon: const Icon(Symbols.calendar_today, weight: 300),
-        activeIcon: const Icon(Symbols.calendar_today, weight: 500, fill: 1),
+        activeIcon: const Icon(Symbols.calendar_today, weight: 600, fill: 1),
         label: 'Playdates',
         screen: const PlaydatesScreen(),
       ),
       NavigationItem(
         icon: const Icon(Symbols.event, weight: 300),
-        activeIcon: const Icon(Symbols.event, weight: 500, fill: 1),
+        activeIcon: const Icon(Symbols.event, weight: 600, fill: 1),
         label: 'Events',
         screen: const EventsScreen(),
       ),
@@ -180,7 +180,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
         activeIcon: Badge(
           isLabelVisible: _unreadMessageCount > 0,
           label: Text('$_unreadMessageCount'),
-          child: const Icon(Symbols.chat_bubble, weight: 500, fill: 1),
+          child: const Icon(Symbols.chat_bubble, weight: 600, fill: 1),
         ),
         label: 'Messages',
         screen: const MessagesScreen(),
@@ -191,10 +191,15 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
             final unreadCount =
                 ref.watch(unreadNotificationCountProvider).value ?? 0;
             final avatar = _dogAvatarUrl != null && _dogAvatarUrl!.isNotEmpty
-                ? CircleAvatar(
-                    radius: 12,
-                    backgroundImage: NetworkImage(_dogAvatarUrl!),
-                    onBackgroundImageError: (_, __) {},
+                ? ClipOval(
+                    child: Image.network(
+                      _dogAvatarUrl!,
+                      width: 24,
+                      height: 24,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Symbols.person, weight: 300, size: 24),
+                    ),
                   )
                 : const Icon(Symbols.person, weight: 300);
 
@@ -210,12 +215,17 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
             final unreadCount =
                 ref.watch(unreadNotificationCountProvider).value ?? 0;
             final avatar = _dogAvatarUrl != null && _dogAvatarUrl!.isNotEmpty
-                ? CircleAvatar(
-                    radius: 12,
-                    backgroundImage: NetworkImage(_dogAvatarUrl!),
-                    onBackgroundImageError: (_, __) {},
+                ? ClipOval(
+                    child: Image.network(
+                      _dogAvatarUrl!,
+                      width: 24,
+                      height: 24,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Symbols.person, weight: 600, fill: 1, size: 24),
+                    ),
                   )
-                : const Icon(Symbols.person, weight: 500, fill: 1);
+                : const Icon(Symbols.person, weight: 600, fill: 1);
 
             return Badge(
               isLabelVisible: unreadCount > 0,
