@@ -82,6 +82,37 @@ class NotificationService {
     }
   }
 
+  /// Mark every notification matching [userId] + [relatedId] (and optionally
+  /// [type]) as read. Used when we know the request/playdate id but not the
+  /// notification id — e.g. an FCM payload arriving before the DB row is in
+  /// our local cache, or a walk-invite sheet opened from a tap-from-background
+  /// where we only have [related_id].
+  ///
+  /// Filters on `is_read=false` so we don't generate no-op realtime ticks.
+  /// Fails open (logs but doesn't rethrow) so callers can use this in UI
+  /// hot paths without wrapping in try/catch.
+  static Future<void> markAsReadByRelatedId({
+    required String userId,
+    required String relatedId,
+    String? type,
+  }) async {
+    try {
+      var query = SupabaseConfig.client
+          .from('notifications')
+          .update({'is_read': true})
+          .eq('user_id', userId)
+          .eq('related_id', relatedId)
+          .eq('is_read', false);
+      if (type != null) {
+        query = query.eq('type', type);
+      }
+      await query;
+      await syncBadgeCount(userId);
+    } catch (e) {
+      debugPrint('Error marking notifications as read by related_id: $e');
+    }
+  }
+
   /// Create a new notification
   static Future<Map<String, dynamic>> createNotification({
     required String userId,

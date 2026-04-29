@@ -114,6 +114,7 @@ class NotificationManager {
       final payload = <String, dynamic>{
         ...meta,
         'related_id': notification.relatedId,
+        'notification_id': notification.id, // Sprint 1: enable mark-as-read
         'type': 'playdate_request',
       };
 
@@ -177,6 +178,8 @@ class NotificationManager {
                     final payload = <String, dynamic>{
                       ...meta,
                       'related_id': notification.relatedId,
+                      'notification_id':
+                          notification.id, // Sprint 1: enable mark-as-read
                       'type': 'playdate_request',
                     };
                     openReceiveWalkSheetFromInvitePayload(ctx, payload);
@@ -192,6 +195,8 @@ class NotificationManager {
                 final payload = <String, dynamic>{
                   ...meta,
                   'related_id': notification.relatedId,
+                  'notification_id':
+                      notification.id, // Sprint 1: enable mark-as-read
                   'type': 'playdate_request',
                 };
                 WidgetsBinding.instance.addPostFrameCallback((_) {
