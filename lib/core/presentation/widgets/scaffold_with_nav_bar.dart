@@ -26,14 +26,17 @@ class ScaffoldWithNavBar extends ConsumerWidget {
 
     final useSlimBottomNav = ref.watch(featureFlagsProvider).useSlimBottomNav;
 
-    // Define all possible items with their original index
+    // Define all possible items with their original index.
+    // Using account_circle for Profile (Symbols.person rendered blank on iOS
+    // in release builds — likely a tree-shaking interaction with the
+    // material_symbols_icons v4 variable font).
     final allItems = [
       _NavItem(index: 0, icon: Symbols.home, label: 'Feed'),
       _NavItem(index: 1, icon: Symbols.map, label: 'Map'),
       _NavItem(index: 2, icon: Symbols.calendar_today, label: 'Playdates'),
       _NavItem(index: 3, icon: Symbols.event, label: 'Events'),
       _NavItem(index: 4, icon: Symbols.chat_bubble, label: 'Messages'),
-      _NavItem(index: 5, icon: Symbols.person, label: 'Profile'),
+      _NavItem(index: 5, icon: Symbols.account_circle, label: 'Profile'),
     ];
 
     final List<_NavItem> navItems;
@@ -85,12 +88,19 @@ class ScaffoldWithNavBar extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        // Icon
+                        // Icon — classy thin Material Symbols.
+                        // Using only the weight axis (200/300) for selection
+                        // emphasis. Avoiding the fill axis because it renders
+                        // blank on iOS in release builds with v4 of the
+                        // material_symbols_icons package. Selection cue
+                        // comes from the green color + the top indicator
+                        // line + the small weight bump.
                         Icon(
                           item.icon,
-                          weight: isSelected ? 500 : 300,
-                          fill: isSelected ? 1 : 0,
-                          size: 22,
+                          weight: isSelected ? 300 : 200,
+                          grade: 0,
+                          opticalSize: 24,
+                          size: 24,
                           color: isSelected ? greenColor : unselectedColor,
                         ),
                         const SizedBox(height: 2),
