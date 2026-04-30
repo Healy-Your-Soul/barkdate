@@ -15,6 +15,7 @@ import 'package:barkdate/widgets/send_walk_sheet.dart';
 import 'package:barkdate/services/selected_image.dart';
 import 'package:barkdate/services/photo_upload_service.dart';
 import 'package:barkdate/services/dog_breed_service.dart';
+import 'package:barkdate/widgets/flat_toggle.dart';
 
 class DogDetailsScreen extends ConsumerStatefulWidget {
   final Dog dog;
@@ -1248,18 +1249,11 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                             _buildEditableDetailRow(
                               Icons.straighten,
                               'Size',
-                              Wrap(
-                                spacing: 8,
-                                children: ['Small', 'Medium', 'Large']
-                                    .map(
-                                      (size) => ChoiceChip(
-                                        label: Text(size),
-                                        selected: _editSize == size,
-                                        onSelected: (_) =>
-                                            setState(() => _editSize = size),
-                                      ),
-                                    )
-                                    .toList(),
+                              FlatToggle(
+                                options: const ['Small', 'Medium', 'Large'],
+                                selected: _editSize,
+                                onChanged: (val) =>
+                                    setState(() => _editSize = val),
                               ),
                             )
                           else
@@ -1271,18 +1265,13 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                             _buildEditableDetailRow(
                               Icons.transgender,
                               'Gender',
-                              Wrap(
-                                spacing: 8,
-                                children: ['Male', 'Female']
-                                    .map(
-                                      (gender) => ChoiceChip(
-                                        label: Text(gender),
-                                        selected: _editGender == gender,
-                                        onSelected: (_) => setState(
-                                            () => _editGender = gender),
-                                      ),
-                                    )
-                                    .toList(),
+                              FlatToggle(
+                                options: const ['Male', 'Female'],
+                                labels: const ['Boy', 'Girl'],
+                                icons: const [Icons.male, Icons.female],
+                                selected: _editGender,
+                                onChanged: (val) =>
+                                    setState(() => _editGender = val),
                               ),
                             )
                           else
@@ -1303,6 +1292,9 @@ class _DogDetailsScreenState extends ConsumerState<DogDetailsScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF4CAF50),
+                                    ),
                                     onPressed: _isSavingEdit
                                         ? null
                                         : _saveInlineDogEdits,
