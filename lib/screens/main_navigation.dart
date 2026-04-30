@@ -225,7 +225,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                           weight: 600, fill: 1, size: 24),
                     ),
                   )
-                : const Icon(Symbols.sound_detection_dog_barking, weight: 600, fill: 1);
+                : const Icon(Symbols.sound_detection_dog_barking,
+                    weight: 600, fill: 1);
 
             return Badge(
               isLabelVisible: unreadCount > 0,
