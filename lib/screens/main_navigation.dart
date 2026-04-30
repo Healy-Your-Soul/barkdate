@@ -196,7 +196,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                     backgroundImage: NetworkImage(_dogAvatarUrl!),
                     onBackgroundImageError: (_, __) {},
                   )
-                : const Icon(Symbols.person, weight: 300);
+                : const Icon(Symbols.sound_detection_dog_barking, weight: 300);
 
             return Badge(
               isLabelVisible: unreadCount > 0,
@@ -215,7 +215,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                     backgroundImage: NetworkImage(_dogAvatarUrl!),
                     onBackgroundImageError: (_, __) {},
                   )
-                : const Icon(Symbols.person, weight: 500, fill: 1);
+                : const Icon(Symbols.sound_detection_dog_barking, weight: 500, fill: 1);
 
             return Badge(
               isLabelVisible: unreadCount > 0,
