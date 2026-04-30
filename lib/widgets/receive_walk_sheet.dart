@@ -34,14 +34,6 @@ class ReceiveWalkSheet extends ConsumerStatefulWidget {
 
 class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
   bool _isLoading = false;
-  final TextEditingController _counterLocationController =
-      TextEditingController();
-
-  @override
-  void dispose() {
-    _counterLocationController.dispose();
-    super.dispose();
-  }
 
   Future<Map<String, dynamic>?> _fetchRequestContext() async {
     try {
@@ -234,147 +226,6 @@ class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
     }
   }
 
-  Future<void> _handleMaybeLater() async {
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (context) {
-        DateTime selectedDate = widget.scheduledAt;
-        TimeOfDay selectedTime = TimeOfDay.fromDateTime(widget.scheduledAt);
-
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final proposedDateTime = DateTime(
-              selectedDate.year,
-              selectedDate.month,
-              selectedDate.day,
-              selectedTime.hour,
-              selectedTime.minute,
-            );
-
-            return AlertDialog(
-              title: const Text('Suggest a better time'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(
-                      controller: _counterLocationController,
-                      decoration: const InputDecoration(
-                        labelText: 'Optional location note',
-                        hintText: 'Same park, but near the south gate',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.schedule),
-                      title: const Text('Proposed time'),
-                      subtitle: Text(_formatDateTime(proposedDateTime)),
-                      onTap: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime.now(),
-                          lastDate:
-                              DateTime.now().add(const Duration(days: 180)),
-                        );
-                        if (date == null || !context.mounted) return;
-
-                        final time = await showTimePicker(
-                          context: context,
-                          initialTime: selectedTime,
-                        );
-                        if (time == null) return;
-
-                        setState(() {
-                          selectedDate = date;
-                          selectedTime = time;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context, {
-                      'scheduled_at': proposedDateTime.toIso8601String(),
-                      'location_note': _counterLocationController.text.trim(),
-                    });
-                  },
-                  child: const Text('Send proposal'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (!mounted || result == null) return;
-
-    setState(() => _isLoading = true);
-    try {
-      final userId = SupabaseConfig.auth.currentUser?.id;
-      if (userId == null) throw Exception('User not logged in');
-
-      final success = await PlaydateRequestService.respondToPlaydateRequest(
-        requestId: widget.requestId,
-        userId: userId,
-        response: 'counter_proposed',
-        message: 'Could we adjust the plan a bit?',
-        counterProposal: {
-          'scheduled_at': result['scheduled_at'],
-          if ((result['location_note'] as String).isNotEmpty)
-            'location_note': result['location_note'],
-        },
-      );
-
-      if (!mounted) return;
-
-      if (!success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not send counter-proposal.')),
-        );
-        return;
-      }
-
-      final chatTarget = await _resolveAcceptedChatTarget();
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      if (chatTarget != null && mounted) {
-        ChatRoute(
-          matchId: chatTarget['conversationId']!,
-          recipientId: chatTarget['recipientId']!,
-          recipientName: chatTarget['recipientName']!,
-          recipientAvatarUrl: chatTarget['recipientAvatarUrl']!,
-        ).push(context);
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Counter-proposal sent. Continue in chat.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   Future<void> _showPostAcceptActions({
     required String userId,
     required String playdateId,
@@ -550,26 +401,6 @@ class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
                     child: const Text("Yes, let's walk!",
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 16)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Maybe Later
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: _handleMaybeLater,
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Color(0xFFE89E5F)),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text("Maybe later",
-                        style: TextStyle(
-                            color: Color(0xFFE89E5F),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16)),
                   ),
                 ),
                 const SizedBox(height: 12),
