@@ -94,9 +94,10 @@ class ScaffoldWithNavBar extends ConsumerWidget {
                         // Icon
                         Icon(
                           item.icon,
-                          weight: isSelected ? 500 : 300,
-                          fill: isSelected ? 1 : 0,
-                          size: 22,
+                          weight: isSelected ? 300 : 200,
+                          grade: 0,
+                          opticalSize: 24,
+                          size: 24,
                           color: isSelected ? greenColor : unselectedColor,
                         ),
                         const SizedBox(height: 2),
