@@ -27,19 +27,19 @@ class ScaffoldWithNavBar extends ConsumerWidget {
     final useSlimBottomNav = ref.watch(featureFlagsProvider).useSlimBottomNav;
 
     // Define all possible items with their original index.
-    // Using account_circle for Profile (Symbols.person rendered blank on iOS
-    // in release builds — likely a tree-shaking interaction with the
-    // material_symbols_icons v4 variable font).
+    //
+    // Profile uses Symbols.pets (paw print) — both Symbols.person and
+    // Symbols.sound_detection_dog_barking rendered blank on iOS in this
+    // build of material_symbols_icons v4 (those specific glyphs aren't in
+    // the loaded variable-font subset). Symbols.pets is a core glyph that
+    // renders reliably and fits the dog-app brand better than a person.
     final allItems = [
       _NavItem(index: 0, icon: Symbols.home, label: 'Feed'),
       _NavItem(index: 1, icon: Symbols.map, label: 'Map'),
       _NavItem(index: 2, icon: Symbols.calendar_today, label: 'Playdates'),
       _NavItem(index: 3, icon: Symbols.event, label: 'Events'),
       _NavItem(index: 4, icon: Symbols.chat_bubble, label: 'Messages'),
-      _NavItem(
-          index: 5,
-          icon: Symbols.sound_detection_dog_barking,
-          label: 'Profile'),
+      _NavItem(index: 5, icon: Symbols.pets, label: 'Profile'),
     ];
 
     final List<_NavItem> navItems;
@@ -91,19 +91,12 @@ class ScaffoldWithNavBar extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        // Icon — classy thin Material Symbols.
-                        // Using only the weight axis (200/300) for selection
-                        // emphasis. Avoiding the fill axis because it renders
-                        // blank on iOS in release builds with v4 of the
-                        // material_symbols_icons package. Selection cue
-                        // comes from the green color + the top indicator
-                        // line + the small weight bump.
+                        // Icon
                         Icon(
                           item.icon,
-                          weight: isSelected ? 300 : 200,
-                          grade: 0,
-                          opticalSize: 24,
-                          size: 24,
+                          weight: isSelected ? 500 : 300,
+                          fill: isSelected ? 1 : 0,
+                          size: 22,
                           color: isSelected ? greenColor : unselectedColor,
                         ),
                         const SizedBox(height: 2),
