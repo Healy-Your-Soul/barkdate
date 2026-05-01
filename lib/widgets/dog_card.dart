@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:barkdate/services/conversation_service.dart';
+import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/widgets/playdate_action_popup.dart';
 import 'package:barkdate/widgets/content_options_menu.dart';
 import 'dart:async';
@@ -155,8 +157,55 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
           Navigator.of(context).pop();
           _showRescheduleDialog();
         },
+        // Sprint 4: wire the previously-dormant chat callback so the
+        // "Let's chat" button inside the popup actually goes to chat.
+        onChat: () {
+          Navigator.of(context).pop();
+          _openWalkChat();
+        },
       ),
     );
+  }
+
+  /// Sprint 4: open the chat for this confirmed walk. Tries the
+  /// playdate-scoped conversation first (so we land in the same thread
+  /// where the walk's system messages live), then falls back to a
+  /// 1-on-1 conversation between the current user and the dog's owner.
+  ///
+  /// Mirrors `_resolveAcceptedChatTarget` in `receive_walk_sheet.dart`
+  /// — same resolution logic the Yes-let's-walk path already uses.
+  Future<void> _openWalkChat() async {
+    final playdate = _currentPlaydate;
+    final me = SupabaseConfig.auth.currentUser;
+    if (playdate == null || me == null) return;
+
+    final playdateId = playdate['id'] as String?;
+    String conversationId;
+
+    if (playdateId != null && playdateId.isNotEmpty) {
+      final conv = await ConversationService.getPlaydateConversation(playdateId);
+      if (conv != null && conv['id'] != null) {
+        conversationId = conv['id'] as String;
+      } else {
+        conversationId = await ConversationService.getOrCreateConversation(
+          user1Id: me.id,
+          user2Id: widget.dog.ownerId,
+        );
+      }
+    } else {
+      conversationId = await ConversationService.getOrCreateConversation(
+        user1Id: me.id,
+        user2Id: widget.dog.ownerId,
+      );
+    }
+
+    if (!mounted) return;
+    ChatRoute(
+      matchId: conversationId,
+      recipientId: widget.dog.ownerId,
+      recipientName: widget.dog.ownerName,
+      recipientAvatarUrl: widget.dog.ownerAvatarUrl ?? '',
+    ).push(context);
   }
 
   Future<void> _showRescheduleDialog() async {
@@ -319,7 +368,7 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
                       const Icon(Icons.check_circle,
                           size: 12, color: Colors.green),
                       const SizedBox(width: 2),
-                      Text('EDIT',
+                      Text('WALK',
                           style: theme.textTheme.labelSmall?.copyWith(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
@@ -590,8 +639,11 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
   Widget _buildFriendButtonsCompact(ThemeData theme) {
     // Only return the top priority button for compact mode
     if (_playdateStatus == 'confirmed') {
-      return OutlinedButton(
+      return OutlinedButton.icon(
         onPressed: _showPlaydatePopup,
+        icon: const Icon(Icons.check_circle, size: 14),
+        label: const Text('Walk Details',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
         style: OutlinedButton.styleFrom(
           foregroundColor: Colors.green,
           side: const BorderSide(color: Colors.green, width: 1),
@@ -599,8 +651,6 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
-        child: const Text('Edit Playdate',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
       );
     }
     return AnimatedBuilder(

@@ -142,31 +142,35 @@ class PlaydateActionPopup extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
               child: Column(
                 children: [
-                  // Primary actions row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppButton(
-                          text: 'Chat',
-                          icon: Icons.chat_bubble,
-                          onPressed: onChat,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: AppButton(
-                          text: 'Reschedule',
-                          icon: Icons.schedule,
-                          customColor: Colors.orange,
-                          onPressed: onReschedule,
-                        ),
-                      ),
-                    ],
+                  // Primary action — Let's chat (full-width, prominent).
+                  // After confirmation, chat is the most likely next step
+                  // (confirm meet-up spot, share parking tips, etc.).
+                  SizedBox(
+                    width: double.infinity,
+                    child: AppButton(
+                      text: "Let's chat",
+                      icon: Icons.chat_bubble,
+                      onPressed: onChat,
+                    ),
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
 
-                  // Secondary actions
+                  // Secondary action — Reschedule
+                  SizedBox(
+                    width: double.infinity,
+                    child: AppButton(
+                      text: 'Reschedule',
+                      icon: Icons.schedule,
+                      customColor: Colors.orange,
+                      type: AppButtonType.outline,
+                      onPressed: onReschedule,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // Tertiary actions — text-only
                   Row(
                     children: [
                       Expanded(
