@@ -5,7 +5,6 @@ import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/conversation_service.dart';
-import 'package:barkdate/services/calendar_integration_service.dart';
 import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/features/feed/presentation/providers/friend_activity_provider.dart';
 import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
@@ -155,23 +154,12 @@ class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
           if (!mounted) return;
 
           if (requestContext != null) {
-            final playdate =
-                requestContext['playdate'] as Map<String, dynamic>? ?? const {};
             final playdateId = (requestContext['playdate_id'] as String?) ?? '';
             if (playdateId.isNotEmpty) {
               await _postWalkSystemMessage(playdateId, userId, status);
-
-              await _showPostAcceptActions(
-                userId: userId,
-                playdateId: playdateId,
-                title: (playdate['title'] as String?) ??
-                    'Walk with ${widget.dogName}',
-                location: (playdate['location'] as String?) ?? widget.location,
-                scheduledAt: (playdate['scheduled_at'] as String?) != null
-                    ? DateTime.tryParse(playdate['scheduled_at']) ??
-                        widget.scheduledAt
-                    : widget.scheduledAt,
-              );
+              // Sprint 3: removed _showPostAcceptActions. Reminders are now
+              // opt-in via ReminderButton on the confirmed-walk card in chat
+              // and on the walk-details sheet.
               if (!mounted) return;
             }
           }
@@ -224,110 +212,6 @@ class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  Future<void> _showPostAcceptActions({
-    required String userId,
-    required String playdateId,
-    required String title,
-    required String location,
-    required DateTime scheduledAt,
-  }) async {
-    int? selectedMinutes;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setState) {
-            Future<void> saveAndClose() async {
-              if (selectedMinutes != null) {
-                await PlaydateRequestService.upsertReminderPreference(
-                  userId: userId,
-                  playdateId: playdateId,
-                  requestId: widget.requestId,
-                  minutesBefore: selectedMinutes!,
-                );
-              }
-
-              if (!ctx.mounted) return;
-              Navigator.pop(ctx);
-            }
-
-            Future<void> addToCalendar() async {
-              final ok = await CalendarIntegrationService.addPlaydateToCalendar(
-                title: title,
-                startTime: scheduledAt,
-                endTime: scheduledAt.add(const Duration(minutes: 60)),
-                location: location,
-                description: 'Planned with BarkDate',
-              );
-
-              if (!ctx.mounted) return;
-              ScaffoldMessenger.of(ctx).showSnackBar(
-                SnackBar(
-                  content: Text(ok
-                      ? 'Opening calendar event draft...'
-                      : 'Could not open calendar right now.'),
-                ),
-              );
-            }
-
-            Widget chip(String label, int minutes) {
-              final selected = selectedMinutes == minutes;
-              return ChoiceChip(
-                label: Text(label),
-                selected: selected,
-                onSelected: (_) => setState(() => selectedMinutes = minutes),
-              );
-            }
-
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Optional reminder',
-                      style: Theme.of(ctx)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        chip('15 min', 15),
-                        chip('1 hour', 60),
-                        chip('1 day', 1440),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    OutlinedButton.icon(
-                      onPressed: addToCalendar,
-                      icon: const Icon(Icons.calendar_month),
-                      label: const Text('Add to calendar'),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: saveAndClose,
-                        child: const Text('Continue to chat'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 
   String _formatDateTime(DateTime dt) {
