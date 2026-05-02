@@ -150,21 +150,84 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
 
     showDialog(
       context: context,
-      builder: (context) => PlaydateActionPopup(
+      builder: (dialogCtx) => PlaydateActionPopup(
         playdate: _currentPlaydate!,
-        onCancel: () => Navigator.of(context).pop(),
+        onCancel: () {
+          Navigator.of(dialogCtx).pop();
+          _confirmAndCancelWalk();
+        },
         onReschedule: () {
-          Navigator.of(context).pop();
+          Navigator.of(dialogCtx).pop();
           _showRescheduleDialog();
         },
         // Sprint 4: wire the previously-dormant chat callback so the
         // "Let's chat" button inside the popup actually goes to chat.
         onChat: () {
-          Navigator.of(context).pop();
+          Navigator.of(dialogCtx).pop();
           _openWalkChat();
         },
       ),
     );
+  }
+
+  /// Confirm cancellation, then mark the playdate as cancelled in the DB
+  /// and refresh local state. Closes the popup before showing the confirm
+  /// dialog (called from the popup's onCancel which already pops first).
+  Future<void> _confirmAndCancelWalk() async {
+    final playdate = _currentPlaydate;
+    if (playdate == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel this walk?'),
+        content: Text(
+            'This will cancel the walk with ${widget.dog.name}. The other owner will be notified.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Keep walk'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Cancel walk'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await SupabaseConfig.client.from('playdates').update({
+        'status': 'cancelled',
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', playdate['id']);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Walk cancelled.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        // Reset local state so the card flips back to "Walk?" / Bark
+        setState(() {
+          _playdateStatus = 'none';
+          _currentPlaydate = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not cancel walk: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   /// Sprint 4: open the chat for this confirmed walk. Tries the
