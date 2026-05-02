@@ -716,6 +716,13 @@ class PlaydateRequestService {
   }
 
   /// Save reminder preference for a user+playdate/request.
+  /// Pass [enabled]=false to silently cancel an existing reminder
+  /// (we don't DELETE because the dispatcher's predicate already
+  /// gates on `enabled = true`).
+  ///
+  /// [requestId] is optional — older / multi-participant walks may
+  /// not have an originating request row. Pass an empty string in
+  /// that case; the column is nullable in the DB.
   static Future<bool> upsertReminderPreference({
     required String userId,
     required String playdateId,
@@ -727,7 +734,7 @@ class PlaydateRequestService {
       await SupabaseConfig.client.from('playdate_reminder_preferences').upsert({
         'user_id': userId,
         'playdate_id': playdateId,
-        'playdate_request_id': requestId,
+        'playdate_request_id': requestId.isEmpty ? null : requestId,
         'enabled': enabled,
         'minutes_before': minutesBefore,
         'updated_at': DateTime.now().toIso8601String(),
@@ -737,6 +744,28 @@ class PlaydateRequestService {
     } catch (e) {
       debugPrint('Error upserting reminder preference: $e');
       return false;
+    }
+  }
+
+  /// Fetch the current reminder preference row for the given user+playdate,
+  /// or null if none exists. Used by ReminderButton to show the current
+  /// state (which minute window is set, or whether reminder is enabled).
+  static Future<Map<String, dynamic>?> getReminderPreferenceForPlaydate({
+    required String userId,
+    required String playdateId,
+  }) async {
+    try {
+      final row = await SupabaseConfig.client
+          .from('playdate_reminder_preferences')
+          .select()
+          .eq('user_id', userId)
+          .eq('playdate_id', playdateId)
+          .maybeSingle();
+      if (row == null) return null;
+      return Map<String, dynamic>.from(row);
+    } catch (e) {
+      debugPrint('Error fetching reminder preference: $e');
+      return null;
     }
   }
 
