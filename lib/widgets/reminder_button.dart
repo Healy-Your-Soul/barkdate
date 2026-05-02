@@ -125,7 +125,8 @@ class _ReminderButtonState extends State<ReminderButton> {
         if (ok) {
           setState(() => _currentMinutes = mins);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Reminder set ${_humanLabel(mins)} before.')),
+            SnackBar(
+                content: Text('Reminder set ${_humanLabel(mins)} before.')),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
