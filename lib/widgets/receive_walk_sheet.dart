@@ -6,6 +6,7 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/conversation_service.dart';
 import 'package:barkdate/core/router/app_routes.dart';
+import 'package:barkdate/core/router/app_router.dart';
 import 'package:barkdate/features/feed/presentation/providers/friend_activity_provider.dart';
 import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 
@@ -173,17 +174,29 @@ class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
         if (!mounted) return;
         Navigator.pop(context);
 
+        // After Navigator.pop, this State is being torn down — `context` is
+        // about to become stale and `mounted` will flip to false. Use the
+        // root navigator's context for any post-close navigation/snackbar so
+        // chat actually opens after Accept (was failing silently before).
+        // rootNavigatorKey.currentContext outlives modal sheets — safe to
+        // use after the pop's async gap.
+        final rootCtx = rootNavigatorKey.currentContext;
+        if (rootCtx == null) return;
+
         if (status == 'accepted') {
-          if (chatTarget != null && mounted) {
-            ChatRoute(
+          if (chatTarget != null) {
+            final chatRoute = ChatRoute(
               matchId: chatTarget['conversationId']!,
               recipientId: chatTarget['recipientId']!,
               recipientName: chatTarget['recipientName']!,
               recipientAvatarUrl: chatTarget['recipientAvatarUrl']!,
-            ).push(context);
+            );
+            // ignore: use_build_context_synchronously
+            chatRoute.push(rootCtx);
           }
 
-          ScaffoldMessenger.of(context).showSnackBar(
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(rootCtx).showSnackBar(
             const SnackBar(
               content: Text('Walk Confirmed! 🎉 Chat is ready.'),
               backgroundColor: Color(0xFF4CAF50),
@@ -191,7 +204,8 @@ class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
             ),
           );
         } else if (status == 'declined') {
-          ScaffoldMessenger.of(context).showSnackBar(
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(rootCtx).showSnackBar(
             const SnackBar(
               content: Text('Walk declined.'),
               behavior: SnackBarBehavior.floating,
