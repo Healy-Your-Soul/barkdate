@@ -24,7 +24,8 @@ class PlaydateActionPopup extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
-    final hasDescription = (playdate['description'] as String?)?.isNotEmpty ?? false;
+    final hasDescription =
+        (playdate['description'] as String?)?.isNotEmpty ?? false;
 
     return Dialog(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -54,8 +55,8 @@ class PlaydateActionPopup extends StatelessWidget {
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.check_circle,
-                        size: 20, color: _green),
+                    child:
+                        const Icon(Icons.check_circle, size: 20, color: _green),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
