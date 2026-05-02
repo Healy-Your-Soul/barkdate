@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:barkdate/widgets/app_button.dart';
 
-/// Beautiful popup for confirmed playdates with action buttons
-/// Inspired by Flutter_beautiful_popup templates
+/// Compact info + action popup shown from a confirmed walk indicator on a
+/// dog card. Tighter than the previous version — no sprawling hero, no
+/// overflowing buttons. Primary action is "Let's chat"; reschedule and
+/// cancel are secondary text actions at the bottom.
 class PlaydateActionPopup extends StatelessWidget {
   final Map<String, dynamic> playdate;
   final VoidCallback? onReschedule;
@@ -17,174 +18,172 @@ class PlaydateActionPopup extends StatelessWidget {
     this.onCancel,
   });
 
+  static const _green = Color(0xFF4CAF50);
+
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final hasDescription =
+        (playdate['description'] as String?)?.isNotEmpty ?? false;
 
     return Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        width: size.width * 0.9,
-        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 500),
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
+      backgroundColor: theme.scaffoldBackgroundColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 380,
+          minWidth: size.width * 0.7,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header with icon
+            // ── Slim header ──
             Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.green.shade400, Colors.green.shade600],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+              decoration: const BoxDecoration(
+                color: _green,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),
-              child: Column(
+              child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(8),
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.pets,
-                      size: 32,
-                      color: Colors.green,
-                    ),
+                    child:
+                        const Icon(Icons.check_circle, size: 20, color: _green),
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Walk Confirmed! 🎉',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Walk Confirmed',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
 
-            // Content
+            // ── Content ──
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Location
-                  Row(
-                    children: [
-                      Icon(Icons.location_on, color: theme.hintColor, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          playdate['location'] ?? 'Location TBD',
-                          style: theme.textTheme.bodyLarge,
-                        ),
-                      ),
-                    ],
+                  _infoRow(
+                    theme,
+                    Icons.location_on,
+                    playdate['location'] as String? ?? 'Location TBD',
                   ),
-                  const SizedBox(height: 12),
-
-                  // Time
-                  Row(
-                    children: [
-                      Icon(Icons.access_time, color: theme.hintColor, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _formatDateTime(playdate['scheduled_at']),
-                          style: theme.textTheme.bodyLarge,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 10),
+                  _infoRow(
+                    theme,
+                    Icons.access_time,
+                    _formatDateTime(playdate['scheduled_at'] as String?),
                   ),
-
-                  if (playdate['description'] != null) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.notes, color: theme.hintColor, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            playdate['description'],
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        ),
-                      ],
+                  if (hasDescription) ...[
+                    const SizedBox(height: 10),
+                    _infoRow(
+                      theme,
+                      Icons.notes,
+                      playdate['description'] as String,
                     ),
                   ],
                 ],
               ),
             ),
 
-            // Action buttons
+            // ── Primary action ──
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              child: Column(
-                children: [
-                  // Primary actions row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppButton(
-                          text: 'Chat',
-                          icon: Icons.chat_bubble,
-                          onPressed: onChat,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: AppButton(
-                          text: 'Reschedule',
-                          icon: Icons.schedule,
-                          customColor: Colors.orange,
-                          onPressed: onReschedule,
-                        ),
-                      ),
-                    ],
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              child: SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: FilledButton.icon(
+                  onPressed: onChat,
+                  icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                  label: const Text(
+                    "Let's chat",
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _green,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
-                  const SizedBox(height: 12),
-
-                  // Secondary actions
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppButton(
-                          text: 'Cancel Walk',
-                          type: AppButtonType.text,
-                          customColor: Colors.red,
-                          onPressed: onCancel,
+            // ── Tertiary actions ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: onReschedule,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.orange.shade800,
+                      ),
+                      child: const Text(
+                        'Reschedule',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      Expanded(
-                        child: AppButton(
-                          text: 'Close',
-                          type: AppButtonType.text,
-                          onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 16,
+                    color: theme.dividerColor,
+                  ),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: onCancel,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red.shade700,
+                      ),
+                      child: const Text(
+                        'Cancel walk',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 16,
+                    color: theme.dividerColor,
+                  ),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(
+                        'Close',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -195,34 +194,47 @@ class PlaydateActionPopup extends StatelessWidget {
     );
   }
 
+  Widget _infoRow(ThemeData theme, IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: theme.hintColor),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14),
+          ),
+        ),
+      ],
+    );
+  }
+
   String _formatDateTime(String? dateTimeStr) {
     if (dateTimeStr == null) return 'Time TBD';
-
     try {
-      final dateTime = DateTime.parse(dateTimeStr);
+      final dt = DateTime.parse(dateTimeStr);
       final now = DateTime.now();
       final tomorrow = now.add(const Duration(days: 1));
 
       String dateStr;
-      if (dateTime.year == now.year &&
-          dateTime.month == now.month &&
-          dateTime.day == now.day) {
+      if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
         dateStr = 'Today';
-      } else if (dateTime.year == tomorrow.year &&
-          dateTime.month == tomorrow.month &&
-          dateTime.day == tomorrow.day) {
+      } else if (dt.year == tomorrow.year &&
+          dt.month == tomorrow.month &&
+          dt.day == tomorrow.day) {
         dateStr = 'Tomorrow';
       } else {
-        dateStr = '${dateTime.month}/${dateTime.day}/${dateTime.year}';
+        dateStr = '${dt.month}/${dt.day}/${dt.year}';
       }
 
-      final hour = dateTime.hour;
-      final minute = dateTime.minute.toString().padLeft(2, '0');
+      final hour = dt.hour;
+      final minute = dt.minute.toString().padLeft(2, '0');
       final period = hour >= 12 ? 'PM' : 'AM';
       final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
 
       return '$dateStr at $displayHour:$minute $period';
-    } catch (e) {
+    } catch (_) {
       return dateTimeStr;
     }
   }
