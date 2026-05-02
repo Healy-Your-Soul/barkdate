@@ -183,7 +183,8 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
     String conversationId;
 
     if (playdateId != null && playdateId.isNotEmpty) {
-      final conv = await ConversationService.getPlaydateConversation(playdateId);
+      final conv =
+          await ConversationService.getPlaydateConversation(playdateId);
       if (conv != null && conv['id'] != null) {
         conversationId = conv['id'] as String;
       } else {
