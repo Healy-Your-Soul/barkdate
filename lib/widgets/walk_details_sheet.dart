@@ -10,6 +10,7 @@ import 'package:barkdate/features/playdates/presentation/screens/map_picker_scre
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/design_system/app_spacing.dart';
 import 'package:barkdate/core/router/app_routes.dart';
+import 'package:barkdate/widgets/reminder_button.dart';
 
 /// Bottom sheet showing details of a planned walk — who's going, time, park.
 /// Supports both checkin-based walks (System B) and playdate-based walks (System A).
@@ -628,6 +629,24 @@ class _WalkDetailsSheetState extends State<WalkDetailsSheet> {
                   ),
                 ),
               ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+
+          // Sprint 3: Reminder button (opt-in). Shown only for playdate-based
+          // walks (we need a playdate_id for the upsert) that aren't locked or
+          // already in the past — there's no point reminding about a finished
+          // walk.
+          if (widget._isPlaydateBased &&
+              !isLocked &&
+              widget.scheduledFor.isAfter(DateTime.now())) ...[
+            ReminderButton(
+              playdateId: widget.playdateId!,
+              scheduledAt: widget.scheduledFor,
+              walkTitle: (_playdateData?['title'] as String?) ??
+                  'Walk at ${widget.parkName}',
+              walkLocation: widget.parkName,
+              compact: false,
             ),
             const SizedBox(height: AppSpacing.md),
           ],
