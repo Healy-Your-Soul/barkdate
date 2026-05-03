@@ -100,9 +100,43 @@ class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
   Future<void> _postWalkSystemMessage(
       String playdateId, String userId, String status) async {
     try {
-      final conversation =
+      // Sprint 5 Sub-task D: defensive conversation auto-create.
+      // createPlaydateRequest *tries* to create the conversation eagerly at
+      // invite time, but if that step silently failed ("deferred – will
+      // retry on accept" — see bark_playdate_services.dart) we'd otherwise
+      // drop this system message. Recover by ensuring the conversation
+      // exists before posting.
+      var conversation =
           await ConversationService.getPlaydateConversation(playdateId);
-      if (conversation == null) return;
+
+      if (conversation == null) {
+        debugPrint(
+            '⚠️ No playdate conversation for $playdateId — creating one now');
+        final pd = await SupabaseConfig.client
+            .from('playdates')
+            .select('organizer_id, participant_id, title')
+            .eq('id', playdateId)
+            .maybeSingle();
+        if (pd == null) return;
+
+        final organizerId = pd['organizer_id'] as String?;
+        final participantId = pd['participant_id'] as String?;
+        final title = (pd['title'] as String?) ?? 'Walk';
+        if (organizerId == null || participantId == null) return;
+
+        final convId =
+            await ConversationService.getOrCreatePlaydateConversation(
+          playdateId: playdateId,
+          participantUserIds: [organizerId, participantId],
+          groupName: title,
+        );
+        if (convId == null) {
+          debugPrint('❌ Could not create playdate conversation; skipping');
+          return;
+        }
+        conversation = {'id': convId};
+      }
+
       final conversationId = conversation['id'] as String;
 
       final dogs = await BarkDateUserService.getUserDogs(userId);
