@@ -410,8 +410,7 @@ class DogMarkerGenerator {
         paint
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5 * dpr
-          ..color =
-              isConfirmed ? _walkBlueConfirmed : _walkBluePending;
+          ..color = isConfirmed ? _walkBlueConfirmed : _walkBluePending;
         canvas.drawCircle(badgeCenter, badgeRadius - (1 * dpr), paint);
 
         final clockTp = TextPainter(

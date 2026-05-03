@@ -398,8 +398,8 @@ class FriendActivityService {
           }
         }
 
-        final isConfirmed = (playdate['status'] == 'confirmed') &&
-            inviteeDog != null;
+        final isConfirmed =
+            (playdate['status'] == 'confirmed') && inviteeDog != null;
 
         results.add({
           'id': playdate['id'],

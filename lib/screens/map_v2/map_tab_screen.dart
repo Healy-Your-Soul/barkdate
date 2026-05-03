@@ -562,9 +562,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           ? '🐾 $dogName & $inviteeDogName • $timeStr'
           : '🕐 $dogName • $timeStr';
 
-      final String? inviteeDogPhotoUrl = isConfirmed
-          ? (inviteeDog?['main_photo_url'] as String?)
-          : null;
+      final String? inviteeDogPhotoUrl =
+          isConfirmed ? (inviteeDog?['main_photo_url'] as String?) : null;
       final String? organizerDogPhotoUrl = dog?['main_photo_url'] as String?;
       final icon = await DogMarkerGenerator.createScheduledWalkMarker(
         organizerDogPhotoUrl: organizerDogPhotoUrl,
