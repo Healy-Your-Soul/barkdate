@@ -533,7 +533,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       }
     }
 
-    // Add scheduled future walk markers (green walk markers)
+    // Add scheduled future walk markers — Sprint 6: walk-together blue
+    // circle with the organizer's dog photo (pending) or both dogs side-by-
+    // side overlapping (confirmed = "they meet").
     for (final walk in _scheduledWalks) {
       final lat = walk['latitude'] as double?;
       final lng = walk['longitude'] as double?;
@@ -543,9 +545,12 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       if (scheduledFor == null) continue;
 
       final dog = walk['dog'] as Map<String, dynamic>?;
+      final inviteeDog = walk['invitee_dog'] as Map<String, dynamic>?;
       final dogName = dog?['name'] as String? ?? 'Someone';
+      final inviteeDogName = inviteeDog?['name'] as String?;
       final parkName = walk['park_name'] as String? ?? 'a park';
       final playdateId = walk['playdate_id'] as String?;
+      final isConfirmed = walk['is_confirmed'] == true;
 
       final hour = scheduledFor.hour;
       final minute = scheduledFor.minute.toString().padLeft(2, '0');
@@ -553,14 +558,27 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
       final timeStr = '$displayHour:$minute $amPm';
 
+      final infoTitle = isConfirmed && inviteeDogName != null
+          ? '🐾 $dogName & $inviteeDogName • $timeStr'
+          : '🕐 $dogName • $timeStr';
+
+      final String? inviteeDogPhotoUrl =
+          isConfirmed ? (inviteeDog?['main_photo_url'] as String?) : null;
+      final String? organizerDogPhotoUrl = dog?['main_photo_url'] as String?;
+      final icon = await DogMarkerGenerator.createScheduledWalkMarker(
+        organizerDogPhotoUrl: organizerDogPhotoUrl,
+        inviteeDogPhotoUrl: inviteeDogPhotoUrl,
+      );
+
       newMarkers.add(Marker(
         markerId: MarkerId('scheduled_walk_${walk['id']}'),
         position: LatLng(lat, lng),
         infoWindow: InfoWindow(
-          title: '🕐 $dogName • $timeStr',
-          snippet: 'Walk at $parkName',
+          title: infoTitle,
+          snippet:
+              isConfirmed ? 'Confirmed walk at $parkName' : 'Walk at $parkName',
         ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        icon: icon,
         zIndexInt: 40,
         onTap: () {
           showWalkDetailsSheet(

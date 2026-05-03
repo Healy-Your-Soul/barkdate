@@ -284,6 +284,176 @@ class DogMarkerGenerator {
     _cache.clear();
   }
 
+  // ────────────────────────────────────────────────────────────────────────
+  // Sprint 6: scheduled-walk markers (1-or-2 dogs, walk-together blue)
+  // ────────────────────────────────────────────────────────────────────────
+
+  /// Walk-together brand blue (matches FriendAlertType.walkTogether color).
+  static const Color _walkBlueConfirmed = Color(0xFF0D47A1);
+  static const Color _walkBluePending = Color(0xFF64B5F6);
+
+  /// Create a circular blue marker for a scheduled future walk.
+  ///
+  /// - When [inviteeDogPhotoUrl] is null → walk is pending (only organizer
+  ///   has committed). Renders a single dog photo on a lighter blue ring.
+  /// - When [inviteeDogPhotoUrl] is non-null → walk is confirmed (the
+  ///   meet-up is happening). Renders both dogs' photos side-by-side
+  ///   overlapping on a deeper blue ring — the visual cue that "they meet."
+  static Future<BitmapDescriptor> createScheduledWalkMarker({
+    required String? organizerDogPhotoUrl,
+    String? inviteeDogPhotoUrl,
+    int size = 88,
+  }) async {
+    final isConfirmed =
+        inviteeDogPhotoUrl != null && inviteeDogPhotoUrl.isNotEmpty;
+
+    final cacheKey = 'walk_${organizerDogPhotoUrl ?? "none"}_'
+        '${inviteeDogPhotoUrl ?? "none"}_${isConfirmed ? "ok" : "pending"}_$size';
+    if (_cache.containsKey(cacheKey)) return _cache[cacheKey]!;
+
+    try {
+      ui.Image? orgImg;
+      if (organizerDogPhotoUrl != null && organizerDogPhotoUrl.isNotEmpty) {
+        orgImg = await _loadNetworkImage(organizerDogPhotoUrl);
+      }
+      ui.Image? invImg;
+      if (isConfirmed) {
+        invImg = await _loadNetworkImage(inviteeDogPhotoUrl);
+      }
+
+      final bytes = await _createScheduledWalkMarkerImage(
+        organizerImage: orgImg,
+        inviteeImage: invImg,
+        isConfirmed: isConfirmed,
+        size: size,
+      );
+
+      final descriptor = BitmapDescriptor.bytes(
+        bytes,
+        width: size.toDouble(),
+        height: size.toDouble(),
+      );
+      _cache[cacheKey] = descriptor;
+      return descriptor;
+    } catch (e) {
+      debugPrint('Error creating scheduled walk marker: $e');
+      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+    }
+  }
+
+  static Future<Uint8List> _createScheduledWalkMarkerImage({
+    ui.Image? organizerImage,
+    ui.Image? inviteeImage,
+    required bool isConfirmed,
+    required int size,
+  }) async {
+    return _buildBaseMarker(
+      size: size,
+      drawContent: (canvas, center, radius, scaledSize, dpr) {
+        final paint = Paint();
+
+        // Outer blue ring (color depth signals confirmed vs pending).
+        paint.color = isConfirmed ? _walkBlueConfirmed : _walkBluePending;
+        canvas.drawCircle(center, radius - (2 * dpr), paint);
+
+        // White inner ring for the photo(s) to sit on.
+        paint.color = Colors.white;
+        final innerRadius = radius - (4 * dpr) - (2 * dpr);
+        canvas.drawCircle(center, innerRadius, paint);
+
+        if (isConfirmed && organizerImage != null && inviteeImage != null) {
+          // ── Two dogs side-by-side, slightly overlapping ──
+          final dogRadius = innerRadius * 0.62;
+          final overlap = dogRadius * 0.55;
+          final leftCenter = Offset(center.dx - overlap, center.dy);
+          final rightCenter = Offset(center.dx + overlap, center.dy);
+
+          // White ring around each dog so they read as separate even when
+          // overlapping.
+          paint.color = Colors.white;
+          canvas.drawCircle(leftCenter, dogRadius + (2 * dpr), paint);
+          canvas.drawCircle(rightCenter, dogRadius + (2 * dpr), paint);
+
+          _drawCircularImage(canvas, organizerImage, leftCenter, dogRadius);
+          _drawCircularImage(canvas, inviteeImage, rightCenter, dogRadius);
+        } else if (organizerImage != null) {
+          // ── Single dog (pending) ──
+          _drawCircularImage(
+              canvas, organizerImage, center, innerRadius - (2 * dpr));
+        } else {
+          // ── No photo fallback: pawprint glyph on white ──
+          final tp = TextPainter(
+            text: TextSpan(
+              text: '🐾',
+              style: TextStyle(fontSize: scaledSize * 0.4),
+            ),
+            textDirection: TextDirection.ltr,
+          );
+          tp.layout();
+          tp.paint(
+            canvas,
+            Offset(center.dx - tp.width / 2, center.dy - tp.height / 2),
+          );
+        }
+
+        // Small clock badge (top-right) so users still recognise this as a
+        // scheduled-walk marker even at a glance.
+        final badgeRadius = scaledSize * 0.18;
+        final badgeCenter = Offset(
+          scaledSize - badgeRadius - (2 * dpr),
+          badgeRadius + (2 * dpr),
+        );
+        paint
+          ..style = PaintingStyle.fill
+          ..color = Colors.white;
+        canvas.drawCircle(badgeCenter, badgeRadius, paint);
+        paint
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5 * dpr
+          ..color = isConfirmed ? _walkBlueConfirmed : _walkBluePending;
+        canvas.drawCircle(badgeCenter, badgeRadius - (1 * dpr), paint);
+
+        final clockTp = TextPainter(
+          text: TextSpan(
+            text: '🕐',
+            style: TextStyle(fontSize: badgeRadius * 1.4),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        clockTp.layout();
+        clockTp.paint(
+          canvas,
+          Offset(
+            badgeCenter.dx - clockTp.width / 2,
+            badgeCenter.dy - clockTp.height / 2,
+          ),
+        );
+      },
+    );
+  }
+
+  /// Draw [image] clipped to a circle at [center] with [radius]. Used for
+  /// the two-dog walk marker.
+  static void _drawCircularImage(
+      Canvas canvas, ui.Image image, Offset center, double radius) {
+    canvas.save();
+    final clip = Path()
+      ..addOval(Rect.fromCircle(center: center, radius: radius));
+    canvas.clipPath(clip);
+
+    final shorter = image.width < image.height
+        ? image.width.toDouble()
+        : image.height.toDouble();
+    final src = Rect.fromCenter(
+      center: Offset(image.width / 2, image.height / 2),
+      width: shorter,
+      height: shorter,
+    );
+    final dst = Rect.fromCircle(center: center, radius: radius);
+    canvas.drawImageRect(image, src, dst, Paint());
+    canvas.restore();
+  }
+
   /// Create a custom place marker with category-specific color and icon
   ///
   /// [category] - Place category (park, cafe, store, vet, etc.)

@@ -344,7 +344,10 @@ class FriendActivityService {
     }
   }
 
-  /// Get scheduled walks for the map (from playdates table)
+  /// Get scheduled walks for the map (from playdates table).
+  ///
+  /// Sprint 6: also returns the invitee's dog when the walk is confirmed,
+  /// so the map marker can render both dogs' photos ("when they meet").
   static Future<List<Map<String, dynamic>>> getScheduledWalksForMap() async {
     try {
       final now = DateTime.now().toIso8601String();
@@ -352,7 +355,11 @@ class FriendActivityService {
       final data = await SupabaseConfig.client
           .from('playdates')
           .select('''
-            id, location, scheduled_at, status, title, latitude, longitude, organizer_id
+            id, location, scheduled_at, status, title, latitude, longitude, organizer_id,
+            participants:playdate_participants(
+              user_id,
+              dog:dog_id(id, name, main_photo_url)
+            )
           ''')
           .inFilter('status', ['pending', 'confirmed'])
           .gte('scheduled_at', now)
@@ -360,6 +367,10 @@ class FriendActivityService {
 
       final results = <Map<String, dynamic>>[];
       for (final playdate in data) {
+        // Organizer dog (always exists — they created the playdate). Pulled
+        // separately because it pre-dates the participants relation in the
+        // schema and we don't want to assume the organizer is in
+        // playdate_participants.
         Map<String, dynamic>? orgDog;
         try {
           orgDog = await SupabaseConfig.client
@@ -370,6 +381,26 @@ class FriendActivityService {
               .maybeSingle();
         } catch (_) {}
 
+        // Invitee dog — first participant whose dog isn't the organizer's.
+        // For 1-on-1 walks (the common case) there's at most one such
+        // entry; for multi-participant walks we just pick the first since
+        // the marker only has room for two dogs anyway.
+        Map<String, dynamic>? inviteeDog;
+        final participants = playdate['participants'] as List<dynamic>?;
+        if (participants != null) {
+          for (final p in participants) {
+            if (p is! Map<String, dynamic>) continue;
+            final pDog = p['dog'] as Map<String, dynamic>?;
+            if (pDog == null) continue;
+            if (orgDog != null && pDog['id'] == orgDog['id']) continue;
+            inviteeDog = pDog;
+            break;
+          }
+        }
+
+        final isConfirmed =
+            (playdate['status'] == 'confirmed') && inviteeDog != null;
+
         results.add({
           'id': playdate['id'],
           'latitude': playdate['latitude'],
@@ -377,7 +408,10 @@ class FriendActivityService {
           'scheduled_for': playdate['scheduled_at'],
           'park_name': playdate['location'],
           'playdate_id': playdate['id'],
+          'status': playdate['status'],
+          'is_confirmed': isConfirmed,
           'dog': orgDog ?? {'name': 'Someone'},
+          'invitee_dog': inviteeDog,
         });
       }
 
