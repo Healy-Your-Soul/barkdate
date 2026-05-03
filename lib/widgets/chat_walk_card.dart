@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -92,6 +93,12 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
   bool _hasError = false;
   RealtimeChannel? _playdateChannel;
 
+  // Sprint 5: one-shot timer that fires at scheduled_at so the card
+  // transitions from "confirmed" to the locked/past pill automatically
+  // while the user is still looking at the chat. Re-scheduled whenever
+  // _loadPlaydateData runs (handles reschedule + initial load).
+  Timer? _expiryTimer;
+
   @override
   void initState() {
     super.initState();
@@ -105,7 +112,29 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
       SupabaseConfig.client.removeChannel(_playdateChannel!);
       _playdateChannel = null;
     }
+    _expiryTimer?.cancel();
     super.dispose();
+  }
+
+  /// Sprint 5: schedule a one-shot Timer that calls setState exactly when
+  /// scheduled_at passes, so the next build computes _isExpired = true and
+  /// the card transitions to its locked state without user interaction.
+  /// 5-second buffer absorbs any client-server clock skew.
+  void _scheduleExpiryRebuild() {
+    _expiryTimer?.cancel();
+    if (_playdateData == null) return;
+    final scheduledAtRaw = _playdateData!['scheduled_at'] as String?;
+    if (scheduledAtRaw == null) return;
+    final scheduledAt = DateTime.tryParse(scheduledAtRaw);
+    if (scheduledAt == null) return;
+
+    final delay = scheduledAt.difference(DateTime.now()) +
+        const Duration(seconds: 5);
+    if (delay.isNegative) return; // already past — build will reflect that
+
+    _expiryTimer = Timer(delay, () {
+      if (mounted) setState(() {});
+    });
   }
 
   void _subscribeToPlaydateChanges() {
@@ -165,6 +194,7 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
               List<Map<String, dynamic>>.from(data['participants'] ?? []);
           _isLoading = false;
         });
+        _scheduleExpiryRebuild();
       } else if (mounted) {
         setState(() {
           _isLoading = false;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/conversation_service.dart';
@@ -45,10 +46,22 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
   bool _hasBarked = false;
   Timer? _barkResetTimer;
 
+  // Sprint 5: realtime channels keep the card's playdate state in sync with
+  // the server. Without these, the card only reflects state at initState
+  // and goes stale until the user triggers a manual refresh.
+  RealtimeChannel? _requestsChannel;
+  RealtimeChannel? _playdatesChannel;
+
+  // Coalesce burst-y realtime events (e.g. trigger fires AFTER INSERT and
+  // AFTER UPDATE in the same transaction) into a single _checkPlaydateStatus
+  // call.
+  Timer? _refreshDebounce;
+
   @override
   void initState() {
     super.initState();
     _checkPlaydateStatus();
+    _subscribeToWalkChanges();
 
     // Initialize bark animation
     _barkAnimationController = AnimationController(
@@ -68,7 +81,58 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
   void dispose() {
     _barkAnimationController.dispose();
     _barkResetTimer?.cancel();
+    _refreshDebounce?.cancel();
+    if (_requestsChannel != null) {
+      SupabaseConfig.client.removeChannel(_requestsChannel!);
+      _requestsChannel = null;
+    }
+    if (_playdatesChannel != null) {
+      SupabaseConfig.client.removeChannel(_playdatesChannel!);
+      _playdatesChannel = null;
+    }
     super.dispose();
+  }
+
+  /// Subscribe to playdate-related row changes so the card stays in sync.
+  /// We subscribe broadly (no server-side OR filter — Postgres realtime
+  /// filters can't express "requester=me OR invitee=me") and let
+  /// [_checkPlaydateStatus]'s existing queries do the discrimination.
+  /// Notifications get debounced by 300ms so a burst of trigger-driven
+  /// updates doesn't fan out into N redundant fetches.
+  void _subscribeToWalkChanges() {
+    final user = SupabaseConfig.auth.currentUser;
+    if (user == null) return;
+
+    // Channel name keyed on (this dog, this user) so two cards for the same
+    // pair don't collide, and per-dog cleanup is straightforward.
+    final key = '${widget.dog.id}_${user.id}';
+
+    _requestsChannel = SupabaseConfig.client
+        .channel('dog_card_requests_$key')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'playdate_requests',
+          callback: (payload) => _scheduleRefresh(),
+        )
+        .subscribe();
+
+    _playdatesChannel = SupabaseConfig.client
+        .channel('dog_card_playdates_$key')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'playdates',
+          callback: (payload) => _scheduleRefresh(),
+        )
+        .subscribe();
+  }
+
+  void _scheduleRefresh() {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) _checkPlaydateStatus();
+    });
   }
 
   void _handleBarkPressed() {
@@ -105,7 +169,9 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
           .limit(1);
 
       if (pendingRequestsReceived.isNotEmpty) {
-        setState(() => _playdateStatus = 'pending');
+        if (mounted && _playdateStatus != 'pending') {
+          setState(() => _playdateStatus = 'pending');
+        }
         return;
       }
 
@@ -135,9 +201,23 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
         final playdateData = confirmedAsOrganizer.isNotEmpty
             ? confirmedAsOrganizer.first
             : confirmedAsParticipant.first;
+        if (mounted) {
+          setState(() {
+            _playdateStatus = 'confirmed';
+            _currentPlaydate = playdateData;
+          });
+        }
+        return;
+      }
+
+      // Sprint 5: neither pending nor confirmed — reset to 'none'. Handles
+      // the realtime case where a confirmed walk gets cancelled by the
+      // OTHER party (without this, the card would stay stuck on 'confirmed'
+      // because the previous code had no else-branch).
+      if (mounted && _playdateStatus != 'none') {
         setState(() {
-          _playdateStatus = 'confirmed';
-          _currentPlaydate = playdateData;
+          _playdateStatus = 'none';
+          _currentPlaydate = null;
         });
       }
     } catch (e) {
