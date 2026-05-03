@@ -128,8 +128,8 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
     final scheduledAt = DateTime.tryParse(scheduledAtRaw);
     if (scheduledAt == null) return;
 
-    final delay = scheduledAt.difference(DateTime.now()) +
-        const Duration(seconds: 5);
+    final delay =
+        scheduledAt.difference(DateTime.now()) + const Duration(seconds: 5);
     if (delay.isNegative) return; // already past — build will reflect that
 
     _expiryTimer = Timer(delay, () {

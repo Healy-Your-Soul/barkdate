@@ -124,7 +124,8 @@ class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
         final title = (pd['title'] as String?) ?? 'Walk';
         if (organizerId == null || participantId == null) return;
 
-        final convId = await ConversationService.getOrCreatePlaydateConversation(
+        final convId =
+            await ConversationService.getOrCreatePlaydateConversation(
           playdateId: playdateId,
           participantUserIds: [organizerId, participantId],
           groupName: title,
