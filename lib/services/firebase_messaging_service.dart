@@ -308,14 +308,17 @@ class FirebaseMessagingService {
         if (ctx != null) _navigateToScreen(type, message.data);
       }
 
-      // Sprint 7b: only show banner for walk invites (playdateRequest).
-      // Other types just update the badge silently.
+      // Sprint 7b: only show banner + OS local notification for walk invites
+      // when the app is in foreground. Messages, barks, matches just update
+      // the badge silently — the user is already in the app, no need to
+      // surface a redundant alert. (When the app is in background or closed,
+      // FCM delivers the OS push directly without going through this code.)
       if (type == NotificationType.playdateRequest) {
         await InAppNotificationService.showBanner(notification,
             onTapAction: bannerTapAction);
+        await NotificationSoundService.playNotificationSound(notification.type);
+        await _showLocalNotification(message, notification);
       }
-      await NotificationSoundService.playNotificationSound(notification.type);
-      await _showLocalNotification(message, notification);
 
       // Auto-show the Walk Invite sheet for playdate_request (resolves request_id
       // from playdate_id when FCM data payload is incomplete — e.g. web/data-only).
@@ -565,14 +568,17 @@ class FirebaseMessagingService {
         }
         break;
       case NotificationType.message:
-        // Navigate to chat
+        // related_id is match_id for messages.
+        // Sprint 7b fix: use the typed ChatRoute. The previous '/chat' string
+        // push hit a null-check assertion in go_router because $ChatRoute
+        // expects matchId / recipientId via path+query, not extra.
         if (data['related_id'] != null) {
-          // related_id is match_id for messages
-          GoRouter.of(context).push('/chat', extra: {
-            'matchId': data['related_id'],
-            // We might need recipient info here, but ChatScreen usually fetches it if missing
-            // or we might need to pass partial data
-          });
+          ChatRoute(
+            matchId: data['related_id'] as String,
+            recipientId: '',
+            recipientName: (data['sender_name'] as String?) ?? 'Chat',
+            recipientAvatarUrl: '',
+          ).push(context);
         }
         break;
       case NotificationType.match:

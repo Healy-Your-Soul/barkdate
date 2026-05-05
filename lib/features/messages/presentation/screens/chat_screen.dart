@@ -6,6 +6,7 @@ import 'package:barkdate/models/message.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/chat_walk_card.dart';
 import 'package:barkdate/supabase/notification_service.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
 
 import 'package:intl/intl.dart' as intl;
 
@@ -70,8 +71,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     _markChatNotificationsRead();
   }
 
-  /// Sprint 7b: mark existing unread notifications for this chat as read
-  /// the moment the user opens the conversation.
+  /// Sprint 7b: mark existing unread notifications AND messages for this chat
+  /// as read the moment the user opens the conversation. We mark messages
+  /// directly here (not just the post-frame callback inside build) so the
+  /// Messages tab badge clears even if the messages stream hasn't loaded yet.
   void _markChatNotificationsRead() async {
     final uid = SupabaseConfig.auth.currentUser?.id;
     if (uid == null) return;
@@ -80,6 +83,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       relatedId: widget.matchId,
       type: 'message',
     );
+    try {
+      await BarkDateMessageService.markMessagesAsRead(widget.matchId, uid);
+    } catch (e) {
+      debugPrint('Failed to mark messages as read on chat entry: $e');
+    }
   }
 
   /// Check if this conversation is linked to a playdate.
