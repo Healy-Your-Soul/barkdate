@@ -174,9 +174,8 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
           },
         )
         .subscribe((status, [error]) {
-          debugPrint(
-              '🔔 chat_walk_card sub: $status (id: ${widget.playdateId})');
-        });
+      debugPrint('🔔 chat_walk_card sub: $status (id: ${widget.playdateId})');
+    });
   }
 
   Future<void> _loadPlaydateData() async {

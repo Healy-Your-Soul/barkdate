@@ -120,8 +120,8 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
           },
         )
         .subscribe((status, [error]) {
-          debugPrint('🔔 dog_card requests sub: $status (key: $key)');
-        });
+      debugPrint('🔔 dog_card requests sub: $status (key: $key)');
+    });
 
     _playdatesChannel = SupabaseConfig.client
         .channel('dog_card_playdates_$key')
@@ -136,8 +136,8 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
           },
         )
         .subscribe((status, [error]) {
-          debugPrint('🔔 dog_card playdates sub: $status (key: $key)');
-        });
+      debugPrint('🔔 dog_card playdates sub: $status (key: $key)');
+    });
   }
 
   void _scheduleRefresh() {
