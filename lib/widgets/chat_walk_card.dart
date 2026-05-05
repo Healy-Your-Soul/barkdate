@@ -153,7 +153,9 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
             value: widget.playdateId,
           ),
           callback: (payload) {
-            if (mounted) _loadPlaydateData();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _loadPlaydateData();
+            });
           },
         )
         .onPostgresChanges(
@@ -166,10 +168,15 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
             value: widget.playdateId,
           ),
           callback: (payload) {
-            if (mounted) _loadPlaydateData();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _loadPlaydateData();
+            });
           },
         )
-        .subscribe();
+        .subscribe((status, [error]) {
+          debugPrint(
+              '🔔 chat_walk_card sub: $status (id: ${widget.playdateId})');
+        });
   }
 
   Future<void> _loadPlaydateData() async {

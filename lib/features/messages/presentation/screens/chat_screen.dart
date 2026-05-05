@@ -204,7 +204,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             value: playdateId,
           ),
           callback: (payload) {
-            if (mounted) _loadLinkedPlaydate();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _loadLinkedPlaydate();
+            });
           },
         )
         .onPostgresChanges(
@@ -217,7 +219,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             value: playdateId,
           ),
           callback: (payload) {
-            if (mounted) _loadLinkedPlaydate();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _loadLinkedPlaydate();
+            });
           },
         )
         .subscribe();
@@ -238,18 +242,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           schema: 'public',
           table: 'playdate_requests',
           callback: (payload) {
-            if (!mounted) return;
-            final newRow = payload.newRecord;
-            final reqId = newRow['requester_id'] as String?;
-            final invId = newRow['invitee_id'] as String?;
-            // Check if this request involves us and the other user
-            final pair = {currentUserId, widget.recipientId};
-            if (reqId != null &&
-                invId != null &&
-                pair.contains(reqId) &&
-                pair.contains(invId)) {
-              _loadLinkedPlaydate();
-            }
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              final newRow = payload.newRecord;
+              final reqId = newRow['requester_id'] as String?;
+              final invId = newRow['invitee_id'] as String?;
+              final pair = {currentUserId, widget.recipientId};
+              if (reqId != null &&
+                  invId != null &&
+                  pair.contains(reqId) &&
+                  pair.contains(invId)) {
+                _loadLinkedPlaydate();
+              }
+            });
           },
         )
         .subscribe();

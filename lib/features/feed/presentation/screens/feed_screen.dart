@@ -50,7 +50,9 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
     if (uid == null) return;
 
     void invalidateFeedPlaydates() {
-      if (mounted) ref.invalidate(userPlaydatesProvider);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.invalidate(userPlaydatesProvider);
+      });
     }
 
     _playdateFeedChannel =
