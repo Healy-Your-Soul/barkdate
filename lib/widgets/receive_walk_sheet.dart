@@ -7,6 +7,7 @@ import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/conversation_service.dart';
 import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/core/router/app_router.dart';
+import 'package:barkdate/features/messages/presentation/screens/chat_screen.dart';
 import 'package:barkdate/features/feed/presentation/providers/friend_activity_provider.dart';
 import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 
@@ -219,14 +220,17 @@ class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
 
         if (status == 'accepted') {
           if (chatTarget != null) {
-            final chatRoute = ChatRoute(
-              matchId: chatTarget['conversationId']!,
-              recipientId: chatTarget['recipientId']!,
-              recipientName: chatTarget['recipientName']!,
-              recipientAvatarUrl: chatTarget['recipientAvatarUrl']!,
-            );
-            // ignore: use_build_context_synchronously
-            chatRoute.push(rootCtx);
+            final convId = chatTarget['conversationId']!;
+            if (ChatNavigationGuard.canPush(convId)) {
+              final chatRoute = ChatRoute(
+                matchId: convId,
+                recipientId: chatTarget['recipientId']!,
+                recipientName: chatTarget['recipientName']!,
+                recipientAvatarUrl: chatTarget['recipientAvatarUrl']!,
+              );
+              // ignore: use_build_context_synchronously
+              chatRoute.push(rootCtx);
+            }
           }
 
           // ignore: use_build_context_synchronously

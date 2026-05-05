@@ -47,6 +47,30 @@ class ActiveChatTracker {
   }
 }
 
+/// Sprint 7c: prevents duplicate ChatRoute pushes that cause the Flutter
+/// `!keyReservation.contains(key)` assertion crash. Multiple code paths
+/// (notification tap, realtime listener, receive_walk_sheet accept) can all
+/// try to push the same chat simultaneously.
+class ChatNavigationGuard {
+  static DateTime? _lastPushTime;
+  static String? _lastPushMatchId;
+
+  static bool canPush(String matchId) {
+    final now = DateTime.now();
+    if (_lastPushMatchId == matchId &&
+        _lastPushTime != null &&
+        now.difference(_lastPushTime!).inMilliseconds < 800) {
+      return false;
+    }
+    if (ActiveChatTracker.isViewing(matchId)) {
+      return false;
+    }
+    _lastPushMatchId = matchId;
+    _lastPushTime = now;
+    return true;
+  }
+}
+
 class _ChatScreenState extends ConsumerState<ChatScreen>
     with WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
