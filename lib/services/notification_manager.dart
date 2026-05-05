@@ -232,7 +232,10 @@ class NotificationManager {
     bool playSound = true,
   }) async {
     try {
-      // Create notification in database
+      // Create notification in database and fire push via delegate in
+      // NotificationService.createNotification (wired up in Sprint 7a).
+      // The sendPush flag is kept for API compatibility but push is now
+      // always handled inside createNotification.
       await NotificationService.createNotification(
         userId: userId,
         title: title,
@@ -242,47 +245,6 @@ class NotificationManager {
         relatedId: relatedId,
         metadata: metadata,
       );
-
-      // Send push notification if requested
-      if (sendPush) {
-        try {
-          // Get user's FCM token from database
-          final userResponse = await SupabaseConfig.client
-              .from('users')
-              .select('fcm_token')
-              .eq('id', userId)
-              .maybeSingle();
-
-          final fcmToken = userResponse?['fcm_token'] as String?;
-
-          if (fcmToken != null && fcmToken.isNotEmpty) {
-            var badgeCount = 0;
-            try {
-              badgeCount = await NotificationService.getUnreadCount(userId);
-            } catch (e) {
-              debugPrint('Failed to compute unread badge count: $e');
-            }
-
-            await FirebaseMessagingService.sendPushNotificationToUser(
-              userToken: fcmToken,
-              title: title,
-              body: body,
-              type: type,
-              badgeCount: badgeCount,
-              data: {
-                'action_type': actionType,
-                'related_id': relatedId,
-                ...?metadata,
-              },
-            );
-            debugPrint('📱 Push notification sent to user $userId');
-          } else {
-            debugPrint('⚠️ No FCM token for user $userId, skipping push');
-          }
-        } catch (e) {
-          debugPrint('Failed to send push notification: $e');
-        }
-      }
 
       // Play sound if requested
       if (playSound) {
