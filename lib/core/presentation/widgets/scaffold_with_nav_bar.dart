@@ -39,7 +39,7 @@ class ScaffoldWithNavBar extends ConsumerWidget {
       _NavItem(index: 2, icon: Symbols.calendar_today, label: 'Playdates'),
       _NavItem(index: 3, icon: Symbols.event, label: 'Events'),
       _NavItem(index: 4, icon: Symbols.chat_bubble, label: 'Messages'),
-      _NavItem(index: 5, icon: Symbols.pets, label: 'Profile'),
+      _NavItem(index: 5, icon: Icons.pets, label: 'Profile'),
     ];
 
     final List<_NavItem> navItems;
