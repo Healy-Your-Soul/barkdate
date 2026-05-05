@@ -33,8 +33,7 @@ class ChatScreen extends ConsumerStatefulWidget {
 class ActiveChatTracker {
   static String? _activeConversationId;
 
-  static bool isViewing(String matchId) =>
-      _activeConversationId == matchId;
+  static bool isViewing(String matchId) => _activeConversationId == matchId;
 
   static void setActive(String matchId) {
     _activeConversationId = matchId;
@@ -49,7 +48,6 @@ class ActiveChatTracker {
 
 class _ChatScreenState extends ConsumerState<ChatScreen>
     with WidgetsBindingObserver {
-
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSending = false;
