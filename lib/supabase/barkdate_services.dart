@@ -653,34 +653,40 @@ class BarkDateMessageService {
   static Future<Map<String, dynamic>> sendMessage({
     required String matchId,
     required String senderId,
-    required String receiverId,
+    String? receiverId,
     required String content,
     String messageType = 'text',
   }) async {
-    final data = {
+    final data = <String, dynamic>{
       'match_id': matchId,
       'sender_id': senderId,
-      'receiver_id': receiverId,
+      // Omit receiver_id entirely when null/empty (group / playdate chats).
+      // The DB column is nullable after Sprint 7a migration.
+      if (receiverId != null && receiverId.isNotEmpty)
+        'receiver_id': receiverId,
       'content': content,
       'message_type': messageType,
     };
 
     final result = await SupabaseService.insert('messages', data);
 
-    // Send push notification
-    try {
-      // Get sender name for notification
-      final senderProfile = await BarkDateUserService.getUserProfile(senderId);
-      final senderName = senderProfile?['name'] ?? 'Friend';
+    // Only notify a specific recipient — group chats (null receiverId) would
+    // need to notify all participants, which is out of scope for Sprint 7a.
+    if (receiverId != null && receiverId.isNotEmpty) {
+      try {
+        final senderProfile =
+            await BarkDateUserService.getUserProfile(senderId);
+        final senderName = senderProfile?['name'] ?? 'Friend';
 
-      await NotificationManager.sendMessageNotification(
-        receiverUserId: receiverId,
-        senderName: senderName,
-        messageContent: content,
-        matchId: matchId,
-      );
-    } catch (e) {
-      debugPrint('Error sending message notification: $e');
+        await NotificationManager.sendMessageNotification(
+          receiverUserId: receiverId,
+          senderName: senderName,
+          messageContent: content,
+          matchId: matchId,
+        );
+      } catch (e) {
+        debugPrint('Error sending message notification: $e');
+      }
     }
 
     return result.first;
@@ -740,11 +746,15 @@ class BarkDateMessageService {
 
   /// Mark messages as read
   static Future<void> markMessagesAsRead(String matchId, String userId) async {
+    // Marks 1-on-1 messages (receiver_id = me) AND group messages
+    // (receiver_id IS NULL) as read. Group messages are broadcast to all
+    // participants in the match so there is no single receiver.
     await SupabaseConfig.client
         .from('messages')
         .update({'is_read': true})
         .eq('match_id', matchId)
-        .eq('receiver_id', userId);
+        .neq('sender_id', userId)
+        .or('receiver_id.eq.$userId,receiver_id.is.null');
   }
 
   /// Get recent conversations
@@ -757,7 +767,7 @@ class BarkDateMessageService {
           sender:users!messages_sender_id_fkey(id, name, avatar_url),
           receiver:users!messages_receiver_id_fkey(id, name, avatar_url)
         ''')
-        .or('sender_id.eq.$userId,receiver_id.eq.$userId')
+        .or('sender_id.eq.$userId,receiver_id.eq.$userId,receiver_id.is.null')
         .order('created_at', ascending: false);
 
     // Group by match_id and return latest message for each conversation.
@@ -844,18 +854,21 @@ class BarkDateMessageService {
             final newRecord = payload.newRecord;
             final oldRecord = payload.oldRecord;
 
-            // Check if modification involves the user
+            // Check if modification involves the user.
+            // receiver_id may be NULL for group chats (Sprint 7a).
             bool involvesUser = false;
             if (newRecord.isNotEmpty) {
               if (newRecord['sender_id'] == userId ||
-                  newRecord['receiver_id'] == userId) {
+                  newRecord['receiver_id'] == userId ||
+                  newRecord['receiver_id'] == null) {
                 involvesUser = true;
               }
             }
             // For deletes, we might only have oldRecord
             if (!involvesUser && oldRecord.isNotEmpty) {
               if (oldRecord['sender_id'] == userId ||
-                  oldRecord['receiver_id'] == userId) {
+                  oldRecord['receiver_id'] == userId ||
+                  oldRecord['receiver_id'] == null) {
                 involvesUser = true;
               }
             }

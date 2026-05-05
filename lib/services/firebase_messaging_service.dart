@@ -62,6 +62,25 @@ class FirebaseMessagingService {
       // Get and store FCM token
       await _getAndStoreFCMToken();
 
+      // Register push delegate on NotificationService so createNotification
+      // triggers a real FCM push on every call site, without a circular import.
+      NotificationService.registerPushDelegate(({
+        required String userToken,
+        required String title,
+        required String body,
+        required NotificationType type,
+        Map<String, dynamic>? data,
+        int? badgeCount,
+      }) =>
+          FirebaseMessagingService.sendPushNotificationToUser(
+            userToken: userToken,
+            title: title,
+            body: body,
+            type: type,
+            data: data,
+            badgeCount: badgeCount,
+          ));
+
       // Set up message handlers
       _setupMessageHandlers();
 

@@ -4,8 +4,28 @@ import 'package:barkdate/services/app_badge_service.dart';
 import 'package:barkdate/services/in_app_notification_service.dart';
 import 'package:barkdate/models/notification.dart';
 
+// Defined here to avoid a circular import with firebase_messaging_service.dart.
+// FirebaseMessagingService.initialize() calls registerPushDelegate() to wire
+// itself in, so every createNotification call gets a real FCM push.
+typedef PushNotificationDelegate = Future<bool> Function({
+  required String userToken,
+  required String title,
+  required String body,
+  required NotificationType type,
+  Map<String, dynamic>? data,
+  int? badgeCount,
+});
+
 /// Service for managing notifications in BarkDate
 class NotificationService {
+  static PushNotificationDelegate? _pushDelegate;
+
+  /// Called once by FirebaseMessagingService.initialize() to register the
+  /// real FCM sender. Keeps this file free of a circular import.
+  static void registerPushDelegate(PushNotificationDelegate delegate) {
+    _pushDelegate = delegate;
+  }
+
   /// Get unread notifications for a user
   static Future<List<Map<String, dynamic>>> getUnreadNotifications(
       String userId) async {
@@ -173,13 +193,69 @@ class NotificationService {
         }
       }
 
-      // Send push notification if Firebase is initialized
+      // Send push notification via the delegate registered by FirebaseMessagingService.
+      // Failure here must never break the DB insert above.
       try {
-        // Store FCM token for the user (simplified for now)
-        debugPrint('Would send push notification to user $userId: $title');
+        if (_pushDelegate != null) {
+          final userResponse = await SupabaseConfig.client
+              .from('users')
+              .select('fcm_token')
+              .eq('id', userId)
+              .maybeSingle();
+
+          final fcmToken = userResponse?['fcm_token'] as String?;
+          if (fcmToken != null && fcmToken.isNotEmpty) {
+            int badgeCount = 0;
+            try {
+              badgeCount = await getUnreadCount(userId);
+            } catch (_) {}
+
+            NotificationType notifType;
+            switch (type) {
+              case 'bark':
+                notifType = NotificationType.bark;
+                break;
+              case 'playdate':
+                notifType = NotificationType.playdate;
+                break;
+              case 'playdate_request':
+                notifType = NotificationType.playdateRequest;
+                break;
+              case 'message':
+                notifType = NotificationType.message;
+                break;
+              case 'match':
+                notifType = NotificationType.match;
+                break;
+              case 'social':
+                notifType = NotificationType.social;
+                break;
+              case 'achievement':
+                notifType = NotificationType.achievement;
+                break;
+              default:
+                notifType = NotificationType.system;
+            }
+
+            await _pushDelegate!(
+              userToken: fcmToken,
+              title: title,
+              body: body,
+              type: notifType,
+              badgeCount: badgeCount,
+              data: {
+                'action_type': actionType,
+                'related_id': relatedId,
+                ...?metadata,
+              },
+            );
+            debugPrint('📱 Push sent to user $userId');
+          } else {
+            debugPrint('⚠️ No FCM token for user $userId — skipping push');
+          }
+        }
       } catch (e) {
         debugPrint('Failed to send push notification: $e');
-        // Don't fail the whole operation if push fails
       }
 
       return result;

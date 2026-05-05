@@ -299,7 +299,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     return Message(
                       id: data['id'] as String,
                       senderId: data['sender_id'] as String,
-                      receiverId: data['receiver_id'] as String,
+                      receiverId: data['receiver_id'] as String? ?? '',
                       text: data['content'] as String,
                       timestamp: DateTime.parse(data['created_at'] as String),
                       isRead: data['is_read'] ?? false,
