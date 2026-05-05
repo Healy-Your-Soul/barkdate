@@ -5,6 +5,7 @@ import 'package:barkdate/features/playdates/presentation/providers/playdate_prov
 import 'package:barkdate/models/message.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/chat_walk_card.dart';
+import 'package:barkdate/supabase/notification_service.dart';
 
 import 'package:intl/intl.dart' as intl;
 
@@ -26,8 +27,16 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
+// Expose the state type so NotificationManager can check which chat is active.
+typedef ChatScreenState = _ChatScreenState;
+
 class _ChatScreenState extends ConsumerState<ChatScreen>
     with WidgetsBindingObserver {
+  // Sprint 7b: track which conversation is open so the notification manager
+  // can auto-mark-read instead of bumping the badge while user is reading.
+  static String? _activeConversationId;
+  static bool isViewing(String matchId) => _activeConversationId == matchId;
+
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSending = false;
@@ -43,9 +52,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   @override
   void initState() {
     super.initState();
+    _activeConversationId = widget.matchId;
     WidgetsBinding.instance.addObserver(this);
     _messageController.addListener(_checkInputDirection);
     _loadLinkedPlaydate();
+    _markChatNotificationsRead();
+  }
+
+  /// Sprint 7b: mark existing unread notifications for this chat as read
+  /// the moment the user opens the conversation.
+  void _markChatNotificationsRead() async {
+    final uid = SupabaseConfig.auth.currentUser?.id;
+    if (uid == null) return;
+    await NotificationService.markAsReadByRelatedId(
+      userId: uid,
+      relatedId: widget.matchId,
+      type: 'message',
+    );
   }
 
   /// Check if this conversation is linked to a playdate.
@@ -208,6 +231,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   @override
   void dispose() {
+    if (_activeConversationId == widget.matchId) {
+      _activeConversationId = null;
+    }
     WidgetsBinding.instance.removeObserver(this);
     if (_playdateChannel != null) {
       SupabaseConfig.client.removeChannel(_playdateChannel!);

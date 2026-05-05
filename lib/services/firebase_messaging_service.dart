@@ -308,8 +308,12 @@ class FirebaseMessagingService {
         if (ctx != null) _navigateToScreen(type, message.data);
       }
 
-      await InAppNotificationService.showBanner(notification,
-          onTapAction: bannerTapAction);
+      // Sprint 7b: only show banner for walk invites (playdateRequest).
+      // Other types just update the badge silently.
+      if (type == NotificationType.playdateRequest) {
+        await InAppNotificationService.showBanner(notification,
+            onTapAction: bannerTapAction);
+      }
       await NotificationSoundService.playNotificationSound(notification.type);
       await _showLocalNotification(message, notification);
 
