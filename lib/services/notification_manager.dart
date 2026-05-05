@@ -193,8 +193,7 @@ class NotificationManager {
               if (notification.type == NotificationType.message) {
                 final convoId = notification.relatedId ??
                     (notification.metadata?['conversation_id'] as String?);
-                if (convoId != null &&
-                    ActiveChatTracker.isViewing(convoId)) {
+                if (convoId != null && ActiveChatTracker.isViewing(convoId)) {
                   await NotificationService.markAsRead(notification.id);
                   return;
                 }
