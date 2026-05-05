@@ -87,8 +87,8 @@ class ScaffoldWithNavBar extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         // Icon — with unread badge for Messages tab
-                        _buildIcon(item, isSelected, greenColor,
-                            unselectedColor, ref),
+                        _buildIcon(
+                            item, isSelected, greenColor, unselectedColor, ref),
                         const SizedBox(height: 2),
                         // Label
                         Text(
@@ -111,6 +111,7 @@ class ScaffoldWithNavBar extends ConsumerWidget {
       ),
     );
   }
+
   Widget _buildIcon(_NavItem item, bool isSelected, Color greenColor,
       Color unselectedColor, WidgetRef ref) {
     final icon = Icon(
