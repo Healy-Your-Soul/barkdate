@@ -9,6 +9,7 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/models/notification.dart';
 import 'package:barkdate/core/router/app_router.dart';
 import 'package:barkdate/widgets/receive_walk_sheet.dart';
+import 'package:barkdate/features/messages/presentation/screens/chat_screen.dart';
 
 /// Central notification manager that coordinates all notification services
 class NotificationManager {
@@ -150,7 +151,7 @@ class NotificationManager {
     // Listen to real-time notifications
     _realtimeSubscription =
         NotificationService.streamUserNotifications(currentUser.id).listen(
-      (notifications) {
+      (notifications) async {
         if (notifications.isNotEmpty) {
           // Get the latest notification
           final latestNotification = notifications.first;
@@ -164,27 +165,39 @@ class NotificationManager {
               final notification =
                   BarkDateNotification.fromMap(latestNotification);
 
-              // Show in-app banner only for fresh notifications (10s window)
-              if (isRecent) {
+              // Sprint 7b: only show the sliding banner for walk invites.
+              // Other notifications (messages, barks, matches) just update
+              // the badge silently — the banner was spamming users in-app.
+              final shouldShowBanner =
+                  notification.type == NotificationType.playdateRequest;
+              if (isRecent && shouldShowBanner) {
                 InAppNotificationService.showNotification(
                   notification,
                   onTapAction: () {
-                    if (notification.type != NotificationType.playdateRequest) {
-                      return;
-                    }
                     final ctx = rootNavigatorKey.currentContext;
                     if (ctx == null) return;
                     final meta = notification.metadata ?? {};
                     final payload = <String, dynamic>{
                       ...meta,
                       'related_id': notification.relatedId,
-                      'notification_id':
-                          notification.id, // Sprint 1: enable mark-as-read
+                      'notification_id': notification.id,
                       'type': 'playdate_request',
                     };
                     openReceiveWalkSheetFromInvitePayload(ctx, payload);
                   },
                 );
+              }
+
+              // Sprint 7b: auto-mark-read if user is currently in the chat
+              // this notification belongs to.
+              if (notification.type == NotificationType.message) {
+                final convoId = notification.relatedId ??
+                    (notification.metadata?['conversation_id'] as String?);
+                if (convoId != null &&
+                    ChatScreenState.isViewing(convoId)) {
+                  await NotificationService.markAsRead(notification.id);
+                  return;
+                }
               }
 
               // Auto-open walk invite sheet for playdate_request regardless
