@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barkdate/services/feature_flags.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class ScaffoldWithNavBar extends ConsumerWidget {
   const ScaffoldWithNavBar({
@@ -27,11 +28,11 @@ class ScaffoldWithNavBar extends ConsumerWidget {
 
     // Define all possible items with their original index.
     final allItems = [
-      _NavItem(index: 0, icon: Icons.home, label: 'Feed'),
-      _NavItem(index: 1, icon: Icons.map, label: 'Map'),
-      _NavItem(index: 2, icon: Icons.calendar_today, label: 'Playdates'),
-      _NavItem(index: 3, icon: Icons.event, label: 'Events'),
-      _NavItem(index: 4, icon: Icons.chat_bubble, label: 'Messages'),
+      _NavItem(index: 0, icon: Symbols.home, label: 'Feed'),
+      _NavItem(index: 1, icon: Symbols.map, label: 'Map'),
+      _NavItem(index: 2, icon: Symbols.calendar_today, label: 'Playdates'),
+      _NavItem(index: 3, icon: Symbols.event, label: 'Events'),
+      _NavItem(index: 4, icon: Symbols.chat_bubble, label: 'Messages'),
       _NavItem(index: 5, icon: Icons.pets, label: 'Profile'),
     ];
 
