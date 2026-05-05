@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import 'package:barkdate/services/feature_flags.dart';
 
 class ScaffoldWithNavBar extends ConsumerWidget {
@@ -27,19 +26,13 @@ class ScaffoldWithNavBar extends ConsumerWidget {
     final useSlimBottomNav = ref.watch(featureFlagsProvider).useSlimBottomNav;
 
     // Define all possible items with their original index.
-    //
-    // Profile uses Symbols.pets (paw print) — both Symbols.person and
-    // Symbols.sound_detection_dog_barking rendered blank on iOS in this
-    // build of material_symbols_icons v4 (those specific glyphs aren't in
-    // the loaded variable-font subset). Symbols.pets is a core glyph that
-    // renders reliably and fits the dog-app brand better than a person.
     final allItems = [
-      _NavItem(index: 0, icon: Symbols.home, label: 'Feed'),
-      _NavItem(index: 1, icon: Symbols.map, label: 'Map'),
-      _NavItem(index: 2, icon: Symbols.calendar_today, label: 'Playdates'),
-      _NavItem(index: 3, icon: Symbols.event, label: 'Events'),
-      _NavItem(index: 4, icon: Symbols.chat_bubble, label: 'Messages'),
-      _NavItem(index: 5, icon: Symbols.pets, label: 'Profile'),
+      _NavItem(index: 0, icon: Icons.home, label: 'Feed'),
+      _NavItem(index: 1, icon: Icons.map, label: 'Map'),
+      _NavItem(index: 2, icon: Icons.calendar_today, label: 'Playdates'),
+      _NavItem(index: 3, icon: Icons.event, label: 'Events'),
+      _NavItem(index: 4, icon: Icons.chat_bubble, label: 'Messages'),
+      _NavItem(index: 5, icon: Icons.pets, label: 'Profile'),
     ];
 
     final List<_NavItem> navItems;
