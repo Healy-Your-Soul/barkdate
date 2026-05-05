@@ -27,15 +27,28 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-// Expose the state type so NotificationManager can check which chat is active.
-typedef ChatScreenState = _ChatScreenState;
+/// Sprint 7b: tracks which chat conversation is currently visible so other
+/// services (e.g. NotificationManager) can suppress / auto-mark-read
+/// notifications for the open chat.
+class ActiveChatTracker {
+  static String? _activeConversationId;
+
+  static bool isViewing(String matchId) =>
+      _activeConversationId == matchId;
+
+  static void setActive(String matchId) {
+    _activeConversationId = matchId;
+  }
+
+  static void clearIfActive(String matchId) {
+    if (_activeConversationId == matchId) {
+      _activeConversationId = null;
+    }
+  }
+}
 
 class _ChatScreenState extends ConsumerState<ChatScreen>
     with WidgetsBindingObserver {
-  // Sprint 7b: track which conversation is open so the notification manager
-  // can auto-mark-read instead of bumping the badge while user is reading.
-  static String? _activeConversationId;
-  static bool isViewing(String matchId) => _activeConversationId == matchId;
 
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -52,7 +65,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   @override
   void initState() {
     super.initState();
-    _activeConversationId = widget.matchId;
+    ActiveChatTracker.setActive(widget.matchId);
     WidgetsBinding.instance.addObserver(this);
     _messageController.addListener(_checkInputDirection);
     _loadLinkedPlaydate();
@@ -231,9 +244,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   @override
   void dispose() {
-    if (_activeConversationId == widget.matchId) {
-      _activeConversationId = null;
-    }
+    ActiveChatTracker.clearIfActive(widget.matchId);
     WidgetsBinding.instance.removeObserver(this);
     if (_playdateChannel != null) {
       SupabaseConfig.client.removeChannel(_playdateChannel!);
