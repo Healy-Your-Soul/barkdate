@@ -8,6 +8,8 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/walk_details_sheet.dart';
 import 'package:intl/intl.dart';
 
+const Duration _kWalkExpiryGrace = Duration(minutes: 60);
+
 /// Effective playdate status for UI labels. Matches [feed_screen] logic: use
 /// `playdate_requests` when `playdates.status` lags, and treat multi-participant
 /// walks as confirmed when the row is still `pending`.
@@ -128,9 +130,10 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
     final scheduledAt = DateTime.tryParse(scheduledAtRaw);
     if (scheduledAt == null) return;
 
+    final transitionAt = scheduledAt.add(_kWalkExpiryGrace);
     final delay =
-        scheduledAt.difference(DateTime.now()) + const Duration(seconds: 5);
-    if (delay.isNegative) return; // already past — build will reflect that
+        transitionAt.difference(DateTime.now()) + const Duration(seconds: 5);
+    if (delay.isNegative) return;
 
     _expiryTimer = Timer(delay, () {
       if (mounted) setState(() {});
@@ -217,7 +220,7 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
     final scheduledAt =
         DateTime.tryParse(_playdateData!['scheduled_at'] ?? '') ??
             DateTime.now();
-    return DateTime.now().isAfter(scheduledAt);
+    return DateTime.now().isAfter(scheduledAt.add(_kWalkExpiryGrace));
   }
 
   bool get _isCancelled {
@@ -283,26 +286,55 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Center(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.grey.shade200,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  _isCancelled ? Icons.block : Icons.check_circle_outline,
-                  size: 14,
-                  color: Colors.grey.shade700,
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Icon(
+                    _isCancelled ? Icons.block : Icons.check_circle_outline,
+                    size: 14,
+                    color: Colors.grey.shade700,
+                  ),
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  '$statusStr Walk: $location • $timeStr',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey.shade700,
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$statusStr Walk',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        location,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        timeStr,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -665,7 +697,8 @@ class ChatWalkPinnedHeader extends StatelessWidget {
     this.onTap,
   });
 
-  bool get _isExpired => DateTime.now().isAfter(scheduledFor);
+  bool get _isExpired =>
+      DateTime.now().isAfter(scheduledFor.add(_kWalkExpiryGrace));
   bool get _isCancelled => status == 'cancelled';
   bool get _isLocked => _isExpired || _isCancelled;
 

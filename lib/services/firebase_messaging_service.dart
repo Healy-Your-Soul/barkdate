@@ -15,6 +15,7 @@ import 'package:barkdate/widgets/receive_walk_sheet.dart';
 import 'package:barkdate/core/router/app_router.dart';
 import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/services/conversation_service.dart';
+import 'package:barkdate/features/messages/presentation/screens/chat_screen.dart';
 import 'package:go_router/go_router.dart';
 
 /// Firebase Cloud Messaging service for BarkDate
@@ -550,10 +551,12 @@ class FirebaseMessagingService {
           try {
             final conv = await ConversationService.getPlaydateConversation(pId);
             if (conv != null && context.mounted) {
+              final convId = conv['id'] as String;
+              if (!ChatNavigationGuard.canPush(convId)) break;
               final responderName =
                   merged2['responder_name'] as String? ?? 'Walk buddy';
               ChatRoute(
-                matchId: conv['id'] as String,
+                matchId: convId,
                 recipientId: '',
                 recipientName: responderName,
                 recipientAvatarUrl: '',
@@ -568,13 +571,11 @@ class FirebaseMessagingService {
         }
         break;
       case NotificationType.message:
-        // related_id is match_id for messages.
-        // Sprint 7b fix: use the typed ChatRoute. The previous '/chat' string
-        // push hit a null-check assertion in go_router because $ChatRoute
-        // expects matchId / recipientId via path+query, not extra.
         if (data['related_id'] != null) {
+          final matchId = data['related_id'] as String;
+          if (!ChatNavigationGuard.canPush(matchId)) break;
           ChatRoute(
-            matchId: data['related_id'] as String,
+            matchId: matchId,
             recipientId: '',
             recipientName: (data['sender_name'] as String?) ?? 'Chat',
             recipientAvatarUrl: '',

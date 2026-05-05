@@ -10,6 +10,7 @@ import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/widgets/receive_walk_sheet.dart';
 import 'package:barkdate/services/conversation_service.dart';
+import 'package:barkdate/features/messages/presentation/screens/chat_screen.dart';
 
 /// Provider for notifications
 final notificationsProvider =
@@ -149,10 +150,12 @@ class NotificationsScreen extends ConsumerWidget {
                 final conv =
                     await ConversationService.getPlaydateConversation(pId);
                 if (conv != null && context.mounted) {
+                  final convId = conv['id'] as String;
+                  if (!ChatNavigationGuard.canPush(convId)) break;
                   final respName =
                       metadata?['responder_name'] as String? ?? 'Walk buddy';
                   ChatRoute(
-                    matchId: conv['id'] as String,
+                    matchId: convId,
                     recipientId: '',
                     recipientName: respName,
                     recipientAvatarUrl: '',
@@ -165,14 +168,16 @@ class NotificationsScreen extends ConsumerWidget {
             const PlaydatesRoute().push(context);
             break;
           case 'message':
-            // Navigate to messages or specific chat if we have conversation data
             if (metadata != null && metadata['conversation_id'] != null) {
-              ChatRoute(
-                matchId: metadata['conversation_id'],
-                recipientId: '',
-                recipientName: 'Unknown',
-                recipientAvatarUrl: '',
-              ).push(context);
+              final convId = metadata['conversation_id'] as String;
+              if (ChatNavigationGuard.canPush(convId)) {
+                ChatRoute(
+                  matchId: convId,
+                  recipientId: '',
+                  recipientName: 'Unknown',
+                  recipientAvatarUrl: '',
+                ).push(context);
+              }
             } else {
               const MessagesRoute().push(context);
             }
