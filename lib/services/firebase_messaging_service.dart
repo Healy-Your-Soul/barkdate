@@ -332,8 +332,7 @@ class FirebaseMessagingService {
         final c = rootNavigatorKey.currentContext;
         bool sheetOpened = false;
         if (c != null) {
-          sheetOpened =
-              await openReceiveWalkSheetFromInvitePayload(c, payload);
+          sheetOpened = await openReceiveWalkSheetFromInvitePayload(c, payload);
         }
         if (!sheetOpened) {
           await InAppNotificationService.showBanner(notification,
