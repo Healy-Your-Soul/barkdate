@@ -57,7 +57,10 @@ class DogMarkerGenerator {
     // Convert to bytes
     final picture = recorder.endRecording();
     final image = await picture.toImage(scaledSize, scaledSize);
+    picture.dispose(); // Free native memory
+    
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose(); // Free native memory
 
     return byteData!.buffer.asUint8List();
   }
@@ -99,6 +102,8 @@ class DogMarkerGenerator {
         borderWidth: borderWidth,
         isCurrentUser: isCurrentUser,
       );
+      
+      dogImage?.dispose(); // Free native memory
 
       final descriptor = BitmapDescriptor.bytes(
         markerBytes,
@@ -327,6 +332,9 @@ class DogMarkerGenerator {
         isConfirmed: isConfirmed,
         size: size,
       );
+
+      orgImg?.dispose(); // Free native memory
+      invImg?.dispose(); // Free native memory
 
       final descriptor = BitmapDescriptor.bytes(
         bytes,

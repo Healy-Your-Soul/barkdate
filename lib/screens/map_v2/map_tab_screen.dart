@@ -23,6 +23,7 @@ import 'package:barkdate/models/checkin.dart';
 import 'package:barkdate/widgets/live_location_toggle.dart';
 import 'package:barkdate/utils/dog_marker_generator.dart';
 import 'package:barkdate/screens/map_v2/widgets/dog_mini_card.dart';
+import 'package:barkdate/screens/map_v2/widgets/walk_marker_tooltip.dart';
 import 'package:barkdate/screens/map_v2/widgets/place_mini_card.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
@@ -68,6 +69,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
   // Selected live dog for mini popup (Phase 5)
   Map<String, dynamic>? _selectedLiveDog;
+  Map<String, dynamic>? _selectedWalkMarker;
+  bool _isProgrammaticCameraMove = false;
 
   // Selected place for mini popup (tapped marker - shows compact card first)
   PlaceResult? _tappedPlaceMarker;
@@ -570,8 +573,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       final inviteeDog = walk['invitee_dog'] as Map<String, dynamic>?;
       final dogName = dog?['name'] as String? ?? 'Someone';
       final inviteeDogName = inviteeDog?['name'] as String?;
-      final parkName = walk['park_name'] as String? ?? 'a park';
-      final playdateId = walk['playdate_id'] as String?;
       final isConfirmed = walk['is_confirmed'] == true;
 
       final hour = scheduledFor.hour;
@@ -579,10 +580,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       final amPm = hour >= 12 ? 'PM' : 'AM';
       final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
       final timeStr = '$displayHour:$minute $amPm';
-
-      final infoTitle = isConfirmed && inviteeDogName != null
-          ? '🐾 $dogName & $inviteeDogName • $timeStr'
-          : '🕐 $dogName • $timeStr';
 
       final String? inviteeDogPhotoUrl =
           isConfirmed ? (inviteeDog?['main_photo_url'] as String?) : null;
@@ -596,24 +593,17 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       newMarkers.add(Marker(
         markerId: MarkerId('scheduled_walk_${walk['id']}'),
         position: LatLng(lat, lng),
-        infoWindow: InfoWindow(
-          title: infoTitle,
-          snippet:
-              isConfirmed ? 'Confirmed walk at $parkName' : 'Walk at $parkName',
-        ),
+        infoWindow: InfoWindow.noText,
         icon: icon,
         zIndexInt: 40,
         onTap: () {
-          showWalkDetailsSheet(
-            context,
-            parkId: parkName,
-            parkName: parkName,
-            scheduledFor: scheduledFor,
-            organizerDogName: dogName,
-            playdateId: playdateId,
-            latitude: lat,
-            longitude: lng,
-          );
+          setState(() => _selectedWalkMarker = walk);
+          if (_mapController != null) {
+            _isProgrammaticCameraMove = true;
+            _mapController!.animateCamera(
+              CameraUpdate.newLatLng(LatLng(lat, lng)),
+            );
+          }
         },
       ));
     }
@@ -1053,6 +1043,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   Timer? _debounceTimer;
 
   void _onCameraIdle() async {
+    _isProgrammaticCameraMove = false;
     if (_mapController == null) return;
 
     // Debounce the update to prevent rapid-fire fetches and crashes
@@ -1165,6 +1156,12 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
               onMapCreated: _onMapCreated,
               onCameraMove: _onCameraMove,
               onCameraIdle: _onCameraIdle,
+              onCameraMoveStarted: () {
+                if (_isProgrammaticCameraMove) return;
+                if (_tappedPlaceMarker != null) setState(() => _tappedPlaceMarker = null);
+                if (_selectedLiveDog != null) setState(() => _selectedLiveDog = null);
+                if (_selectedWalkMarker != null) setState(() => _selectedWalkMarker = null);
+              },
               // NEW: Handle map tap to collapse sheet to peek view
               onTap: (LatLng position) {
                 if (_placeSheetState == PlaceSheetState.expanded) {
@@ -1183,6 +1180,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                 }
                 if (_selectedLiveDog != null) {
                   setState(() => _selectedLiveDog = null);
+                }
+                if (_selectedWalkMarker != null) {
+                  setState(() => _selectedWalkMarker = null);
                 }
               },
               initialCameraPosition: CameraPosition(
@@ -1397,6 +1397,49 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
               left: 16,
               top: 8,
               child: _buildCheckInStatusButton(),
+            ),
+
+          // Walk Marker Tooltip (Popup above map when walk marker is tapped)
+          if (_selectedWalkMarker != null)
+            Align(
+              alignment: Alignment.center,
+              child: FractionalTranslation(
+                translation: const Offset(0, -1.1), // Move up to hover just above the centered marker
+                child: SafeArea(
+                  child: PointerInterceptor(
+                    child: WalkMarkerTooltip(
+                      dogName: _selectedWalkMarker!['dog']?['name'] as String? ?? 'Dog',
+                      inviteeDogName: _selectedWalkMarker!['invitee_dog']?['name'] as String?,
+                      time: () {
+                        final scheduledFor = DateTime.tryParse(_selectedWalkMarker!['scheduled_for'] ?? '');
+                        if (scheduledFor == null) return 'Unknown Time';
+                        final hour = scheduledFor.hour;
+                        final minute = scheduledFor.minute.toString().padLeft(2, '0');
+                        final amPm = hour >= 12 ? 'PM' : 'AM';
+                        final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+                        return '$displayHour:$minute $amPm';
+                      }(),
+                      parkName: _selectedWalkMarker!['park_name'] as String? ?? 'Unknown Park',
+                      isConfirmed: _selectedWalkMarker!['is_confirmed'] == true,
+                      onTap: () {
+                        final scheduledFor = DateTime.tryParse(_selectedWalkMarker!['scheduled_for'] ?? '');
+                        if (scheduledFor == null) return;
+                        showWalkDetailsSheet(
+                          context,
+                          parkId: _selectedWalkMarker!['park_name'] as String? ?? '',
+                          parkName: _selectedWalkMarker!['park_name'] as String? ?? '',
+                          scheduledFor: scheduledFor,
+                          organizerDogName: _selectedWalkMarker!['dog']?['name'] as String? ?? 'Dog',
+                          playdateId: _selectedWalkMarker!['playdate_id'] as String?,
+                          latitude: _selectedWalkMarker!['latitude'] as double?,
+                          longitude: _selectedWalkMarker!['longitude'] as double?,
+                        );
+                        setState(() => _selectedWalkMarker = null);
+                      },
+                    ),
+                  ),
+                ),
+              ),
             ),
 
           // Dog mini card popup when a live dog marker is tapped
