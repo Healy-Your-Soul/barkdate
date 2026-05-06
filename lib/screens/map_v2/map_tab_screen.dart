@@ -566,7 +566,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       if (lat == null || lng == null) {
         continue;
       }
-      if (walk['scheduled_for'] == null || DateTime.tryParse(walk['scheduled_for']) == null) {
+      if (walk['scheduled_for'] == null ||
+          DateTime.tryParse(walk['scheduled_for']) == null) {
         continue;
       }
 
