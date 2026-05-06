@@ -27,6 +27,7 @@ import 'package:barkdate/screens/map_v2/widgets/place_mini_card.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
+import 'package:barkdate/services/walk_realtime_service.dart';
 import 'package:barkdate/widgets/walk_details_sheet.dart';
 
 /// New map tab with AI assistant, event integration, and improved UX
@@ -110,9 +111,16 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
     // Realtime subscription for check-ins (instant updates)
     _setupCheckinSubscription();
+
+    // Realtime subscription for walk changes (Sprint 7f service)
+    // so walk markers appear/update instantly instead of waiting 30s.
+    _walkRealtimeSub = WalkRealtimeService.instance.changes.listen((_) {
+      if (mounted) _refreshScheduledWalks();
+    });
   }
 
   StreamSubscription? _checkinSubscription;
+  StreamSubscription? _walkRealtimeSub;
 
   void _setupCheckinSubscription() {
     _checkinSubscription = Supabase.instance.client
@@ -130,6 +138,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     _checkInRefreshTimer?.cancel();
     _liveUsersRefreshTimer?.cancel();
     _checkinSubscription?.cancel();
+    _walkRealtimeSub?.cancel();
     super.dispose();
   }
 
@@ -167,7 +176,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
       // Update viewport
       final location = LatLng(position.latitude, position.longitude);
-      ref.read(mapViewportProvider.notifier).updateCamera(location, 14.0);
+      ref.read(mapViewportProvider.notifier).updateCamera(location, 14.5);
 
       // Fetch initial data
       _fetchPlacesAndEvents();
@@ -214,11 +223,25 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       debugPrint(
           '📍 Search center (map viewport): lat=$searchLat, lng=$searchLng');
 
-      // Fetch places within 5km radius of MAP CENTER (not user position!)
+      // Calculate dynamic search radius based on viewport bounds
+      double searchRadius = 5000;
+      if (bbox != null) {
+        final distanceToCorner = Geolocator.distanceBetween(
+          searchLat,
+          searchLng,
+          bbox.north,
+          bbox.east,
+        );
+        // Clamp between 500m (minimum useful radius) and 50000m (API limit)
+        searchRadius = distanceToCorner.clamp(500.0, 50000.0);
+      }
+      debugPrint('📏 Dynamic search radius: ${searchRadius.round()}m');
+
+      // Fetch places within dynamic radius of MAP CENTER (not user position!)
       final placesResult = await PlacesService.searchDogFriendlyPlaces(
         latitude: searchLat,
         longitude: searchLng,
-        radius: 5000, // 5km radius for relevant nearby results
+        radius: searchRadius.round(), // Dynamic radius matching viewport
         keyword: filters.searchQuery.isEmpty ? null : filters.searchQuery,
         primaryTypes: primaryTypes,
       );
@@ -243,17 +266,16 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         _isLoadingPlaces = false;
       });
 
-      // Fetch check-in counts for the places
-      await _refreshCheckInCounts();
-
-      // Fetch other users' check-ins for map display
-      await _refreshOtherUsersCheckIns();
-
-      // Fetch live users nearby
-      await _refreshLiveUsers();
-
-      // Fetch scheduled future walks for clock markers
-      await _refreshScheduledWalks();
+      // Run all refresh calls in parallel to avoid race conditions.
+      // Each refresh function also calls _updateMarkers() internally
+      // (for standalone 30s-timer use), but here we call it once after
+      // all data is loaded to guarantee a consistent render.
+      await Future.wait([
+        _refreshCheckInCounts(),
+        _refreshOtherUsersCheckIns(),
+        _refreshLiveUsers(),
+        _refreshScheduledWalks(),
+      ]);
 
       _updateMarkers();
     } catch (e) {
@@ -568,6 +590,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       final icon = await DogMarkerGenerator.createScheduledWalkMarker(
         organizerDogPhotoUrl: organizerDogPhotoUrl,
         inviteeDogPhotoUrl: inviteeDogPhotoUrl,
+        size: isConfirmed ? 55 : 52,
       );
 
       newMarkers.add(Marker(
@@ -766,24 +789,26 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   Widget _buildCollapsedFilterChips() {
     final filters = ref.watch(mapFiltersProvider);
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _buildFilterChip('All', 'all', filters.category == 'all', null, null),
-          const SizedBox(width: 8),
-          _buildFilterChip('Parks', 'park', filters.category == 'park',
-              Icons.park, Colors.green),
-          const SizedBox(width: 8),
-          _buildFilterChip('Cafes', 'cafe', filters.category == 'cafe',
-              Icons.local_cafe, Colors.orange),
-          const SizedBox(width: 8),
-          _buildFilterChip('Events', 'events', filters.category == 'events',
-              Icons.event, Colors.purple),
-          const SizedBox(width: 8),
-          _buildFilterChip('Stores', 'store', filters.category == 'store',
-              Icons.store, Colors.blue),
-        ],
+    return PointerInterceptor(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _buildFilterChip('All', 'all', filters.category == 'all', null, null),
+            const SizedBox(width: 8),
+            _buildFilterChip('Parks', 'park', filters.category == 'park',
+                Icons.park, Colors.green),
+            const SizedBox(width: 8),
+            _buildFilterChip('Cafes', 'cafe', filters.category == 'cafe',
+                Icons.local_cafe, Colors.orange),
+            const SizedBox(width: 8),
+            _buildFilterChip('Events', 'events', filters.category == 'events',
+                Icons.event, Colors.purple),
+            const SizedBox(width: 8),
+            _buildFilterChip('Stores', 'store', filters.category == 'store',
+                Icons.store, Colors.blue),
+          ],
+        ),
       ),
     );
   }
@@ -1275,7 +1300,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             bottom: _currentUserCheckIn != null ? 180 : 140,
             left: 16,
             right: 16,
-            child: Row(
+            child: PointerInterceptor(
+              child: Row(
               children: [
                 // Search bar (expanded)
                 const Expanded(child: MapSearchBar()),
@@ -1303,6 +1329,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                   ),
                 ),
               ],
+              ),
             ),
           ),
 
@@ -1311,56 +1338,58 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             // Position above the search bar row (higher than target button)
             bottom: _currentUserCheckIn != null ? 250 : 210,
             right: 16,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    onPressed: _zoomIn,
-                    icon: Icon(
-                      Icons.add,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
+            child: PointerInterceptor(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: _zoomIn,
+                      icon: Icon(
+                        Icons.add,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 20,
+                      ),
+                      tooltip: 'Zoom In',
+                      constraints:
+                          const BoxConstraints(minWidth: 36, minHeight: 36),
+                      padding: EdgeInsets.zero,
                     ),
-                    tooltip: 'Zoom In',
-                    constraints:
-                        const BoxConstraints(minWidth: 36, minHeight: 36),
-                    padding: EdgeInsets.zero,
-                  ),
-                  Container(
-                    height: 1,
-                    width: 20,
-                    color: Colors.grey[400],
-                  ),
-                  IconButton(
-                    onPressed: _zoomOut,
-                    icon: Icon(
-                      Icons.remove,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
+                    Container(
+                      height: 1,
+                      width: 20,
+                      color: Colors.grey[400],
                     ),
-                    tooltip: 'Zoom Out',
-                    constraints:
-                        const BoxConstraints(minWidth: 36, minHeight: 36),
-                    padding: EdgeInsets.zero,
-                  ),
-                ],
+                    IconButton(
+                      onPressed: _zoomOut,
+                      icon: Icon(
+                        Icons.remove,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 20,
+                      ),
+                      tooltip: 'Zoom Out',
+                      constraints:
+                          const BoxConstraints(minWidth: 36, minHeight: 36),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
 
-          // Live Location Toggle - TOP (above Search This Area)
-          Positioned(
-            right: 16,
-            top: 8,
-            child: LiveLocationToggle(
-              onStateChanged: _refreshLiveUsers,
-            ),
-          ),
+          // Live Location Toggle - temporarily hidden (not working yet)
+          // Positioned(
+          //   right: 16,
+          //   top: 8,
+          //   child: LiveLocationToggle(
+          //     onStateChanged: _refreshLiveUsers,
+          //   ),
+          // ),
 
           // Check-in Status Button - TOP LEFT (above Search This Area)
           if (_currentUserCheckIn != null)

@@ -396,37 +396,60 @@ class DogMarkerGenerator {
           );
         }
 
-        // Small clock badge (top-right) so users still recognise this as a
-        // scheduled-walk marker even at a glance.
-        final badgeRadius = scaledSize * 0.18;
+        // Clock badge (top-right) — drawn with Canvas primitives because
+        // emoji rendering on Flutter web Canvas is unreliable.
+        final badgeRadius = scaledSize * 0.22;
         final badgeCenter = Offset(
-          scaledSize - badgeRadius - (2 * dpr),
-          badgeRadius + (2 * dpr),
+          scaledSize - badgeRadius,  // flush to the right edge
+          badgeRadius,               // flush to the top edge
         );
+
+        // White filled circle background
         paint
           ..style = PaintingStyle.fill
           ..color = Colors.white;
         canvas.drawCircle(badgeCenter, badgeRadius, paint);
+
+        // Colored border ring
         paint
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5 * dpr
           ..color = isConfirmed ? _walkBlueConfirmed : _walkBluePending;
         canvas.drawCircle(badgeCenter, badgeRadius - (1 * dpr), paint);
 
-        final clockTp = TextPainter(
-          text: TextSpan(
-            text: '🕐',
-            style: TextStyle(fontSize: badgeRadius * 1.4),
-          ),
-          textDirection: TextDirection.ltr,
+        // Draw clock face: small circle + two hands (hour pointing to 2,
+        // minute pointing to 12) using the same accent color.
+        final clockColor = isConfirmed ? _walkBlueConfirmed : _walkBluePending;
+        final handLength = badgeRadius * 0.45;
+        final shortHand = badgeRadius * 0.32;
+
+        // Clock circle outline
+        paint
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5 * dpr
+          ..color = clockColor;
+        canvas.drawCircle(badgeCenter, badgeRadius * 0.6, paint);
+
+        // Minute hand (pointing up / 12 o'clock)
+        paint
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0 * dpr
+          ..strokeCap = StrokeCap.round
+          ..color = clockColor;
+        canvas.drawLine(
+          badgeCenter,
+          Offset(badgeCenter.dx, badgeCenter.dy - handLength),
+          paint,
         );
-        clockTp.layout();
-        clockTp.paint(
-          canvas,
+
+        // Hour hand (pointing to ~2 o'clock)
+        canvas.drawLine(
+          badgeCenter,
           Offset(
-            badgeCenter.dx - clockTp.width / 2,
-            badgeCenter.dy - clockTp.height / 2,
+            badgeCenter.dx + shortHand * 0.87,  // cos(30°)
+            badgeCenter.dy - shortHand * 0.5,   // sin(30°)
           ),
+          paint,
         );
       },
     );
