@@ -58,7 +58,7 @@ class DogMarkerGenerator {
     final picture = recorder.endRecording();
     final image = await picture.toImage(scaledSize, scaledSize);
     picture.dispose(); // Free native memory
-    
+
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     image.dispose(); // Free native memory
 
@@ -102,7 +102,7 @@ class DogMarkerGenerator {
         borderWidth: borderWidth,
         isCurrentUser: isCurrentUser,
       );
-      
+
       dogImage?.dispose(); // Free native memory
 
       final descriptor = BitmapDescriptor.bytes(
@@ -408,8 +408,8 @@ class DogMarkerGenerator {
         // emoji rendering on Flutter web Canvas is unreliable.
         final badgeRadius = scaledSize * 0.22;
         final badgeCenter = Offset(
-          scaledSize - badgeRadius,  // flush to the right edge
-          badgeRadius,               // flush to the top edge
+          scaledSize - badgeRadius, // flush to the right edge
+          badgeRadius, // flush to the top edge
         );
 
         // White filled circle background
@@ -454,8 +454,8 @@ class DogMarkerGenerator {
         canvas.drawLine(
           badgeCenter,
           Offset(
-            badgeCenter.dx + shortHand * 0.87,  // cos(30°)
-            badgeCenter.dy - shortHand * 0.5,   // sin(30°)
+            badgeCenter.dx + shortHand * 0.87, // cos(30°)
+            badgeCenter.dy - shortHand * 0.5, // sin(30°)
           ),
           paint,
         );
