@@ -165,29 +165,6 @@ class NotificationManager {
               final notification =
                   BarkDateNotification.fromMap(latestNotification);
 
-              // Sprint 7b: only show the sliding banner for walk invites.
-              // Other notifications (messages, barks, matches) just update
-              // the badge silently — the banner was spamming users in-app.
-              final shouldShowBanner =
-                  notification.type == NotificationType.playdateRequest;
-              if (isRecent && shouldShowBanner) {
-                InAppNotificationService.showNotification(
-                  notification,
-                  onTapAction: () {
-                    final ctx = rootNavigatorKey.currentContext;
-                    if (ctx == null) return;
-                    final meta = notification.metadata ?? {};
-                    final payload = <String, dynamic>{
-                      ...meta,
-                      'related_id': notification.relatedId,
-                      'notification_id': notification.id,
-                      'type': 'playdate_request',
-                    };
-                    openReceiveWalkSheetFromInvitePayload(ctx, payload);
-                  },
-                );
-              }
-
               // Sprint 7b: auto-mark-read if user is currently in the chat
               // this notification belongs to.
               if (notification.type == NotificationType.message) {
@@ -199,24 +176,37 @@ class NotificationManager {
                 }
               }
 
-              // Auto-open walk invite sheet for playdate_request regardless
-              // of age — the dedupe guard inside
-              // openReceiveWalkSheetFromInvitePayload prevents doubles.
+              // Sprint 7e: for walk invites, attempt to open the sheet first.
+              // Only fall back to the in-app banner if the sheet was skipped
+              // (dedupe blocked, no navigator context). Eliminates the
+              // "banner + sheet for the same event" double-UI.
               if (notification.type == NotificationType.playdateRequest) {
                 final meta = notification.metadata ?? {};
                 final payload = <String, dynamic>{
                   ...meta,
                   'related_id': notification.relatedId,
-                  'notification_id':
-                      notification.id, // Sprint 1: enable mark-as-read
+                  'notification_id': notification.id,
                   'type': 'playdate_request',
                 };
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  final ctx = rootNavigatorKey.currentContext;
-                  if (ctx != null) {
-                    openReceiveWalkSheetFromInvitePayload(ctx, payload);
-                  }
-                });
+                bool sheetOpened = false;
+                final ctx = rootNavigatorKey.currentContext;
+                if (ctx != null) {
+                  sheetOpened =
+                      // ignore: use_build_context_synchronously
+                      await openReceiveWalkSheetFromInvitePayload(ctx, payload);
+                }
+                if (!sheetOpened && isRecent) {
+                  InAppNotificationService.showNotification(
+                    notification,
+                    onTapAction: () {
+                      final retryCtx = rootNavigatorKey.currentContext;
+                      if (retryCtx != null) {
+                        openReceiveWalkSheetFromInvitePayload(
+                            retryCtx, payload);
+                      }
+                    },
+                  );
+                }
               }
             } catch (e) {
               debugPrint('Error showing real-time notification: $e');

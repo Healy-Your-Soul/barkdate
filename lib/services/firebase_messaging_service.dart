@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart' hide Priority;
-import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
@@ -309,20 +308,9 @@ class FirebaseMessagingService {
         if (ctx != null) _navigateToScreen(type, message.data);
       }
 
-      // Sprint 7b: only show banner + OS local notification for walk invites
-      // when the app is in foreground. Messages, barks, matches just update
-      // the badge silently — the user is already in the app, no need to
-      // surface a redundant alert. (When the app is in background or closed,
-      // FCM delivers the OS push directly without going through this code.)
-      if (type == NotificationType.playdateRequest) {
-        await InAppNotificationService.showBanner(notification,
-            onTapAction: bannerTapAction);
-        await NotificationSoundService.playNotificationSound(notification.type);
-        await _showLocalNotification(message, notification);
-      }
-
-      // Auto-show the Walk Invite sheet for playdate_request (resolves request_id
-      // from playdate_id when FCM data payload is incomplete — e.g. web/data-only).
+      // Sprint 7e: for walk invites in foreground, attempt the sheet first.
+      // Only fall back to the in-app banner (and OS local notification) if
+      // the sheet was skipped — avoids the duplicate banner-plus-sheet UI.
       if (type == NotificationType.playdateRequest) {
         final data = message.data;
         final metadataRaw = data['metadata'];
@@ -339,17 +327,21 @@ class FirebaseMessagingService {
         final payload = <String, dynamic>{
           ...metadata,
           ...data,
-          // Sprint 1: pass the local notification id so the funnel can mark
-          // as read. The DB row may not exist on this device yet for FCM
-          // foreground, so the funnel falls back to related_id if missing.
           'notification_id': notification.id,
         };
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          final c = rootNavigatorKey.currentContext;
-          if (c != null) {
-            unawaited(openReceiveWalkSheetFromInvitePayload(c, payload));
-          }
-        });
+        final c = rootNavigatorKey.currentContext;
+        bool sheetOpened = false;
+        if (c != null) {
+          sheetOpened =
+              await openReceiveWalkSheetFromInvitePayload(c, payload);
+        }
+        if (!sheetOpened) {
+          await InAppNotificationService.showBanner(notification,
+              onTapAction: bannerTapAction);
+          await NotificationSoundService.playNotificationSound(
+              notification.type);
+          await _showLocalNotification(message, notification);
+        }
       }
     }
   }
@@ -571,15 +563,21 @@ class FirebaseMessagingService {
         }
         break;
       case NotificationType.message:
-        if (data['related_id'] != null) {
-          final matchId = data['related_id'] as String;
-          if (!ChatNavigationGuard.canPush(matchId)) break;
+        // Sprint 7e: tap originated from FCM = always a user-initiated action,
+        // so force-bypass the dedupe guard. Fall back to messages list if no
+        // conversation id is in the payload (better than landing on Feed).
+        final rawId = data['related_id'] ?? data['match_id'];
+        final matchId = rawId is String && rawId.isNotEmpty ? rawId : null;
+        if (matchId != null) {
+          ChatNavigationGuard.canPush(matchId, force: true);
           ChatRoute(
             matchId: matchId,
             recipientId: '',
             recipientName: (data['sender_name'] as String?) ?? 'Chat',
             recipientAvatarUrl: '',
           ).push(context);
+        } else {
+          const MessagesRoute().push(context);
         }
         break;
       case NotificationType.match:
