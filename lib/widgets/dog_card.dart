@@ -113,9 +113,15 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'playdate_requests',
-          callback: (payload) => _scheduleRefresh(),
+          callback: (payload) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _scheduleRefresh();
+            });
+          },
         )
-        .subscribe();
+        .subscribe((status, [error]) {
+      debugPrint('🔔 dog_card requests sub: $status (key: $key)');
+    });
 
     _playdatesChannel = SupabaseConfig.client
         .channel('dog_card_playdates_$key')
@@ -123,9 +129,15 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
           event: PostgresChangeEvent.update,
           schema: 'public',
           table: 'playdates',
-          callback: (payload) => _scheduleRefresh(),
+          callback: (payload) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _scheduleRefresh();
+            });
+          },
         )
-        .subscribe();
+        .subscribe((status, [error]) {
+      debugPrint('🔔 dog_card playdates sub: $status (key: $key)');
+    });
   }
 
   void _scheduleRefresh() {
