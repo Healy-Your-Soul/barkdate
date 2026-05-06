@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:barkdate/features/messages/presentation/providers/unread_count_provider.dart';
 import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 import 'package:barkdate/models/message.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
@@ -131,6 +132,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       await BarkDateMessageService.markMessagesAsRead(widget.matchId, uid);
     } catch (e) {
       debugPrint('Failed to mark messages as read on chat entry: $e');
+    }
+    // Sprint 7f: refresh the badge immediately rather than waiting for the
+    // realtime round-trip + RPC refetch.
+    if (mounted) {
+      ref.invalidate(unreadConversationCountProvider);
     }
   }
 

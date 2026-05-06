@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/models/dog.dart';
+import 'package:barkdate/services/walk_realtime_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/conversation_service.dart';
 import 'package:barkdate/core/router/app_routes.dart';
@@ -46,11 +46,10 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
   bool _hasBarked = false;
   Timer? _barkResetTimer;
 
-  // Sprint 5: realtime channels keep the card's playdate state in sync with
-  // the server. Without these, the card only reflects state at initState
-  // and goes stale until the user triggers a manual refresh.
-  RealtimeChannel? _requestsChannel;
-  RealtimeChannel? _playdatesChannel;
+  // Sprint 7f: subscribe to the app-wide WalkRealtimeService instead of
+  // owning per-card websocket channels (which cycled subscribed→closed on
+  // every widget rebuild).
+  StreamSubscription<WalkChange>? _walkSub;
 
   // Coalesce burst-y realtime events (e.g. trigger fires AFTER INSERT and
   // AFTER UPDATE in the same transaction) into a single _checkPlaydateStatus
@@ -82,14 +81,8 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
     _barkAnimationController.dispose();
     _barkResetTimer?.cancel();
     _refreshDebounce?.cancel();
-    if (_requestsChannel != null) {
-      SupabaseConfig.client.removeChannel(_requestsChannel!);
-      _requestsChannel = null;
-    }
-    if (_playdatesChannel != null) {
-      SupabaseConfig.client.removeChannel(_playdatesChannel!);
-      _playdatesChannel = null;
-    }
+    _walkSub?.cancel();
+    _walkSub = null;
     super.dispose();
   }
 
@@ -103,40 +96,14 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
     final user = SupabaseConfig.auth.currentUser;
     if (user == null) return;
 
-    // Channel name keyed on (this dog, this user) so two cards for the same
-    // pair don't collide, and per-dog cleanup is straightforward.
-    final key = '${widget.dog.id}_${user.id}';
-
-    _requestsChannel = SupabaseConfig.client
-        .channel('dog_card_requests_$key')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'playdate_requests',
-          callback: (payload) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _scheduleRefresh();
-            });
-          },
-        )
-        .subscribe((status, [error]) {
-      debugPrint('🔔 dog_card requests sub: $status (key: $key)');
-    });
-
-    _playdatesChannel = SupabaseConfig.client
-        .channel('dog_card_playdates_$key')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.update,
-          schema: 'public',
-          table: 'playdates',
-          callback: (payload) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _scheduleRefresh();
-            });
-          },
-        )
-        .subscribe((status, [error]) {
-      debugPrint('🔔 dog_card playdates sub: $status (key: $key)');
+    // Sprint 7f: listen to the singleton's broadcast stream. The card
+    // doesn't know which playdate ids involve this dog up front, so it
+    // refetches on ANY walk change — _scheduleRefresh debounces the burst
+    // to one fetch per 300ms.
+    _walkSub = WalkRealtimeService.instance.changes.listen((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scheduleRefresh();
+      });
     });
   }
 
