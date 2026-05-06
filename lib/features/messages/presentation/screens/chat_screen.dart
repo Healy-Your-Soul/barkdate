@@ -55,8 +55,13 @@ class ChatNavigationGuard {
   static DateTime? _lastPushTime;
   static String? _lastPushMatchId;
 
-  static bool canPush(String matchId) {
+  static bool canPush(String matchId, {bool force = false}) {
     final now = DateTime.now();
+    if (force) {
+      _lastPushMatchId = matchId;
+      _lastPushTime = now;
+      return true;
+    }
     if (_lastPushMatchId == matchId &&
         _lastPushTime != null &&
         now.difference(_lastPushTime!).inMilliseconds < 800) {
@@ -89,10 +94,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   void initState() {
     super.initState();
     ActiveChatTracker.setActive(widget.matchId);
+    _setServerPresence(widget.matchId);
     WidgetsBinding.instance.addObserver(this);
     _messageController.addListener(_checkInputDirection);
     _loadLinkedPlaydate();
     _markChatNotificationsRead();
+  }
+
+  Future<void> _setServerPresence(String? conversationId) async {
+    final uid = SupabaseConfig.auth.currentUser?.id;
+    if (uid == null) return;
+    try {
+      await SupabaseConfig.client.from('user_presence').upsert({
+        'user_id': uid,
+        'active_conversation_id': conversationId,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('user_presence upsert failed: $e');
+    }
   }
 
   /// Sprint 7b: mark existing unread notifications AND messages for this chat
@@ -280,6 +300,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   @override
   void dispose() {
     ActiveChatTracker.clearIfActive(widget.matchId);
+    _setServerPresence(null);
     WidgetsBinding.instance.removeObserver(this);
     if (_playdateChannel != null) {
       SupabaseConfig.client.removeChannel(_playdateChannel!);

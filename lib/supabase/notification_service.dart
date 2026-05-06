@@ -197,6 +197,26 @@ class NotificationService {
       // Failure here must never break the DB insert above.
       try {
         if (_pushDelegate != null) {
+          // Sprint 7e: skip push for chat messages if recipient is currently
+          // viewing this conversation (server-side presence check).
+          if (type == 'message' && relatedId != null) {
+            try {
+              final pres = await SupabaseConfig.client
+                  .from('user_presence')
+                  .select('active_conversation_id')
+                  .eq('user_id', userId)
+                  .maybeSingle();
+              final active = pres?['active_conversation_id'] as String?;
+              if (active == relatedId) {
+                debugPrint(
+                    '⏭️ Skipping push: user $userId is in conversation $relatedId');
+                return result;
+              }
+            } catch (e) {
+              debugPrint('presence check failed (continuing): $e');
+            }
+          }
+
           final userResponse = await SupabaseConfig.client
               .from('users')
               .select('fcm_token')
