@@ -449,14 +449,18 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () {
-                  showPlanWalkSheet(
+                onPressed: () async {
+                  final walkCreated = await showPlanWalkSheet(
                     context,
                     parkId: widget.place.placeId,
                     parkName: widget.place.name,
                     latitude: widget.place.latitude,
                     longitude: widget.place.longitude,
                   );
+                  // Collapse the place sheet after walk is scheduled
+                  if (walkCreated == true) {
+                    widget.onClose?.call();
+                  }
                 },
                 icon: const Text('🕐', style: TextStyle(fontSize: 16)),
                 label: const Text('Plan a Walk'),

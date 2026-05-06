@@ -66,7 +66,7 @@ class MapViewportController extends StateNotifier<MapViewportState> {
   MapViewportController()
       : super(MapViewportState(
           center: const LatLng(-31.9505, 115.8605), // Default: Perth
-          zoom: 13.0,
+          zoom: 14.0,
         ));
 
   void attachMapController(GoogleMapController controller) {
@@ -105,7 +105,7 @@ class MapViewportController extends StateNotifier<MapViewportState> {
 
   /// Recenter on user location
   Future<void> recenter(LatLng userLocation) async {
-    await moveTo(userLocation, zoom: 14.0);
+    await moveTo(userLocation, zoom: 14.5);
   }
 }
 

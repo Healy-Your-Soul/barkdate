@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "flutter-web",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["run_dev.sh"],
+      "port": 8080
+    },
+    {
+      "name": "flutter-ios",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": ["run", "-d", "iphone"],
+      "port": 0
+    },
+    {
+      "name": "flutter-android",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": ["run", "-d", "android"],
+      "port": 0
+    }
+  ]
+}
