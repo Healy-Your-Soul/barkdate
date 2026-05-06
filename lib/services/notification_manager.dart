@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/services/firebase_messaging_service.dart';
+import 'package:barkdate/services/walk_realtime_service.dart';
 import 'package:barkdate/services/in_app_notification_service.dart';
 import 'package:barkdate/services/notification_sound_service.dart';
 import 'package:barkdate/supabase/notification_service.dart';
@@ -69,6 +70,7 @@ class NotificationManager {
     debugPrint('🚀 Starting notification streams for ${currentUser.id}');
     _setupRealtimeNotifications();
     _scanPendingWalkInvites();
+    WalkRealtimeService.instance.start(currentUser.id);
 
     _streamsStarted = true;
   }
@@ -77,14 +79,17 @@ class NotificationManager {
   static void stopNotificationStreams() {
     _realtimeSubscription?.cancel();
     _realtimeSubscription = null;
+    WalkRealtimeService.instance.stop();
     _streamsStarted = false;
   }
 
   /// Called when the app resumes from background.
-  /// Re-scans for pending walk invites the user may have missed.
+  /// Re-scans for pending walk invites the user may have missed and bounces
+  /// the realtime channels (websockets sometimes die silently after long bg).
   static void onAppResumed() {
     if (_streamsStarted) {
       _scanPendingWalkInvites();
+      WalkRealtimeService.instance.restart();
     }
   }
 
