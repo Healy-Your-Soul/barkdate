@@ -564,7 +564,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       final lat = walk['latitude'] as double?;
       final lng = walk['longitude'] as double?;
       if (lat == null || lng == null) continue;
-      if (walk['scheduled_for'] == null || DateTime.tryParse(walk['scheduled_for']) == null) continue;
+      if (walk['scheduled_for'] == null ||
+          DateTime.tryParse(walk['scheduled_for']) == null) continue;
 
       final dog = walk['dog'] as Map<String, dynamic>?;
       final inviteeDog = walk['invitee_dog'] as Map<String, dynamic>?;
