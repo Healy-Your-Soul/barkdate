@@ -1167,8 +1167,7 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
                 child: OutlinedButton(
                   onPressed: () async {
                     final success =
-                        await DogFriendshipService.removeFriendship(
-                            requestId);
+                        await DogFriendshipService.removeFriendship(requestId);
                     if (success) {
                       ref.invalidate(pendingFriendRequestsProvider);
                       if (context.mounted) {
@@ -1197,8 +1196,7 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     final success =
-                        await DogFriendshipService.acceptBark(
-                            requestId);
+                        await DogFriendshipService.acceptBark(requestId);
                     if (success) {
                       ref.invalidate(pendingFriendRequestsProvider);
                       ref.invalidate(nearbyDogsProvider);

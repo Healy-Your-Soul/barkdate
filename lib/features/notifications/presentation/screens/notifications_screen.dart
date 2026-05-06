@@ -281,8 +281,7 @@ class _BarkActionButtonsState extends ConsumerState<_BarkActionButtons> {
   Future<void> _accept() async {
     if (widget.friendshipId == null) return;
     setState(() => _loading = true);
-    final success =
-        await DogFriendshipService.acceptBark(widget.friendshipId!);
+    final success = await DogFriendshipService.acceptBark(widget.friendshipId!);
     if (success && widget.notificationId != null) {
       await NotificationService.markAsRead(widget.notificationId!);
     }

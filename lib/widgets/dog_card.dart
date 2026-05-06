@@ -592,8 +592,7 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
                 backgroundColor: const Color(0xFFE89E5F), // Orange brand color
                 foregroundColor: Colors.white,
                 elevation: 0,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
