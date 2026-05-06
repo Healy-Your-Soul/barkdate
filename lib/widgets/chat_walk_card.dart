@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:barkdate/design_system/app_typography.dart';
 import 'package:barkdate/models/friend_alert.dart';
+import 'package:barkdate/services/walk_realtime_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/walk_details_sheet.dart';
 import 'package:intl/intl.dart';
@@ -93,7 +93,7 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
   List<Map<String, dynamic>> _participants = [];
   bool _isLoading = true;
   bool _hasError = false;
-  RealtimeChannel? _playdateChannel;
+  StreamSubscription<WalkChange>? _walkSub;
 
   // Sprint 5: one-shot timer that fires at scheduled_at so the card
   // transitions from "confirmed" to the locked/past pill automatically
@@ -110,10 +110,8 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
 
   @override
   void dispose() {
-    if (_playdateChannel != null) {
-      SupabaseConfig.client.removeChannel(_playdateChannel!);
-      _playdateChannel = null;
-    }
+    _walkSub?.cancel();
+    _walkSub = null;
     _expiryTimer?.cancel();
     super.dispose();
   }
@@ -141,40 +139,15 @@ class _ChatWalkCardState extends State<ChatWalkCard> {
   }
 
   void _subscribeToPlaydateChanges() {
-    _playdateChannel = SupabaseConfig.client
-        .channel('chat_walk_card_${widget.playdateId}')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.update,
-          schema: 'public',
-          table: 'playdates',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'id',
-            value: widget.playdateId,
-          ),
-          callback: (payload) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _loadPlaydateData();
-            });
-          },
-        )
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'playdate_requests',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'playdate_id',
-            value: widget.playdateId,
-          ),
-          callback: (payload) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _loadPlaydateData();
-            });
-          },
-        )
-        .subscribe((status, [error]) {
-      debugPrint('🔔 chat_walk_card sub: $status (id: ${widget.playdateId})');
+    // Sprint 7f: subscribe to the long-lived singleton instead of opening a
+    // per-widget websocket channel. Filters by playdate id so this card only
+    // refetches for its own playdate.
+    _walkSub = WalkRealtimeService.instance
+        .changesForPlaydate(widget.playdateId)
+        .listen((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadPlaydateData();
+      });
     });
   }
 
