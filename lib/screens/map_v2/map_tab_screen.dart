@@ -20,7 +20,6 @@ import 'package:barkdate/services/location_service.dart';
 import 'package:barkdate/services/friend_activity_service.dart';
 import 'package:barkdate/models/event.dart';
 import 'package:barkdate/models/checkin.dart';
-import 'package:barkdate/widgets/live_location_toggle.dart';
 import 'package:barkdate/utils/dog_marker_generator.dart';
 import 'package:barkdate/screens/map_v2/widgets/dog_mini_card.dart';
 import 'package:barkdate/screens/map_v2/widgets/walk_marker_tooltip.dart';
@@ -565,21 +564,11 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       final lat = walk['latitude'] as double?;
       final lng = walk['longitude'] as double?;
       if (lat == null || lng == null) continue;
-
-      final scheduledFor = DateTime.tryParse(walk['scheduled_for'] ?? '');
-      if (scheduledFor == null) continue;
+      if (walk['scheduled_for'] == null || DateTime.tryParse(walk['scheduled_for']) == null) continue;
 
       final dog = walk['dog'] as Map<String, dynamic>?;
       final inviteeDog = walk['invitee_dog'] as Map<String, dynamic>?;
-      final dogName = dog?['name'] as String? ?? 'Someone';
-      final inviteeDogName = inviteeDog?['name'] as String?;
       final isConfirmed = walk['is_confirmed'] == true;
-
-      final hour = scheduledFor.hour;
-      final minute = scheduledFor.minute.toString().padLeft(2, '0');
-      final amPm = hour >= 12 ? 'PM' : 'AM';
-      final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-      final timeStr = '$displayHour:$minute $amPm';
 
       final String? inviteeDogPhotoUrl =
           isConfirmed ? (inviteeDog?['main_photo_url'] as String?) : null;
@@ -1158,9 +1147,15 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
               onCameraIdle: _onCameraIdle,
               onCameraMoveStarted: () {
                 if (_isProgrammaticCameraMove) return;
-                if (_tappedPlaceMarker != null) setState(() => _tappedPlaceMarker = null);
-                if (_selectedLiveDog != null) setState(() => _selectedLiveDog = null);
-                if (_selectedWalkMarker != null) setState(() => _selectedWalkMarker = null);
+                if (_tappedPlaceMarker != null) {
+                  setState(() => _tappedPlaceMarker = null);
+                }
+                if (_selectedLiveDog != null) {
+                  setState(() => _selectedLiveDog = null);
+                }
+                if (_selectedWalkMarker != null) {
+                  setState(() => _selectedWalkMarker = null);
+                }
               },
               // NEW: Handle map tap to collapse sheet to peek view
               onTap: (LatLng position) {
