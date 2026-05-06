@@ -784,7 +784,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _buildFilterChip('All', 'all', filters.category == 'all', null, null),
+            _buildFilterChip(
+                'All', 'all', filters.category == 'all', null, null),
             const SizedBox(width: 8),
             _buildFilterChip('Parks', 'park', filters.category == 'park',
                 Icons.park, Colors.green),
@@ -1158,9 +1159,12 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
               onCameraIdle: _onCameraIdle,
               onCameraMoveStarted: () {
                 if (_isProgrammaticCameraMove) return;
-                if (_tappedPlaceMarker != null) setState(() => _tappedPlaceMarker = null);
-                if (_selectedLiveDog != null) setState(() => _selectedLiveDog = null);
-                if (_selectedWalkMarker != null) setState(() => _selectedWalkMarker = null);
+                if (_tappedPlaceMarker != null)
+                  setState(() => _tappedPlaceMarker = null);
+                if (_selectedLiveDog != null)
+                  setState(() => _selectedLiveDog = null);
+                if (_selectedWalkMarker != null)
+                  setState(() => _selectedWalkMarker = null);
               },
               // NEW: Handle map tap to collapse sheet to peek view
               onTap: (LatLng position) {
@@ -1302,33 +1306,33 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             right: 16,
             child: PointerInterceptor(
               child: Row(
-              children: [
-                // Search bar (expanded)
-                const Expanded(child: MapSearchBar()),
-                const SizedBox(width: 8),
-                // Target/Recenter button (flat style matching search)
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    onPressed: _recenterMap,
-                    icon: Icon(
-                      Icons.my_location,
-                      color: Theme.of(context).colorScheme.primary,
+                children: [
+                  // Search bar (expanded)
+                  const Expanded(child: MapSearchBar()),
+                  const SizedBox(width: 8),
+                  // Target/Recenter button (flat style matching search)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    tooltip: 'My Location',
+                    child: IconButton(
+                      onPressed: _recenterMap,
+                      icon: Icon(
+                        Icons.my_location,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      tooltip: 'My Location',
+                    ),
                   ),
-                ),
-              ],
+                ],
               ),
             ),
           ),
@@ -1404,35 +1408,52 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             Align(
               alignment: Alignment.center,
               child: FractionalTranslation(
-                translation: const Offset(0, -1.1), // Move up to hover just above the centered marker
+                translation: const Offset(
+                    0, -1.1), // Move up to hover just above the centered marker
                 child: SafeArea(
                   child: PointerInterceptor(
                     child: WalkMarkerTooltip(
-                      dogName: _selectedWalkMarker!['dog']?['name'] as String? ?? 'Dog',
-                      inviteeDogName: _selectedWalkMarker!['invitee_dog']?['name'] as String?,
+                      dogName:
+                          _selectedWalkMarker!['dog']?['name'] as String? ??
+                              'Dog',
+                      inviteeDogName: _selectedWalkMarker!['invitee_dog']
+                          ?['name'] as String?,
                       time: () {
-                        final scheduledFor = DateTime.tryParse(_selectedWalkMarker!['scheduled_for'] ?? '');
+                        final scheduledFor = DateTime.tryParse(
+                            _selectedWalkMarker!['scheduled_for'] ?? '');
                         if (scheduledFor == null) return 'Unknown Time';
                         final hour = scheduledFor.hour;
-                        final minute = scheduledFor.minute.toString().padLeft(2, '0');
+                        final minute =
+                            scheduledFor.minute.toString().padLeft(2, '0');
                         final amPm = hour >= 12 ? 'PM' : 'AM';
-                        final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+                        final displayHour =
+                            hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
                         return '$displayHour:$minute $amPm';
                       }(),
-                      parkName: _selectedWalkMarker!['park_name'] as String? ?? 'Unknown Park',
+                      parkName: _selectedWalkMarker!['park_name'] as String? ??
+                          'Unknown Park',
                       isConfirmed: _selectedWalkMarker!['is_confirmed'] == true,
                       onTap: () {
-                        final scheduledFor = DateTime.tryParse(_selectedWalkMarker!['scheduled_for'] ?? '');
+                        final scheduledFor = DateTime.tryParse(
+                            _selectedWalkMarker!['scheduled_for'] ?? '');
                         if (scheduledFor == null) return;
                         showWalkDetailsSheet(
                           context,
-                          parkId: _selectedWalkMarker!['park_name'] as String? ?? '',
-                          parkName: _selectedWalkMarker!['park_name'] as String? ?? '',
+                          parkId:
+                              _selectedWalkMarker!['park_name'] as String? ??
+                                  '',
+                          parkName:
+                              _selectedWalkMarker!['park_name'] as String? ??
+                                  '',
                           scheduledFor: scheduledFor,
-                          organizerDogName: _selectedWalkMarker!['dog']?['name'] as String? ?? 'Dog',
-                          playdateId: _selectedWalkMarker!['playdate_id'] as String?,
+                          organizerDogName:
+                              _selectedWalkMarker!['dog']?['name'] as String? ??
+                                  'Dog',
+                          playdateId:
+                              _selectedWalkMarker!['playdate_id'] as String?,
                           latitude: _selectedWalkMarker!['latitude'] as double?,
-                          longitude: _selectedWalkMarker!['longitude'] as double?,
+                          longitude:
+                              _selectedWalkMarker!['longitude'] as double?,
                         );
                         setState(() => _selectedWalkMarker = null);
                       },
