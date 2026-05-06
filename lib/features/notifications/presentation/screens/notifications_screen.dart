@@ -10,6 +10,7 @@ import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/widgets/receive_walk_sheet.dart';
 import 'package:barkdate/services/conversation_service.dart';
+import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/features/messages/presentation/screens/chat_screen.dart';
 
 /// Provider for notifications
@@ -99,7 +100,7 @@ class NotificationsScreen extends ConsumerWidget {
     switch (type) {
       case 'bark':
         icon = Icons.pets;
-        iconColor = const Color(0xFF4CAF50);
+        iconColor = const Color(0xFFE89E5F); // Orange to match Add to Pack
         break;
       case 'playdate_request':
         icon = Icons.calendar_today;
@@ -229,6 +230,15 @@ class NotificationsScreen extends ConsumerWidget {
             timeago.format(createdAt),
             style: AppTypography.caption().copyWith(color: Colors.grey[500]),
           ),
+          // Sprint 8: inline Accept / Ignore for bark (pack request)
+          if (type == 'bark' && !isRead) ...[
+            const SizedBox(height: 8),
+            _BarkActionButtons(
+              friendshipId: metadata?['friendship_id'] as String?,
+              notificationId: notificationId,
+              senderDogName: metadata?['sender_dog_name'] as String? ?? '',
+            ),
+          ],
         ],
       ),
       trailing: !isRead
@@ -236,12 +246,141 @@ class NotificationsScreen extends ConsumerWidget {
               width: 8,
               height: 8,
               decoration: const BoxDecoration(
-                color: Color(0xFF4CAF50),
+                color: Color(0xFFE89E5F),
                 shape: BoxShape.circle,
               ),
             )
           : null,
       contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+    );
+  }
+}
+
+/// Sprint 8: Inline Accept / Ignore buttons for bark notifications.
+/// Stateful so it can show a loading spinner and swap to a result message
+/// after the user taps.
+class _BarkActionButtons extends ConsumerStatefulWidget {
+  final String? friendshipId;
+  final String? notificationId;
+  final String senderDogName;
+
+  const _BarkActionButtons({
+    required this.friendshipId,
+    required this.notificationId,
+    required this.senderDogName,
+  });
+
+  @override
+  ConsumerState<_BarkActionButtons> createState() => _BarkActionButtonsState();
+}
+
+class _BarkActionButtonsState extends ConsumerState<_BarkActionButtons> {
+  bool _loading = false;
+  String? _result; // 'accepted' | 'declined' | null
+
+  Future<void> _accept() async {
+    if (widget.friendshipId == null) return;
+    setState(() => _loading = true);
+    final success =
+        await DogFriendshipService.acceptBark(widget.friendshipId!);
+    if (success && widget.notificationId != null) {
+      await NotificationService.markAsRead(widget.notificationId!);
+    }
+    if (mounted) {
+      setState(() {
+        _loading = false;
+        _result = success ? 'accepted' : null;
+      });
+      if (success) {
+        ref.invalidate(notificationsProvider);
+      }
+    }
+  }
+
+  Future<void> _decline() async {
+    if (widget.friendshipId == null) return;
+    setState(() => _loading = true);
+    final success =
+        await DogFriendshipService.removeFriendship(widget.friendshipId!);
+    if (success && widget.notificationId != null) {
+      await NotificationService.markAsRead(widget.notificationId!);
+    }
+    if (mounted) {
+      setState(() {
+        _loading = false;
+        _result = success ? 'declined' : null;
+      });
+      if (success) {
+        ref.invalidate(notificationsProvider);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const SizedBox(
+        height: 32,
+        child: Center(
+            child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2))),
+      );
+    }
+
+    if (_result == 'accepted') {
+      return Text(
+        '${widget.senderDogName} joined your pack! 🎉',
+        style: AppTypography.bodySmall().copyWith(
+          color: const Color(0xFF4CAF50),
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
+    if (_result == 'declined') {
+      return Text(
+        'Request declined',
+        style: AppTypography.bodySmall().copyWith(color: Colors.grey[500]),
+      );
+    }
+
+    // Show Accept / Ignore pair
+    return Row(
+      children: [
+        SizedBox(
+          height: 32,
+          child: ElevatedButton(
+            onPressed: _accept,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFCF5EE),
+              foregroundColor: Colors.orange[800],
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Accept',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          height: 32,
+          child: OutlinedButton(
+            onPressed: _decline,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.grey[600],
+              side: BorderSide(color: Colors.grey[300]!),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Ignore',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -269,23 +269,25 @@ class NotificationManager {
     }
   }
 
-  /// Send a bark notification
+  /// Send a bark notification (pack request)
   static Future<void> sendBarkNotification({
     required String receiverUserId,
     required String senderDogName,
     required String receiverDogName,
     String? senderUserId,
+    String? friendshipId,
   }) async {
     await sendNotification(
       userId: receiverUserId,
-      title: '🐕 New Bark!',
-      body: '$senderDogName wants to play with $receiverDogName!',
+      title: '🐕 New Pack Request!',
+      body: '$senderDogName wants to join $receiverDogName\'s pack!',
       type: NotificationType.bark,
       actionType: 'open_matches',
       metadata: {
         'sender_user_id': senderUserId,
         'sender_dog_name': senderDogName,
         'receiver_dog_name': receiverDogName,
+        if (friendshipId != null) 'friendship_id': friendshipId,
       },
     );
   }
