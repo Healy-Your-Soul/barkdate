@@ -1167,8 +1167,7 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
                 child: OutlinedButton(
                   onPressed: () async {
                     final success =
-                        await BarkDateFriendService.declineFriendRequest(
-                            requestId);
+                        await DogFriendshipService.removeFriendship(requestId);
                     if (success) {
                       ref.invalidate(pendingFriendRequestsProvider);
                       if (context.mounted) {
@@ -1197,8 +1196,7 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     final success =
-                        await BarkDateFriendService.acceptFriendRequest(
-                            requestId);
+                        await DogFriendshipService.acceptBark(requestId);
                     if (success) {
                       ref.invalidate(pendingFriendRequestsProvider);
                       ref.invalidate(nearbyDogsProvider);
@@ -1914,8 +1912,14 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: DogCard(
-              dog: Dog.fromJson(dog),
-              isFriend: false,
+              dog: Dog.fromJson({
+                ...dog,
+                // Sprint 8: mark friends from the Friends tab so cards
+                // render "In Pack ✓" instead of "Add to Pack"
+                if (category == 'Friends') 'is_friend': true,
+                if (category == 'Friends') 'friendship_status': 'accepted',
+              }),
+              isFriend: category == 'Friends',
               onTap: () =>
                   DogDetailsRoute($extra: Dog.fromJson(dog)).push(context),
               onWalkPressed: () async {
@@ -1932,7 +1936,8 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                          content: Text('Barked at ${targetDog.name}! 🐕'),
+                          content: Text(
+                              '${targetDog.name} added to pack request! 🐕'),
                           backgroundColor: Colors.green),
                     );
                   }
@@ -2003,8 +2008,13 @@ class _PackSearchModalState extends ConsumerState<_PackSearchModal>
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: DogCard(
-            dog: Dog.fromJson(dog),
-            isFriend: false,
+            dog: Dog.fromJson({
+              ...dog,
+              // Sprint 8: mark friends in search results
+              if (category == 'Friends') 'is_friend': true,
+              if (category == 'Friends') 'friendship_status': 'accepted',
+            }),
+            isFriend: category == 'Friends',
             onTap: () =>
                 DogDetailsRoute($extra: Dog.fromJson(dog)).push(context),
             onWalkPressed: () async {

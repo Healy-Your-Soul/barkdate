@@ -13,6 +13,11 @@ class Dog {
   final double distanceKm;
   final bool isMatched;
   final bool? isFriend; // Tracks if this dog is in user's pack
+  // Sprint 8: richer friendship state for card rendering.
+  // null = no relationship, 'pending_sent' = I sent, 'pending_received' = they
+  // sent, 'accepted' = in pack.
+  final String? friendshipStatus;
+  final String? friendshipId; // DB row id — needed to accept/decline inline
 
   const Dog({
     required this.id,
@@ -29,6 +34,8 @@ class Dog {
     required this.distanceKm,
     this.isMatched = false,
     this.isFriend,
+    this.friendshipStatus,
+    this.friendshipId,
   });
 
   Dog copyWith({
@@ -46,6 +53,8 @@ class Dog {
     double? distanceKm,
     bool? isMatched,
     bool? isFriend,
+    String? friendshipStatus,
+    String? friendshipId,
   }) =>
       Dog(
         id: id ?? this.id,
@@ -62,6 +71,8 @@ class Dog {
         distanceKm: distanceKm ?? this.distanceKm,
         isMatched: isMatched ?? this.isMatched,
         isFriend: isFriend ?? this.isFriend,
+        friendshipStatus: friendshipStatus ?? this.friendshipStatus,
+        friendshipId: friendshipId ?? this.friendshipId,
       );
 
   factory Dog.fromJson(Map<String, dynamic> json) {
@@ -100,6 +111,8 @@ class Dog {
       distanceKm: json['distance_km']?.toDouble() ?? 0.0,
       isMatched: json['is_matched'] ?? false,
       isFriend: json['is_friend'],
+      friendshipStatus: json['friendship_status'] as String?,
+      friendshipId: json['friendship_id'] as String?,
     );
   }
 
@@ -119,6 +132,8 @@ class Dog {
       'distance_km': distanceKm,
       'is_matched': isMatched,
       'is_friend': isFriend,
+      'friendship_status': friendshipStatus,
+      'friendship_id': friendshipId,
     };
   }
 }

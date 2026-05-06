@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/services/walk_realtime_service.dart';
+import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/conversation_service.dart';
 import 'package:barkdate/core/router/app_routes.dart';
@@ -18,6 +19,9 @@ class DogCard extends StatefulWidget {
   final VoidCallback?
       onAddToPackPressed; // For non-friends: send bark/friend request
   final bool compact; // If true, uses a portrait-style card layout
+  // Sprint 8: callback fired after inline accept/decline so parent can
+  // invalidate providers. Passes true for accept, false for decline.
+  final ValueChanged<bool>? onFriendshipChanged;
 
   const DogCard({
     super.key,
@@ -29,6 +33,7 @@ class DogCard extends StatefulWidget {
     this.isFriend = true, // Default to true for backwards compatibility
     this.onAddToPackPressed,
     this.compact = false,
+    this.onFriendshipChanged,
   });
 
   @override
@@ -36,6 +41,13 @@ class DogCard extends StatefulWidget {
 }
 
 class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
+  /// Sprint 8: true when the dog is an accepted pack member — either via the
+  /// legacy `isFriend` bool OR the new `friendshipStatus` field.
+  bool get _isEffectivelyFriend =>
+      widget.isFriend ||
+      widget.dog.isFriend == true ||
+      widget.dog.friendshipStatus == 'accepted';
+
   String _playdateStatus = 'none'; // 'none', 'pending', 'confirmed'
   Map<String, dynamic>?
       _currentPlaydate; // Store current playdate data when confirmed
@@ -554,36 +566,47 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
     );
   }
 
-  /// Buttons for non-friends: Add to Pack + View Profile
+  /// Sprint 8: state-aware buttons based on friendship status.
+  /// Shows one of: Add to Pack / Request Sent / Accept+Ignore / In Pack ✓
   Widget _buildNonFriendButtons(ThemeData theme) {
+    final status = widget.dog.friendshipStatus;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Add to Pack button (sends friend request)
-        SizedBox(
-          width: 80,
-          height: 32,
-          child: ElevatedButton(
-            onPressed: widget.onAddToPackPressed ?? widget.onWalkPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE89E5F), // Orange brand color
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+        // Primary action based on friendship state
+        if (status == 'accepted')
+          _buildInPackPill(theme)
+        else if (status == 'pending_sent')
+          _buildRequestSentPill(theme)
+        else if (status == 'pending_received')
+          _buildAcceptIgnoreButtons(theme)
+        else
+          // No relationship — show Add to Pack
+          SizedBox(
+            width: 80,
+            height: 32,
+            child: ElevatedButton(
+              onPressed: widget.onAddToPackPressed ?? widget.onWalkPressed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE89E5F), // Orange brand color
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
-            ),
-            child: Text(
-              'Add to Pack',
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                fontSize: 10,
-                color: Colors.white,
+              child: Text(
+                'Add to Pack',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 10,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
-        ),
         const SizedBox(height: 4),
         // View Profile button
         SizedBox(
@@ -610,6 +633,135 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
         ),
       ],
     );
+  }
+
+  /// Green "In Pack ✓" pill for accepted friends
+  Widget _buildInPackPill(ThemeData theme) {
+    return SizedBox(
+      width: 80,
+      height: 32,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8F5E9),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF4CAF50), width: 1),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, size: 12, color: Color(0xFF4CAF50)),
+            const SizedBox(width: 2),
+            Text(
+              'In Pack',
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                fontSize: 10,
+                color: const Color(0xFF4CAF50),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Gray "Request Sent" pill for outgoing pending requests
+  Widget _buildRequestSentPill(ThemeData theme) {
+    return SizedBox(
+      width: 80,
+      height: 32,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[400]!, width: 1),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          'Request Sent',
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            fontSize: 9,
+            color: Colors.grey[600],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Inline Accept + Ignore for incoming pending requests
+  Widget _buildAcceptIgnoreButtons(ThemeData theme) {
+    return SizedBox(
+      width: 80,
+      height: 32,
+      child: Row(
+        children: [
+          // Accept
+          Expanded(
+            child: SizedBox(
+              height: 32,
+              child: ElevatedButton(
+                onPressed: () => _handleInlineAccept(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE89E5F),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: EdgeInsets.zero,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      bottomLeft: Radius.circular(16),
+                    ),
+                  ),
+                ),
+                child: const Icon(Icons.check, size: 16),
+              ),
+            ),
+          ),
+          const SizedBox(width: 1),
+          // Ignore
+          Expanded(
+            child: SizedBox(
+              height: 32,
+              child: OutlinedButton(
+                onPressed: () => _handleInlineDecline(),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.grey[600],
+                  side: BorderSide(color: Colors.grey[300]!),
+                  padding: EdgeInsets.zero,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.only(
+                      topRight: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                  ),
+                ),
+                child: const Icon(Icons.close, size: 16),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleInlineAccept() async {
+    final friendshipId = widget.dog.friendshipId;
+    if (friendshipId == null) return;
+    final success = await DogFriendshipService.acceptBark(friendshipId);
+    if (success) {
+      widget.onFriendshipChanged?.call(true);
+    }
+  }
+
+  Future<void> _handleInlineDecline() async {
+    final friendshipId = widget.dog.friendshipId;
+    if (friendshipId == null) return;
+    final success = await DogFriendshipService.removeFriendship(friendshipId);
+    if (success) {
+      widget.onFriendshipChanged?.call(false);
+    }
   }
 
   Widget _buildCompactLayout(ThemeData theme, Dog dog) {
@@ -733,7 +885,7 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
                   SizedBox(
                     width: double.infinity,
                     height: 32,
-                    child: widget.isFriend
+                    child: _isEffectivelyFriend
                         ? _buildFriendButtonsCompact(theme)
                         : _buildNonFriendButtonsCompact(theme),
                   ),
@@ -803,6 +955,102 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
   }
 
   Widget _buildNonFriendButtonsCompact(ThemeData theme) {
+    final status = widget.dog.friendshipStatus;
+
+    if (status == 'accepted') {
+      // In Pack — green pill
+      return Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8F5E9),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF4CAF50), width: 1),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, size: 12, color: Color(0xFF4CAF50)),
+            const SizedBox(width: 3),
+            Text(
+              'In Pack',
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                fontSize: 11,
+                color: const Color(0xFF4CAF50),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (status == 'pending_sent') {
+      // Request Sent — gray pill
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[400]!, width: 1),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          'Request Sent',
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            fontSize: 11,
+            color: Colors.grey[600],
+          ),
+        ),
+      );
+    }
+
+    if (status == 'pending_received') {
+      // Accept + Ignore pair
+      return Row(
+        children: [
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () => _handleInlineAccept(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE89E5F),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: EdgeInsets.zero,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    bottomLeft: Radius.circular(16),
+                  ),
+                ),
+              ),
+              child: const Text('Accept',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+            ),
+          ),
+          const SizedBox(width: 1),
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => _handleInlineDecline(),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.grey[600],
+                side: BorderSide(color: Colors.grey[300]!),
+                padding: EdgeInsets.zero,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    topRight: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
+                ),
+              ),
+              child: const Text('Ignore',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Default: no relationship — Add to Pack
     return ElevatedButton(
       onPressed: widget.onAddToPackPressed ?? widget.onWalkPressed,
       style: ElevatedButton.styleFrom(
@@ -907,7 +1155,7 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
               // Action buttons - conditional based on friendship status
               SizedBox(
                 width: 85,
-                child: widget.isFriend
+                child: _isEffectivelyFriend
                     ? _buildFriendButtons(theme)
                     : _buildNonFriendButtons(theme),
               ),

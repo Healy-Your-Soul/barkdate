@@ -133,6 +133,8 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
         ownerName: friendDogMap['user']?['name'] ?? 'Unknown Owner',
         distanceKm: 0.0, // Friends don't need distance in this view
         isFriend: true,
+        friendshipStatus: 'accepted',
+        friendshipId: f['id'] as String?,
       );
     }).toList();
   }
@@ -144,23 +146,45 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
     offset: 0,
   );
 
-  // Get friend IDs to mark them in the list
-  Set<String> friendDogIds = {};
+  // Sprint 8: Build a map of dogId → {status, friendshipId, direction} from
+  // all friendship rows (accepted + pending) so each card can render the
+  // correct state (In Pack / Request Sent / Accept+Ignore / Add to Pack).
+  Map<String, Map<String, String>> friendshipMap = {};
   if (myDogId != null) {
-    final friends = await DogFriendshipService.getFriends(myDogId);
-    for (final f in friends) {
-      final dogData = f['dog'] as Map<String, dynamic>?;
-      final friendDogData = f['friend_dog'] as Map<String, dynamic>?;
-      if (dogData != null && dogData['id'] != myDogId) {
-        friendDogIds.add(dogData['id'] as String);
+    // Fetch all friendships (accepted + pending) in one query
+    final allFriendships = await SupabaseConfig.client
+        .from('dog_friendships')
+        .select('id, dog_id, friend_dog_id, status')
+        .or('dog_id.eq.$myDogId,friend_dog_id.eq.$myDogId');
+
+    for (final f in allFriendships) {
+      final fDogId = f['dog_id'] as String;
+      final fFriendDogId = f['friend_dog_id'] as String;
+      final status = f['status'] as String;
+      final fId = f['id'] as String;
+
+      // The "other" dog is whichever isn't mine
+      final otherDogId = fDogId == myDogId ? fFriendDogId : fDogId;
+
+      String resolvedStatus;
+      if (status == 'accepted') {
+        resolvedStatus = 'accepted';
+      } else if (status == 'pending') {
+        // Direction: did I send (dog_id == myDogId) or receive?
+        resolvedStatus =
+            fDogId == myDogId ? 'pending_sent' : 'pending_received';
+      } else {
+        continue; // skip 'declined' or unknown
       }
-      if (friendDogData != null && friendDogData['id'] != myDogId) {
-        friendDogIds.add(friendDogData['id'] as String);
-      }
+
+      friendshipMap[otherDogId] = {
+        'status': resolvedStatus,
+        'friendshipId': fId,
+      };
     }
   }
 
-  // Apply memory filters and map isFriend status
+  // Apply memory filters and map friendship status
   return dogs.where((dog) {
     if (dog.distanceKm > filter.maxDistance) return false;
     if (dog.age < filter.minAge || dog.age > filter.maxAge) return false;
@@ -175,9 +199,11 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
     }
     return true;
   }).map((dog) {
-    // Return copy with updated friend status
+    final fs = friendshipMap[dog.id];
     return dog.copyWith(
-      isFriend: friendDogIds.contains(dog.id),
+      isFriend: fs?['status'] == 'accepted',
+      friendshipStatus: fs?['status'],
+      friendshipId: fs?['friendshipId'],
     );
   }).toList();
 });
