@@ -23,10 +23,12 @@ import 'package:barkdate/models/checkin.dart';
 import 'package:barkdate/widgets/live_location_toggle.dart';
 import 'package:barkdate/utils/dog_marker_generator.dart';
 import 'package:barkdate/screens/map_v2/widgets/dog_mini_card.dart';
+import 'package:barkdate/screens/map_v2/widgets/walk_marker_tooltip.dart';
 import 'package:barkdate/screens/map_v2/widgets/place_mini_card.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
+import 'package:barkdate/services/walk_realtime_service.dart';
 import 'package:barkdate/widgets/walk_details_sheet.dart';
 
 /// New map tab with AI assistant, event integration, and improved UX
@@ -67,6 +69,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
   // Selected live dog for mini popup (Phase 5)
   Map<String, dynamic>? _selectedLiveDog;
+  Map<String, dynamic>? _selectedWalkMarker;
+  bool _isProgrammaticCameraMove = false;
 
   // Selected place for mini popup (tapped marker - shows compact card first)
   PlaceResult? _tappedPlaceMarker;
@@ -110,9 +114,16 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
     // Realtime subscription for check-ins (instant updates)
     _setupCheckinSubscription();
+
+    // Realtime subscription for walk changes (Sprint 7f service)
+    // so walk markers appear/update instantly instead of waiting 30s.
+    _walkRealtimeSub = WalkRealtimeService.instance.changes.listen((_) {
+      if (mounted) _refreshScheduledWalks();
+    });
   }
 
   StreamSubscription? _checkinSubscription;
+  StreamSubscription? _walkRealtimeSub;
 
   void _setupCheckinSubscription() {
     _checkinSubscription = Supabase.instance.client
@@ -130,6 +141,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     _checkInRefreshTimer?.cancel();
     _liveUsersRefreshTimer?.cancel();
     _checkinSubscription?.cancel();
+    _walkRealtimeSub?.cancel();
     super.dispose();
   }
 
@@ -167,7 +179,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
       // Update viewport
       final location = LatLng(position.latitude, position.longitude);
-      ref.read(mapViewportProvider.notifier).updateCamera(location, 14.0);
+      ref.read(mapViewportProvider.notifier).updateCamera(location, 14.5);
 
       // Fetch initial data
       _fetchPlacesAndEvents();
@@ -214,11 +226,25 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       debugPrint(
           '📍 Search center (map viewport): lat=$searchLat, lng=$searchLng');
 
-      // Fetch places within 5km radius of MAP CENTER (not user position!)
+      // Calculate dynamic search radius based on viewport bounds
+      double searchRadius = 5000;
+      if (bbox != null) {
+        final distanceToCorner = Geolocator.distanceBetween(
+          searchLat,
+          searchLng,
+          bbox.north,
+          bbox.east,
+        );
+        // Clamp between 500m (minimum useful radius) and 50000m (API limit)
+        searchRadius = distanceToCorner.clamp(500.0, 50000.0);
+      }
+      debugPrint('📏 Dynamic search radius: ${searchRadius.round()}m');
+
+      // Fetch places within dynamic radius of MAP CENTER (not user position!)
       final placesResult = await PlacesService.searchDogFriendlyPlaces(
         latitude: searchLat,
         longitude: searchLng,
-        radius: 5000, // 5km radius for relevant nearby results
+        radius: searchRadius.round(), // Dynamic radius matching viewport
         keyword: filters.searchQuery.isEmpty ? null : filters.searchQuery,
         primaryTypes: primaryTypes,
       );
@@ -243,17 +269,16 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         _isLoadingPlaces = false;
       });
 
-      // Fetch check-in counts for the places
-      await _refreshCheckInCounts();
-
-      // Fetch other users' check-ins for map display
-      await _refreshOtherUsersCheckIns();
-
-      // Fetch live users nearby
-      await _refreshLiveUsers();
-
-      // Fetch scheduled future walks for clock markers
-      await _refreshScheduledWalks();
+      // Run all refresh calls in parallel to avoid race conditions.
+      // Each refresh function also calls _updateMarkers() internally
+      // (for standalone 30s-timer use), but here we call it once after
+      // all data is loaded to guarantee a consistent render.
+      await Future.wait([
+        _refreshCheckInCounts(),
+        _refreshOtherUsersCheckIns(),
+        _refreshLiveUsers(),
+        _refreshScheduledWalks(),
+      ]);
 
       _updateMarkers();
     } catch (e) {
@@ -548,8 +573,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       final inviteeDog = walk['invitee_dog'] as Map<String, dynamic>?;
       final dogName = dog?['name'] as String? ?? 'Someone';
       final inviteeDogName = inviteeDog?['name'] as String?;
-      final parkName = walk['park_name'] as String? ?? 'a park';
-      final playdateId = walk['playdate_id'] as String?;
       final isConfirmed = walk['is_confirmed'] == true;
 
       final hour = scheduledFor.hour;
@@ -558,39 +581,29 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
       final timeStr = '$displayHour:$minute $amPm';
 
-      final infoTitle = isConfirmed && inviteeDogName != null
-          ? '🐾 $dogName & $inviteeDogName • $timeStr'
-          : '🕐 $dogName • $timeStr';
-
       final String? inviteeDogPhotoUrl =
           isConfirmed ? (inviteeDog?['main_photo_url'] as String?) : null;
       final String? organizerDogPhotoUrl = dog?['main_photo_url'] as String?;
       final icon = await DogMarkerGenerator.createScheduledWalkMarker(
         organizerDogPhotoUrl: organizerDogPhotoUrl,
         inviteeDogPhotoUrl: inviteeDogPhotoUrl,
+        size: isConfirmed ? 55 : 52,
       );
 
       newMarkers.add(Marker(
         markerId: MarkerId('scheduled_walk_${walk['id']}'),
         position: LatLng(lat, lng),
-        infoWindow: InfoWindow(
-          title: infoTitle,
-          snippet:
-              isConfirmed ? 'Confirmed walk at $parkName' : 'Walk at $parkName',
-        ),
+        infoWindow: InfoWindow.noText,
         icon: icon,
         zIndexInt: 40,
         onTap: () {
-          showWalkDetailsSheet(
-            context,
-            parkId: parkName,
-            parkName: parkName,
-            scheduledFor: scheduledFor,
-            organizerDogName: dogName,
-            playdateId: playdateId,
-            latitude: lat,
-            longitude: lng,
-          );
+          setState(() => _selectedWalkMarker = walk);
+          if (_mapController != null) {
+            _isProgrammaticCameraMove = true;
+            _mapController!.animateCamera(
+              CameraUpdate.newLatLng(LatLng(lat, lng)),
+            );
+          }
         },
       ));
     }
@@ -766,24 +779,26 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   Widget _buildCollapsedFilterChips() {
     final filters = ref.watch(mapFiltersProvider);
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _buildFilterChip('All', 'all', filters.category == 'all', null, null),
-          const SizedBox(width: 8),
-          _buildFilterChip('Parks', 'park', filters.category == 'park',
-              Icons.park, Colors.green),
-          const SizedBox(width: 8),
-          _buildFilterChip('Cafes', 'cafe', filters.category == 'cafe',
-              Icons.local_cafe, Colors.orange),
-          const SizedBox(width: 8),
-          _buildFilterChip('Events', 'events', filters.category == 'events',
-              Icons.event, Colors.purple),
-          const SizedBox(width: 8),
-          _buildFilterChip('Stores', 'store', filters.category == 'store',
-              Icons.store, Colors.blue),
-        ],
+    return PointerInterceptor(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _buildFilterChip('All', 'all', filters.category == 'all', null, null),
+            const SizedBox(width: 8),
+            _buildFilterChip('Parks', 'park', filters.category == 'park',
+                Icons.park, Colors.green),
+            const SizedBox(width: 8),
+            _buildFilterChip('Cafes', 'cafe', filters.category == 'cafe',
+                Icons.local_cafe, Colors.orange),
+            const SizedBox(width: 8),
+            _buildFilterChip('Events', 'events', filters.category == 'events',
+                Icons.event, Colors.purple),
+            const SizedBox(width: 8),
+            _buildFilterChip('Stores', 'store', filters.category == 'store',
+                Icons.store, Colors.blue),
+          ],
+        ),
       ),
     );
   }
@@ -1028,6 +1043,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   Timer? _debounceTimer;
 
   void _onCameraIdle() async {
+    _isProgrammaticCameraMove = false;
     if (_mapController == null) return;
 
     // Debounce the update to prevent rapid-fire fetches and crashes
@@ -1140,6 +1156,12 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
               onMapCreated: _onMapCreated,
               onCameraMove: _onCameraMove,
               onCameraIdle: _onCameraIdle,
+              onCameraMoveStarted: () {
+                if (_isProgrammaticCameraMove) return;
+                if (_tappedPlaceMarker != null) setState(() => _tappedPlaceMarker = null);
+                if (_selectedLiveDog != null) setState(() => _selectedLiveDog = null);
+                if (_selectedWalkMarker != null) setState(() => _selectedWalkMarker = null);
+              },
               // NEW: Handle map tap to collapse sheet to peek view
               onTap: (LatLng position) {
                 if (_placeSheetState == PlaceSheetState.expanded) {
@@ -1158,6 +1180,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                 }
                 if (_selectedLiveDog != null) {
                   setState(() => _selectedLiveDog = null);
+                }
+                if (_selectedWalkMarker != null) {
+                  setState(() => _selectedWalkMarker = null);
                 }
               },
               initialCameraPosition: CameraPosition(
@@ -1275,7 +1300,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             bottom: _currentUserCheckIn != null ? 180 : 140,
             left: 16,
             right: 16,
-            child: Row(
+            child: PointerInterceptor(
+              child: Row(
               children: [
                 // Search bar (expanded)
                 const Expanded(child: MapSearchBar()),
@@ -1303,6 +1329,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                   ),
                 ),
               ],
+              ),
             ),
           ),
 
@@ -1311,56 +1338,58 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             // Position above the search bar row (higher than target button)
             bottom: _currentUserCheckIn != null ? 250 : 210,
             right: 16,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    onPressed: _zoomIn,
-                    icon: Icon(
-                      Icons.add,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
+            child: PointerInterceptor(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: _zoomIn,
+                      icon: Icon(
+                        Icons.add,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 20,
+                      ),
+                      tooltip: 'Zoom In',
+                      constraints:
+                          const BoxConstraints(minWidth: 36, minHeight: 36),
+                      padding: EdgeInsets.zero,
                     ),
-                    tooltip: 'Zoom In',
-                    constraints:
-                        const BoxConstraints(minWidth: 36, minHeight: 36),
-                    padding: EdgeInsets.zero,
-                  ),
-                  Container(
-                    height: 1,
-                    width: 20,
-                    color: Colors.grey[400],
-                  ),
-                  IconButton(
-                    onPressed: _zoomOut,
-                    icon: Icon(
-                      Icons.remove,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
+                    Container(
+                      height: 1,
+                      width: 20,
+                      color: Colors.grey[400],
                     ),
-                    tooltip: 'Zoom Out',
-                    constraints:
-                        const BoxConstraints(minWidth: 36, minHeight: 36),
-                    padding: EdgeInsets.zero,
-                  ),
-                ],
+                    IconButton(
+                      onPressed: _zoomOut,
+                      icon: Icon(
+                        Icons.remove,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 20,
+                      ),
+                      tooltip: 'Zoom Out',
+                      constraints:
+                          const BoxConstraints(minWidth: 36, minHeight: 36),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
 
-          // Live Location Toggle - TOP (above Search This Area)
-          Positioned(
-            right: 16,
-            top: 8,
-            child: LiveLocationToggle(
-              onStateChanged: _refreshLiveUsers,
-            ),
-          ),
+          // Live Location Toggle - temporarily hidden (not working yet)
+          // Positioned(
+          //   right: 16,
+          //   top: 8,
+          //   child: LiveLocationToggle(
+          //     onStateChanged: _refreshLiveUsers,
+          //   ),
+          // ),
 
           // Check-in Status Button - TOP LEFT (above Search This Area)
           if (_currentUserCheckIn != null)
@@ -1368,6 +1397,49 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
               left: 16,
               top: 8,
               child: _buildCheckInStatusButton(),
+            ),
+
+          // Walk Marker Tooltip (Popup above map when walk marker is tapped)
+          if (_selectedWalkMarker != null)
+            Align(
+              alignment: Alignment.center,
+              child: FractionalTranslation(
+                translation: const Offset(0, -1.1), // Move up to hover just above the centered marker
+                child: SafeArea(
+                  child: PointerInterceptor(
+                    child: WalkMarkerTooltip(
+                      dogName: _selectedWalkMarker!['dog']?['name'] as String? ?? 'Dog',
+                      inviteeDogName: _selectedWalkMarker!['invitee_dog']?['name'] as String?,
+                      time: () {
+                        final scheduledFor = DateTime.tryParse(_selectedWalkMarker!['scheduled_for'] ?? '');
+                        if (scheduledFor == null) return 'Unknown Time';
+                        final hour = scheduledFor.hour;
+                        final minute = scheduledFor.minute.toString().padLeft(2, '0');
+                        final amPm = hour >= 12 ? 'PM' : 'AM';
+                        final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+                        return '$displayHour:$minute $amPm';
+                      }(),
+                      parkName: _selectedWalkMarker!['park_name'] as String? ?? 'Unknown Park',
+                      isConfirmed: _selectedWalkMarker!['is_confirmed'] == true,
+                      onTap: () {
+                        final scheduledFor = DateTime.tryParse(_selectedWalkMarker!['scheduled_for'] ?? '');
+                        if (scheduledFor == null) return;
+                        showWalkDetailsSheet(
+                          context,
+                          parkId: _selectedWalkMarker!['park_name'] as String? ?? '',
+                          parkName: _selectedWalkMarker!['park_name'] as String? ?? '',
+                          scheduledFor: scheduledFor,
+                          organizerDogName: _selectedWalkMarker!['dog']?['name'] as String? ?? 'Dog',
+                          playdateId: _selectedWalkMarker!['playdate_id'] as String?,
+                          latitude: _selectedWalkMarker!['latitude'] as double?,
+                          longitude: _selectedWalkMarker!['longitude'] as double?,
+                        );
+                        setState(() => _selectedWalkMarker = null);
+                      },
+                    ),
+                  ),
+                ),
+              ),
             ),
 
           // Dog mini card popup when a live dog marker is tapped
