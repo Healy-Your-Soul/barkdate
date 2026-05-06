@@ -421,10 +421,14 @@ DateTime? _walkInviteSheetDedupeAt;
 
 /// Opens the walk-invite sheet, resolving [request_id] from the DB when FCM only
 /// sends [related_id]/[playdate_id] (common for push payloads).
-Future<void> openReceiveWalkSheetFromInvitePayload(
+/// Returns true if the sheet was actually shown, false if it was skipped
+/// (dedupe blocked, no auth, no resolvable request, or context unmounted).
+/// Sprint 7e: callers use this to decide whether to also show the in-app
+/// banner — when the sheet opens, the banner is redundant.
+Future<bool> openReceiveWalkSheetFromInvitePayload(
     BuildContext context, Map<String, dynamic> data) async {
   final uid = SupabaseConfig.auth.currentUser?.id;
-  if (uid == null) return;
+  if (uid == null) return false;
 
   final dedupeHint =
       (data['request_id'] ?? data['related_id'] ?? data['playdate_id'])
@@ -435,7 +439,7 @@ Future<void> openReceiveWalkSheetFromInvitePayload(
         _walkInviteSheetDedupeAt != null &&
         now.difference(_walkInviteSheetDedupeAt!) <
             const Duration(seconds: 4)) {
-      return;
+      return false;
     }
   }
 
@@ -455,7 +459,7 @@ Future<void> openReceiveWalkSheetFromInvitePayload(
     }
   }
 
-  if (requestId == null || requestId.isEmpty) return;
+  if (requestId == null || requestId.isEmpty) return false;
   final resolvedRequestId = requestId;
 
   var location = data['location'] as String? ?? 'Unknown location';
@@ -484,7 +488,7 @@ Future<void> openReceiveWalkSheetFromInvitePayload(
     }
   }
 
-  if (!context.mounted) return;
+  if (!context.mounted) return false;
   _walkInviteSheetDedupeKey = resolvedRequestId;
   _walkInviteSheetDedupeAt = DateTime.now();
 
@@ -511,7 +515,7 @@ Future<void> openReceiveWalkSheetFromInvitePayload(
     }
   }
 
-  if (!context.mounted) return;
+  if (!context.mounted) return false;
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -525,4 +529,5 @@ Future<void> openReceiveWalkSheetFromInvitePayload(
       scheduledAt: scheduledAt,
     ),
   );
+  return true;
 }
