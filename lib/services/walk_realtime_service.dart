@@ -61,8 +61,8 @@ class WalkRealtimeService {
           },
         )
         .subscribe((status, [error]) {
-          debugPrint('🔔 walk_rt requests: $status');
-        });
+      debugPrint('🔔 walk_rt requests: $status');
+    });
 
     _playdatesChannel = SupabaseConfig.client
         .channel('walk_rt_playdates_$userId')
@@ -71,14 +71,14 @@ class WalkRealtimeService {
           schema: 'public',
           table: 'playdates',
           callback: (payload) {
-            final pid = (payload.newRecord['id'] ??
-                payload.oldRecord['id']) as String?;
+            final pid =
+                (payload.newRecord['id'] ?? payload.oldRecord['id']) as String?;
             _controller?.add(WalkChange(playdateId: pid, source: 'playdates'));
           },
         )
         .subscribe((status, [error]) {
-          debugPrint('🔔 walk_rt playdates: $status');
-        });
+      debugPrint('🔔 walk_rt playdates: $status');
+    });
   }
 
   void stop() {
