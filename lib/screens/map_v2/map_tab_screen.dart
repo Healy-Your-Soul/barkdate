@@ -178,7 +178,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
       // Update viewport
       final location = LatLng(position.latitude, position.longitude);
-      ref.read(mapViewportProvider.notifier).updateCamera(location, 14.5);
+      ref.read(mapViewportProvider.notifier).updateCamera(location, 15);
 
       // Fetch initial data
       _fetchPlacesAndEvents();

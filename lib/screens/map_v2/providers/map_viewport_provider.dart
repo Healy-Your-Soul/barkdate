@@ -105,7 +105,7 @@ class MapViewportController extends StateNotifier<MapViewportState> {
 
   /// Recenter on user location
   Future<void> recenter(LatLng userLocation) async {
-    await moveTo(userLocation, zoom: 14.5);
+    await moveTo(userLocation, zoom: 15);
   }
 }
 
