@@ -11,7 +11,6 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/widgets/plan_walk_sheet.dart';
-import 'package:barkdate/widgets/app_button.dart';
 import 'package:barkdate/design_system/app_colors.dart';
 import 'package:barkdate/design_system/app_styles.dart';
 import 'package:geolocator/geolocator.dart';
