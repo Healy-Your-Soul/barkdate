@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:barkdate/services/places_service.dart';
 import 'package:barkdate/services/checkin_service.dart';
+import 'package:barkdate/services/park_activity_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/models/checkin.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -10,6 +11,10 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/widgets/plan_walk_sheet.dart';
+import 'package:barkdate/widgets/app_button.dart';
+import 'package:barkdate/design_system/app_colors.dart';
+import 'package:barkdate/design_system/app_styles.dart';
+import 'package:geolocator/geolocator.dart';
 
 /// Shows a simple place details sheet (DEPRECATED - use PlaceSheetContent instead)
 void showPlaceSheet(BuildContext context, PlaceResult place) {
@@ -37,6 +42,9 @@ class PlaceSheetContent extends StatefulWidget {
   final ScrollController scrollController;
   final VoidCallback? onClose;
   final VoidCallback? onCheckInChanged; // Callback when check-in state changes
+  final VoidCallback? onParkActivityReported; // Callback after activity report
+  final Position? userPosition;
+  final int? parkActivityCount;
 
   const PlaceSheetContent({
     super.key,
@@ -44,6 +52,9 @@ class PlaceSheetContent extends StatefulWidget {
     required this.scrollController,
     this.onClose,
     this.onCheckInChanged,
+    this.onParkActivityReported,
+    this.userPosition,
+    this.parkActivityCount,
   });
 
   @override
@@ -54,16 +65,26 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
   CheckIn? _currentCheckIn;
   bool _isLoading = true;
   bool _isCheckingInOut = false;
+  bool _isReportingActivity = false;
   int _dogCount = 0;
+  int _reportDogCount = 3;
   List<Map<String, dynamic>> _checkedInDogs = []; // Dogs with their details
   List<Map<String, dynamic>> _amenities = []; // Amenities with counts
   bool _showAllAmenities = false;
+  double? _distanceToPlaceMeters;
+  bool _isAdminUser = false;
 
   @override
   void initState() {
     super.initState();
+    if (widget.parkActivityCount != null &&
+        widget.parkActivityCount! > 0) {
+      _reportDogCount = widget.parkActivityCount!.clamp(1, 15);
+    }
     _loadCheckInState();
     _loadAmenities();
+    _loadDistanceToPlace();
+    _loadAdminStatus();
   }
 
   @override
@@ -73,6 +94,10 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     if (widget.place.placeId != oldWidget.place.placeId) {
       _loadCheckInState();
       _loadAmenities();
+      _loadDistanceToPlace();
+    }
+    if (widget.userPosition != oldWidget.userPosition) {
+      _loadDistanceToPlace();
     }
   }
 
@@ -160,7 +185,11 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
   void _showMessage(String message, Color color) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -179,6 +208,248 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     } catch (e) {
       debugPrint('Error loading amenities: $e');
     }
+  }
+
+  Future<void> _loadAdminStatus() async {
+    try {
+      final isAdmin = await ParkActivityService.isAdminUser();
+      if (mounted) {
+        setState(() => _isAdminUser = isAdmin);
+      }
+    } catch (e) {
+      debugPrint('Error loading admin status: $e');
+    }
+  }
+
+  Future<void> _loadDistanceToPlace() async {
+    try {
+      final position = widget.userPosition ??
+          await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.high,
+            ),
+          );
+
+      final distance = Geolocator.distanceBetween(
+        position.latitude,
+        position.longitude,
+        widget.place.latitude,
+        widget.place.longitude,
+      );
+
+      if (mounted) {
+        setState(() => _distanceToPlaceMeters = distance);
+      }
+    } catch (e) {
+      debugPrint('Error loading distance to place: $e');
+      if (mounted) {
+        setState(() => _distanceToPlaceMeters = null);
+      }
+    }
+  }
+
+  bool _isWithinReportDistance() {
+    return _distanceToPlaceMeters != null && _distanceToPlaceMeters! <= 500;
+  }
+
+  void _changeReportDogCount(int delta) {
+    setState(() {
+      _reportDogCount = (_reportDogCount + delta).clamp(1, 15);
+    });
+  }
+
+  Future<void> _reportParkActivity() async {
+    if (_isReportingActivity) return;
+    setState(() => _isReportingActivity = true);
+
+    try {
+      final isAdmin = _isAdminUser || await ParkActivityService.isAdminUser();
+      final canReport = isAdmin || _isWithinReportDistance();
+
+      if (!canReport) {
+        _showMessage('You must be within 500m to report', Colors.orange);
+        return;
+      }
+
+      final success = await ParkActivityService.reportDogCount(
+        parkId: widget.place.placeId,
+        dogCount: _reportDogCount,
+        isAdminOverride: isAdmin,
+      );
+
+      if (success) {
+        _showMessage('Thanks! Reported $_reportDogCount dogs here.', Colors.green);
+        widget.onParkActivityReported?.call();
+      } else {
+        _showMessage('Failed to report activity. Try again.', Colors.red);
+      }
+    } catch (e) {
+      debugPrint('Error reporting park activity: $e');
+      _showMessage('Something went wrong. Try again.', Colors.red);
+    } finally {
+      if (mounted) setState(() => _isReportingActivity = false);
+    }
+  }
+
+  Widget _buildStepperButton({
+    required IconData icon,
+    required VoidCallback? onTap,
+  }) {
+    final isEnabled = onTap != null;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppStyles.borderRadiusFull,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: isEnabled ? Colors.white : Colors.grey.shade200,
+          borderRadius: AppStyles.borderRadiusFull,
+          border: Border.all(color: Colors.grey.shade300),
+          boxShadow: isEnabled ? AppStyles.shadowSM : null,
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: isEnabled ? AppColors.primaryGreen : Colors.grey,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivityCountPill(int activityCount) {
+    final label = activityCount == 1
+        ? '1 dog spotted'
+        : '$activityCount dogs spotted';
+
+    return InkWell(
+      onTap: () => _showMessage(
+          '$label playing here recently', Colors.black87),
+      borderRadius: AppStyles.borderRadiusFull,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.accentOrange.withValues(alpha: 0.12),
+          borderRadius: AppStyles.borderRadiusFull,
+          border: Border.all(
+            color: AppColors.accentOrange.withValues(alpha: 0.5),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.pets,
+              size: 16,
+              color: AppColors.secondaryBrownDark,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.secondaryBrownDark,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildParkActivitySection() {
+    final canReport = _isAdminUser || _isWithinReportDistance();
+    final activityCount = widget.parkActivityCount ?? 0;
+    final distanceText = _distanceToPlaceMeters == null
+        ? 'Location required to report'
+        : '${_distanceToPlaceMeters!.toStringAsFixed(0)} m away';
+    final helperText = _isAdminUser
+      ? 'Admin override enabled'
+      : (_distanceToPlaceMeters == null
+        ? 'Location required to report'
+        : (canReport
+          ? distanceText
+          : 'You must be within 500m to report'));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Spotted dogs here?',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        if (activityCount > 0) ...[
+          _buildActivityCountPill(activityCount),
+          const SizedBox(height: 10),
+        ],
+        Row(
+          children: [
+            _buildStepperButton(
+              icon: Icons.remove,
+              onTap: _reportDogCount > 1
+                  ? () => _changeReportDogCount(-1)
+                  : null,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.lightSurfaceVariant,
+                  borderRadius: AppStyles.borderRadiusFull,
+                  border: Border.all(color: AppColors.lightBorder),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.pets,
+                      size: 16,
+                      color: AppColors.secondaryBrown,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '$_reportDogCount dogs',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.lightTextPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            _buildStepperButton(
+              icon: Icons.add,
+              onTap: _reportDogCount < 15
+                  ? () => _changeReportDogCount(1)
+                  : null,
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        AppButton(
+          text: 'Spotted dogs',
+          icon: Icons.pets,
+          size: AppButtonSize.small,
+          isFullWidth: true,
+          isLoading: _isReportingActivity,
+          customColor: AppColors.accentOrange,
+          onPressed: canReport ? _reportParkActivity : null,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          helperText,
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        ),
+      ],
+    );
   }
 
   /// Build amenities section with chips
@@ -511,7 +782,11 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
+
+            // PARK ACTIVITY REPORT (crowdsourced)
+            _buildParkActivitySection(),
+            const SizedBox(height: 12),
 
             // WHO'S HERE - Dog Avatars Carousel (only if dogs present)
             if (_checkedInDogs.isNotEmpty) ...[

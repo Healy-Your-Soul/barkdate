@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:barkdate/core/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -21,6 +22,7 @@ import 'package:barkdate/services/friend_activity_service.dart';
 import 'package:barkdate/models/event.dart';
 import 'package:barkdate/models/checkin.dart';
 import 'package:barkdate/utils/dog_marker_generator.dart';
+import 'package:barkdate/services/park_activity_service.dart';
 import 'package:barkdate/screens/map_v2/widgets/dog_mini_card.dart';
 import 'package:barkdate/screens/map_v2/widgets/walk_marker_tooltip.dart';
 import 'package:barkdate/screens/map_v2/widgets/place_mini_card.dart';
@@ -29,6 +31,7 @@ import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/services/walk_realtime_service.dart';
 import 'package:barkdate/widgets/walk_details_sheet.dart';
+import 'package:barkdate/design_system/app_colors.dart';
 
 /// New map tab with AI assistant, event integration, and improved UX
 class MapTabScreenV2 extends ConsumerStatefulWidget {
@@ -87,11 +90,22 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   // Scheduled future walks (for clock markers)
   final List<Map<String, dynamic>> _scheduledWalks = [];
 
+  // Active park reports
+  Map<String, int> _activeParks = {};
+  bool _hasGlowParks = false;
+  bool _glowPulseOn = false;
+  Timer? _glowPulseTimer;
+  bool _isAdminUser = false;
+  bool _isSeedingVisibleArea = false;
+  String? _lastAutoSeedAreaKey;
+  DateTime? _lastAutoSeedDate;
+
   @override
   void initState() {
     super.initState();
     _getUserLocation();
     _loadUserCheckIn(); // Load user's current check-in status
+    _loadAdminStatus();
 
     // Auto-cleanup stale check-ins on startup (4+ hours old)
     CheckInService.autoCheckoutInactiveUsers();
@@ -139,9 +153,155 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   void dispose() {
     _checkInRefreshTimer?.cancel();
     _liveUsersRefreshTimer?.cancel();
+    _glowPulseTimer?.cancel();
     _checkinSubscription?.cancel();
     _walkRealtimeSub?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadAdminStatus() async {
+    try {
+      final isAdmin = await ParkActivityService.isAdminUser();
+      if (mounted) {
+        setState(() => _isAdminUser = isAdmin);
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading admin status: $e');
+    }
+  }
+
+  void _showMapMessage(String message, {Color? color}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color ?? Colors.black87,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  List<PlaceResult> _filterPlacesInBounds(
+      List<PlaceResult> places, LatLngBounds? bounds) {
+    if (bounds == null) return places;
+
+    return places.where((place) {
+      return place.latitude >= bounds.southwest.latitude &&
+          place.latitude <= bounds.northeast.latitude &&
+          place.longitude >= bounds.southwest.longitude &&
+          place.longitude <= bounds.northeast.longitude;
+    }).toList();
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Future<void> _maybeAutoSeed({
+    required List<PlaceResult> visiblePlaces,
+    required bool hasActiveInView,
+    required double centerLat,
+    required double centerLng,
+  }) async {
+    if (visiblePlaces.isEmpty || hasActiveInView) return;
+    if (!ParkActivityService.isWithinAutoSeedWindow()) return;
+
+    final areaKey = ParkActivityService.buildAreaKey(
+      latitude: centerLat,
+      longitude: centerLng,
+    );
+    final now = DateTime.now();
+
+    if (_lastAutoSeedAreaKey == areaKey &&
+        _lastAutoSeedDate != null &&
+        _isSameDay(_lastAutoSeedDate!, now)) {
+      return;
+    }
+
+    final random = math.Random();
+    final selected = <PlaceResult>[];
+
+    for (final place in visiblePlaces) {
+      if (random.nextDouble() < 0.4) {
+        selected.add(place);
+      }
+    }
+
+    if (selected.isEmpty) {
+      selected.add(visiblePlaces[random.nextInt(visiblePlaces.length)]);
+    }
+
+    final parkIds = selected.map((place) => place.placeId).toList();
+    final dogCounts = selected
+        .map((_) => random.nextInt(9) + 2) // 2 to 10 dogs
+        .toList();
+
+    final didSeed = await ParkActivityService.autoSeedParks(
+      areaKey: areaKey,
+      parkIds: parkIds,
+      dogCounts: dogCounts,
+    );
+
+    if (didSeed) {
+      _lastAutoSeedAreaKey = areaKey;
+      _lastAutoSeedDate = now;
+      await _refreshActiveParks();
+    }
+  }
+
+  Future<void> _seedVisibleArea() async {
+    if (_isSeedingVisibleArea || _mapController == null) return;
+
+    final isAdmin = _isAdminUser || await ParkActivityService.isAdminUser();
+    if (!isAdmin) {
+      _showMapMessage('Admin access required');
+      return;
+    }
+
+    setState(() => _isSeedingVisibleArea = true);
+
+    try {
+      if (_places.isEmpty) {
+        _showMapMessage('No parks loaded. Tap “Search this area” first.');
+        return;
+      }
+
+      final bounds = await _mapController!.getVisibleRegion();
+      final visiblePlaces = _filterPlacesInBounds(_places, bounds);
+
+      if (visiblePlaces.isEmpty) {
+        _showMapMessage('No parks in the visible area.');
+        return;
+      }
+
+      final random = math.Random();
+      final selected = <PlaceResult>[];
+      for (final place in visiblePlaces) {
+        if (random.nextDouble() < 0.4) {
+          selected.add(place);
+        }
+      }
+
+      if (selected.isEmpty) {
+        selected.add(visiblePlaces[random.nextInt(visiblePlaces.length)]);
+      }
+
+      await Future.wait(
+        selected.map((place) => ParkActivityService.reportDogCount(
+              parkId: place.placeId,
+              dogCount: random.nextInt(9) + 2,
+              isAdminOverride: true,
+            )),
+      );
+
+      _showMapMessage('Seeded ${selected.length} parks');
+      await _refreshActiveParks();
+    } catch (e) {
+      debugPrint('❌ Error seeding visible area: $e');
+      _showMapMessage('Failed to seed this area');
+    } finally {
+      if (mounted) setState(() => _isSeedingVisibleArea = false);
+    }
   }
 
   Future<void> _getUserLocation() async {
@@ -260,13 +420,33 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         );
       }
 
+        // Fetch active parks globally
+        final activeParksData = await ParkActivityService.getActiveParks();
+          final visiblePlaces =
+            _filterPlacesInBounds(placesResult.places, viewport.bounds);
+        final hasActiveInView = visiblePlaces
+          .any((place) => activeParksData.containsKey(place.placeId));
+        final hasGlowParks =
+          activeParksData.values.any((count) => count > 5);
+
       setState(() {
         _places.clear();
         _places.addAll(placesResult.places);
         _events.clear();
         _events.addAll(events);
+        _activeParks = activeParksData;
+        _hasGlowParks = hasGlowParks;
         _isLoadingPlaces = false;
       });
+
+      _updateGlowPulseTimer(hasGlowParks);
+
+      await _maybeAutoSeed(
+        visiblePlaces: visiblePlaces,
+        hasActiveInView: hasActiveInView,
+        centerLat: searchLat,
+        centerLng: searchLng,
+      );
 
       // Run all refresh calls in parallel to avoid race conditions.
       // Each refresh function also calls _updateMarkers() internally
@@ -319,6 +499,34 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       }
     } catch (e) {
       debugPrint('❌ Error refreshing check-in counts: $e');
+    }
+  }
+
+  Future<void> _refreshActiveParks() async {
+    try {
+      final activeParksData = await ParkActivityService.getActiveParks();
+      final hasGlowParks =
+          activeParksData.values.any((count) => count > 5);
+
+      if (mounted) {
+        setState(() {
+          _activeParks = activeParksData;
+          _hasGlowParks = hasGlowParks;
+        });
+      }
+
+      _updateGlowPulseTimer(hasGlowParks);
+      _updateMarkers();
+    } catch (e) {
+      debugPrint('❌ Error refreshing active parks: $e');
+    }
+  }
+
+  void _updateGlowPulseTimer(bool hasGlowParks) {
+    _glowPulseTimer?.cancel();
+    _glowPulseTimer = null;
+    if (mounted) {
+      setState(() => _glowPulseOn = hasGlowParks);
     }
   }
 
@@ -505,11 +713,15 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           }
         }
 
-        // Generate custom marker based on category (no count badge on marker)
+        // Generate custom marker based on category (with count badge on marker)
         final categoryName = place.category.name;
-        final icon = await DogMarkerGenerator.createPlaceMarker(
+        final activityCount = _activeParks[place.placeId] ?? 0;
+        
+        final icon = await DogMarkerGenerator.createPlaceMarkerWithCount(
           category: categoryName,
-          size: 40,
+          dogCount: activityCount,
+          glowPulseOn: activityCount > 5 ? _glowPulseOn : false,
+          size: 44, // Slightly larger to accommodate badge/glow
         );
 
         newMarkers.add(Marker(
@@ -1243,6 +1455,44 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             ),
           ),
 
+          // Admin-only seed button
+          if (_isAdminUser)
+            Positioned(
+              top: 50,
+              right: 16,
+              child: PointerInterceptor(
+                child: ElevatedButton.icon(
+                  onPressed:
+                      _isSeedingVisibleArea ? null : _seedVisibleArea,
+                  icon: _isSeedingVisibleArea
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.auto_awesome, size: 14),
+                  label: const Text('Seed area'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentOrange,
+                    foregroundColor: Colors.white,
+                    elevation: 1,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
           // Bottom: Category filter chips (always shown)
           Positioned(
             bottom: 0,
@@ -1852,6 +2102,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     return PlaceSheetContent(
       place: place,
       scrollController: scrollController,
+      userPosition: _userPosition,
+      parkActivityCount: _activeParks[place.placeId],
       onClose: () => setState(() {
         _selectedPlace = null;
         _placeSheetState = PlaceSheetState.closed;
@@ -1861,6 +2113,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         if (_selectedPlace != null) {
           _checkUserCheckInStatus(_selectedPlace!.placeId);
         }
+      },
+      onParkActivityReported: () {
+        _refreshActiveParks();
       },
     );
   }

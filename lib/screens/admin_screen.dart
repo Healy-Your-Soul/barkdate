@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:location/location.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../services/park_service.dart';
 import '../models/featured_park.dart';
 import '../services/places_service.dart';
 import '../services/qr_checkin_service.dart';
+import '../services/park_activity_service.dart';
+import 'dart:math' as math;
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -217,6 +220,87 @@ class _AdminScreenState extends State<AdminScreen> with WidgetsBindingObserver {
         backgroundColor: Colors.green,
       ),
     );
+  }
+
+  Future<void> _seedMapArea() async {
+    if (_mapController == null) {
+      _showError('Map is not ready');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final isAdmin = await ParkActivityService.isAdminUser();
+      if (!isAdmin) {
+        _showError('Admin access required');
+        return;
+      }
+
+      final bounds = await _mapController!.getVisibleRegion();
+      final centerLat = (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
+      final centerLng = (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
+
+      final distanceToCorner = Geolocator.distanceBetween(
+        centerLat,
+        centerLng,
+        bounds.northeast.latitude,
+        bounds.northeast.longitude,
+      );
+      final searchRadius = distanceToCorner.clamp(500.0, 50000.0);
+
+      // Fetch places in the visible area
+      final result = await PlacesService.searchDogFriendlyPlaces(
+        latitude: centerLat,
+        longitude: centerLng,
+        keyword: '',
+        radius: searchRadius.round(),
+      );
+
+      final visiblePlaces = result.places.where((place) {
+        return place.latitude >= bounds.southwest.latitude &&
+            place.latitude <= bounds.northeast.latitude &&
+            place.longitude >= bounds.southwest.longitude &&
+            place.longitude <= bounds.northeast.longitude;
+      }).toList();
+
+      if (visiblePlaces.isEmpty) {
+        _showError('No parks found in the visible area');
+        return;
+      }
+
+      int seededCount = 0;
+      final random = math.Random();
+      
+      // Randomly select ~40% of the parks
+      for (final place in visiblePlaces) {
+        if (random.nextDouble() < 0.4) {
+          final dogCount = random.nextInt(9) + 2; // 2 to 10 dogs
+          await ParkActivityService.reportDogCount(
+            parkId: place.placeId,
+            dogCount: dogCount,
+            isAdminOverride: true,
+          );
+          seededCount++;
+        }
+      }
+
+      if (seededCount == 0 && result.places.isNotEmpty) {
+        // Guarantee at least 1 if there were places
+        final place = result.places.first;
+        await ParkActivityService.reportDogCount(
+          parkId: place.placeId,
+          dogCount: random.nextInt(9) + 2,
+          isAdminOverride: true,
+        );
+        seededCount = 1;
+      }
+
+      _showSuccess('Successfully seeded $seededCount parks with activity!');
+    } catch (e) {
+      _showError('Failed to seed map: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _generateQrCode(FeaturedPark park) async {
@@ -581,6 +665,61 @@ class _AdminScreenState extends State<AdminScreen> with WidgetsBindingObserver {
                         child: const Text('Clear'),
                       ),
                     ],
+                  ),
+
+                  const SizedBox(height: 24),
+                  const Divider(),
+
+                  // Map Seeding Engine
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      border: Border.all(color: Colors.orange),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.auto_awesome, color: Colors.orange),
+                            SizedBox(width: 8),
+                            Text(
+                              'Seed Map Activity',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Simulate 2-10 dogs at random parks within the map\'s visible area. Useful for launching a new neighborhood to prevent the "Empty Room" problem.',
+                          style: TextStyle(color: Colors.black87),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _isLoading ? null : _seedMapArea,
+                          icon: _isLoading
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.flash_on),
+                          label: const Text('Seed Visible Area'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
                   const SizedBox(height: 24),
