@@ -92,7 +92,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
   // Active park reports
   Map<String, int> _activeParks = {};
-  bool _hasGlowParks = false;
   bool _glowPulseOn = false;
   Timer? _glowPulseTimer;
   bool _isAdminUser = false;
@@ -434,7 +433,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         _events.clear();
         _events.addAll(events);
         _activeParks = activeParksData;
-        _hasGlowParks = hasGlowParks;
         _isLoadingPlaces = false;
       });
 
@@ -509,7 +507,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       if (mounted) {
         setState(() {
           _activeParks = activeParksData;
-          _hasGlowParks = hasGlowParks;
         });
       }
 
