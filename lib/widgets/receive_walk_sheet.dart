@@ -163,6 +163,21 @@ class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
   }
 
   Future<void> _handleResponse(String status) async {
+    // Sprint 8: block accept/decline if the walk time has already passed.
+    if (DateTime.now().isAfter(widget.scheduledAt)) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'This walk has already passed and can no longer be accepted.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {

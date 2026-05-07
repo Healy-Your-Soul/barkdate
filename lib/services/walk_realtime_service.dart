@@ -67,7 +67,10 @@ class WalkRealtimeService {
     _playdatesChannel = SupabaseConfig.client
         .channel('walk_rt_playdates_$userId')
         .onPostgresChanges(
-          event: PostgresChangeEvent.update,
+          // Sprint 8: was update-only — missed new playdate INSERTs, so the
+          // map didn't refresh until the 30s timer. Changed to `all` so newly
+          // scheduled walks appear on the map instantly.
+          event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'playdates',
           callback: (payload) {
