@@ -169,7 +169,8 @@ class _ReceiveWalkSheetState extends ConsumerState<ReceiveWalkSheet> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('This walk has already passed and can no longer be accepted.'),
+            content: Text(
+                'This walk has already passed and can no longer be accepted.'),
             backgroundColor: Colors.orange,
           ),
         );
