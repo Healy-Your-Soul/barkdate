@@ -61,6 +61,9 @@ class FirebaseMessagingService {
 
       // Get and store FCM token
       await _getAndStoreFCMToken();
+      
+      // Re-sync token on initialization in case it's stale
+      await _resyncFCMTokenIfNeeded();
 
       // Register push delegate on NotificationService so createNotification
       // triggers a real FCM push on every call site, without a circular import.
@@ -288,6 +291,45 @@ class FirebaseMessagingService {
             .update({'fcm_token': newToken}).eq('id', user.id);
       }
     });
+  }
+
+  /// Fetch current FCM token and update Supabase if missing or different
+  /// Called on app resume and initialization to handle stale tokens
+  static Future<void> _resyncFCMTokenIfNeeded() async {
+    try {
+      final currentToken = await _firebaseMessaging.getToken();
+      if (currentToken == null) {
+        debugPrint('⚠️ Could not fetch FCM token for resync');
+        return;
+      }
+
+      final user = SupabaseConfig.auth.currentUser;
+      if (user == null) {
+        debugPrint('ℹ️ No user signed in, skipping token resync');
+        return;
+      }
+
+      // Check stored token
+      final stored = await SupabaseConfig.client
+          .from('users')
+          .select('fcm_token')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      final storedToken = stored?['fcm_token'] as String?;
+
+      // Update only if missing or different
+      if (storedToken != currentToken) {
+        await SupabaseConfig.client
+            .from('users')
+            .update({'fcm_token': currentToken}).eq('id', user.id);
+
+        debugPrint('🔄 FCM token re-synced (${storedToken == null ? 'was missing' : 'was stale'})');
+        _cachedToken = currentToken;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error re-syncing FCM token: $e');
+    }
   }
 
   /// Handle messages when app is in foreground
@@ -688,6 +730,11 @@ class FirebaseMessagingService {
   static Future<String?> getCurrentToken() async {
     if (_cachedToken != null) return _cachedToken;
     return await _getAndStoreFCMToken();
+  }
+
+  /// Re-sync FCM token if it's stale or missing (called on app resume)
+  static Future<void> resyncTokenOnAppResume() async {
+    await _resyncFCMTokenIfNeeded();
   }
 
   /// Send push notification to specific user
