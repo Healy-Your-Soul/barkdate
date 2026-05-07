@@ -77,8 +77,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
   @override
   void initState() {
     super.initState();
-    if (widget.parkActivityCount != null &&
-        widget.parkActivityCount! > 0) {
+    if (widget.parkActivityCount != null && widget.parkActivityCount! > 0) {
       _reportDogCount = widget.parkActivityCount!.clamp(1, 15);
     }
     _loadCheckInState();
@@ -278,7 +277,8 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
       );
 
       if (success) {
-        _showMessage('Thanks! Reported $_reportDogCount dogs here.', Colors.green);
+        _showMessage(
+            'Thanks! Reported $_reportDogCount dogs here.', Colors.green);
         widget.onParkActivityReported?.call();
       } else {
         _showMessage('Failed to report activity. Try again.', Colors.red);
@@ -319,13 +319,11 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
   }
 
   Widget _buildActivityCountPill(int activityCount) {
-    final label = activityCount == 1
-        ? '1 dog spotted'
-        : '$activityCount dogs spotted';
+    final label =
+        activityCount == 1 ? '1 dog spotted' : '$activityCount dogs spotted';
 
     return InkWell(
-      onTap: () => _showMessage(
-          '$label playing here recently', Colors.black87),
+      onTap: () => _showMessage('$label playing here recently', Colors.black87),
       borderRadius: AppStyles.borderRadiusFull,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -366,12 +364,10 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
         ? 'Location required to report'
         : '${_distanceToPlaceMeters!.toStringAsFixed(0)} m away';
     final helperText = _isAdminUser
-      ? 'Admin override enabled'
-      : (_distanceToPlaceMeters == null
-        ? 'Location required to report'
-        : (canReport
-          ? distanceText
-          : 'You must be within 500m to report'));
+        ? 'Admin override enabled'
+        : (_distanceToPlaceMeters == null
+            ? 'Location required to report'
+            : (canReport ? distanceText : 'You must be within 500m to report'));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -389,9 +385,8 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
           children: [
             _buildStepperButton(
               icon: Icons.remove,
-              onTap: _reportDogCount > 1
-                  ? () => _changeReportDogCount(-1)
-                  : null,
+              onTap:
+                  _reportDogCount > 1 ? () => _changeReportDogCount(-1) : null,
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -427,9 +422,8 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             const SizedBox(width: 8),
             _buildStepperButton(
               icon: Icons.add,
-              onTap: _reportDogCount < 15
-                  ? () => _changeReportDogCount(1)
-                  : null,
+              onTap:
+                  _reportDogCount < 15 ? () => _changeReportDogCount(1) : null,
             ),
           ],
         ),

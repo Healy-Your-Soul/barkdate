@@ -778,9 +778,11 @@ class DogMarkerGenerator {
           );
           iconPainter.layout();
 
-          final badgeWidth =
-              badgePadding + iconPainter.width + (badgeHeight * 0.2) +
-                  countPainter.width + badgePadding;
+          final badgeWidth = badgePadding +
+              iconPainter.width +
+              (badgeHeight * 0.2) +
+              countPainter.width +
+              badgePadding;
 
           final badgeLeft = scaledSize - badgeWidth - badgeRight;
           final badgeRect = RRect.fromLTRBR(

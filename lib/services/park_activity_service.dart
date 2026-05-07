@@ -51,20 +51,19 @@ class ParkActivityService {
   static Future<Map<String, int>> getActiveParks() async {
     try {
       final response = await _supabase.rpc('get_active_parks');
-      
+
       final activeParks = <String, int>{};
-      
+
       if (response != null && response is List) {
         for (final row in response) {
           if (row['park_id'] != null && row['dog_count'] != null) {
             final count = row['dog_count'];
-            activeParks[row['park_id']] = count is int
-                ? count
-                : (count as num).toInt();
+            activeParks[row['park_id']] =
+                count is int ? count : (count as num).toInt();
           }
         }
       }
-      
+
       return activeParks;
     } catch (e) {
       debugPrint('Error fetching active parks: $e');

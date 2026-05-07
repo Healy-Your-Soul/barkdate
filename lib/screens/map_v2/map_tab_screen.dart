@@ -420,14 +420,13 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         );
       }
 
-        // Fetch active parks globally
-        final activeParksData = await ParkActivityService.getActiveParks();
-          final visiblePlaces =
-            _filterPlacesInBounds(placesResult.places, viewport.bounds);
-        final hasActiveInView = visiblePlaces
+      // Fetch active parks globally
+      final activeParksData = await ParkActivityService.getActiveParks();
+      final visiblePlaces =
+          _filterPlacesInBounds(placesResult.places, viewport.bounds);
+      final hasActiveInView = visiblePlaces
           .any((place) => activeParksData.containsKey(place.placeId));
-        final hasGlowParks =
-          activeParksData.values.any((count) => count > 5);
+      final hasGlowParks = activeParksData.values.any((count) => count > 5);
 
       setState(() {
         _places.clear();
@@ -505,8 +504,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
   Future<void> _refreshActiveParks() async {
     try {
       final activeParksData = await ParkActivityService.getActiveParks();
-      final hasGlowParks =
-          activeParksData.values.any((count) => count > 5);
+      final hasGlowParks = activeParksData.values.any((count) => count > 5);
 
       if (mounted) {
         setState(() {
@@ -716,7 +714,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         // Generate custom marker based on category (with count badge on marker)
         final categoryName = place.category.name;
         final activityCount = _activeParks[place.placeId] ?? 0;
-        
+
         final icon = await DogMarkerGenerator.createPlaceMarkerWithCount(
           category: categoryName,
           dogCount: activityCount,
@@ -1462,8 +1460,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
               right: 16,
               child: PointerInterceptor(
                 child: ElevatedButton.icon(
-                  onPressed:
-                      _isSeedingVisibleArea ? null : _seedVisibleArea,
+                  onPressed: _isSeedingVisibleArea ? null : _seedVisibleArea,
                   icon: _isSeedingVisibleArea
                       ? const SizedBox(
                           width: 14,

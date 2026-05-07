@@ -237,8 +237,10 @@ class _AdminScreenState extends State<AdminScreen> with WidgetsBindingObserver {
       }
 
       final bounds = await _mapController!.getVisibleRegion();
-      final centerLat = (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
-      final centerLng = (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
+      final centerLat =
+          (bounds.northeast.latitude + bounds.southwest.latitude) / 2;
+      final centerLng =
+          (bounds.northeast.longitude + bounds.southwest.longitude) / 2;
 
       final distanceToCorner = Geolocator.distanceBetween(
         centerLat,
@@ -270,7 +272,7 @@ class _AdminScreenState extends State<AdminScreen> with WidgetsBindingObserver {
 
       int seededCount = 0;
       final random = math.Random();
-      
+
       // Randomly select ~40% of the parks
       for (final place in visiblePlaces) {
         if (random.nextDouble() < 0.4) {
