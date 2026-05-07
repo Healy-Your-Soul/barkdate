@@ -220,7 +220,12 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     final random = math.Random();
     final selected = <PlaceResult>[];
 
-    for (final place in visiblePlaces) {
+    // Filter to parks only
+    final parksOnly =
+        visiblePlaces.where((p) => p.category == PlaceCategory.park).toList();
+    final placesToSeed = parksOnly.isNotEmpty ? parksOnly : visiblePlaces;
+
+    for (final place in placesToSeed) {
       if (random.nextDouble() < 0.4) {
         selected.add(place);
       }
@@ -273,9 +278,14 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         return;
       }
 
+      // Filter to parks only
+      final parksOnly =
+          visiblePlaces.where((p) => p.category == PlaceCategory.park).toList();
+      final placesToSeed = parksOnly.isNotEmpty ? parksOnly : visiblePlaces;
+
       final random = math.Random();
       final selected = <PlaceResult>[];
-      for (final place in visiblePlaces) {
+      for (final place in placesToSeed) {
         if (random.nextDouble() < 0.4) {
           selected.add(place);
         }

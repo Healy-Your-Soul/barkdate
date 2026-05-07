@@ -86,10 +86,13 @@ class NotificationManager {
   /// Called when the app resumes from background.
   /// Re-scans for pending walk invites the user may have missed and bounces
   /// the realtime channels (websockets sometimes die silently after long bg).
+  /// Also re-syncs the FCM token in case it became stale.
   static void onAppResumed() {
     if (_streamsStarted) {
       _scanPendingWalkInvites();
       WalkRealtimeService.instance.restart();
+      // Re-sync FCM token to handle stale tokens from inactivity
+      unawaited(FirebaseMessagingService.resyncTokenOnAppResume());
     }
   }
 
