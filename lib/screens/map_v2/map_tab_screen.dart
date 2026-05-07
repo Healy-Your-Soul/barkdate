@@ -219,9 +219,10 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
     final random = math.Random();
     final selected = <PlaceResult>[];
-    
+
     // Filter to parks only
-    final parksOnly = visiblePlaces.where((p) => p.category == PlaceCategory.park).toList();
+    final parksOnly =
+        visiblePlaces.where((p) => p.category == PlaceCategory.park).toList();
     final placesToSeed = parksOnly.isNotEmpty ? parksOnly : visiblePlaces;
 
     for (final place in placesToSeed) {
@@ -278,7 +279,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       }
 
       // Filter to parks only
-      final parksOnly = visiblePlaces.where((p) => p.category == PlaceCategory.park).toList();
+      final parksOnly =
+          visiblePlaces.where((p) => p.category == PlaceCategory.park).toList();
       final placesToSeed = parksOnly.isNotEmpty ? parksOnly : visiblePlaces;
 
       final random = math.Random();

@@ -392,36 +392,36 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             ),
             const SizedBox(width: 8),
             Expanded(
-                  flex: 3,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
+              flex: 3,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.lightSurfaceVariant,
+                  borderRadius: AppStyles.borderRadiusFull,
+                  border: Border.all(color: AppColors.lightBorder),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.pets,
+                      size: 17,
+                      color: AppColors.secondaryBrown,
                     ),
-                    decoration: BoxDecoration(
-                      color: AppColors.lightSurfaceVariant,
-                      borderRadius: AppStyles.borderRadiusFull,
-                      border: Border.all(color: AppColors.lightBorder),
+                    const SizedBox(width: 6),
+                    Text(
+                      '$_reportDogCount dogs',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.lightTextPrimary,
+                      ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.pets,
-                          size: 17,
-                          color: AppColors.secondaryBrown,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '$_reportDogCount dogs',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.lightTextPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(width: 8),
@@ -432,40 +432,40 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             ),
             const SizedBox(width: 8),
             Expanded(
-                  flex: 2,
-                  child: ElevatedButton(
-                    onPressed: canReport ? _reportParkActivity : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentOrange,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shadowColor: Colors.transparent,
-                      minimumSize: const Size(0, 44),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                    child: _isReportingActivity
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : const FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              'SPOTTED',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+              flex: 2,
+              child: ElevatedButton(
+                onPressed: canReport ? _reportParkActivity : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentOrange,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  minimumSize: const Size(0, 44),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                child: _isReportingActivity
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'SPOTTED',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
+                        ),
+                      ),
               ),
             ),
           ],

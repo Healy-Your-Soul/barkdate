@@ -61,7 +61,7 @@ class FirebaseMessagingService {
 
       // Get and store FCM token
       await _getAndStoreFCMToken();
-      
+
       // Re-sync token on initialization in case it's stale
       await _resyncFCMTokenIfNeeded();
 
@@ -324,7 +324,8 @@ class FirebaseMessagingService {
             .from('users')
             .update({'fcm_token': currentToken}).eq('id', user.id);
 
-        debugPrint('🔄 FCM token re-synced (${storedToken == null ? 'was missing' : 'was stale'})');
+        debugPrint(
+            '🔄 FCM token re-synced (${storedToken == null ? 'was missing' : 'was stale'})');
         _cachedToken = currentToken;
       }
     } catch (e) {
