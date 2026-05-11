@@ -5,6 +5,7 @@ import 'package:barkdate/services/places_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:barkdate/core/config/map_constants.dart';
 
 class MapLocationResult {
   final double latitude;
@@ -186,7 +187,7 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
           });
 
           await _mapController
-              ?.animateCamera(CameraUpdate.newLatLngZoom(target, 15));
+              ?.animateCamera(CameraUpdate.newLatLngZoom(target, MapConstants.defaultZoom));
         }
       }
     } catch (e) {
@@ -245,7 +246,7 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
                 onMapCreated: _onMapCreated,
                 initialCameraPosition: CameraPosition(
                   target: _selectedLatLng ?? _defaultLatLng,
-                  zoom: 13,
+                  zoom: MapConstants.defaultZoom,
                 ),
                 myLocationEnabled: !kIsWeb,
                 myLocationButtonEnabled: true,

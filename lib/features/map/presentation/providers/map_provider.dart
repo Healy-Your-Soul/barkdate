@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:barkdate/core/config/map_constants.dart';
 import 'package:barkdate/features/map/domain/repositories/map_repository.dart';
 import 'package:barkdate/features/map/data/repositories/map_repository_impl.dart';
 import 'package:barkdate/services/places_service.dart';
@@ -18,7 +19,7 @@ class MapViewport {
 
   MapViewport({
     this.center = const LatLng(40.7128, -74.0060), // NYC default
-    this.zoom = 14.0,
+    this.zoom = MapConstants.defaultZoom,
     this.bounds,
   });
 
