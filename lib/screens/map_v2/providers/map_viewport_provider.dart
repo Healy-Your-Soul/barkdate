@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:barkdate/core/config/map_constants.dart';
 
 /// State representing the current map viewport
 class MapViewportState {
@@ -67,7 +66,7 @@ class MapViewportController extends StateNotifier<MapViewportState> {
   MapViewportController()
       : super(MapViewportState(
           center: const LatLng(-31.9505, 115.8605), // Default: Perth
-          zoom: MapConstants.defaultZoom,
+          zoom: 20.0,
         ));
 
   void attachMapController(GoogleMapController controller) {
@@ -106,7 +105,7 @@ class MapViewportController extends StateNotifier<MapViewportState> {
 
   /// Recenter on user location
   Future<void> recenter(LatLng userLocation) async {
-    await moveTo(userLocation, zoom: MapConstants.defaultZoom);
+    await moveTo(userLocation, zoom: 15);
   }
 }
 

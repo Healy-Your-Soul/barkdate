@@ -69,9 +69,12 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
   int _reportDogCount = 3;
   List<Map<String, dynamic>> _checkedInDogs = []; // Dogs with their details
   List<Map<String, dynamic>> _amenities = []; // Amenities with counts
+  Set<String> _userSuggestedIds = {}; // Amenity IDs this user has confirmed
   bool _showAllAmenities = false;
   double? _distanceToPlaceMeters;
   bool _isAdminUser = false;
+  // Dog-friendly vote: null = not voted, true = yes, false = no
+  bool? _dogFriendlyVote;
 
   @override
   void initState() {
@@ -81,6 +84,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     }
     _loadCheckInState();
     _loadAmenities();
+    _loadUserSuggestions();
     _loadDistanceToPlace();
     _loadAdminStatus();
   }
@@ -92,6 +96,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     if (widget.place.placeId != oldWidget.place.placeId) {
       _loadCheckInState();
       _loadAmenities();
+      _loadUserSuggestions();
       _loadDistanceToPlace();
     }
     if (widget.userPosition != oldWidget.userPosition) {
@@ -205,6 +210,31 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
       }
     } catch (e) {
       debugPrint('Error loading amenities: $e');
+    }
+  }
+
+  /// Load which amenities THIS user has already confirmed for this place
+  Future<void> _loadUserSuggestions() async {
+    try {
+      final userId = SupabaseConfig.auth.currentUser?.id;
+      if (userId == null) return;
+
+      final data = await SupabaseConfig.client
+          .from('amenity_suggestions')
+          .select('amenity_id')
+          .eq('place_id', widget.place.placeId)
+          .eq('user_id', userId);
+
+      if (mounted) {
+        setState(() {
+          _userSuggestedIds = (data as List)
+              .map((row) => row['amenity_id']?.toString() ?? '')
+              .where((id) => id.isNotEmpty)
+              .toSet();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading user suggestions: $e');
     }
   }
 
@@ -480,29 +510,70 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     );
   }
 
-  /// Build amenities section with chips
-  Widget _buildAmenitiesSection() {
-    // Filter to amenities that have been suggested at least once
-    final suggestedAmenities = _amenities
-        .where((a) => (a['suggested_count'] as int? ?? 0) > 0)
-        .toList();
+  /// Map amenity names to Material Icons (avoids emoji)
+  static final Map<String, IconData> _amenityIcons = {
+    'Dog Water Bowls': Icons.water_drop_outlined,
+    'Shaded Areas': Icons.park_outlined,
+    'Off-Leash Area': Icons.pets_outlined,
+    'Fenced': Icons.fence_outlined,
+    'Benches': Icons.event_seat_outlined,
+    'Restrooms': Icons.wc_outlined,
+    'Poop Bags': Icons.shopping_bag_outlined,
+    'Parking': Icons.local_parking_outlined,
+    'Dog-Friendly Patio': Icons.deck_outlined,
+    'Treats Available': Icons.cookie_outlined,
+  };
 
-    if (suggestedAmenities.isEmpty) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Amenities',
-              style: TextStyle(
-                  fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
-          const SizedBox(height: 6),
-          Text('No amenities reported yet',
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
-        ],
-      );
+  /// Toggle an amenity for this place (suggest or unsuggest)
+  Future<void> _toggleAmenity(String amenityId) async {
+    final alreadySuggested = _userSuggestedIds.contains(amenityId);
+
+    try {
+      if (alreadySuggested) {
+        // Remove the suggestion
+        await SupabaseConfig.client.rpc('unsuggest_amenity', params: {
+          'p_place_id': widget.place.placeId,
+          'p_amenity_id': amenityId,
+        });
+        _showMessage('Amenity removed', Colors.grey.shade700);
+      } else {
+        // Add the suggestion
+        await SupabaseConfig.client.rpc('suggest_amenity', params: {
+          'p_place_id': widget.place.placeId,
+          'p_amenity_id': amenityId,
+        });
+        _showMessage('Amenity confirmed!', Colors.teal);
+      }
+      // Refresh both amenity counts and user's own list
+      await Future.wait([
+        _loadAmenities(),
+        _loadUserSuggestions(),
+      ]);
+    } catch (e) {
+      debugPrint('Error toggling amenity: $e');
+      _showMessage('Could not update, try again', Colors.red);
+    }
+  }
+
+  /// Build amenities section with tappable tag chips
+  Widget _buildAmenitiesSection() {
+    if (_amenities.isEmpty) {
+      return const SizedBox.shrink();
     }
 
-    final displayCount = _showAllAmenities ? suggestedAmenities.length : 4;
-    final displayList = suggestedAmenities.take(displayCount).toList();
+    // Sort: confirmed first, then by display order
+    final sorted = List<Map<String, dynamic>>.from(_amenities)
+      ..sort((a, b) {
+        final aCount = (a['suggested_count'] as int? ?? 0);
+        final bCount = (b['suggested_count'] as int? ?? 0);
+        if (aCount > 0 && bCount == 0) return -1;
+        if (aCount == 0 && bCount > 0) return 1;
+        return 0;
+      });
+
+    // Limit to first 6 items unless "show more" is tapped (~2 rows)
+    final displayList = _showAllAmenities ? sorted : sorted.take(6).toList();
+    final hasMore = sorted.length > 6 && !_showAllAmenities;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,22 +586,74 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
           spacing: 6,
           runSpacing: 6,
           children: [
-            ...displayList.map((amenity) => Chip(
-                  avatar: Text(amenity['icon'] ?? '✓',
-                      style: const TextStyle(fontSize: 14)),
-                  label: Text(
-                    amenity['name'] ?? '',
-                    style: const TextStyle(fontSize: 12),
+            ...displayList.map((amenity) {
+              final amenityId = amenity['amenity_id']?.toString() ?? '';
+              final name = amenity['name'] as String? ?? '';
+              final iconData = _amenityIcons[name] ?? Icons.check_circle_outline;
+              final userConfirmed = _userSuggestedIds.contains(amenityId);
+
+              return GestureDetector(
+                onTap: () => _toggleAmenity(amenityId),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: userConfirmed
+                        ? Colors.teal.shade50
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: userConfirmed
+                          ? Colors.teal.shade400
+                          : Colors.grey.shade300,
+                    ),
                   ),
-                  backgroundColor: Colors.green.shade50,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                )),
-            if (suggestedAmenities.length > 4 && !_showAllAmenities)
-              ActionChip(
-                label: Text('+${suggestedAmenities.length - 4} more'),
-                onPressed: () => setState(() => _showAllAmenities = true),
-                backgroundColor: Colors.grey.shade100,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        iconData,
+                        size: 15,
+                        color: userConfirmed
+                            ? Colors.teal.shade700
+                            : Colors.grey.shade500,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        name,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: userConfirmed
+                              ? Colors.teal.shade800
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+            if (hasMore)
+              GestureDetector(
+                onTap: () => setState(() => _showAllAmenities = true),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Text(
+                    '+${sorted.length - 6} more',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
               ),
           ],
         ),
@@ -634,6 +757,9 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
 
   /// Submit dog-friendly vote and notify admins
   Future<void> _submitDogFriendlyVote(bool isDogFriendly) async {
+    // Update local state immediately for responsive UI
+    setState(() => _dogFriendlyVote = isDogFriendly);
+
     try {
       // Submit using the same report system with a different type
       final reportType =
@@ -649,16 +775,16 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
 
       _showMessage(
         isDogFriendly
-            ? 'Thanks! Your feedback helps other dog owners 🐕'
-            : 'Thanks for letting us know! We\'ll review this.',
-        Colors.green,
+            ? 'Thanks! Marked as dog-friendly'
+            : 'Thanks! We will review this',
+        isDogFriendly ? Colors.teal : Colors.red.shade400,
       );
     } catch (e) {
       debugPrint('Error submitting vote: $e');
       if (e.toString().contains('already reported')) {
         _showMessage('You already voted for this place', Colors.orange);
       } else {
-        _showMessage('Thanks for your feedback!', Colors.green);
+        _showMessage('Thanks for your feedback!', Colors.teal);
       }
     }
   }
@@ -774,48 +900,46 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             ),
             const SizedBox(height: 16),
 
-            // DOG COUNT & CROWDEDNESS - Always visible
-            Row(
-              children: [
-                Icon(Icons.pets,
-                    color: _getCrowdednessColor(_dogCount), size: 18),
-                const SizedBox(width: 6),
-                Text(
-                  _dogCount == 0
-                      ? 'No checked-in dogs here right now'
-                      : '$_dogCount ${_dogCount == 1 ? 'dog' : 'dogs'} here now',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 13),
-                ),
-                if (_dogCount > 0) ...[
-                  const SizedBox(width: 8),
-                  // Crowdedness badge
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: _getCrowdednessColor(_dogCount)
-                          .withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border:
-                          Border.all(color: _getCrowdednessColor(_dogCount)),
-                    ),
+            // DOG COUNT & CROWDEDNESS - Always visible (total = check-ins + spotted)
+            Builder(builder: (context) {
+              final totalDogCount = _dogCount + (widget.parkActivityCount ?? 0);
+              return Row(
+                children: [
+                  Flexible(
                     child: Text(
-                      _getCrowdednessLabel(_dogCount),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: _getCrowdednessColor(_dogCount),
-                      ),
+                      totalDogCount == 0
+                          ? 'No dogs here right now'
+                          : '$totalDogCount ${totalDogCount == 1 ? 'dog' : 'dogs'} checked in',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                   ),
+                  if (totalDogCount > 0) ...[
+                    const SizedBox(width: 8),
+                    // Crowdedness badge
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _getCrowdednessColor(totalDogCount)
+                            .withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border:
+                            Border.all(color: _getCrowdednessColor(totalDogCount)),
+                      ),
+                      child: Text(
+                        _getCrowdednessLabel(totalDogCount),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _getCrowdednessColor(totalDogCount),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // PARK ACTIVITY REPORT (crowdsourced)
-            _buildParkActivitySection(),
+              );
+            }),
             const SizedBox(height: 12),
 
             // WHO'S HERE - Dog Avatars Carousel (only if dogs present)
@@ -972,8 +1096,12 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                   },
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
             ],
+
+            // PARK ACTIVITY REPORT (crowdsourced)
+            _buildParkActivitySection(),
+            const SizedBox(height: 12),
 
             // STATUS ROW
             Row(
@@ -1014,113 +1142,119 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             ),
             const SizedBox(height: 16),
 
-            // CATEGORY
-            Text(
-              'Categories:',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-            ),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: _getCategoryColor(widget.place.category)
-                    .withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                widget.place.category.displayName,
-                style: TextStyle(
-                    color: _getCategoryColor(widget.place.category),
-                    fontSize: 13),
-              ),
+            // CATEGORY (small inline chip)
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getCategoryColor(widget.place.category)
+                        .withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    widget.place.category.displayName,
+                    style: TextStyle(
+                      color: _getCategoryColor(widget.place.category),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 
             // DOG FRIENDLY STATUS
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: widget.place.isDogFriendly
-                    ? Colors.green.shade50
-                    : Colors.red.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: widget.place.isDogFriendly
-                      ? Colors.green.shade200
-                      : Colors.red.shade200,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        widget.place.isDogFriendly
-                            ? Icons.check_circle
-                            : Icons.help_outline,
-                        color: widget.place.isDogFriendly
-                            ? Colors.green
-                            : Colors.red.shade700,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.place.isDogFriendly
-                                  ? 'Dog Friendly'
-                                  : 'Check if dog-friendly',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            if (!widget.place.isDogFriendly)
-                              Text(
-                                'Call ahead to confirm dogs are welcome',
-                                style: TextStyle(
-                                    color: Colors.grey.shade600, fontSize: 12),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Dog-friendly?',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade700,
+                    ),
                   ),
-                  // Voting section for unverified places
-                  if (!widget.place.isDogFriendly) ...[
-                    const Divider(height: 20),
-                    Row(
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => _submitDogFriendlyVote(true),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: (widget.place.isDogFriendly || _dogFriendlyVote == true)
+                          ? Colors.green.shade50
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: (widget.place.isDogFriendly || _dogFriendlyVote == true)
+                            ? Colors.green.shade400
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
+                        Icon(Icons.check, size: 15,
+                          color: (widget.place.isDogFriendly || _dogFriendlyVote == true)
+                              ? Colors.green.shade700
+                              : Colors.grey.shade500),
+                        const SizedBox(width: 4),
                         Text(
-                          'Is this place dog-friendly?',
+                          'Yes',
                           style: TextStyle(
-                              fontSize: 13, color: Colors.grey.shade700),
-                        ),
-                        const Spacer(),
-                        // Yes button
-                        IconButton(
-                          onPressed: () => _submitDogFriendlyVote(true),
-                          icon: const Icon(Icons.check_circle_outline),
-                          color: Colors.green,
-                          tooltip: 'Yes, dog-friendly',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                        const SizedBox(width: 16),
-                        // No button
-                        IconButton(
-                          onPressed: () => _submitDogFriendlyVote(false),
-                          icon: const Icon(Icons.cancel_outlined),
-                          color: Colors.red,
-                          tooltip: 'Not dog-friendly',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: (widget.place.isDogFriendly || _dogFriendlyVote == true)
+                                ? Colors.green.shade800
+                                : Colors.grey.shade600,
+                          ),
                         ),
                       ],
                     ),
-                  ],
-                ],
-              ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () => _submitDogFriendlyVote(false),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _dogFriendlyVote == false
+                          ? Colors.red.shade50
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _dogFriendlyVote == false
+                            ? Colors.red.shade400
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.close, size: 15,
+                          color: _dogFriendlyVote == false
+                              ? Colors.red.shade700
+                              : Colors.grey.shade500),
+                        const SizedBox(width: 4),
+                        Text(
+                          'No',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: _dogFriendlyVote == false
+                                ? Colors.red.shade800
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 
@@ -1207,56 +1341,41 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
     }
 
     if (isElsewhere) {
-      return Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.orange.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.orange.shade300),
+      return ElevatedButton.icon(
+        onPressed: _isCheckingInOut
+            ? null
+            : () async {
+                setState(() => _isCheckingInOut = true);
+                _showMessage(
+                  'You\'re checked in at ${_currentCheckIn!.parkName}. Checking out...',
+                  Colors.orange,
+                );
+                await CheckInService.checkOut();
+                _showMessage('Checked out!', Colors.green);
+                await _loadCheckInState();
+                widget.onCheckInChanged?.call();
+                setState(() => _isCheckingInOut = false);
+              },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.orange.shade50,
+          foregroundColor: Colors.orange.shade800,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.orange.shade300),
+          ),
         ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Icon(Icons.location_on, color: Colors.orange.shade700),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'You\'re at ${_currentCheckIn!.parkName}',
-                    style: TextStyle(
-                      color: Colors.orange.shade800,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: _isCheckingInOut
-                    ? null
-                    : () async {
-                        setState(() => _isCheckingInOut = true);
-                        await CheckInService.checkOut();
-                        _showMessage('Checked out!', Colors.green);
-                        await _loadCheckInState();
-                        setState(() => _isCheckingInOut = false);
-                      },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.orange.shade700,
-                  side: BorderSide(color: Colors.orange.shade400),
-                ),
-                child: _isCheckingInOut
-                    ? const SizedBox(
-                        height: 16,
-                        width: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Check Out First'),
-              ),
-            ),
-          ],
+        icon: _isCheckingInOut
+            ? const SizedBox(
+                height: 18,
+                width: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.logout, size: 18),
+        label: const Text(
+          'Check Out First',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       );
     }
