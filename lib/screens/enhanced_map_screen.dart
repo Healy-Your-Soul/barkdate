@@ -258,7 +258,8 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
                     _mapController = controller;
                     if (_currentLocation != null) {
                       controller.animateCamera(
-                        CameraUpdate.newLatLngZoom(_currentLocation!, MapConstants.defaultZoom),
+                        CameraUpdate.newLatLngZoom(
+                            _currentLocation!, MapConstants.defaultZoom),
                       );
                     }
                   },
@@ -340,7 +341,8 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
                   onTap: () {
                     if (_currentLocation != null) {
                       _mapController?.animateCamera(
-                        CameraUpdate.newLatLngZoom(_currentLocation!, MapConstants.defaultZoom),
+                        CameraUpdate.newLatLngZoom(
+                            _currentLocation!, MapConstants.defaultZoom),
                       );
                     }
                   },

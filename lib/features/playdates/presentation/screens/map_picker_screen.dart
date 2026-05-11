@@ -103,7 +103,8 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     // If we fetched location before map was ready, animate now
     if (_pendingCameraTarget != null) {
       _mapController!.animateCamera(
-        CameraUpdate.newLatLngZoom(_pendingCameraTarget!, MapConstants.defaultZoom),
+        CameraUpdate.newLatLngZoom(
+            _pendingCameraTarget!, MapConstants.defaultZoom),
       );
       _pendingCameraTarget = null;
       // Mark location as ready after a short delay for animation

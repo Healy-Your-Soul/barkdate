@@ -186,8 +186,8 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
             _selectedPlaceName = placeName;
           });
 
-          await _mapController
-              ?.animateCamera(CameraUpdate.newLatLngZoom(target, MapConstants.defaultZoom));
+          await _mapController?.animateCamera(
+              CameraUpdate.newLatLngZoom(target, MapConstants.defaultZoom));
         }
       }
     } catch (e) {
