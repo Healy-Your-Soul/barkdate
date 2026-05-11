@@ -6,6 +6,7 @@ import 'package:barkdate/services/location_service.dart';
 import 'package:barkdate/utils/dog_marker_generator.dart';
 import 'package:barkdate/features/playdates/presentation/widgets/selection_place_sheet.dart';
 import 'dart:async';
+import 'package:barkdate/core/config/map_constants.dart';
 
 class MapPickerScreen extends StatefulWidget {
   final LatLng? initialLocation; // Pre-fetched location from parent screen
@@ -73,7 +74,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
         // If map controller exists, animate now. Otherwise, save for later.
         if (_mapController != null) {
           _mapController!.animateCamera(
-            CameraUpdate.newLatLngZoom(userLocation, 14),
+            CameraUpdate.newLatLngZoom(userLocation, MapConstants.defaultZoom),
           );
         } else {
           _pendingCameraTarget = userLocation;
@@ -102,7 +103,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     // If we fetched location before map was ready, animate now
     if (_pendingCameraTarget != null) {
       _mapController!.animateCamera(
-        CameraUpdate.newLatLngZoom(_pendingCameraTarget!, 14),
+        CameraUpdate.newLatLngZoom(_pendingCameraTarget!, MapConstants.defaultZoom),
       );
       _pendingCameraTarget = null;
       // Mark location as ready after a short delay for animation
@@ -236,7 +237,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
 
           // Move camera to the selected place
           _mapController?.animateCamera(
-            CameraUpdate.newLatLngZoom(latLng, 15),
+            CameraUpdate.newLatLngZoom(latLng, MapConstants.defaultZoom),
           );
 
           // Update initial position and search for places there
@@ -290,7 +291,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
             GoogleMap(
               initialCameraPosition: CameraPosition(
                 target: _initialPosition,
-                zoom: 14,
+                zoom: MapConstants.defaultZoom,
               ),
               onMapCreated: _onMapCreated,
               markers: _markers,

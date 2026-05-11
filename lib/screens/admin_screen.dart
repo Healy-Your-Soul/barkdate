@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:barkdate/core/config/map_constants.dart';
 import 'package:location/location.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../services/park_service.dart';
@@ -143,7 +144,7 @@ class _AdminScreenState extends State<AdminScreen> with WidgetsBindingObserver {
 
     // Move map to selected location
     _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(_selectedLocation!, 16),
+      CameraUpdate.newLatLngZoom(_selectedLocation!, MapConstants.defaultZoom),
     );
   }
 
@@ -501,7 +502,7 @@ class _AdminScreenState extends State<AdminScreen> with WidgetsBindingObserver {
                       mapType: MapType.normal,
                       initialCameraPosition: const CameraPosition(
                         target: LatLng(37.7749, -122.4194), // San Francisco
-                        zoom: 12,
+                        zoom: MapConstants.defaultZoom,
                       ),
                       onMapCreated: (GoogleMapController controller) {
                         _mapController = controller;
@@ -710,7 +711,7 @@ class _AdminScreenState extends State<AdminScreen> with WidgetsBindingObserver {
                                                 park.latitude, park.longitude);
                                             _mapController?.animateCamera(
                                               CameraUpdate.newLatLngZoom(
-                                                  location, 16),
+                                                  location, MapConstants.defaultZoom),
                                             );
                                             // Scroll to map top roughly by scrolling screen to top
                                             Scrollable.ensureVisible(context,
