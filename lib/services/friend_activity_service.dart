@@ -9,18 +9,20 @@ import 'package:barkdate/supabase/barkdate_services.dart';
 /// Service that aggregates real-time friend activity into FriendAlerts.
 /// Queries existing tables: checkins, dog_friendships, posts, playdates.
 class FriendActivityService {
-  /// Get all current alerts for a user (combined from all sources)
+  /// Get all current alerts for a user (combined from all sources).
+  ///
+  /// Always includes seeded park activity (1 random card) so the carousel
+  /// is never empty — even for brand-new users with zero friends.
   static Future<List<FriendAlert>> getAlerts(String userId) async {
     try {
       // Get user's primary dog
       final dogs = await BarkDateUserService.getUserDogs(userId);
-      if (dogs.isEmpty) return [];
+      if (dogs.isEmpty) return await _getSeededActivityAlerts();
 
       final myDogId = dogs.first['id'] as String;
 
       // Get friend dog IDs
       final friends = await DogFriendshipService.getFriends(myDogId);
-      if (friends.isEmpty) return [];
 
       final friendDogIds = <String>[];
       final friendUserIds = <String>[];
@@ -43,17 +45,19 @@ class FriendActivityService {
         }
       }
 
-      if (friendDogIds.isEmpty) return [];
+      // Always fetch seeded activity + user's own walks + nearby spots.
+      // Friend-specific queries only run when the user actually has friends.
+      final hasFriends = friendDogIds.isNotEmpty;
 
-      // Fetch all alert sources concurrently
       final results = await Future.wait([
-        _getFriendCheckInAlerts(friendUserIds, friendDogIds),
+        _getSeededActivityAlerts(),
         _getNearbySpotAlerts(),
-        _getFriendUpcomingWalkAlerts(friendUserIds),
-        _getNewFriendAlerts(myDogId),
-        _getUpcomingPlaydateAlerts(userId),
-        _getFriendPostAlerts(friendDogIds),
         _getUserOwnUpcomingWalkAlerts(userId),
+        _getUpcomingPlaydateAlerts(userId),
+        if (hasFriends) _getFriendCheckInAlerts(friendUserIds, friendDogIds),
+        if (hasFriends) _getFriendUpcomingWalkAlerts(friendUserIds),
+        if (hasFriends) _getNewFriendAlerts(myDogId),
+        if (hasFriends) _getFriendPostAlerts(friendDogIds),
       ]);
 
       final allAlerts = <FriendAlert>[];
@@ -61,18 +65,14 @@ class FriendActivityService {
         allAlerts.addAll(list);
       }
 
+      debugPrint(
+          '[FriendActivity] total alerts assembled: ${allAlerts.length}');
+
       // Sort by most recent first
       allAlerts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       // Limit to 10 most recent
-      final result = allAlerts.take(10).toList();
-
-      // If no real alerts, show demo cards so users can see the UI
-      if (result.isEmpty) {
-        return _getDemoAlerts();
-      }
-
-      return result;
+      return allAlerts.take(10).toList();
     } catch (e) {
       debugPrint('Error getting friend alerts: $e');
       return [];
@@ -547,36 +547,45 @@ class FriendActivityService {
     }
   }
 
-  /// Demo alerts shown when no real friend activity exists.
-  /// Lets users see the carousel UI immediately.
-  static List<FriendAlert> _getDemoAlerts() {
-    final now = DateTime.now();
-    return [
-      FriendAlert.nearbySpot(
-        id: 'demo_spot',
-        parkName: 'Central Park',
-        dogCount: 3,
-      ),
-      FriendAlert.walkTogether(
-        id: 'demo_walk',
-        dogName: 'Luna',
-        parkName: 'Riverside Dog Park',
-        scheduledFor: now.add(const Duration(hours: 2)),
-        joinCount: 2,
-      ),
-      FriendAlert.friendCheckIn(
-        id: 'demo_checkin',
-        dogName: 'Max',
-        parkName: 'Hyde Park',
-      ),
-      FriendAlert.newFriend(
-        id: 'demo_friend',
-        dogName: 'Buddy',
-      ),
-      FriendAlert.friendPost(
-        id: 'demo_post',
-        dogName: 'Rocky',
-      ),
-    ];
+  /// Fetch ONE random seeded park activity card for the carousel. Uses the
+  /// `park_activity_reports` table populated by admin seeding and user
+  /// "Spotted dogs" reports. Returns at most 1 card so it doesn't flood
+  /// the carousel with identical "dogs at park" entries.
+  static Future<List<FriendAlert>> _getSeededActivityAlerts() async {
+    try {
+      // Use a wide window (7 days) so seeded / admin data stays visible
+      // even if it was created a while ago.
+      final cutoff =
+          DateTime.now().subtract(const Duration(days: 7)).toIso8601String();
+
+      final data = await SupabaseConfig.client
+          .from('park_activity_reports')
+          .select('park_id, dog_count, park_name')
+          .gte('created_at', cutoff)
+          .order('created_at', ascending: false)
+          .limit(10);
+
+      debugPrint(
+          '[SeededActivity] query returned ${(data as List).length} rows');
+
+      if (data.isEmpty) return [];
+
+      // Pick one random park so users see variety across refreshes
+      final picked = (data..shuffle()).first;
+      final parkName = picked['park_name'] as String? ?? 'A nearby park';
+      final dogCount = picked['dog_count'] as int? ?? 1;
+
+      return [
+        FriendAlert.nearbySpot(
+          id: 'activity_${picked['park_id']}',
+          parkName: parkName,
+          dogCount: dogCount,
+          parkId: picked['park_id'] as String?,
+        ),
+      ];
+    } catch (e) {
+      debugPrint('Error fetching seeded activity alerts: $e');
+      return [];
+    }
   }
 }

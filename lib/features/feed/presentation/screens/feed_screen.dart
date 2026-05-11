@@ -1289,6 +1289,139 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
     );
   }
 
+  /// Build recent post previews (horizontal scroll) from ALL dogs.
+  Widget _buildRecentPostsPreviews(BuildContext context, WidgetRef ref) {
+    final postsAsync = ref.watch(recentPublicPostsProvider);
+
+    return postsAsync.when(
+      data: (posts) {
+        if (posts.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Recent',
+              style: AppTypography.labelMedium(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 110,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: posts.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                itemBuilder: (context, index) {
+                  final post = posts[index];
+                  final dog = post['dog'] as Map<String, dynamic>?;
+                  final dogName = dog?['name'] as String? ?? 'Dog';
+                  final dogPhoto = dog?['main_photo_url'] as String?;
+                  final imageUrl = post['image_url'] as String?;
+                  final content = post['content'] as String? ?? '';
+
+                  return GestureDetector(
+                    onTap: () =>
+                        const SocialFeedRoute(initialTab: 0).push(context),
+                    child: Container(
+                      width: 150,
+                      decoration: BoxDecoration(
+                        color: imageUrl != null ? null : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.grey.withValues(alpha: 0.25),
+                        ),
+                        image: imageUrl != null
+                            ? DecorationImage(
+                                image: NetworkImage(imageUrl),
+                                fit: BoxFit.cover,
+                                colorFilter: ColorFilter.mode(
+                                  Colors.black.withValues(alpha: 0.3),
+                                  BlendMode.darken,
+                                ),
+                              )
+                            : null,
+                      ),
+                      padding: const EdgeInsets.all(10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: imageUrl != null
+                                        ? Colors.white
+                                        : Colors.grey.withValues(alpha: 0.3),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: CircleAvatar(
+                                  radius: 13,
+                                  backgroundImage: dogPhoto != null
+                                      ? NetworkImage(dogPhoto)
+                                      : null,
+                                  child: dogPhoto == null
+                                      ? const Icon(Icons.pets, size: 12)
+                                      : null,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  dogName,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                    color: imageUrl != null
+                                        ? Colors.white
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Spacer(),
+                          if (content.isNotEmpty)
+                            Text(
+                              content,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: imageUrl != null
+                                    ? Colors.white.withValues(alpha: 0.85)
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
   /// Build the "Sniff Around" social feed preview section
   Widget _buildSniffAroundSection(BuildContext context, WidgetRef ref) {
     // Get user's first dog for personalization
@@ -1407,6 +1540,11 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
 
               const SizedBox(height: 16),
 
+              // Recent posts from all dogs
+              _buildRecentPostsPreviews(context, ref),
+
+              const SizedBox(height: 16),
+
               // Quick action buttons with proper navigation
               Row(
                 children: [
@@ -1417,7 +1555,7 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
                       icon: Icon(Icons.pets,
                           size: 18,
                           color: Theme.of(context).colorScheme.primary),
-                      label: const Text('Browse Feed'),
+                      label: const Text('All Dogs'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
@@ -1432,7 +1570,7 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
                       onPressed: () => const SocialFeedRoute(initialTab: 1)
                           .push(context), // Following tab
                       icon: const Icon(Icons.group_outlined, size: 18),
-                      label: const Text('Friends'),
+                      label: const Text('My Pack'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(

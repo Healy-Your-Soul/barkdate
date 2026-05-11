@@ -8,6 +8,7 @@ import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
+import 'package:flutter/foundation.dart';
 
 final dogRepositoryProvider = Provider<DogRepository>((ref) {
   return DogRepositoryImpl();
@@ -206,4 +207,16 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
       friendshipId: fs?['friendshipId'],
     );
   }).toList();
+});
+
+/// Recent public posts from ALL dogs (for the Sniff Around section).
+/// Returns raw maps — lightweight so the feed preview stays fast.
+final recentPublicPostsProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  try {
+    return await BarkDateSocialService.getFeedPosts(limit: 6, offset: 0);
+  } catch (e) {
+    debugPrint('Error fetching recent public posts: $e');
+    return [];
+  }
 });
