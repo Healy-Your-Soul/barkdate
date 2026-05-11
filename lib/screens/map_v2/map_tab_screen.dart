@@ -238,7 +238,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
     final parkIds = selected.map((place) => place.placeId).toList();
     final dogCounts = selected
-        .map((_) => random.nextInt(9) + 2) // 2 to 10 dogs
+        .map((_) => random.nextInt(5) + 1) // 1 to 5 dogs
         .toList();
 
     final didSeed = await ParkActivityService.autoSeedParks(
@@ -299,7 +299,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       await Future.wait(
         selected.map((place) => ParkActivityService.reportDogCount(
               parkId: place.placeId,
-              dogCount: random.nextInt(9) + 2,
+              dogCount: random.nextInt(5) + 1,
               isAdminOverride: true,
             )),
       );

@@ -277,7 +277,7 @@ class _AdminScreenState extends State<AdminScreen> with WidgetsBindingObserver {
       // Randomly select ~40% of the parks
       for (final place in visiblePlaces) {
         if (random.nextDouble() < 0.4) {
-          final dogCount = random.nextInt(9) + 2; // 2 to 10 dogs
+          final dogCount = random.nextInt(5) + 1; // 1 to 5 dogs
           await ParkActivityService.reportDogCount(
             parkId: place.placeId,
             dogCount: dogCount,
@@ -292,7 +292,7 @@ class _AdminScreenState extends State<AdminScreen> with WidgetsBindingObserver {
         final place = result.places.first;
         await ParkActivityService.reportDogCount(
           parkId: place.placeId,
-          dogCount: random.nextInt(9) + 2,
+          dogCount: random.nextInt(5) + 1,
           isAdminOverride: true,
         );
         seededCount = 1;
@@ -701,7 +701,7 @@ class _AdminScreenState extends State<AdminScreen> with WidgetsBindingObserver {
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Simulate 2-10 dogs at random parks within the map\'s visible area. Useful for launching a new neighborhood to prevent the "Empty Room" problem.',
+                          'Simulate 1-5 dogs at random parks within the map\'s visible area. Useful for launching a new neighborhood to prevent the "Empty Room" problem.',
                           style: TextStyle(color: Colors.black87),
                         ),
                         const SizedBox(height: 16),
