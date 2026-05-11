@@ -589,7 +589,8 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             ...displayList.map((amenity) {
               final amenityId = amenity['amenity_id']?.toString() ?? '';
               final name = amenity['name'] as String? ?? '';
-              final iconData = _amenityIcons[name] ?? Icons.check_circle_outline;
+              final iconData =
+                  _amenityIcons[name] ?? Icons.check_circle_outline;
               final userConfirmed = _userSuggestedIds.contains(amenityId);
 
               return GestureDetector(
@@ -918,14 +919,14 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                     const SizedBox(width: 8),
                     // Crowdedness badge
                     Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: _getCrowdednessColor(totalDogCount)
                             .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border:
-                            Border.all(color: _getCrowdednessColor(totalDogCount)),
+                        border: Border.all(
+                            color: _getCrowdednessColor(totalDogCount)),
                       ),
                       child: Text(
                         _getCrowdednessLabel(totalDogCount),
@@ -1146,7 +1147,8 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: _getCategoryColor(widget.place.category)
                         .withValues(alpha: 0.1),
@@ -1182,14 +1184,17 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                 GestureDetector(
                   onTap: () => _submitDogFriendlyVote(true),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: (widget.place.isDogFriendly || _dogFriendlyVote == true)
+                      color: (widget.place.isDogFriendly ||
+                              _dogFriendlyVote == true)
                           ? Colors.green.shade50
                           : Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: (widget.place.isDogFriendly || _dogFriendlyVote == true)
+                        color: (widget.place.isDogFriendly ||
+                                _dogFriendlyVote == true)
                             ? Colors.green.shade400
                             : Colors.grey.shade300,
                       ),
@@ -1197,17 +1202,20 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check, size: 15,
-                          color: (widget.place.isDogFriendly || _dogFriendlyVote == true)
-                              ? Colors.green.shade700
-                              : Colors.grey.shade500),
+                        Icon(Icons.check,
+                            size: 15,
+                            color: (widget.place.isDogFriendly ||
+                                    _dogFriendlyVote == true)
+                                ? Colors.green.shade700
+                                : Colors.grey.shade500),
                         const SizedBox(width: 4),
                         Text(
                           'Yes',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: (widget.place.isDogFriendly || _dogFriendlyVote == true)
+                            color: (widget.place.isDogFriendly ||
+                                    _dogFriendlyVote == true)
                                 ? Colors.green.shade800
                                 : Colors.grey.shade600,
                           ),
@@ -1220,7 +1228,8 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                 GestureDetector(
                   onTap: () => _submitDogFriendlyVote(false),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: _dogFriendlyVote == false
                           ? Colors.red.shade50
@@ -1235,10 +1244,11 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.close, size: 15,
-                          color: _dogFriendlyVote == false
-                              ? Colors.red.shade700
-                              : Colors.grey.shade500),
+                        Icon(Icons.close,
+                            size: 15,
+                            color: _dogFriendlyVote == false
+                                ? Colors.red.shade700
+                                : Colors.grey.shade500),
                         const SizedBox(width: 4),
                         Text(
                           'No',
