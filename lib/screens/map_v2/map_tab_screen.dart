@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:barkdate/core/config/map_constants.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/screens/map_v2/providers/map_viewport_provider.dart';
@@ -347,7 +348,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
       // Update viewport
       final location = LatLng(position.latitude, position.longitude);
-      ref.read(mapViewportProvider.notifier).updateCamera(location, 15);
+      ref
+          .read(mapViewportProvider.notifier)
+          .updateCamera(location, MapConstants.defaultZoom);
 
       // Fetch initial data
       _fetchPlacesAndEvents();

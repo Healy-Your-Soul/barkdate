@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:barkdate/core/config/map_constants.dart';
 import 'package:location/location.dart';
 import '../services/park_service.dart';
 import '../services/places_service.dart';
@@ -250,14 +251,15 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
                   initialCameraPosition: CameraPosition(
                     target:
                         _currentLocation ?? const LatLng(37.7749, -122.4194),
-                    zoom: 14.0,
+                    zoom: MapConstants.defaultZoom,
                   ),
                   markers: _markers,
                   onMapCreated: (GoogleMapController controller) {
                     _mapController = controller;
                     if (_currentLocation != null) {
                       controller.animateCamera(
-                        CameraUpdate.newLatLngZoom(_currentLocation!, 14.0),
+                        CameraUpdate.newLatLngZoom(
+                            _currentLocation!, MapConstants.defaultZoom),
                       );
                     }
                   },
@@ -339,7 +341,8 @@ class _EnhancedMapScreenState extends State<EnhancedMapScreen> {
                   onTap: () {
                     if (_currentLocation != null) {
                       _mapController?.animateCamera(
-                        CameraUpdate.newLatLngZoom(_currentLocation!, 16),
+                        CameraUpdate.newLatLngZoom(
+                            _currentLocation!, MapConstants.defaultZoom),
                       );
                     }
                   },

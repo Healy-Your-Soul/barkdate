@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:barkdate/core/config/map_constants.dart';
 import 'package:location/location.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:barkdate/services/park_service.dart';
@@ -253,7 +254,7 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _centerOnMyLocation() async {
     if (_currentLocation == null || _mapController == null) return;
     await _mapController!.animateCamera(CameraUpdate.newCameraPosition(
-      CameraPosition(target: _currentLocation!, zoom: 14),
+      CameraPosition(target: _currentLocation!, zoom: MapConstants.defaultZoom),
     ));
   }
 
@@ -331,7 +332,7 @@ class _MapScreenState extends State<MapScreen> {
                     initialCameraPosition: CameraPosition(
                       target:
                           _currentLocation ?? const LatLng(40.7829, -73.9654),
-                      zoom: 12,
+                      zoom: MapConstants.defaultZoom,
                     ),
                     myLocationEnabled: true,
                     myLocationButtonEnabled: false,

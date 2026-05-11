@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:barkdate/core/config/map_constants.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:barkdate/features/map/presentation/providers/map_provider.dart';
 import 'package:barkdate/features/map/presentation/widgets/map_search_bar.dart';
@@ -63,7 +64,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       ref.read(mapViewportProvider.notifier).state =
           ref.read(mapViewportProvider).copyWith(
                 center: location,
-                zoom: 16.0,
+                zoom: MapConstants.defaultZoom,
               );
 
       setState(() {
@@ -110,7 +111,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
       if (_mapController != null) {
         await _mapController!.animateCamera(
-          CameraUpdate.newLatLngZoom(location, 14.0),
+          CameraUpdate.newLatLngZoom(location, MapConstants.defaultZoom),
         );
       }
 
