@@ -158,6 +158,18 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                       return true;
                     }).toList();
 
+                    // Sprint 7b: sort unread conversations to the top,
+                    // then by recency within each group.
+                    filteredConversations.sort((a, b) {
+                      final aUnread = a['has_unread'] == true;
+                      final bUnread = b['has_unread'] == true;
+                      if (aUnread && !bUnread) return -1;
+                      if (!aUnread && bUnread) return 1;
+                      final aTime = a['created_at'] as String? ?? '';
+                      final bTime = b['created_at'] as String? ?? '';
+                      return bTime.compareTo(aTime);
+                    });
+
                     if (filteredConversations.isEmpty) {
                       return Center(
                         child: Padding(

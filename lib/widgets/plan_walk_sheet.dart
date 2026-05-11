@@ -377,15 +377,15 @@ class _PlanWalkSheetState extends State<PlanWalkSheet> {
   }
 }
 
-/// Show the Plan Walk bottom sheet
-void showPlanWalkSheet(
+/// Show the Plan Walk bottom sheet. Returns `true` if a walk was created.
+Future<bool?> showPlanWalkSheet(
   BuildContext context, {
   required String parkId,
   required String parkName,
   double? latitude,
   double? longitude,
 }) {
-  showModalBottomSheet(
+  return showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

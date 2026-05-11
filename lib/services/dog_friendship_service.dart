@@ -43,15 +43,20 @@ class DogFriendshipService {
         return false; // Already friends or pending
       }
 
-      // Create new friendship request
-      await _supabase.from('dog_friendships').insert({
-        'dog_id': fromDogId,
-        'friend_dog_id': toDogId,
-        'status': statusPending,
-        'created_at': DateTime.now().toIso8601String(),
-      });
+      // Create new friendship request and read back the ID
+      final inserted = await _supabase
+          .from('dog_friendships')
+          .insert({
+            'dog_id': fromDogId,
+            'friend_dog_id': toDogId,
+            'status': statusPending,
+            'created_at': DateTime.now().toIso8601String(),
+          })
+          .select('id')
+          .single();
 
-      debugPrint('🐕 Bark sent from $fromDogId to $toDogId');
+      final friendshipId = inserted['id'] as String?;
+      debugPrint('🐕 Bark sent from $fromDogId to $toDogId (id=$friendshipId)');
 
       // Send notification to the other dog's owner
       try {
@@ -72,6 +77,7 @@ class DogFriendshipService {
             senderDogName: fromDog['name'],
             receiverDogName: toDog['name'],
             senderUserId: currentUserId,
+            friendshipId: friendshipId,
           );
         }
       } catch (e) {

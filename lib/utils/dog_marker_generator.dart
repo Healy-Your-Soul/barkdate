@@ -57,7 +57,10 @@ class DogMarkerGenerator {
     // Convert to bytes
     final picture = recorder.endRecording();
     final image = await picture.toImage(scaledSize, scaledSize);
+    picture.dispose(); // Free native memory
+
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose(); // Free native memory
 
     return byteData!.buffer.asUint8List();
   }
@@ -99,6 +102,8 @@ class DogMarkerGenerator {
         borderWidth: borderWidth,
         isCurrentUser: isCurrentUser,
       );
+
+      dogImage?.dispose(); // Free native memory
 
       final descriptor = BitmapDescriptor.bytes(
         markerBytes,
@@ -328,6 +333,9 @@ class DogMarkerGenerator {
         size: size,
       );
 
+      orgImg?.dispose(); // Free native memory
+      invImg?.dispose(); // Free native memory
+
       final descriptor = BitmapDescriptor.bytes(
         bytes,
         width: size.toDouble(),
@@ -396,37 +404,60 @@ class DogMarkerGenerator {
           );
         }
 
-        // Small clock badge (top-right) so users still recognise this as a
-        // scheduled-walk marker even at a glance.
-        final badgeRadius = scaledSize * 0.18;
+        // Clock badge (top-right) — drawn with Canvas primitives because
+        // emoji rendering on Flutter web Canvas is unreliable.
+        final badgeRadius = scaledSize * 0.22;
         final badgeCenter = Offset(
-          scaledSize - badgeRadius - (2 * dpr),
-          badgeRadius + (2 * dpr),
+          scaledSize - badgeRadius, // flush to the right edge
+          badgeRadius, // flush to the top edge
         );
+
+        // White filled circle background
         paint
           ..style = PaintingStyle.fill
           ..color = Colors.white;
         canvas.drawCircle(badgeCenter, badgeRadius, paint);
+
+        // Colored border ring
         paint
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5 * dpr
           ..color = isConfirmed ? _walkBlueConfirmed : _walkBluePending;
         canvas.drawCircle(badgeCenter, badgeRadius - (1 * dpr), paint);
 
-        final clockTp = TextPainter(
-          text: TextSpan(
-            text: '🕐',
-            style: TextStyle(fontSize: badgeRadius * 1.4),
-          ),
-          textDirection: TextDirection.ltr,
+        // Draw clock face: small circle + two hands (hour pointing to 2,
+        // minute pointing to 12) using the same accent color.
+        final clockColor = isConfirmed ? _walkBlueConfirmed : _walkBluePending;
+        final handLength = badgeRadius * 0.45;
+        final shortHand = badgeRadius * 0.32;
+
+        // Clock circle outline
+        paint
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5 * dpr
+          ..color = clockColor;
+        canvas.drawCircle(badgeCenter, badgeRadius * 0.6, paint);
+
+        // Minute hand (pointing up / 12 o'clock)
+        paint
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0 * dpr
+          ..strokeCap = StrokeCap.round
+          ..color = clockColor;
+        canvas.drawLine(
+          badgeCenter,
+          Offset(badgeCenter.dx, badgeCenter.dy - handLength),
+          paint,
         );
-        clockTp.layout();
-        clockTp.paint(
-          canvas,
+
+        // Hour hand (pointing to ~2 o'clock)
+        canvas.drawLine(
+          badgeCenter,
           Offset(
-            badgeCenter.dx - clockTp.width / 2,
-            badgeCenter.dy - clockTp.height / 2,
+            badgeCenter.dx + shortHand * 0.87, // cos(30°)
+            badgeCenter.dy - shortHand * 0.5, // sin(30°)
           ),
+          paint,
         );
       },
     );
@@ -576,10 +607,12 @@ class DogMarkerGenerator {
   static Future<BitmapDescriptor> createPlaceMarkerWithCount({
     required String category,
     required int dogCount,
+    bool glowPulseOn = false,
     int size = 48,
   }) async {
     // Create a cache key that includes dog count
-    final cacheKey = 'place_${category}_${dogCount}_$size';
+    final cacheKey =
+        'place_${category}_${dogCount}_${glowPulseOn ? '1' : '0'}_$size';
 
     // Return cached version if available
     if (_cache.containsKey(cacheKey)) {
@@ -622,6 +655,7 @@ class DogMarkerGenerator {
         color: markerColor,
         icon: icon,
         dogCount: dogCount,
+        glowPulseOn: glowPulseOn,
         size: size,
       );
 
@@ -643,6 +677,7 @@ class DogMarkerGenerator {
     required Color color,
     required String icon,
     required int dogCount,
+    required bool glowPulseOn,
     required int size,
   }) async {
     return _buildBaseMarker(
@@ -651,6 +686,22 @@ class DogMarkerGenerator {
       radiusAdjustment: 12, // Smaller to leave room for badge
       drawContent: (canvas, center, radius, scaledSize, dpr) {
         final paint = Paint();
+
+        // Draw glowing aura if dogCount > 5
+        if (dogCount > 5) {
+          final glowRadius = radius + (glowPulseOn ? (8 * dpr) : (4 * dpr));
+          final glowPaint = Paint()
+            ..shader = ui.Gradient.radial(
+              center,
+              glowRadius,
+              [
+                Colors.orange.withValues(alpha: glowPulseOn ? 0.35 : 0.2),
+                Colors.orange.withValues(alpha: 0.0),
+              ],
+              [0.6, 1.0],
+            );
+          canvas.drawCircle(center, glowRadius, glowPaint);
+        }
 
         // Draw colored circle
         paint.color = color;
@@ -691,45 +742,87 @@ class DogMarkerGenerator {
 
         // Draw dog count badge (top right) if count > 0
         if (dogCount > 0) {
-          final badgeRadius = scaledSize * 0.22;
-          final badgeCenter = Offset(
-              scaledSize - badgeRadius - (2 * dpr), badgeRadius + (2 * dpr));
+          final badgeHeight = scaledSize * 0.41;
+          final badgePadding = badgeHeight * 0.34;
+          final badgeTop = 2 * dpr;
+          final badgeRight = 2 * dpr;
+          final badgeColor = dogCount >= 6
+              ? Colors.red
+              : (dogCount >= 3 ? Colors.orange : Colors.green);
 
-          // Badge background (red/orange circle)
-          paint
-            ..style = PaintingStyle.fill
-            ..color = dogCount >= 6
-                ? Colors.red
-                : (dogCount >= 3 ? Colors.orange : Colors.green);
-          canvas.drawCircle(badgeCenter, badgeRadius, paint);
-
-          // Badge border
-          paint
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.5 * dpr
-            ..color = Colors.white;
-          canvas.drawCircle(badgeCenter, badgeRadius, paint);
-
-          // Badge text (dog count)
           final countText = dogCount > 9 ? '9+' : dogCount.toString();
-          final badgeTextPainter = TextPainter(
+          final countPainter = TextPainter(
             text: TextSpan(
               text: countText,
               style: TextStyle(
-                fontSize: badgeRadius * 1.1,
+                fontSize: badgeHeight * 0.64,
                 color: Colors.white,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
               ),
             ),
             textDirection: TextDirection.ltr,
           );
-          badgeTextPainter.layout();
-          badgeTextPainter.paint(
-            canvas,
-            Offset(
-              badgeCenter.dx - badgeTextPainter.width / 2,
-              badgeCenter.dy - badgeTextPainter.height / 2,
+          countPainter.layout();
+
+          final iconPainter = TextPainter(
+            text: TextSpan(
+              text: String.fromCharCode(Icons.pets.codePoint),
+              style: TextStyle(
+                fontSize: badgeHeight * 0.85,
+                fontFamily: Icons.pets.fontFamily,
+                package: Icons.pets.fontPackage,
+                color: Colors.white,
+              ),
             ),
+            textDirection: TextDirection.ltr,
+          );
+          iconPainter.layout();
+
+          final badgeWidth = badgePadding +
+              iconPainter.width +
+              (badgeHeight * 0.2) +
+              countPainter.width +
+              badgePadding;
+
+          final badgeLeft = scaledSize - badgeWidth - badgeRight;
+          final badgeRect = RRect.fromLTRBR(
+            badgeLeft,
+            badgeTop,
+            badgeLeft + badgeWidth,
+            badgeTop + badgeHeight,
+            Radius.circular(badgeHeight / 2),
+          );
+
+          paint
+            ..style = PaintingStyle.fill
+            ..color = Colors.black.withValues(alpha: 0.15);
+          canvas.drawRRect(
+            badgeRect.shift(Offset(0, 1.2 * dpr)),
+            paint,
+          );
+
+          paint
+            ..style = PaintingStyle.fill
+            ..color = badgeColor;
+          canvas.drawRRect(badgeRect, paint);
+
+          paint
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.3 * dpr
+            ..color = Colors.white;
+          canvas.drawRRect(badgeRect, paint);
+
+          final centerY = badgeTop + (badgeHeight / 2);
+          final iconX = badgeLeft + badgePadding;
+          iconPainter.paint(
+            canvas,
+            Offset(iconX, centerY - (iconPainter.height / 2)),
+          );
+
+          final textX = iconX + iconPainter.width + (badgeHeight * 0.2);
+          countPainter.paint(
+            canvas,
+            Offset(textX, centerY - (countPainter.height / 2)),
           );
         }
       },

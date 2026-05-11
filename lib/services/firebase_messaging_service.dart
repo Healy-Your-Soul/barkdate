@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart' hide Priority;
-import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
@@ -15,6 +14,7 @@ import 'package:barkdate/widgets/receive_walk_sheet.dart';
 import 'package:barkdate/core/router/app_router.dart';
 import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/services/conversation_service.dart';
+import 'package:barkdate/features/messages/presentation/screens/chat_screen.dart';
 import 'package:go_router/go_router.dart';
 
 /// Firebase Cloud Messaging service for BarkDate
@@ -61,6 +61,28 @@ class FirebaseMessagingService {
 
       // Get and store FCM token
       await _getAndStoreFCMToken();
+
+      // Re-sync token on initialization in case it's stale
+      await _resyncFCMTokenIfNeeded();
+
+      // Register push delegate on NotificationService so createNotification
+      // triggers a real FCM push on every call site, without a circular import.
+      NotificationService.registerPushDelegate(({
+        required String userToken,
+        required String title,
+        required String body,
+        required NotificationType type,
+        Map<String, dynamic>? data,
+        int? badgeCount,
+      }) =>
+          FirebaseMessagingService.sendPushNotificationToUser(
+            userToken: userToken,
+            title: title,
+            body: body,
+            type: type,
+            data: data,
+            badgeCount: badgeCount,
+          ));
 
       // Set up message handlers
       _setupMessageHandlers();
@@ -271,6 +293,46 @@ class FirebaseMessagingService {
     });
   }
 
+  /// Fetch current FCM token and update Supabase if missing or different
+  /// Called on app resume and initialization to handle stale tokens
+  static Future<void> _resyncFCMTokenIfNeeded() async {
+    try {
+      final currentToken = await _firebaseMessaging.getToken();
+      if (currentToken == null) {
+        debugPrint('⚠️ Could not fetch FCM token for resync');
+        return;
+      }
+
+      final user = SupabaseConfig.auth.currentUser;
+      if (user == null) {
+        debugPrint('ℹ️ No user signed in, skipping token resync');
+        return;
+      }
+
+      // Check stored token
+      final stored = await SupabaseConfig.client
+          .from('users')
+          .select('fcm_token')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      final storedToken = stored?['fcm_token'] as String?;
+
+      // Update only if missing or different
+      if (storedToken != currentToken) {
+        await SupabaseConfig.client
+            .from('users')
+            .update({'fcm_token': currentToken}).eq('id', user.id);
+
+        debugPrint(
+            '🔄 FCM token re-synced (${storedToken == null ? 'was missing' : 'was stale'})');
+        _cachedToken = currentToken;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error re-syncing FCM token: $e');
+    }
+  }
+
   /// Handle messages when app is in foreground
   static Future<void> _handleForegroundMessage(RemoteMessage message) async {
     debugPrint('📱 Foreground message received: ${message.messageId}');
@@ -289,13 +351,9 @@ class FirebaseMessagingService {
         if (ctx != null) _navigateToScreen(type, message.data);
       }
 
-      await InAppNotificationService.showBanner(notification,
-          onTapAction: bannerTapAction);
-      await NotificationSoundService.playNotificationSound(notification.type);
-      await _showLocalNotification(message, notification);
-
-      // Auto-show the Walk Invite sheet for playdate_request (resolves request_id
-      // from playdate_id when FCM data payload is incomplete — e.g. web/data-only).
+      // Sprint 7e: for walk invites in foreground, attempt the sheet first.
+      // Only fall back to the in-app banner (and OS local notification) if
+      // the sheet was skipped — avoids the duplicate banner-plus-sheet UI.
       if (type == NotificationType.playdateRequest) {
         final data = message.data;
         final metadataRaw = data['metadata'];
@@ -312,17 +370,20 @@ class FirebaseMessagingService {
         final payload = <String, dynamic>{
           ...metadata,
           ...data,
-          // Sprint 1: pass the local notification id so the funnel can mark
-          // as read. The DB row may not exist on this device yet for FCM
-          // foreground, so the funnel falls back to related_id if missing.
           'notification_id': notification.id,
         };
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          final c = rootNavigatorKey.currentContext;
-          if (c != null) {
-            unawaited(openReceiveWalkSheetFromInvitePayload(c, payload));
-          }
-        });
+        final c = rootNavigatorKey.currentContext;
+        bool sheetOpened = false;
+        if (c != null) {
+          sheetOpened = await openReceiveWalkSheetFromInvitePayload(c, payload);
+        }
+        if (!sheetOpened) {
+          await InAppNotificationService.showBanner(notification,
+              onTapAction: bannerTapAction);
+          await NotificationSoundService.playNotificationSound(
+              notification.type);
+          await _showLocalNotification(message, notification);
+        }
       }
     }
   }
@@ -524,10 +585,12 @@ class FirebaseMessagingService {
           try {
             final conv = await ConversationService.getPlaydateConversation(pId);
             if (conv != null && context.mounted) {
+              final convId = conv['id'] as String;
+              if (!ChatNavigationGuard.canPush(convId)) break;
               final responderName =
                   merged2['responder_name'] as String? ?? 'Walk buddy';
               ChatRoute(
-                matchId: conv['id'] as String,
+                matchId: convId,
                 recipientId: '',
                 recipientName: responderName,
                 recipientAvatarUrl: '',
@@ -542,14 +605,21 @@ class FirebaseMessagingService {
         }
         break;
       case NotificationType.message:
-        // Navigate to chat
-        if (data['related_id'] != null) {
-          // related_id is match_id for messages
-          GoRouter.of(context).push('/chat', extra: {
-            'matchId': data['related_id'],
-            // We might need recipient info here, but ChatScreen usually fetches it if missing
-            // or we might need to pass partial data
-          });
+        // Sprint 7e: tap originated from FCM = always a user-initiated action,
+        // so force-bypass the dedupe guard. Fall back to messages list if no
+        // conversation id is in the payload (better than landing on Feed).
+        final rawId = data['related_id'] ?? data['match_id'];
+        final matchId = rawId is String && rawId.isNotEmpty ? rawId : null;
+        if (matchId != null) {
+          ChatNavigationGuard.canPush(matchId, force: true);
+          ChatRoute(
+            matchId: matchId,
+            recipientId: '',
+            recipientName: (data['sender_name'] as String?) ?? 'Chat',
+            recipientAvatarUrl: '',
+          ).push(context);
+        } else {
+          const MessagesRoute().push(context);
         }
         break;
       case NotificationType.match:
@@ -661,6 +731,11 @@ class FirebaseMessagingService {
   static Future<String?> getCurrentToken() async {
     if (_cachedToken != null) return _cachedToken;
     return await _getAndStoreFCMToken();
+  }
+
+  /// Re-sync FCM token if it's stale or missing (called on app resume)
+  static Future<void> resyncTokenOnAppResume() async {
+    await _resyncFCMTokenIfNeeded();
   }
 
   /// Send push notification to specific user

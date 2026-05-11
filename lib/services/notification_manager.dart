@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/services/firebase_messaging_service.dart';
+import 'package:barkdate/services/walk_realtime_service.dart';
 import 'package:barkdate/services/in_app_notification_service.dart';
 import 'package:barkdate/services/notification_sound_service.dart';
 import 'package:barkdate/supabase/notification_service.dart';
@@ -9,6 +10,7 @@ import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/models/notification.dart';
 import 'package:barkdate/core/router/app_router.dart';
 import 'package:barkdate/widgets/receive_walk_sheet.dart';
+import 'package:barkdate/features/messages/presentation/screens/chat_screen.dart';
 
 /// Central notification manager that coordinates all notification services
 class NotificationManager {
@@ -68,6 +70,7 @@ class NotificationManager {
     debugPrint('🚀 Starting notification streams for ${currentUser.id}');
     _setupRealtimeNotifications();
     _scanPendingWalkInvites();
+    WalkRealtimeService.instance.start(currentUser.id);
 
     _streamsStarted = true;
   }
@@ -76,14 +79,20 @@ class NotificationManager {
   static void stopNotificationStreams() {
     _realtimeSubscription?.cancel();
     _realtimeSubscription = null;
+    WalkRealtimeService.instance.stop();
     _streamsStarted = false;
   }
 
   /// Called when the app resumes from background.
-  /// Re-scans for pending walk invites the user may have missed.
+  /// Re-scans for pending walk invites the user may have missed and bounces
+  /// the realtime channels (websockets sometimes die silently after long bg).
+  /// Also re-syncs the FCM token in case it became stale.
   static void onAppResumed() {
     if (_streamsStarted) {
       _scanPendingWalkInvites();
+      WalkRealtimeService.instance.restart();
+      // Re-sync FCM token to handle stale tokens from inactivity
+      unawaited(FirebaseMessagingService.resyncTokenOnAppResume());
     }
   }
 
@@ -150,7 +159,7 @@ class NotificationManager {
     // Listen to real-time notifications
     _realtimeSubscription =
         NotificationService.streamUserNotifications(currentUser.id).listen(
-      (notifications) {
+      (notifications) async {
         if (notifications.isNotEmpty) {
           // Get the latest notification
           final latestNotification = notifications.first;
@@ -164,47 +173,48 @@ class NotificationManager {
               final notification =
                   BarkDateNotification.fromMap(latestNotification);
 
-              // Show in-app banner only for fresh notifications (10s window)
-              if (isRecent) {
-                InAppNotificationService.showNotification(
-                  notification,
-                  onTapAction: () {
-                    if (notification.type != NotificationType.playdateRequest) {
-                      return;
-                    }
-                    final ctx = rootNavigatorKey.currentContext;
-                    if (ctx == null) return;
-                    final meta = notification.metadata ?? {};
-                    final payload = <String, dynamic>{
-                      ...meta,
-                      'related_id': notification.relatedId,
-                      'notification_id':
-                          notification.id, // Sprint 1: enable mark-as-read
-                      'type': 'playdate_request',
-                    };
-                    openReceiveWalkSheetFromInvitePayload(ctx, payload);
-                  },
-                );
+              // Sprint 7b: auto-mark-read if user is currently in the chat
+              // this notification belongs to.
+              if (notification.type == NotificationType.message) {
+                final convoId = notification.relatedId ??
+                    (notification.metadata?['conversation_id'] as String?);
+                if (convoId != null && ActiveChatTracker.isViewing(convoId)) {
+                  await NotificationService.markAsRead(notification.id);
+                  return;
+                }
               }
 
-              // Auto-open walk invite sheet for playdate_request regardless
-              // of age — the dedupe guard inside
-              // openReceiveWalkSheetFromInvitePayload prevents doubles.
+              // Sprint 7e: for walk invites, attempt to open the sheet first.
+              // Only fall back to the in-app banner if the sheet was skipped
+              // (dedupe blocked, no navigator context). Eliminates the
+              // "banner + sheet for the same event" double-UI.
               if (notification.type == NotificationType.playdateRequest) {
                 final meta = notification.metadata ?? {};
                 final payload = <String, dynamic>{
                   ...meta,
                   'related_id': notification.relatedId,
-                  'notification_id':
-                      notification.id, // Sprint 1: enable mark-as-read
+                  'notification_id': notification.id,
                   'type': 'playdate_request',
                 };
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  final ctx = rootNavigatorKey.currentContext;
-                  if (ctx != null) {
-                    openReceiveWalkSheetFromInvitePayload(ctx, payload);
-                  }
-                });
+                bool sheetOpened = false;
+                final ctx = rootNavigatorKey.currentContext;
+                if (ctx != null) {
+                  sheetOpened =
+                      // ignore: use_build_context_synchronously
+                      await openReceiveWalkSheetFromInvitePayload(ctx, payload);
+                }
+                if (!sheetOpened && isRecent) {
+                  InAppNotificationService.showNotification(
+                    notification,
+                    onTapAction: () {
+                      final retryCtx = rootNavigatorKey.currentContext;
+                      if (retryCtx != null) {
+                        openReceiveWalkSheetFromInvitePayload(
+                            retryCtx, payload);
+                      }
+                    },
+                  );
+                }
               }
             } catch (e) {
               debugPrint('Error showing real-time notification: $e');
@@ -232,7 +242,10 @@ class NotificationManager {
     bool playSound = true,
   }) async {
     try {
-      // Create notification in database
+      // Create notification in database and fire push via delegate in
+      // NotificationService.createNotification (wired up in Sprint 7a).
+      // The sendPush flag is kept for API compatibility but push is now
+      // always handled inside createNotification.
       await NotificationService.createNotification(
         userId: userId,
         title: title,
@@ -242,47 +255,6 @@ class NotificationManager {
         relatedId: relatedId,
         metadata: metadata,
       );
-
-      // Send push notification if requested
-      if (sendPush) {
-        try {
-          // Get user's FCM token from database
-          final userResponse = await SupabaseConfig.client
-              .from('users')
-              .select('fcm_token')
-              .eq('id', userId)
-              .maybeSingle();
-
-          final fcmToken = userResponse?['fcm_token'] as String?;
-
-          if (fcmToken != null && fcmToken.isNotEmpty) {
-            var badgeCount = 0;
-            try {
-              badgeCount = await NotificationService.getUnreadCount(userId);
-            } catch (e) {
-              debugPrint('Failed to compute unread badge count: $e');
-            }
-
-            await FirebaseMessagingService.sendPushNotificationToUser(
-              userToken: fcmToken,
-              title: title,
-              body: body,
-              type: type,
-              badgeCount: badgeCount,
-              data: {
-                'action_type': actionType,
-                'related_id': relatedId,
-                ...?metadata,
-              },
-            );
-            debugPrint('📱 Push notification sent to user $userId');
-          } else {
-            debugPrint('⚠️ No FCM token for user $userId, skipping push');
-          }
-        } catch (e) {
-          debugPrint('Failed to send push notification: $e');
-        }
-      }
 
       // Play sound if requested
       if (playSound) {
@@ -300,23 +272,25 @@ class NotificationManager {
     }
   }
 
-  /// Send a bark notification
+  /// Send a bark notification (pack request)
   static Future<void> sendBarkNotification({
     required String receiverUserId,
     required String senderDogName,
     required String receiverDogName,
     String? senderUserId,
+    String? friendshipId,
   }) async {
     await sendNotification(
       userId: receiverUserId,
-      title: '🐕 New Bark!',
-      body: '$senderDogName wants to play with $receiverDogName!',
+      title: '🐕 New Pack Request!',
+      body: '$senderDogName wants to join $receiverDogName\'s pack!',
       type: NotificationType.bark,
       actionType: 'open_matches',
       metadata: {
         'sender_user_id': senderUserId,
         'sender_dog_name': senderDogName,
         'receiver_dog_name': receiverDogName,
+        if (friendshipId != null) 'friendship_id': friendshipId,
       },
     );
   }

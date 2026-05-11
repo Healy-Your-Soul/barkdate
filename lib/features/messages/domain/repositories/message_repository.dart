@@ -4,7 +4,7 @@ abstract class MessageRepository {
   Future<Map<String, dynamic>> sendMessage({
     required String matchId,
     required String senderId,
-    required String receiverId,
+    String? receiverId,
     required String content,
     String messageType = 'text',
   });

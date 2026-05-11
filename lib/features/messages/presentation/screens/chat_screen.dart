@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:barkdate/features/messages/presentation/providers/unread_count_provider.dart';
 import 'package:barkdate/features/playdates/presentation/providers/playdate_provider.dart';
 import 'package:barkdate/models/message.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/widgets/chat_walk_card.dart';
+import 'package:barkdate/supabase/notification_service.dart';
+import 'package:barkdate/supabase/barkdate_services.dart';
 
 import 'package:intl/intl.dart' as intl;
 
@@ -26,6 +29,54 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
+/// Sprint 7b: tracks which chat conversation is currently visible so other
+/// services (e.g. NotificationManager) can suppress / auto-mark-read
+/// notifications for the open chat.
+class ActiveChatTracker {
+  static String? _activeConversationId;
+
+  static bool isViewing(String matchId) => _activeConversationId == matchId;
+
+  static void setActive(String matchId) {
+    _activeConversationId = matchId;
+  }
+
+  static void clearIfActive(String matchId) {
+    if (_activeConversationId == matchId) {
+      _activeConversationId = null;
+    }
+  }
+}
+
+/// Sprint 7c: prevents duplicate ChatRoute pushes that cause the Flutter
+/// `!keyReservation.contains(key)` assertion crash. Multiple code paths
+/// (notification tap, realtime listener, receive_walk_sheet accept) can all
+/// try to push the same chat simultaneously.
+class ChatNavigationGuard {
+  static DateTime? _lastPushTime;
+  static String? _lastPushMatchId;
+
+  static bool canPush(String matchId, {bool force = false}) {
+    final now = DateTime.now();
+    if (force) {
+      _lastPushMatchId = matchId;
+      _lastPushTime = now;
+      return true;
+    }
+    if (_lastPushMatchId == matchId &&
+        _lastPushTime != null &&
+        now.difference(_lastPushTime!).inMilliseconds < 800) {
+      return false;
+    }
+    if (ActiveChatTracker.isViewing(matchId)) {
+      return false;
+    }
+    _lastPushMatchId = matchId;
+    _lastPushTime = now;
+    return true;
+  }
+}
+
 class _ChatScreenState extends ConsumerState<ChatScreen>
     with WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
@@ -43,9 +94,50 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   @override
   void initState() {
     super.initState();
+    ActiveChatTracker.setActive(widget.matchId);
+    _setServerPresence(widget.matchId);
     WidgetsBinding.instance.addObserver(this);
     _messageController.addListener(_checkInputDirection);
     _loadLinkedPlaydate();
+    _markChatNotificationsRead();
+  }
+
+  Future<void> _setServerPresence(String? conversationId) async {
+    final uid = SupabaseConfig.auth.currentUser?.id;
+    if (uid == null) return;
+    try {
+      await SupabaseConfig.client.from('user_presence').upsert({
+        'user_id': uid,
+        'active_conversation_id': conversationId,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('user_presence upsert failed: $e');
+    }
+  }
+
+  /// Sprint 7b: mark existing unread notifications AND messages for this chat
+  /// as read the moment the user opens the conversation. We mark messages
+  /// directly here (not just the post-frame callback inside build) so the
+  /// Messages tab badge clears even if the messages stream hasn't loaded yet.
+  void _markChatNotificationsRead() async {
+    final uid = SupabaseConfig.auth.currentUser?.id;
+    if (uid == null) return;
+    await NotificationService.markAsReadByRelatedId(
+      userId: uid,
+      relatedId: widget.matchId,
+      type: 'message',
+    );
+    try {
+      await BarkDateMessageService.markMessagesAsRead(widget.matchId, uid);
+    } catch (e) {
+      debugPrint('Failed to mark messages as read on chat entry: $e');
+    }
+    // Sprint 7f: refresh the badge immediately rather than waiting for the
+    // realtime round-trip + RPC refetch.
+    if (mounted) {
+      ref.invalidate(unreadConversationCountProvider);
+    }
   }
 
   /// Check if this conversation is linked to a playdate.
@@ -138,7 +230,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             value: playdateId,
           ),
           callback: (payload) {
-            if (mounted) _loadLinkedPlaydate();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _loadLinkedPlaydate();
+            });
           },
         )
         .onPostgresChanges(
@@ -151,7 +245,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             value: playdateId,
           ),
           callback: (payload) {
-            if (mounted) _loadLinkedPlaydate();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _loadLinkedPlaydate();
+            });
           },
         )
         .subscribe();
@@ -172,18 +268,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           schema: 'public',
           table: 'playdate_requests',
           callback: (payload) {
-            if (!mounted) return;
-            final newRow = payload.newRecord;
-            final reqId = newRow['requester_id'] as String?;
-            final invId = newRow['invitee_id'] as String?;
-            // Check if this request involves us and the other user
-            final pair = {currentUserId, widget.recipientId};
-            if (reqId != null &&
-                invId != null &&
-                pair.contains(reqId) &&
-                pair.contains(invId)) {
-              _loadLinkedPlaydate();
-            }
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              final newRow = payload.newRecord;
+              final reqId = newRow['requester_id'] as String?;
+              final invId = newRow['invitee_id'] as String?;
+              final pair = {currentUserId, widget.recipientId};
+              if (reqId != null &&
+                  invId != null &&
+                  pair.contains(reqId) &&
+                  pair.contains(invId)) {
+                _loadLinkedPlaydate();
+              }
+            });
           },
         )
         .subscribe();
@@ -208,6 +305,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   @override
   void dispose() {
+    ActiveChatTracker.clearIfActive(widget.matchId);
+    _setServerPresence(null);
     WidgetsBinding.instance.removeObserver(this);
     if (_playdateChannel != null) {
       SupabaseConfig.client.removeChannel(_playdateChannel!);
@@ -299,7 +398,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     return Message(
                       id: data['id'] as String,
                       senderId: data['sender_id'] as String,
-                      receiverId: data['receiver_id'] as String,
+                      receiverId: data['receiver_id'] as String? ?? '',
                       text: data['content'] as String,
                       timestamp: DateTime.parse(data['created_at'] as String),
                       isRead: data['is_read'] ?? false,

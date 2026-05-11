@@ -68,7 +68,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             return Message(
               id: item['id'] as String,
               senderId: item['sender_id'] as String,
-              receiverId: item['receiver_id'] as String,
+              receiverId: item['receiver_id'] as String? ?? '',
               text: item['content'] as String,
               timestamp: DateTime.parse(item['created_at'] as String),
             );
@@ -138,7 +138,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         return Message(
           id: data['id'] as String,
           senderId: data['sender_id'] as String,
-          receiverId: data['receiver_id'] as String,
+          receiverId: data['receiver_id'] as String? ?? '',
           text: data['content'] as String,
           timestamp: DateTime.parse(data['created_at'] as String),
         );
