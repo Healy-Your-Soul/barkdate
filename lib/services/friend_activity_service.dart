@@ -65,7 +65,8 @@ class FriendActivityService {
         allAlerts.addAll(list);
       }
 
-      debugPrint('[FriendActivity] total alerts assembled: ${allAlerts.length}');
+      debugPrint(
+          '[FriendActivity] total alerts assembled: ${allAlerts.length}');
 
       // Sort by most recent first
       allAlerts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -564,7 +565,8 @@ class FriendActivityService {
           .order('created_at', ascending: false)
           .limit(10);
 
-      debugPrint('[SeededActivity] query returned ${(data as List).length} rows');
+      debugPrint(
+          '[SeededActivity] query returned ${(data as List).length} rows');
 
       if (data.isEmpty) return [];
 

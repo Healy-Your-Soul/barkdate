@@ -1330,9 +1330,7 @@ class _FeedFeatureScreenState extends ConsumerState<FeedFeatureScreen> {
                     child: Container(
                       width: 150,
                       decoration: BoxDecoration(
-                        color: imageUrl != null
-                            ? null
-                            : Colors.white,
+                        color: imageUrl != null ? null : Colors.white,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: Colors.grey.withValues(alpha: 0.25),

@@ -288,7 +288,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
       final parksOnly =
           visiblePlaces.where((p) => p.category == PlaceCategory.park).toList();
       if (parksOnly.isEmpty) {
-        _showMapMessage('No parks in the visible area (only parks can be seeded).');
+        _showMapMessage(
+            'No parks in the visible area (only parks can be seeded).');
         return;
       }
 
@@ -890,7 +891,8 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
       // Traffic light system: Green <1h, Orange 1-2h, Red 2-3h
       final borderColor = DogMarkerGenerator.getBorderColorForAge(hoursAgo);
-      debugPrint('🎨 Check-in marker: ${dog?['name']} checked_in_at=$checkedInAtStr hoursAgo=${hoursAgo.toStringAsFixed(2)} color=$borderColor');
+      debugPrint(
+          '🎨 Check-in marker: ${dog?['name']} checked_in_at=$checkedInAtStr hoursAgo=${hoursAgo.toStringAsFixed(2)} color=$borderColor');
 
       final dogPhotoUrl = dog?['main_photo_url'] as String?;
       final dogName = dog?['name'] as String? ?? 'Dog';
@@ -1372,8 +1374,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     });
 
     // Listen for external focus requests (e.g. "Say Hi" from carousel)
-    ref.listen<MapFocusRequest?>(mapFocusRequestProvider,
-        (previous, next) {
+    ref.listen<MapFocusRequest?>(mapFocusRequestProvider, (previous, next) {
       if (next != null && _mapController != null) {
         _isProgrammaticCameraMove = true;
         _mapController!.animateCamera(
