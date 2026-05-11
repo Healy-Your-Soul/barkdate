@@ -90,6 +90,7 @@ class ParkActivityService {
   static Future<bool> reportDogCount({
     required String parkId,
     required int dogCount,
+    String? parkName,
     bool isAdminOverride = false,
   }) async {
     try {
@@ -102,6 +103,7 @@ class ParkActivityService {
         'dog_count': dogCount,
         'is_admin_override': isAdminOverride,
         'source': isAdminOverride ? 'admin' : 'user',
+        if (parkName != null) 'park_name': parkName,
       });
 
       return true;

@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:barkdate/core/router/app_routes.dart';
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/widgets/walk_details_sheet.dart';
+import 'package:barkdate/screens/map_v2/providers/map_focus_provider.dart';
 
 /// A horizontally scrollable carousel of PackAlertCards.
 /// Auto-advances every 5 seconds with page indicator dots.
@@ -112,10 +113,33 @@ class _PackAlertsCarouselState extends ConsumerState<PackAlertsCarousel> {
       if (uri.path == '/social-feed') {
         const SocialFeedRoute().push(context);
       } else if (uri.path == '/map') {
+        final meta = alert.metadata;
+        final lat = meta?['latitude'] as double?;
+        final lng = meta?['longitude'] as double?;
+        if (lat != null && lng != null) {
+          ref.read(mapFocusRequestProvider.notifier).state = MapFocusRequest(
+            latitude: lat,
+            longitude: lng,
+            parkId: meta?['park_id'] as String?,
+            parkName: meta?['park_name'] as String?,
+          );
+        }
         const MapRoute().go(context);
       } else if (uri.path == '/dog-details') {
         if (alert.metadata != null) {
-          DogDetailsRoute($extra: Dog.fromJson(alert.metadata!)).push(context);
+          // Build a minimal Dog-compatible map from alert metadata
+          final meta = alert.metadata!;
+          final dogJson = <String, dynamic>{
+            'id': meta['dog_id'] ?? '',
+            'name': meta['dog_name'] ?? 'Dog',
+            'main_photo_url': meta['photo_url'],
+            'user_id': meta['user_id'],
+          };
+          try {
+            DogDetailsRoute($extra: Dog.fromJson(dogJson)).push(context);
+          } catch (e) {
+            debugPrint('Error navigating to dog details: $e');
+          }
         }
       } else if (uri.path == '/playdate-details') {
         if (alert.metadata != null) {
