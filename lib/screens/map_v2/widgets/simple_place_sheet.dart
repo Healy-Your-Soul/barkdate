@@ -301,6 +301,7 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
 
       final success = await ParkActivityService.reportDogCount(
         parkId: widget.place.placeId,
+        parkName: widget.place.name,
         dogCount: _reportDogCount,
         isAdminOverride: isAdmin,
       );
@@ -997,15 +998,10 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                               humanName: user?['name'],
                               dogPhotoUrl: photoUrl,
                               timeAgo: timeAgoStr,
-                              isFriend:
-                                  false, // We check friendship status if available, default false. Ideally fetch this.
+                              parkName: widget.place.name,
                               isOwnDog: user?['id'] ==
                                   Supabase.instance.client.auth.currentUser?.id,
                               onAddToPack: () async {
-                                // Close dialog first
-                                // Navigator.pop(context); // Optional: keep open or close? User might want to see success.
-                                // Let's keep it open and show snackbar on top.
-
                                 try {
                                   final currentUser =
                                       Supabase.instance.client.auth.currentUser;
@@ -1046,7 +1042,6 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                                     );
                                   }
 
-                                  // Close dialog on success
                                   if (success && context.mounted) {
                                     Navigator.pop(context);
                                   }
@@ -1055,14 +1050,15 @@ class _PlaceSheetContentState extends State<PlaceSheetContent> {
                                       'Error sending friend request: $e');
                                 }
                               },
-                              onBark: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('🐕 You barked at $dogName!'),
-                                    backgroundColor: Colors.orange,
-                                  ),
-                                );
+                              onWalkTogether: () {
                                 Navigator.pop(context);
+                                showPlanWalkSheet(
+                                  context,
+                                  parkId: widget.place.placeId,
+                                  parkName: widget.place.name,
+                                  latitude: widget.place.latitude,
+                                  longitude: widget.place.longitude,
+                                );
                               },
                               onClose: () => Navigator.pop(context),
                             ),

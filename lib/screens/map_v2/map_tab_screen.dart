@@ -32,7 +32,9 @@ import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/services/walk_realtime_service.dart';
 import 'package:barkdate/widgets/walk_details_sheet.dart';
+import 'package:barkdate/widgets/plan_walk_sheet.dart';
 import 'package:barkdate/design_system/app_colors.dart';
+import 'package:barkdate/screens/map_v2/providers/map_focus_provider.dart';
 
 /// New map tab with AI assistant, event integration, and improved UX
 class MapTabScreenV2 extends ConsumerStatefulWidget {
@@ -90,6 +92,9 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
   // Scheduled future walks (for clock markers)
   final List<Map<String, dynamic>> _scheduledWalks = [];
+
+  // Cached friend dog IDs for mini-card friendship state
+  Set<String> _friendDogIds = {};
 
   // Active park reports
   Map<String, int> _activeParks = {};
@@ -221,19 +226,19 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     final random = math.Random();
     final selected = <PlaceResult>[];
 
-    // Filter to parks only
+    // Only seed parks — never cafes or other categories
     final parksOnly =
         visiblePlaces.where((p) => p.category == PlaceCategory.park).toList();
-    final placesToSeed = parksOnly.isNotEmpty ? parksOnly : visiblePlaces;
+    if (parksOnly.isEmpty) return;
 
-    for (final place in placesToSeed) {
+    for (final place in parksOnly) {
       if (random.nextDouble() < 0.4) {
         selected.add(place);
       }
     }
 
     if (selected.isEmpty) {
-      selected.add(visiblePlaces[random.nextInt(visiblePlaces.length)]);
+      selected.add(parksOnly[random.nextInt(parksOnly.length)]);
     }
 
     final parkIds = selected.map((place) => place.placeId).toList();
@@ -279,26 +284,30 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         return;
       }
 
-      // Filter to parks only
+      // Only seed parks — never cafes or other categories
       final parksOnly =
           visiblePlaces.where((p) => p.category == PlaceCategory.park).toList();
-      final placesToSeed = parksOnly.isNotEmpty ? parksOnly : visiblePlaces;
+      if (parksOnly.isEmpty) {
+        _showMapMessage('No parks in the visible area (only parks can be seeded).');
+        return;
+      }
 
       final random = math.Random();
       final selected = <PlaceResult>[];
-      for (final place in placesToSeed) {
+      for (final place in parksOnly) {
         if (random.nextDouble() < 0.4) {
           selected.add(place);
         }
       }
 
       if (selected.isEmpty) {
-        selected.add(visiblePlaces[random.nextInt(visiblePlaces.length)]);
+        selected.add(parksOnly[random.nextInt(parksOnly.length)]);
       }
 
       await Future.wait(
         selected.map((place) => ParkActivityService.reportDogCount(
               parkId: place.placeId,
+              parkName: place.name,
               dogCount: random.nextInt(5) + 1,
               isAdminOverride: true,
             )),
@@ -538,12 +547,45 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     }
   }
 
+  /// Refresh the set of friend dog IDs (for mini-card friendship state).
+  Future<void> _refreshFriendDogIds() async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return;
+
+      final dogs = await BarkDateUserService.getUserDogs(userId);
+      if (dogs.isEmpty) return;
+
+      final myDogId = dogs.first['id'] as String;
+      final friends = await DogFriendshipService.getFriends(myDogId);
+
+      final ids = <String>{};
+      for (final f in friends) {
+        final dogData = f['dog'] as Map<String, dynamic>?;
+        final friendDogData = f['friend_dog'] as Map<String, dynamic>?;
+        if (dogData != null && dogData['id'] != myDogId) {
+          ids.add(dogData['id'] as String);
+        }
+        if (friendDogData != null && friendDogData['id'] != myDogId) {
+          ids.add(friendDogData['id'] as String);
+        }
+      }
+
+      _friendDogIds = ids;
+    } catch (e) {
+      debugPrint('❌ Error refreshing friend dog IDs: $e');
+    }
+  }
+
   /// Refresh other users' check-ins to display on map
   Future<void> _refreshOtherUsersCheckIns() async {
     try {
       final userId = Supabase.instance.client.auth.currentUser?.id;
       final checkIns =
           await CheckInService.getAllActiveCheckIns(excludeUserId: userId);
+
+      // Also refresh friend IDs so mini-card shows correct friendship state
+      await _refreshFriendDogIds();
 
       debugPrint('📍 Other users check-ins found: ${checkIns.length}');
 
@@ -576,11 +618,13 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
       debugPrint('📍 Live users found: ${liveUsers.length}');
 
-      // DEBUG: If no other live users, show our own marker so we can see the feature
-      if (liveUsers.isEmpty) {
+      // DEBUG: If no other live users AND user has no active check-in,
+      // show our own marker so we can see the live-user feature.
+      // Skip when checked in — the check-in marker already shows the user
+      // on the map with the correct time-based color.
+      if (liveUsers.isEmpty && _currentUserCheckIn == null) {
         debugPrint(
             '🔧 DEBUG: No live users nearby, adding self marker for testing');
-        // Get current user's primary dog (oldest created, active)
         final userDogs = await Supabase.instance.client
             .from('dogs')
             .select('name, main_photo_url')
@@ -589,7 +633,6 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
             .order('created_at', ascending: true)
             .limit(1);
 
-        // Get user name
         final userData = await Supabase.instance.client
             .from('users')
             .select('name')
@@ -847,6 +890,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
 
       // Traffic light system: Green <1h, Orange 1-2h, Red 2-3h
       final borderColor = DogMarkerGenerator.getBorderColorForAge(hoursAgo);
+      debugPrint('🎨 Check-in marker: ${dog?['name']} checked_in_at=$checkedInAtStr hoursAgo=${hoursAgo.toStringAsFixed(2)} color=$borderColor');
 
       final dogPhotoUrl = dog?['main_photo_url'] as String?;
       final dogName = dog?['name'] as String? ?? 'Dog';
@@ -873,13 +917,20 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
         anchor: const Offset(0.5, 0.5),
         onTap: () {
           // Show dog mini card popup
+          final dogId = dog?['id'] as String?;
+          final isFriend = dogId != null && _friendDogIds.contains(dogId);
           setState(() => _selectedLiveDog = {
                 'user_id': userId,
                 'user_name': userName,
                 'dog_name': dogName,
+                'dog_id': dogId,
                 'dog_photo_url': dogPhotoUrl,
                 'park_name': parkName,
-                'hours_ago': hoursAgo,
+                'park_id': checkIn['park_id'],
+                'latitude': latitude,
+                'longitude': longitude,
+                'is_friend': isFriend,
+                'live_location_updated_at': checkedInAtStr,
               });
         },
       ));
@@ -1313,12 +1364,25 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
     // Listen for filter changes and update markers
     ref.listen(mapFiltersProvider, (previous, next) {
       if (previous?.category != next.category) {
-        // Category changed - refetch from Google with new types
         _fetchPlacesAndEvents();
       } else if (previous?.openNow != next.openNow ||
           previous?.showEvents != next.showEvents) {
-        // Just refresh markers for other filter changes
         _updateMarkers();
+      }
+    });
+
+    // Listen for external focus requests (e.g. "Say Hi" from carousel)
+    ref.listen<MapFocusRequest?>(mapFocusRequestProvider,
+        (previous, next) {
+      if (next != null && _mapController != null) {
+        _isProgrammaticCameraMove = true;
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(
+            LatLng(next.latitude, next.longitude),
+            17.0,
+          ),
+        );
+        ref.read(mapFocusRequestProvider.notifier).state = null;
       }
     });
 
@@ -1720,7 +1784,7 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
           // Dog mini card popup when a live dog marker is tapped
           if (_selectedLiveDog != null)
             Positioned(
-              top: 80,
+              bottom: 140,
               left: 16,
               right: 16,
               child: Center(
@@ -1734,20 +1798,27 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                   timeAgo: _formatTimeAgo(_calculateHoursAgo(
                       _selectedLiveDog!['live_location_updated_at']
                           as String?)),
-                  isFriend: _selectedLiveDog!['is_friend'] as bool? ?? false,
-                  // Can't bark at yourself!
+                  friendshipStatus: (_selectedLiveDog!['is_friend'] == true)
+                      ? 'accepted'
+                      : _selectedLiveDog!['friendship_status'] as String?,
+                  parkName: _selectedLiveDog!['park_name'] as String?,
                   isOwnDog: _selectedLiveDog!['user_id'] ==
                       Supabase.instance.client.auth.currentUser?.id,
-                  onBark: () {
-                    // TODO: Send bark to user
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            '🐕 You barked at ${_selectedLiveDog!['dog_name'] ?? 'this dog'}!'),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
+                  onWalkTogether: () {
+                    final parkName =
+                        _selectedLiveDog!['park_name'] as String? ?? 'Park';
+                    final parkId =
+                        _selectedLiveDog!['park_id'] as String? ?? parkName;
+                    final lat = _selectedLiveDog!['latitude'] as double?;
+                    final lng = _selectedLiveDog!['longitude'] as double?;
                     setState(() => _selectedLiveDog = null);
+                    showPlanWalkSheet(
+                      context,
+                      parkId: parkId,
+                      parkName: parkName,
+                      latitude: lat,
+                      longitude: lng,
+                    );
                   },
                   onAddToPack: () async {
                     try {
@@ -1769,13 +1840,24 @@ class _MapTabScreenV2State extends ConsumerState<MapTabScreenV2> {
                       }
                       final myDogId = dogs.first['id'] as String;
 
-                      final targetDogId = _selectedLiveDog!['dog_id'] as String;
+                      final targetDogId =
+                          _selectedLiveDog!['dog_id'] as String?;
+                      if (targetDogId == null) return;
+
                       final success = await DogFriendshipService.sendBark(
                         fromDogId: myDogId,
                         toDogId: targetDogId,
                       );
 
                       if (context.mounted) {
+                        if (success) {
+                          // Update state to show "Request Sent"
+                          setState(() {
+                            _selectedLiveDog!['friendship_status'] =
+                                'pending_sent';
+                            _selectedLiveDog!['is_friend'] = false;
+                          });
+                        }
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(success
