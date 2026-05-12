@@ -43,10 +43,9 @@ Future<void> main() async {
           lowerMessage.contains('exception') ||
           lowerMessage.contains('⚠️') ||
           lowerMessage.contains('❌')) {
-        
         // Use error level if it sounds like an actual failure
-        if (lowerMessage.contains('error') || 
-            lowerMessage.contains('failed') || 
+        if (lowerMessage.contains('error') ||
+            lowerMessage.contains('failed') ||
             lowerMessage.contains('exception')) {
           Sentry.logger.error(message);
         } else {
