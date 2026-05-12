@@ -60,6 +60,7 @@ Future<void> main() async {
   await SentryFlutter.init(
     (options) {
       options.dsn = const String.fromEnvironment('SENTRY_DSN');
+      options.environment = kReleaseMode ? 'production' : 'development';
       options.enableLogs = true;
       options.addIntegration(LoggingIntegration());
       options.sendDefaultPii = true;
