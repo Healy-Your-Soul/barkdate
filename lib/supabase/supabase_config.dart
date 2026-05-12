@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:sentry_supabase/sentry_supabase.dart';
 
 /// BarkDate Supabase configuration
 class SupabaseConfig {
@@ -12,6 +13,7 @@ class SupabaseConfig {
       url: supabaseUrl,
       anonKey: anonKey,
       debug: kDebugMode,
+      httpClient: SentrySupabaseClient(),
     );
   }
 
