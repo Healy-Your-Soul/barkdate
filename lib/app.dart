@@ -35,7 +35,7 @@ class _BarkDateAppState extends ConsumerState<BarkDateApp>
     if (userId != null) {
       // Identify user in Sentry
       Sentry.configureScope((scope) => scope.setUser(SentryUser(id: userId)));
-      
+
       await RealtimeService().initialize(userId);
 
       // Listen for achievement events
@@ -58,7 +58,7 @@ class _BarkDateAppState extends ConsumerState<BarkDateApp>
       if (data.event == AuthChangeEvent.signedIn &&
           data.session?.user.id != null) {
         final userId = data.session!.user.id;
-        
+
         // Identify user in Sentry
         Sentry.configureScope((scope) => scope.setUser(SentryUser(id: userId)));
 
