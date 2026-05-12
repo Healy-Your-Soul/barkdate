@@ -15,16 +15,53 @@ import 'package:barkdate/firebase_options.dart';
 import 'package:barkdate/utils/maps_js_bridge.dart';
 import 'package:barkdate/app.dart';
 import 'package:barkdate/core/sentry/sentry_riverpod_observer.dart';
-
+import 'package:sentry_logging/sentry_logging.dart';
 import 'package:barkdate/services/feature_flags.dart';
 
 /// A Completer that completes when the Google Maps API is ready.
 final mapsApiReadyCompleter = Completer<void>();
 
 Future<void> main() async {
+  // Forward debugPrint to Sentry breadcrumbs/logs
+  final oldDebugPrint = debugPrint;
+  debugPrint = (String? message, {int? wrapWidth}) {
+    if (message != null) {
+      final lowerMessage = message.toLowerCase();
+
+      // Always add as breadcrumb for error context (Quota-safe)
+      Sentry.addBreadcrumb(Breadcrumb(
+        message: message,
+        level: SentryLevel.info,
+        category: 'debugPrint',
+      ));
+
+      // Only send to Logs tab if it's an Error/Warning OR we are in Release mode
+      if (kReleaseMode ||
+          lowerMessage.contains('error') ||
+          lowerMessage.contains('warning') ||
+          lowerMessage.contains('failed') ||
+          lowerMessage.contains('exception') ||
+          lowerMessage.contains('⚠️') ||
+          lowerMessage.contains('❌')) {
+        
+        // Use error level if it sounds like an actual failure
+        if (lowerMessage.contains('error') || 
+            lowerMessage.contains('failed') || 
+            lowerMessage.contains('exception')) {
+          Sentry.logger.error(message);
+        } else {
+          Sentry.logger.info(message);
+        }
+      }
+    }
+    oldDebugPrint(message, wrapWidth: wrapWidth);
+  };
+
   await SentryFlutter.init(
     (options) {
       options.dsn = const String.fromEnvironment('SENTRY_DSN');
+      options.enableLogs = true;
+      options.addIntegration(LoggingIntegration());
       options.sendDefaultPii = true;
       options.tracesSampleRate = 1.0;
       options.replay.sessionSampleRate = 0.1;
@@ -74,6 +111,9 @@ Future<void> main() async {
 
       // Start cache cleanup (periodic cleanup every minute)
       CacheService().startPeriodicCleanup();
+
+      // Capture a message to verify Sentry is working immediately
+      Sentry.captureMessage('Sentry verified: BarkDate is reporting logs!');
 
       // Wrap app with Riverpod for map_v2 state management
       runApp(
