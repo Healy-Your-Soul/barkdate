@@ -12,7 +12,8 @@ base class SentryProviderObserver extends ProviderObserver {
       error,
       stackTrace: stackTrace,
       withScope: (scope) {
-        scope.setTag('riverpod.provider', context.provider.name ?? context.provider.runtimeType.toString());
+        scope.setTag('riverpod.provider',
+            context.provider.name ?? context.provider.runtimeType.toString());
       },
     );
     super.providerDidFail(context, error, stackTrace);
@@ -29,7 +30,8 @@ base class SentryProviderObserver extends ProviderObserver {
         newValue.error,
         stackTrace: newValue.stackTrace,
         withScope: (scope) {
-          scope.setTag('riverpod.provider', context.provider.name ?? context.provider.runtimeType.toString());
+          scope.setTag('riverpod.provider',
+              context.provider.name ?? context.provider.runtimeType.toString());
         },
       );
     }
