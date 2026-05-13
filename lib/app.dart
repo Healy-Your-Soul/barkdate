@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:barkdate/core/router/app_router.dart';
@@ -32,6 +33,9 @@ class _BarkDateAppState extends ConsumerState<BarkDateApp>
   Future<void> _initRealtimeService() async {
     final userId = SupabaseConfig.auth.currentUser?.id;
     if (userId != null) {
+      // Identify user in Sentry
+      Sentry.configureScope((scope) => scope.setUser(SentryUser(id: userId)));
+
       await RealtimeService().initialize(userId);
 
       // Listen for achievement events
@@ -53,7 +57,12 @@ class _BarkDateAppState extends ConsumerState<BarkDateApp>
     SupabaseConfig.auth.onAuthStateChange.listen((data) async {
       if (data.event == AuthChangeEvent.signedIn &&
           data.session?.user.id != null) {
-        await RealtimeService().initialize(data.session!.user.id);
+        final userId = data.session!.user.id;
+
+        // Identify user in Sentry
+        Sentry.configureScope((scope) => scope.setUser(SentryUser(id: userId)));
+
+        await RealtimeService().initialize(userId);
         _achievementSubscription?.cancel();
         _achievementSubscription =
             RealtimeService().achievementStream.listen((event) {
