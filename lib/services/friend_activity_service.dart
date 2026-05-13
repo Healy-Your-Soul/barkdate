@@ -188,8 +188,10 @@ class FriendActivityService {
       if (data.isEmpty) return [];
 
       // Batch fetch organizer dog names
-      final organizerIds =
-          (data as List).map((p) => p['organizer_id'] as String).toSet().toList();
+      final organizerIds = (data as List)
+          .map((p) => p['organizer_id'] as String)
+          .toSet()
+          .toList();
       final dogsData = await SupabaseConfig.client
           .from('dogs')
           .select('user_id, name')
@@ -378,16 +380,16 @@ class FriendActivityService {
       if (data.isEmpty) return [];
 
       // Batch fetch organizer dogs to avoid N+1
-      final organizerIds =
-          (data as List).map((p) => p['organizer_id'] as String).toSet().toList();
+      final organizerIds = (data as List)
+          .map((p) => p['organizer_id'] as String)
+          .toSet()
+          .toList();
       final dogsData = await SupabaseConfig.client
           .from('dogs')
           .select('id, name, breed, main_photo_url, user_id')
           .inFilter('user_id', organizerIds);
 
-      final dogMap = {
-        for (var d in dogsData) d['user_id'] as String: d
-      };
+      final dogMap = {for (var d in dogsData) d['user_id'] as String: d};
 
       final results = <Map<String, dynamic>>[];
       for (final playdate in data) {

@@ -513,7 +513,8 @@ class ProfileScreen extends ConsumerWidget {
                       // Dogs in Pack - fetches friend count dynamically from batched provider
                       Consumer(
                         builder: (context, ref, _) {
-                          final countsAsync = ref.watch(packFriendCountsProvider);
+                          final countsAsync =
+                              ref.watch(packFriendCountsProvider);
                           final count = countsAsync.value?[dog.id] ?? 0;
                           return _buildAirbnbStat('$count', 'Pack');
                         },

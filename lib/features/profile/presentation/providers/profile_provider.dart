@@ -42,8 +42,7 @@ final sharedDogsProvider = FutureProvider<List<SharedDog>>((ref) async {
 });
 
 // Batch fetch friend counts for all user dogs
-final packFriendCountsProvider =
-    FutureProvider<Map<String, int>>((ref) async {
+final packFriendCountsProvider = FutureProvider<Map<String, int>>((ref) async {
   final dogsAsync = await ref.watch(userDogsProvider.future);
   if (dogsAsync.isEmpty) return {};
 

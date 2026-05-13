@@ -9,7 +9,8 @@ import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:flutter/foundation.dart';
-import 'package:barkdate/supabase/bark_playdate_services.dart' hide DogFriendshipService;
+import 'package:barkdate/supabase/bark_playdate_services.dart'
+    hide DogFriendshipService;
 
 final dogRepositoryProvider = Provider<DogRepository>((ref) {
   return DogRepositoryImpl();
