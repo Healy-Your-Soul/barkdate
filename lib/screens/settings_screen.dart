@@ -427,9 +427,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 messenger.showSnackBar(
                   const SnackBar(content: Text('Checking for updates...')),
                 );
-                
+
                 await UpdateService().fetchUpdateConfig();
-                
+
                 if (UpdateService().isUpdateAvailable()) {
                   if (context.mounted) {
                     _showUpdateAvailableDialog(context);
