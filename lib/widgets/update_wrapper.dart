@@ -13,7 +13,7 @@ class UpdateWrapper extends StatefulWidget {
 }
 
 class _UpdateWrapperState extends State<UpdateWrapper> {
-  bool _isUpdateRequired = false;
+  bool _isUpdateRequired = true;
 
   @override
   void initState() {
@@ -55,57 +55,148 @@ class _UpdateWrapperState extends State<UpdateWrapper> {
         debugShowCheckedModeBanner: false,
         theme: Theme.of(context),
         home: Scaffold(
-          body: Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Theme.of(context).colorScheme.primaryContainer,
-                  Theme.of(context).colorScheme.surface,
-                ],
+          body: Stack(
+            children: [
+              // 1. Background Gradient
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      const Color(0xFFED924D).withValues(alpha: 0.1), // Primary low opacity
+                      const Color(0xFFFF8076).withValues(alpha: 0.05), // Secondary low opacity
+                      Colors.white,
+                    ],
+                  ),
+                ),
               ),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.system_update_alt,
-                    size: 80,
-                    color: Colors.orange,
+
+              // 2. Decorative circles for depth
+              Positioned(
+                top: -100,
+                right: -100,
+                child: Container(
+                  width: 300,
+                  height: 300,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFED924D).withValues(alpha: 0.1),
                   ),
-                  const SizedBox(height: 32),
-                  Text(
-                    'Update Required',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              // 3. Main Content
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // App Icon
+                        Container(
+                          height: 160,
+                          width: 160,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(40),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFED924D).withValues(alpha: 0.2),
+                                blurRadius: 30,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(40),
+                            child: Image.asset(
+                              'assets/icon/app_icon.png',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
                         ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    UpdateService().updateMessage,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  const SizedBox(height: 40),
-                  ElevatedButton.icon(
-                    onPressed: () => UpdateService().launchUpdateUrl(),
-                    icon: const Icon(Icons.download),
-                    label: const Text('Update Now'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
-                      ),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        const SizedBox(height: 40),
+
+                        // Title
+                        Text(
+                          'Paws for an Update!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF2D2D2D),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Subtitle / Message
+                        Text(
+                          UpdateService().updateMessage,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            height: 1.5,
+                            color: const Color(0xFF717171),
+                          ),
+                        ),
+                        const SizedBox(height: 48),
+
+                        // Update Button
+                        Container(
+                          width: double.infinity,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFED924D), Color(0xFFFF8076)],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFED924D).withValues(alpha: 0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: () => UpdateService().launchUpdateUrl(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                            child: const Text(
+                              'Update Now',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Secondary Info
+                        Text(
+                          'Keep your adventure going!',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFFED924D).withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       );
