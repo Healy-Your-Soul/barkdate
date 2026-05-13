@@ -55,6 +55,8 @@ dependencies:
   sentry_flutter: ^9.20.0
   sentry_logging: ^9.20.0
   sentry_supabase: ^9.20.0
+  shorebird_code_push: ^2.0.6
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:

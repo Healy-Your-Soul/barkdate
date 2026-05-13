@@ -17,6 +17,7 @@ import 'package:barkdate/app.dart';
 import 'package:barkdate/core/sentry/sentry_riverpod_observer.dart';
 import 'package:sentry_logging/sentry_logging.dart';
 import 'package:barkdate/services/feature_flags.dart';
+import 'package:barkdate/services/update_service.dart';
 
 /// A Completer that completes when the Google Maps API is ready.
 final mapsApiReadyCompleter = Completer<void>();
@@ -111,6 +112,9 @@ Future<void> main() async {
 
       // Start cache cleanup (periodic cleanup every minute)
       CacheService().startPeriodicCleanup();
+
+      // Initialize Update Service (auto-updates & version checks)
+      await UpdateService().initialize();
 
       // Capture a message to verify Sentry is working immediately
       Sentry.captureMessage('Sentry verified: BarkDate is reporting logs!');

@@ -9,6 +9,8 @@ import 'package:barkdate/widgets/supabase_auth_wrapper.dart';
 import 'package:barkdate/services/cache_service.dart';
 import 'package:barkdate/widgets/location_settings_widget.dart';
 import 'package:barkdate/screens/terms_of_service_screen.dart';
+import 'package:barkdate/services/update_service.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -18,10 +20,19 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  String _version = '1.0.0';
+
   @override
   void initState() {
     super.initState();
-    // Load settings on startup (can be used for future radius UI)
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    setState(() {
+      _version = '${info.version}+${info.buildNumber}';
+    });
   }
 
   void _showSignOutDialog(BuildContext context) {
@@ -406,6 +417,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               },
             ),
+            _buildSettingsItem(
+              context,
+              icon: Icons.update,
+              title: 'Check for Updates',
+              subtitle: 'Check for the latest version',
+              onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('Checking for updates...')),
+                );
+                
+                await UpdateService().fetchUpdateConfig();
+                
+                if (UpdateService().isUpdateAvailable()) {
+                  if (context.mounted) {
+                    _showUpdateAvailableDialog(context);
+                  }
+                } else {
+                  messenger.showSnackBar(
+                    const SnackBar(content: Text('BarkDate is up to date!')),
+                  );
+                }
+              },
+            ),
 
             const SizedBox(height: 24),
 
@@ -454,7 +489,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // App version
             Text(
-              'BarkDate v1.0.0',
+              'BarkDate v$_version',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context)
                         .colorScheme
@@ -591,6 +626,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
         builder: (context, scrollController) {
           return PrivacySheet(scrollController: scrollController);
         },
+      ),
+    );
+  }
+
+  void _showUpdateAvailableDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Update Available'),
+        content: Text(UpdateService().updateMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Later'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              UpdateService().launchUpdateUrl();
+            },
+            child: const Text('Update Now'),
+          ),
+        ],
       ),
     );
   }
