@@ -231,7 +231,7 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
               (status['current_playdate'] as Map?)?['id'] as String?,
         );
       }
-      return dog;
+      return dog.copyWith(playdateStatus: 'none');
     }).toList();
   }
 
