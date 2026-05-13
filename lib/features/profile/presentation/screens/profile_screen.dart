@@ -9,7 +9,6 @@ import 'package:barkdate/core/config/app_constants.dart';
 import 'package:barkdate/screens/onboarding/create_profile_screen.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/screens/help_screen.dart';
-import 'package:barkdate/services/dog_friendship_service.dart';
 import 'package:barkdate/features/profile/presentation/screens/dog_details_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -511,11 +510,12 @@ class ProfileScreen extends ConsumerWidget {
                           return _buildAirbnbStat('$count', 'Playdates');
                         },
                       ),
-                      // Dogs in Pack - fetches friend count dynamically
-                      FutureBuilder<List<Map<String, dynamic>>>(
-                        future: DogFriendshipService.getFriends(dog.id),
-                        builder: (context, snapshot) {
-                          final count = snapshot.data?.length ?? 0;
+                      // Dogs in Pack - fetches friend count dynamically from batched provider
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final countsAsync =
+                              ref.watch(packFriendCountsProvider);
+                          final count = countsAsync.value?[dog.id] ?? 0;
                           return _buildAirbnbStat('$count', 'Pack');
                         },
                       ),

@@ -185,33 +185,45 @@ class FriendActivityService {
           .order('scheduled_at', ascending: true)
           .limit(5);
 
-      final alerts = <FriendAlert>[];
+      if (data.isEmpty) return [];
 
+      // Batch fetch organizer dog names
+      final organizerIds = (data as List)
+          .map((p) => p['organizer_id'] as String)
+          .toSet()
+          .toList();
+      final dogsData = await SupabaseConfig.client
+          .from('dogs')
+          .select('user_id, name')
+          .inFilter('user_id', organizerIds);
+
+      final dogNameMap = {
+        for (var d in dogsData) d['user_id'] as String: d['name'] as String
+      };
+
+      // Batch fetch participant counts
+      final playdateIds = (data as List).map((p) => p['id'] as String).toList();
+      final participantsData = await SupabaseConfig.client
+          .from('playdate_participants')
+          .select('playdate_id')
+          .inFilter('playdate_id', playdateIds);
+
+      final participantCounts = <String, int>{};
+      for (var p in participantsData) {
+        final pid = p['playdate_id'] as String;
+        participantCounts[pid] = (participantCounts[pid] ?? 0) + 1;
+      }
+
+      final alerts = <FriendAlert>[];
       for (final playdate in data) {
         final playdateId = playdate['id'] as String;
         final location = playdate['location'] as String? ?? 'a park';
         final scheduledAt =
             DateTime.tryParse(playdate['scheduled_at'] ?? '') ?? DateTime.now();
+        final organizerId = playdate['organizer_id'] as String;
 
-        String dogName = 'A friend';
-        try {
-          final orgDog = await SupabaseConfig.client
-              .from('dogs')
-              .select('name')
-              .eq('user_id', playdate['organizer_id'])
-              .limit(1)
-              .maybeSingle();
-          if (orgDog != null) dogName = orgDog['name'] as String? ?? dogName;
-        } catch (_) {}
-
-        int participantCount = 0;
-        try {
-          final participants = await SupabaseConfig.client
-              .from('playdate_participants')
-              .select('id')
-              .eq('playdate_id', playdateId);
-          participantCount = (participants as List).length;
-        } catch (_) {}
+        final dogName = dogNameMap[organizerId] ?? 'A friend';
+        final participantCount = participantCounts[playdateId] ?? 0;
 
         alerts.add(FriendAlert.walkTogether(
           id: 'walk_$playdateId',
@@ -358,33 +370,33 @@ class FriendActivityService {
             id, location, scheduled_at, status, title, latitude, longitude, organizer_id,
             participants:playdate_participants(
               user_id,
-              dog:dog_id(id, name, main_photo_url)
+              dog:dog_id(id, name, breed, main_photo_url)
             )
           ''')
           .inFilter('status', ['pending', 'confirmed'])
           .gte('scheduled_at', now)
           .order('scheduled_at', ascending: true);
 
+      if (data.isEmpty) return [];
+
+      // Batch fetch organizer dogs to avoid N+1
+      final organizerIds = (data as List)
+          .map((p) => p['organizer_id'] as String)
+          .toSet()
+          .toList();
+      final dogsData = await SupabaseConfig.client
+          .from('dogs')
+          .select('id, name, breed, main_photo_url, user_id')
+          .inFilter('user_id', organizerIds);
+
+      final dogMap = {for (var d in dogsData) d['user_id'] as String: d};
+
       final results = <Map<String, dynamic>>[];
       for (final playdate in data) {
-        // Organizer dog (always exists — they created the playdate). Pulled
-        // separately because it pre-dates the participants relation in the
-        // schema and we don't want to assume the organizer is in
-        // playdate_participants.
-        Map<String, dynamic>? orgDog;
-        try {
-          orgDog = await SupabaseConfig.client
-              .from('dogs')
-              .select('id, name, breed, main_photo_url')
-              .eq('user_id', playdate['organizer_id'])
-              .limit(1)
-              .maybeSingle();
-        } catch (_) {}
+        final organizerId = playdate['organizer_id'] as String;
+        final orgDog = dogMap[organizerId];
 
         // Invitee dog — first participant whose dog isn't the organizer's.
-        // For 1-on-1 walks (the common case) there's at most one such
-        // entry; for multi-participant walks we just pick the first since
-        // the marker only has room for two dogs anyway.
         Map<String, dynamic>? inviteeDog;
         final participants = playdate['participants'] as List<dynamic>?;
         if (participants != null) {
@@ -490,6 +502,21 @@ class FriendActivityService {
           .order('scheduled_at', ascending: true)
           .limit(3);
 
+      if (data.isEmpty) return [];
+
+      // Batch fetch participant counts
+      final playdateIds = (data as List).map((p) => p['id'] as String).toList();
+      final participantsData = await SupabaseConfig.client
+          .from('playdate_participants')
+          .select('playdate_id')
+          .inFilter('playdate_id', playdateIds);
+
+      final participantCounts = <String, int>{};
+      for (var p in participantsData) {
+        final pid = p['playdate_id'] as String;
+        participantCounts[pid] = (participantCounts[pid] ?? 0) + 1;
+      }
+
       final alerts = <FriendAlert>[];
       for (final playdate in data) {
         final dateStr = playdate['scheduled_at'] ?? '';
@@ -498,14 +525,7 @@ class FriendActivityService {
         final location =
             playdate['location'] as String? ?? 'Scheduled Location';
 
-        int participantCount = 0;
-        try {
-          final participants = await SupabaseConfig.client
-              .from('playdate_participants')
-              .select('id')
-              .eq('playdate_id', playdateId);
-          participantCount = (participants as List).length;
-        } catch (_) {}
+        final participantCount = participantCounts[playdateId] ?? 0;
 
         alerts.add(FriendAlert.walkTogether(
           id: 'own_walk_$playdateId',

@@ -270,4 +270,42 @@ class DogFriendshipService {
         await getFriendshipStatus(dogId1: fromDogId, dogId2: toDogId);
     return status?['status'] == statusPending;
   }
+
+  /// Get friend counts for a list of dogs (batch fetching)
+  static Future<Map<String, int>> getFriendCounts(List<String> dogIds) async {
+    try {
+      if (dogIds.isEmpty) return {};
+
+      // We need to count accepted friendships where the dog is either dog_id or friend_dog_id
+      // A more efficient way is to fetch all accepted friendships involving these dogs
+      // and count them in memory.
+      final result = await _supabase
+          .from('dog_friendships')
+          .select('dog_id, friend_dog_id')
+          .eq('status', statusAccepted)
+          .or('dog_id.in.(${dogIds.join(',')}),friend_dog_id.in.(${dogIds.join(',')})');
+
+      final counts = <String, int>{};
+      for (final dogId in dogIds) {
+        counts[dogId] = 0;
+      }
+
+      for (final friendship in result) {
+        final d1 = friendship['dog_id'] as String;
+        final d2 = friendship['friend_dog_id'] as String;
+
+        if (counts.containsKey(d1)) {
+          counts[d1] = (counts[d1] ?? 0) + 1;
+        }
+        if (counts.containsKey(d2)) {
+          counts[d2] = (counts[d2] ?? 0) + 1;
+        }
+      }
+
+      return counts;
+    } catch (e) {
+      debugPrint('Error getting friend counts: $e');
+      return {};
+    }
+  }
 }

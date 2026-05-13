@@ -18,6 +18,8 @@ class Dog {
   // sent, 'accepted' = in pack.
   final String? friendshipStatus;
   final String? friendshipId; // DB row id — needed to accept/decline inline
+  final String? playdateStatus; // 'pending', 'confirmed', or null
+  final String? currentPlaydateId;
 
   const Dog({
     required this.id,
@@ -36,6 +38,8 @@ class Dog {
     this.isFriend,
     this.friendshipStatus,
     this.friendshipId,
+    this.playdateStatus,
+    this.currentPlaydateId,
   });
 
   Dog copyWith({
@@ -55,6 +59,8 @@ class Dog {
     bool? isFriend,
     String? friendshipStatus,
     String? friendshipId,
+    String? playdateStatus,
+    String? currentPlaydateId,
   }) =>
       Dog(
         id: id ?? this.id,
@@ -73,6 +79,8 @@ class Dog {
         isFriend: isFriend ?? this.isFriend,
         friendshipStatus: friendshipStatus ?? this.friendshipStatus,
         friendshipId: friendshipId ?? this.friendshipId,
+        playdateStatus: playdateStatus ?? this.playdateStatus,
+        currentPlaydateId: currentPlaydateId ?? this.currentPlaydateId,
       );
 
   factory Dog.fromJson(Map<String, dynamic> json) {
@@ -113,6 +121,8 @@ class Dog {
       isFriend: json['is_friend'],
       friendshipStatus: json['friendship_status'] as String?,
       friendshipId: json['friendship_id'] as String?,
+      playdateStatus: json['playdate_status'] as String?,
+      currentPlaydateId: json['current_playdate_id'] as String?,
     );
   }
 
@@ -134,6 +144,8 @@ class Dog {
       'is_friend': isFriend,
       'friendship_status': friendshipStatus,
       'friendship_id': friendshipId,
+      'playdate_status': playdateStatus,
+      'current_playdate_id': currentPlaydateId,
     };
   }
 }

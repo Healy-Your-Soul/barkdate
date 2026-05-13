@@ -4,6 +4,7 @@ import 'package:barkdate/features/profile/data/repositories/profile_repository_i
 import 'package:barkdate/models/dog.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/dog_sharing_service.dart';
+import 'package:barkdate/services/dog_friendship_service.dart';
 
 // Repository Provider
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
@@ -38,6 +39,15 @@ final sharedDogsProvider = FutureProvider<List<SharedDog>>((ref) async {
   final user = SupabaseConfig.auth.currentUser;
   if (user == null) return [];
   return await DogSharingService.getSharedDogs(user.id);
+});
+
+// Batch fetch friend counts for all user dogs
+final packFriendCountsProvider = FutureProvider<Map<String, int>>((ref) async {
+  final dogsAsync = await ref.watch(userDogsProvider.future);
+  if (dogsAsync.isEmpty) return {};
+
+  final dogIds = dogsAsync.map((d) => d.id).toList();
+  return await DogFriendshipService.getFriendCounts(dogIds);
 });
 
 /// Snapshot of what (if anything) the user still has to fill in to finish
