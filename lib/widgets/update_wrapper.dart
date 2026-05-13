@@ -14,7 +14,7 @@ class UpdateWrapper extends StatefulWidget {
 }
 
 class _UpdateWrapperState extends State<UpdateWrapper> {
-  bool _isUpdateRequired = true;
+  bool _isUpdateRequired = false;
 
   @override
   void initState() {
