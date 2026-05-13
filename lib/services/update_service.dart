@@ -14,7 +14,7 @@ class UpdateService {
   UpdateService._internal();
 
   final _shorebirdUpdater = ShorebirdUpdater();
-  
+
   // Cache for update config
   Map<String, dynamic>? _updateConfig;
   String? _currentVersion;
@@ -49,7 +49,8 @@ class UpdateService {
       if (status == UpdateStatus.outdated) {
         debugPrint('📥 New Shorebird patch available! Downloading...');
         await _shorebirdUpdater.update();
-        debugPrint('✅ Shorebird patch downloaded. It will be applied on next restart.');
+        debugPrint(
+            '✅ Shorebird patch downloaded. It will be applied on next restart.');
       } else if (status == UpdateStatus.restartRequired) {
         debugPrint('🔄 Shorebird patch already downloaded. Restart required.');
       } else {
@@ -81,7 +82,7 @@ class UpdateService {
   /// Returns true if a major update is required (blocking).
   bool isUpdateRequired() {
     if (_updateConfig == null || _currentVersion == null) return false;
-    
+
     final minRequired = _updateConfig!['min_required_version'] as String;
     return _isVersionOlder(_currentVersion!, minRequired);
   }
@@ -89,12 +90,13 @@ class UpdateService {
   /// Returns true if a new version is available (non-blocking).
   bool isUpdateAvailable() {
     if (_updateConfig == null || _currentVersion == null) return false;
-    
+
     final latest = _updateConfig!['latest_version'] as String;
     return _isVersionOlder(_currentVersion!, latest);
   }
 
-  String get updateMessage => _updateConfig?['message'] ?? 'A new version is available!';
+  String get updateMessage =>
+      _updateConfig?['message'] ?? 'A new version is available!';
 
   /// Launch the appropriate update URL (App Store, Play Store, or direct APK).
   Future<void> launchUpdateUrl() async {
@@ -117,8 +119,10 @@ class UpdateService {
 
   /// Helper to compare semantic versions (e.g., "1.0.0" < "1.1.0").
   bool _isVersionOlder(String current, String target) {
-    final currentParts = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-    final targetParts = target.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final currentParts =
+        current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final targetParts =
+        target.split('.').map((e) => int.tryParse(e) ?? 0).toList();
 
     for (var i = 0; i < 3; i++) {
       final currentPart = i < currentParts.length ? currentParts[i] : 0;
