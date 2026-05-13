@@ -10,6 +10,7 @@ import 'package:barkdate/widgets/achievement_toast.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:barkdate/services/notification_manager.dart';
 import 'package:barkdate/supabase/notification_service.dart';
+import 'package:barkdate/widgets/update_wrapper.dart';
 
 class BarkDateApp extends ConsumerStatefulWidget {
   const BarkDateApp({super.key});
@@ -110,25 +111,27 @@ class _BarkDateAppState extends ConsumerState<BarkDateApp>
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
 
-    return MaterialApp.router(
-      title: 'BarkDate',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light,
-      routerConfig: router,
-      debugShowCheckedModeBanner: false,
-      // Limit font scaling to prevent layout breaking with accessibility large fonts
-      builder: (context, child) {
-        final mediaQuery = MediaQuery.of(context);
-        // Clamp text scale between 0.8x and 1.3x for consistent layout
-        final clampedScale = mediaQuery.textScaler.scale(1.0).clamp(0.8, 1.3);
-        return MediaQuery(
-          data: mediaQuery.copyWith(
-            textScaler: TextScaler.linear(clampedScale),
-          ),
-          child: child ?? const SizedBox.shrink(),
-        );
-      },
+    return UpdateWrapper(
+      child: MaterialApp.router(
+        title: 'BarkDate',
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.light,
+        routerConfig: router,
+        debugShowCheckedModeBanner: false,
+        // Limit font scaling to prevent layout breaking with accessibility large fonts
+        builder: (context, child) {
+          final mediaQuery = MediaQuery.of(context);
+          // Clamp text scale between 0.8x and 1.3x for consistent layout
+          final clampedScale = mediaQuery.textScaler.scale(1.0).clamp(0.8, 1.3);
+          return MediaQuery(
+            data: mediaQuery.copyWith(
+              textScaler: TextScaler.linear(clampedScale),
+            ),
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
+      ),
     );
   }
 }

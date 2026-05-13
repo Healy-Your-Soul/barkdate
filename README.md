@@ -90,7 +90,16 @@ Uses Supabase with PostgreSQL for:
 ### Web Compatibility
 - Uses `SelectedImage` for cross-platform image handling
 - Avoids `dart:io` in web builds
+- Web-safe image handling
 - Responsive design for all screen sizes
+
+## 🔄 Updates & Maintenance
+
+BarkDate uses a dual-layer update system:
+- **OTA Patches**: Powered by [Shorebird](https://shorebird.dev) for instant, silent bug fixes.
+- **Remote Config**: Managed via Supabase for required major updates.
+
+See the [Updates Management Guide](UPDATES_GUIDE.md) for instructions on how to push patches and require updates.
 
 ## Support
 
