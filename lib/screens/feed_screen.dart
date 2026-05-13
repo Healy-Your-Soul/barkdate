@@ -253,7 +253,9 @@ class _FeedScreenState extends State<FeedScreen> {
         offset: offset,
       );
 
-      final dogs = dogData.map(_mapDogFromRaw).toList();
+      final dogs = await _enrichDogsWithPlaydateStatus(
+        dogData.map(_mapDogFromRaw).toList(),
+      );
 
       setState(() {
         _nearbyDogs.addAll(dogs);
@@ -431,10 +433,10 @@ class _FeedScreenState extends State<FeedScreen> {
     setState(() => _isRefreshing = false);
   }
 
-  void _applyFeedSnapshot(
+  Future<void> _applyFeedSnapshot(
     Map<String, dynamic> snapshot, {
     bool fromCache = false,
-  }) {
+  }) async {
     final counters = Map<String, dynamic>.from(
       (snapshot['counters'] as Map?) ?? const {},
     );
@@ -487,6 +489,9 @@ class _FeedScreenState extends State<FeedScreen> {
       dogsWithEvents: meta['event_dog_ids'] as Iterable?,
       dogsWithPlaydates: meta['playdate_dog_ids'] as Iterable?,
     );
+
+    // Batch fetch playdate statuses to prevent N+1 queries in DogCard
+    nearbyDogs = await _enrichDogsWithPlaydateStatus(nearbyDogs);
 
     final hasMoreNearby = nearbyRaw.length >= _dogsPageSize;
     final hasMorePlaydates = playdatesRaw.length >= _playdatesPageSize;
@@ -586,7 +591,7 @@ class _FeedScreenState extends State<FeedScreen> {
           });
         }
       } else {
-        _applyFeedSnapshot(snapshot);
+        await _applyFeedSnapshot(snapshot);
         _hasLoadedOnce = true;
       }
     } catch (e) {
@@ -611,22 +616,29 @@ class _FeedScreenState extends State<FeedScreen> {
       _suggestedEvents.isNotEmpty ||
       _friendDogs.isNotEmpty;
 
-  void _hydrateFromCache() {
+  Future<void> _hydrateFromCache() async {
     final user = SupabaseAuth.currentUser;
     if (user == null) return;
 
     final cachedSnapshot = CacheService().getCachedFeedSnapshot(user.id);
     if (cachedSnapshot != null && cachedSnapshot.isNotEmpty) {
-      _applyFeedSnapshot(Map<String, dynamic>.from(cachedSnapshot),
+      await _applyFeedSnapshot(Map<String, dynamic>.from(cachedSnapshot),
           fromCache: true);
       return;
     }
 
     final cachedNearbyRaw = CacheService().getCachedNearbyDogs(user.id);
     if (cachedNearbyRaw != null && cachedNearbyRaw.isNotEmpty) {
-      _nearbyDogs = cachedNearbyRaw.map(_mapDogFromRaw).toList();
-      _nearbyDogsPage = 0;
-      _hasMoreNearbyDogs = cachedNearbyRaw.length >= _dogsPageSize;
+      final dogs = await _enrichDogsWithPlaydateStatus(
+        cachedNearbyRaw.map(_mapDogFromRaw).toList(),
+      );
+      if (mounted) {
+        setState(() {
+          _nearbyDogs = dogs;
+          _nearbyDogsPage = 0;
+          _hasMoreNearbyDogs = cachedNearbyRaw.length >= _dogsPageSize;
+        });
+      }
     }
 
     final pd = CacheService().getCachedPlaydateList(user.id, 'upcoming');
@@ -648,6 +660,38 @@ class _FeedScreenState extends State<FeedScreen> {
       _friendDogs = fr;
       _friendsPage = 0;
       _hasMoreFriends = fr.length >= _friendsPageSize;
+    }
+  }
+
+  Future<List<Dog>> _enrichDogsWithPlaydateStatus(List<Dog> dogs) async {
+    if (dogs.isEmpty) return dogs;
+    final user = SupabaseAuth.currentUser;
+    if (user == null) return dogs;
+
+    try {
+      final ownerIds = dogs
+          .map((d) => d.ownerId)
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList();
+
+      final statuses = await PlaydateQueryService.getPlaydateStatusesForOwners(
+          user.id, ownerIds);
+
+      return dogs.map((dog) {
+        final status = statuses[dog.ownerId];
+        if (status != null) {
+          return dog.copyWith(
+            playdateStatus: status['playdate_status'] as String?,
+            currentPlaydateId:
+                (status['current_playdate'] as Map?)?['id'] as String?,
+          );
+        }
+        return dog;
+      }).toList();
+    } catch (e) {
+      debugPrint('Error enriching dogs with playdate status: $e');
+      return dogs;
     }
   }
 

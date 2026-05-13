@@ -9,6 +9,7 @@ import 'package:barkdate/supabase/barkdate_services.dart';
 import 'package:barkdate/supabase/notification_service.dart';
 import 'package:barkdate/supabase/supabase_config.dart';
 import 'package:flutter/foundation.dart';
+import 'package:barkdate/supabase/bark_playdate_services.dart' hide DogFriendshipService;
 
 final dogRepositoryProvider = Provider<DogRepository>((ref) {
   return DogRepositoryImpl();
@@ -100,13 +101,15 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
   final myDogs = await BarkDateUserService.getUserDogs(user.id);
   final myDogId = myDogs.isNotEmpty ? myDogs.first['id'] as String? : null;
 
+  List<Dog> dogs;
+
   // If showing pack only, fetch friends directly (bypassing nearby pagination limits)
   if (filter.showPackOnly) {
     if (myDogId == null) return [];
 
     final friends = await DogFriendshipService.getFriends(myDogId);
 
-    return friends.map((f) {
+    dogs = friends.map((f) {
       // Determine which dog object is the friend
       final friendDogMap = f['friend_dog']['id'] == myDogId
           ? f['dog'] as Map<String, dynamic>
@@ -138,14 +141,14 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
         friendshipId: f['id'] as String?,
       );
     }).toList();
+  } else {
+    // Normal mode: Fetch nearby dogs
+    dogs = await repository.getNearbyDogs(
+      userId: user.id,
+      limit: 20,
+      offset: 0,
+    );
   }
-
-  // Normal mode: Fetch nearby dogs
-  final dogs = await repository.getNearbyDogs(
-    userId: user.id,
-    limit: 20,
-    offset: 0,
-  );
 
   // Sprint 8: Build a map of dogId → {status, friendshipId, direction} from
   // all friendship rows (accepted + pending) so each card can render the
@@ -186,7 +189,7 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
   }
 
   // Apply memory filters and map friendship status
-  return dogs.where((dog) {
+  final filteredDogs = dogs.where((dog) {
     if (dog.distanceKm > filter.maxDistance) return false;
     if (dog.age < filter.minAge || dog.age > filter.maxAge) return false;
     if (filter.sizes.isNotEmpty && !filter.sizes.contains(dog.size)) {
@@ -207,6 +210,32 @@ final nearbyDogsProvider = FutureProvider.autoDispose<List<Dog>>((ref) async {
       friendshipId: fs?['friendshipId'],
     );
   }).toList();
+
+  // Optimization: Batch fetch playdate statuses to prevent N+1 queries in DogCard
+  if (filteredDogs.isNotEmpty) {
+    final ownerIds = filteredDogs
+        .map((d) => d.ownerId)
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+
+    final statuses = await PlaydateQueryService.getPlaydateStatusesForOwners(
+        user.id, ownerIds);
+
+    return filteredDogs.map((dog) {
+      final status = statuses[dog.ownerId];
+      if (status != null) {
+        return dog.copyWith(
+          playdateStatus: status['playdate_status'] as String?,
+          currentPlaydateId:
+              (status['current_playdate'] as Map?)?['id'] as String?,
+        );
+      }
+      return dog;
+    }).toList();
+  }
+
+  return filteredDogs;
 });
 
 /// Recent public posts from ALL dogs (for the Sniff Around section).

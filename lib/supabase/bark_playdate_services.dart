@@ -1837,4 +1837,77 @@ class PlaydateQueryService {
       };
     }
   }
+
+  /// Batch fetch playdate statuses for a list of dog owners relative to a user.
+  /// Returns a map of owner_id -> {status, playdate_data}.
+  /// This eliminates the N+1 query issue in DogCard.
+  static Future<Map<String, Map<String, dynamic>>> getPlaydateStatusesForOwners(
+    String userId,
+    List<String> ownerIds,
+  ) async {
+    if (ownerIds.isEmpty) return {};
+
+    try {
+      final ownerIdClause = _buildInClause(ownerIds);
+      final nowIso = DateTime.now().toIso8601String();
+
+      // 1. Fetch all pending requests from this user to these owners
+      final pendingRequests = await SupabaseConfig.client
+          .from('playdate_requests')
+          .select('invitee_id, status')
+          .eq('requester_id', userId)
+          .filter('invitee_id', 'in', ownerIdClause)
+          .eq('status', 'pending');
+
+      // 2. Fetch all confirmed upcoming playdates between this user and these owners
+      final confirmedAsOrganizer = await SupabaseConfig.client
+          .from('playdates')
+          .select()
+          .eq('organizer_id', userId)
+          .filter('participant_id', 'in', ownerIdClause)
+          .eq('status', 'confirmed')
+          .gte('scheduled_at', nowIso);
+
+      final confirmedAsParticipant = await SupabaseConfig.client
+          .from('playdates')
+          .select()
+          .filter('organizer_id', 'in', ownerIdClause)
+          .eq('participant_id', userId)
+          .eq('status', 'confirmed')
+          .gte('scheduled_at', nowIso);
+
+      final result = <String, Map<String, dynamic>>{};
+
+      // Fill in pending
+      for (final req in pendingRequests as List) {
+        final ownerId = req['invitee_id'] as String;
+        result[ownerId] = {
+          'playdate_status': 'pending',
+          'current_playdate': null,
+        };
+      }
+
+      // Fill in confirmed (Confirmed takes priority over pending if both exist)
+      for (final pd in confirmedAsOrganizer as List) {
+        final ownerId = pd['participant_id'] as String;
+        result[ownerId] = {
+          'playdate_status': 'confirmed',
+          'current_playdate': pd,
+        };
+      }
+
+      for (final pd in confirmedAsParticipant as List) {
+        final ownerId = pd['organizer_id'] as String;
+        result[ownerId] = {
+          'playdate_status': 'confirmed',
+          'current_playdate': pd,
+        };
+      }
+
+      return result;
+    } catch (e) {
+      debugPrint('Error fetching batched playdate statuses: $e');
+      return {};
+    }
+  }
 }

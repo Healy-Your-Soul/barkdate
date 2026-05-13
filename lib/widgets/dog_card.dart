@@ -71,7 +71,15 @@ class _DogCardState extends State<DogCard> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _checkPlaydateStatus();
+
+    // Batch-loading optimization: if parent (e.g. FeedScreen) already
+    // provided the status, use it to avoid an N+1 query burst.
+    if (widget.dog.playdateStatus != null) {
+      _playdateStatus = widget.dog.playdateStatus!;
+    } else {
+      _checkPlaydateStatus();
+    }
+
     _subscribeToWalkChanges();
 
     // Initialize bark animation
