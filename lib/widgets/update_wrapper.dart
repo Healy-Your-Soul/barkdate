@@ -107,7 +107,8 @@ class _UpdateWrapperState extends State<UpdateWrapper> {
                             borderRadius: BorderRadius.circular(40),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.accentOrange.withValues(alpha: 0.2),
+                                color: AppColors.accentOrange
+                                    .withValues(alpha: 0.2),
                                 blurRadius: 30,
                                 offset: const Offset(0, 10),
                               ),
@@ -155,7 +156,8 @@ class _UpdateWrapperState extends State<UpdateWrapper> {
                             gradient: AppColors.warmGradient,
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.accentOrange.withValues(alpha: 0.3),
+                                color: AppColors.accentOrange
+                                    .withValues(alpha: 0.3),
                                 blurRadius: 15,
                                 offset: const Offset(0, 8),
                               ),
