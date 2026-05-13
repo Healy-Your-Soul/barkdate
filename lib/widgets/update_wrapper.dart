@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:barkdate/services/update_service.dart';
+import 'package:barkdate/design_system/app_colors.dart';
 
 /// A wrapper widget that checks for required updates and shows a blocking
 /// or non-blocking UI to the user.
@@ -51,22 +52,26 @@ class _UpdateWrapperState extends State<UpdateWrapper> {
   @override
   Widget build(BuildContext context) {
     if (_isUpdateRequired) {
+      final theme = Theme.of(context);
+      const backgroundColor = AppColors.lightBackground;
+      const textColor = AppColors.lightTextPrimary;
+      const subTextColor = AppColors.lightTextSecondary;
+
       return MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: Theme.of(context),
+        theme: theme,
         home: Scaffold(
           body: Stack(
             children: [
-              // 1. Background Gradient
+              // 1. Background Gradient (Subtle)
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      const Color(0xFFED924D).withValues(alpha: 0.1), // Primary low opacity
-                      const Color(0xFFFF8076).withValues(alpha: 0.05), // Secondary low opacity
-                      Colors.white,
+                      AppColors.accentOrange.withValues(alpha: 0.1),
+                      backgroundColor,
                     ],
                   ),
                 ),
@@ -81,7 +86,7 @@ class _UpdateWrapperState extends State<UpdateWrapper> {
                   height: 300,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFFED924D).withValues(alpha: 0.1),
+                    color: AppColors.accentOrange.withValues(alpha: 0.1),
                   ),
                 ),
               ),
@@ -102,7 +107,7 @@ class _UpdateWrapperState extends State<UpdateWrapper> {
                             borderRadius: BorderRadius.circular(40),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFED924D).withValues(alpha: 0.2),
+                                color: AppColors.accentOrange.withValues(alpha: 0.2),
                                 blurRadius: 30,
                                 offset: const Offset(0, 10),
                               ),
@@ -122,10 +127,9 @@ class _UpdateWrapperState extends State<UpdateWrapper> {
                         Text(
                           'Paws for an Update!',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 28,
+                          style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFF2D2D2D),
+                            color: textColor,
                             letterSpacing: -0.5,
                           ),
                         ),
@@ -135,10 +139,9 @@ class _UpdateWrapperState extends State<UpdateWrapper> {
                         Text(
                           UpdateService().updateMessage,
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: subTextColor,
                             height: 1.5,
-                            color: const Color(0xFF717171),
                           ),
                         ),
                         const SizedBox(height: 48),
@@ -149,12 +152,10 @@ class _UpdateWrapperState extends State<UpdateWrapper> {
                           height: 64,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(20),
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFED924D), Color(0xFFFF8076)],
-                            ),
+                            gradient: AppColors.warmGradient,
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFED924D).withValues(alpha: 0.3),
+                                color: AppColors.accentOrange.withValues(alpha: 0.3),
                                 blurRadius: 15,
                                 offset: const Offset(0, 8),
                               ),
@@ -177,18 +178,6 @@ class _UpdateWrapperState extends State<UpdateWrapper> {
                                 color: Colors.white,
                               ),
                             ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Secondary Info
-                        Text(
-                          'Keep your adventure going!',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFFED924D).withValues(alpha: 0.8),
                           ),
                         ),
                       ],
