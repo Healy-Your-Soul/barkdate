@@ -64,8 +64,10 @@ class _UpdateWrapperState extends State<UpdateWrapper> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      const Color(0xFFED924D).withValues(alpha: 0.1), // Primary low opacity
-                      const Color(0xFFFF8076).withValues(alpha: 0.05), // Secondary low opacity
+                      const Color(0xFFED924D)
+                          .withValues(alpha: 0.1), // Primary low opacity
+                      const Color(0xFFFF8076)
+                          .withValues(alpha: 0.05), // Secondary low opacity
                       Colors.white,
                     ],
                   ),
@@ -102,7 +104,8 @@ class _UpdateWrapperState extends State<UpdateWrapper> {
                             borderRadius: BorderRadius.circular(40),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFED924D).withValues(alpha: 0.2),
+                                color: const Color(0xFFED924D)
+                                    .withValues(alpha: 0.2),
                                 blurRadius: 30,
                                 offset: const Offset(0, 10),
                               ),
@@ -154,7 +157,8 @@ class _UpdateWrapperState extends State<UpdateWrapper> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFED924D).withValues(alpha: 0.3),
+                                color: const Color(0xFFED924D)
+                                    .withValues(alpha: 0.3),
                                 blurRadius: 15,
                                 offset: const Offset(0, 8),
                               ),
@@ -188,7 +192,8 @@ class _UpdateWrapperState extends State<UpdateWrapper> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFFED924D).withValues(alpha: 0.8),
+                            color:
+                                const Color(0xFFED924D).withValues(alpha: 0.8),
                           ),
                         ),
                       ],
