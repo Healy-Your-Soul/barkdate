@@ -12,7 +12,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 
-CREATE EXTENSION IF NOT EXISTS "pg_net" WITH SCHEMA "extensions";
+CREATE EXTENSION IF NOT EXISTS "pg_cron" WITH SCHEMA "pg_catalog";
 
 
 
@@ -23,7 +23,21 @@ COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
 
-CREATE EXTENSION IF NOT EXISTS "pg_graphql" WITH SCHEMA "graphql";
+CREATE EXTENSION IF NOT EXISTS "pg_net" WITH SCHEMA "public";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "cube" WITH SCHEMA "public";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "earthdistance" WITH SCHEMA "public";
 
 
 
@@ -123,6 +137,136 @@ $$;
 ALTER FUNCTION "public"."accept_dog_share"("p_share_code" character varying, "p_user_id" "uuid", "p_pin_code" character varying) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."add_dog_with_primary_owner"("p_user_id" "uuid", "p_dog_data" "jsonb") RETURNS "uuid"
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  new_dog_id uuid;
+BEGIN
+  -- Insert the dog
+  INSERT INTO dogs (
+    name, breed, age, size, gender, bio, 
+    main_photo_url, extra_photo_urls, photo_urls,
+    vaccinated, neutered, is_active, user_id
+  )
+  VALUES (
+    p_dog_data->>'name',
+    p_dog_data->>'breed',
+    (p_dog_data->>'age')::integer,
+    p_dog_data->>'size',
+    p_dog_data->>'gender',
+    p_dog_data->>'bio',
+    p_dog_data->>'main_photo_url',
+    CASE 
+      WHEN p_dog_data->'extra_photo_urls' IS NOT NULL 
+      THEN ARRAY(SELECT jsonb_array_elements_text(p_dog_data->'extra_photo_urls'))
+      ELSE '{}'::text[]
+    END,
+    CASE 
+      WHEN p_dog_data->'photo_urls' IS NOT NULL 
+      THEN ARRAY(SELECT jsonb_array_elements_text(p_dog_data->'photo_urls'))
+      ELSE '{}'::text[]
+    END,
+    COALESCE((p_dog_data->>'vaccinated')::boolean, false),
+    COALESCE((p_dog_data->>'neutered')::boolean, false),
+    true,
+    p_user_id -- Keep for backward compatibility
+  )
+  RETURNING id INTO new_dog_id;
+  
+  -- Add the creator as primary owner
+  INSERT INTO dog_owners (dog_id, user_id, ownership_type, is_primary, added_by, permissions)
+  VALUES (new_dog_id, p_user_id, 'owner', true, p_user_id, ARRAY['view', 'edit', 'playdates', 'share']);
+  
+  RETURN new_dog_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."add_dog_with_primary_owner"("p_user_id" "uuid", "p_dog_data" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."add_dog_with_primary_owner"("owner_id" "uuid", "dog_name" "text", "dog_breed" "text", "dog_age" integer, "dog_bio" "text" DEFAULT NULL::"text", "dog_image_url" "text" DEFAULT NULL::"text") RETURNS "uuid"
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  new_dog_id UUID;
+BEGIN
+  -- Insert the dog
+  INSERT INTO dogs (name, breed, age, bio, image_url, user_id)
+  VALUES (dog_name, dog_breed, dog_age, dog_bio, dog_image_url, owner_id)
+  RETURNING id INTO new_dog_id;
+  
+  -- Add primary owner relationship
+  INSERT INTO dog_owners (dog_id, user_id, permission_level)
+  VALUES (new_dog_id, owner_id, 'primary');
+  
+  RETURN new_dog_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."add_dog_with_primary_owner"("owner_id" "uuid", "dog_name" "text", "dog_breed" "text", "dog_age" integer, "dog_bio" "text", "dog_image_url" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."auto_approve_friend_tags"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+  -- Check if tagger and tagged dogs are friends
+  IF EXISTS (
+    SELECT 1 FROM dog_friendships df
+    WHERE (
+      (df.dog_id = NEW.tagger_dog_id AND df.friend_dog_id = NEW.tagged_dog_id)
+      OR (df.dog_id = NEW.tagged_dog_id AND df.friend_dog_id = NEW.tagger_dog_id)
+    )
+    AND df.status = 'accepted'
+  ) THEN
+    -- Auto-approve for friends
+    NEW.status := 'approved';
+  END IF;
+  
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."auto_approve_friend_tags"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."auto_checkout_old_checkins"() RETURNS "void"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  UPDATE checkins
+  SET checked_out_at = now(),
+      status = 'completed',
+      updated_at = now()
+  WHERE status = 'active'
+  AND checked_in_at < now() - interval '4 hours';
+END;
+$$;
+
+
+ALTER FUNCTION "public"."auto_checkout_old_checkins"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."auto_checkout_stale_checkins"() RETURNS "void"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  UPDATE park_checkins 
+  SET is_active = false, 
+      checked_out_at = NOW()
+  WHERE is_active = true 
+    AND checked_in_at < NOW() - INTERVAL '12 hours';
+END;
+$$;
+
+
+ALTER FUNCTION "public"."auto_checkout_stale_checkins"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."auto_seed_park_activity"("p_area_key" "text", "p_park_ids" "text"[], "p_dog_counts" integer[]) RETURNS boolean
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -171,6 +315,242 @@ $$;
 
 
 ALTER FUNCTION "public"."auto_seed_park_activity"("p_area_key" "text", "p_park_ids" "text"[], "p_dog_counts" integer[]) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."award_achievement"("target_user_id" "uuid", "achievement_name" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    target_achievement_id uuid;
+BEGIN
+    -- Get achievement ID
+    SELECT id INTO target_achievement_id FROM achievements WHERE name = achievement_name;
+    
+    IF target_achievement_id IS NOT NULL THEN
+        -- Insert if not exists
+        INSERT INTO user_achievements (user_id, achievement_id)
+        VALUES (target_user_id, target_achievement_id)
+        ON CONFLICT (user_id, achievement_id) DO NOTHING;
+        
+        -- Optional: Create notification? (Handled by app or separate trigger on user_achievements)
+    END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."award_achievement"("target_user_id" "uuid", "achievement_name" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."can_bark"("sender_dog_id" "uuid", "receiver_dog_id" "uuid") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+  is_friend boolean;
+  bark_count integer;
+BEGIN
+  -- Check if they are already friends
+  SELECT EXISTS (
+    SELECT 1 FROM dog_friendships 
+    WHERE status = 'accepted'
+    AND (
+      (dog_id = sender_dog_id AND friend_dog_id = receiver_dog_id)
+      OR (dog_id = receiver_dog_id AND friend_dog_id = sender_dog_id)
+    )
+  ) INTO is_friend;
+  
+  -- Friends can bark unlimited
+  IF is_friend THEN
+    RETURN true;
+  END IF;
+  
+  -- Non-friends: count barks in last 24 hours
+  SELECT COUNT(*) INTO bark_count
+  FROM barks
+  WHERE from_dog_id = sender_dog_id
+    AND to_dog_id = receiver_dog_id
+    AND created_at > now() - interval '24 hours';
+  
+  -- Allow if under limit (3 barks per day)
+  RETURN bark_count < 3;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."can_bark"("sender_dog_id" "uuid", "receiver_dog_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."check_community_star_achievement"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    post_author_id uuid;
+    total_likes integer;
+BEGIN
+    -- Get post author
+    SELECT user_id INTO post_author_id FROM posts WHERE id = NEW.post_id;
+    
+    IF post_author_id IS NOT NULL THEN
+        -- Count total likes received by user across all posts
+        SELECT COUNT(*) INTO total_likes 
+        FROM post_likes pl
+        JOIN posts p ON pl.post_id = p.id
+        WHERE p.user_id = post_author_id;
+        
+        IF total_likes >= 100 THEN
+            PERFORM award_achievement(post_author_id, 'Community Star');
+        END IF;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."check_community_star_achievement"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."check_first_playdate_achievement"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    participant record;
+BEGIN
+    IF NEW.status = 'completed' AND (OLD.status IS NULL OR OLD.status != 'completed') THEN
+        -- Award to organizer
+        PERFORM award_achievement(NEW.organizer_id, 'First Playdate');
+        
+        -- Award to all participants
+        FOR participant IN SELECT user_id FROM playdate_participants WHERE playdate_id = NEW.id LOOP
+            PERFORM award_achievement(participant.user_id, 'First Playdate');
+        END LOOP;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."check_first_playdate_achievement"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."check_max_tags"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  tag_count INTEGER;
+BEGIN
+  SELECT COUNT(*) INTO tag_count
+  FROM post_tags
+  WHERE post_id = NEW.post_id;
+  
+  IF tag_count >= 15 THEN
+    RAISE EXCEPTION 'Maximum of 15 tags allowed per post';
+  END IF;
+  
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."check_max_tags"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."check_park_achievements"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    total_checkins integer;
+    unique_parks integer;
+BEGIN
+    -- Park Regular: 10 checkins
+    SELECT COUNT(*) INTO total_checkins FROM checkins WHERE user_id = NEW.user_id;
+    IF total_checkins >= 10 THEN
+        PERFORM award_achievement(NEW.user_id, 'Park Regular');
+    END IF;
+    
+    -- Explorer: 5 different parks
+    SELECT COUNT(DISTINCT park_id) INTO unique_parks FROM checkins WHERE user_id = NEW.user_id;
+    IF unique_parks >= 5 THEN
+        PERFORM award_achievement(NEW.user_id, 'Explorer');
+    END IF;
+    
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."check_park_achievements"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."check_photo_star_achievement"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    photo_posts_count integer;
+BEGIN
+    IF NEW.image_urls IS NOT NULL AND array_length(NEW.image_urls, 1) > 0 THEN
+        SELECT COUNT(*) INTO photo_posts_count 
+        FROM posts 
+        WHERE user_id = NEW.user_id 
+        AND image_urls IS NOT NULL 
+        AND array_length(image_urls, 1) > 0;
+        
+        IF photo_posts_count >= 5 THEN
+            PERFORM award_achievement(NEW.user_id, 'Photo Star');
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."check_photo_star_achievement"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."check_social_butterfly_achievement"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    dog_owner_id uuid;
+    friend_count integer;
+BEGIN
+    -- Get owner of the dog
+    SELECT user_id INTO dog_owner_id FROM dogs WHERE id = NEW.dog_id;
+    
+    IF dog_owner_id IS NOT NULL THEN
+        -- Count friends
+        SELECT COUNT(*) INTO friend_count FROM dog_friendships WHERE dog_id = NEW.dog_id AND status = 'accepted'; -- Assuming 'accepted' or similar status
+        -- If status column doesn't exist or uses different values, adjust accordingly. 
+        -- Based on previous files, status might be 'friend' or 'best_friend'.
+        
+        IF friend_count >= 5 THEN
+            PERFORM award_achievement(dog_owner_id, 'Social Butterfly');
+        END IF;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."check_social_butterfly_achievement"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."cleanup_declined_requests"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  -- When a request is declined, clean up any blocking states
+  IF NEW.status = 'declined' AND OLD.status != 'declined' THEN
+    -- Log the cleanup
+    RAISE NOTICE 'Cleaning up declined request: %', NEW.id;
+    -- Additional cleanup logic can go here
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."cleanup_declined_requests"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."cleanup_user_storage"("user_id" "uuid") RETURNS "void"
@@ -249,6 +629,40 @@ $$;
 ALTER FUNCTION "public"."create_auth_user_for_firebase"("user_email" "text", "user_name" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."create_dog_friendship_after_playdate"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  -- Only create friendship when playdate is marked as completed
+  IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
+    -- Get all dogs from this playdate and create friendships
+    INSERT INTO dog_friendships (dog1_id, dog2_id, formed_through_playdate_id)
+    SELECT DISTINCT 
+      LEAST(pp1.dog_id, pp2.dog_id),
+      GREATEST(pp1.dog_id, pp2.dog_id),
+      NEW.id
+    FROM playdate_participants pp1
+    CROSS JOIN playdate_participants pp2
+    WHERE pp1.playdate_id = NEW.id 
+      AND pp2.playdate_id = NEW.id
+      AND pp1.dog_id != pp2.dog_id
+    ON CONFLICT (dog1_id, dog2_id) DO UPDATE SET
+      updated_at = now(),
+      friendship_level = CASE 
+        WHEN dog_friendships.friendship_level = 'acquaintance' THEN 'friend'
+        WHEN dog_friendships.friendship_level = 'friend' THEN 'best_friend'
+        ELSE dog_friendships.friendship_level
+      END;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."create_dog_friendship_after_playdate"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."create_dog_share"("p_dog_id" "uuid", "p_owner_id" "uuid", "p_access_level" character varying, "p_pin_code" character varying DEFAULT NULL::character varying, "p_expires_at" timestamp with time zone DEFAULT NULL::timestamp with time zone, "p_shared_via" character varying DEFAULT 'link'::character varying, "p_notes" "text" DEFAULT NULL::"text") RETURNS TABLE("share_code" character varying, "share_url" "text", "qr_data" "text")
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -296,6 +710,157 @@ $$;
 
 
 ALTER FUNCTION "public"."create_dog_share"("p_dog_id" "uuid", "p_owner_id" "uuid", "p_access_level" character varying, "p_pin_code" character varying, "p_expires_at" timestamp with time zone, "p_shared_via" character varying, "p_notes" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."create_dog_share_link"("p_access_level" "text", "p_creator_id" "uuid", "p_dog_id" "uuid") RETURNS "text"
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  v_dog_name TEXT;
+  v_share_token TEXT;
+BEGIN
+  -- Get dog name for verification
+  SELECT name INTO v_dog_name
+  FROM dogs 
+  WHERE id = p_dog_id;
+  
+  IF v_dog_name IS NULL THEN
+    RAISE EXCEPTION 'Dog not found';
+  END IF;
+
+  -- Verify the creator has permission to share this dog
+  IF NOT EXISTS (
+    SELECT 1 FROM dog_owners 
+    WHERE dog_id = p_dog_id 
+    AND user_id = p_creator_id 
+    AND 'share' = ANY(permissions)
+  ) THEN
+    RAISE EXCEPTION 'Insufficient permissions to share this dog';
+  END IF;
+  
+  -- Generate unique share token
+  v_share_token := encode(gen_random_bytes(16), 'base64');
+  
+  -- Insert share link
+  INSERT INTO dog_share_links (
+    share_token,
+    dog_id,
+    created_by,
+    dog_name_for_verification,
+    access_level,
+    created_at,
+    expires_at
+  ) VALUES (
+    v_share_token,
+    p_dog_id,
+    p_creator_id,
+    v_dog_name,
+    p_access_level,
+    NOW(),
+    NOW() + INTERVAL '7 days'
+  );
+  
+  RETURN v_share_token;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."create_dog_share_link"("p_access_level" "text", "p_creator_id" "uuid", "p_dog_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."create_dog_share_link"("p_dog_id" "uuid", "p_creator_id" "uuid", "p_permission_level" "text" DEFAULT 'view'::"text") RETURNS "text"
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  link_code TEXT;
+BEGIN
+  -- Check if user has permission to share this dog
+  IF NOT EXISTS (
+    SELECT 1 FROM dog_owners dog_own
+    WHERE dog_own.dog_id = p_dog_id 
+    AND dog_own.user_id = p_creator_id 
+    AND dog_own.permission_level IN ('primary', 'share')
+  ) THEN
+    RAISE EXCEPTION 'User does not have permission to share this dog';
+  END IF;
+  
+  -- Generate unique link code
+  link_code := encode(gen_random_bytes(16), 'base64');
+  
+  -- Insert share link
+  INSERT INTO dog_share_links (
+    code, dog_id, created_by, permission_level, expires_at
+  ) VALUES (
+    link_code, 
+    p_dog_id, 
+    p_creator_id, 
+    p_permission_level,
+    NOW() + INTERVAL '7 days'
+  );
+  
+  RETURN link_code;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."create_dog_share_link"("p_dog_id" "uuid", "p_creator_id" "uuid", "p_permission_level" "text") OWNER TO "postgres";
+
+SET default_tablespace = '';
+
+SET default_table_access_method = "heap";
+
+
+CREATE TABLE IF NOT EXISTS "public"."notifications" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "title" "text" NOT NULL,
+    "body" "text" NOT NULL,
+    "type" "text" NOT NULL,
+    "data" "jsonb",
+    "is_read" boolean DEFAULT false,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "action_type" "text",
+    "related_id" "text",
+    "metadata" "jsonb",
+    CONSTRAINT "notifications_type_check" CHECK (("type" = ANY (ARRAY['match'::"text", 'message'::"text", 'playdate'::"text", 'achievement'::"text", 'system'::"text", 'bark'::"text", 'playdate_request'::"text", 'playdate_update'::"text"])))
+);
+
+
+ALTER TABLE "public"."notifications" OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."create_notification"("user_id" "uuid", "title" "text", "body" "text", "type" "text", "action_type" "text" DEFAULT NULL::"text", "related_id" "text" DEFAULT NULL::"text", "metadata" "jsonb" DEFAULT NULL::"jsonb", "is_read" boolean DEFAULT false, "created_at" timestamp with time zone DEFAULT "now"()) RETURNS "public"."notifications"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+  res notifications%ROWTYPE;
+BEGIN
+  INSERT INTO notifications(
+    user_id, title, body, type, action_type, related_id, metadata, is_read, created_at
+  ) VALUES (
+    user_id, title, body, type, action_type, related_id, metadata, is_read, created_at
+  ) RETURNING * INTO res;
+  RETURN res;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."create_notification"("user_id" "uuid", "title" "text", "body" "text", "type" "text", "action_type" "text", "related_id" "text", "metadata" "jsonb", "is_read" boolean, "created_at" timestamp with time zone) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."decrement_event_participants"("event_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  UPDATE events 
+  SET current_participants = GREATEST(current_participants - 1, 0),
+      updated_at = now()
+  WHERE id = event_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."decrement_event_participants"("event_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."delete_user_account"("user_id" "uuid") RETURNS "void"
@@ -883,6 +1448,23 @@ COMMENT ON FUNCTION "public"."get_nearby_parks"("user_lat" double precision, "us
 
 
 
+CREATE OR REPLACE FUNCTION "public"."get_park_dog_count"("park_uuid" "text") RETURNS integer
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  RETURN (
+    SELECT COUNT(*)::integer
+    FROM checkins
+    WHERE park_id = park_uuid
+    AND status = 'active'
+  );
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_park_dog_count"("park_uuid" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_park_status"("p_park_id" "text") RETURNS TABLE("status" "text", "message" "text", "reporter_name" "text", "is_verified" boolean, "created_at" timestamp with time zone, "hours_ago" double precision)
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -906,6 +1488,46 @@ $$;
 
 
 ALTER FUNCTION "public"."get_park_status"("p_park_id" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_pending_playdate_requests"("user_id_param" "uuid") RETURNS TABLE("id" "uuid", "playdate_id" "uuid", "requester_id" "uuid", "invitee_id" "uuid", "invitee_dog_id" "uuid", "status" "text", "message" "text", "counter_proposal" "jsonb", "created_at" timestamp with time zone, "responded_at" timestamp with time zone, "requester_name" "text", "requester_avatar" "text", "invitee_name" "text", "invitee_avatar" "text", "invitee_dog_name" "text", "invitee_dog_photo" "text", "invitee_dog_breed" "text", "playdate_title" "text", "playdate_location" "text", "playdate_scheduled_at" timestamp with time zone, "playdate_description" "text", "playdate_organizer_id" "uuid")
+    LANGUAGE "sql" SECURITY DEFINER
+    AS $$
+    SELECT 
+        pr.id,
+        pr.playdate_id,
+        pr.requester_id,
+        pr.invitee_id,
+        pr.invitee_dog_id,
+        pr.status,
+        pr.message,
+        pr.counter_proposal,
+        pr.created_at,
+        pr.responded_at,
+        ru.name as requester_name,
+        ru.avatar_url as requester_avatar,
+        iu.name as invitee_name,
+        iu.avatar_url as invitee_avatar,
+        id.name as invitee_dog_name,
+        id.main_photo_url as invitee_dog_photo,
+        id.breed as invitee_dog_breed,
+        p.title as playdate_title,
+        p.location as playdate_location,
+        p.scheduled_at as playdate_scheduled_at,
+        p.description as playdate_description,
+        p.organizer_id as playdate_organizer_id
+    FROM playdate_requests pr
+    LEFT JOIN users ru ON pr.requester_id = ru.id
+    LEFT JOIN users iu ON pr.invitee_id = iu.id  
+    LEFT JOIN dogs id ON pr.invitee_dog_id = id.id
+    LEFT JOIN playdates p ON pr.playdate_id = p.id
+    WHERE pr.invitee_id = user_id_param 
+      AND pr.status = 'pending'
+    ORDER BY pr.created_at DESC;
+$$;
+
+
+ALTER FUNCTION "public"."get_pending_playdate_requests"("user_id_param" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_place_amenities"("p_place_id" "text") RETURNS TABLE("amenity_id" "uuid", "name" "text", "icon" "text", "suggested_count" integer)
@@ -964,6 +1586,161 @@ $$;
 ALTER FUNCTION "public"."get_shared_dogs"("p_user_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."get_user_accessible_dogs"("p_user_id" "uuid") RETURNS TABLE("id" "uuid", "name" "text", "breed" "text", "age" integer, "size" "text", "gender" "text", "bio" "text", "main_photo_url" "text", "extra_photo_urls" "text"[], "photo_urls" "text"[], "user_id" "uuid", "ownership_type" "text", "permissions" "text"[], "is_primary" boolean, "owner_name" "text", "created_at" timestamp with time zone, "updated_at" timestamp with time zone)
+    LANGUAGE "sql" STABLE
+    AS $$
+  WITH current_user_roles AS (
+    SELECT
+      d.id AS dog_id,
+      d.name,
+      d.breed,
+      d.age,
+      d.size,
+      d.gender,
+      d.bio,
+      d.main_photo_url,
+      d.extra_photo_urls,
+      d.photo_urls,
+      -- For backward compatibility: take primary owner’s user_id as 'user_id'
+      primary_owner.user_id AS legacy_user_id,
+      du.ownership_type,
+      du.permissions,
+      du.is_primary,
+      u_primary.name AS primary_owner_name,
+      d.created_at,
+      d.updated_at
+    FROM dogs d
+    -- Join row(s) for current user (their role re this dog)
+    JOIN dog_owners du
+      ON du.dog_id = d.id
+     AND du.user_id = p_user_id
+    -- Primary owner (for legacy fields)
+    LEFT JOIN dog_owners primary_owner
+      ON primary_owner.dog_id = d.id
+     AND primary_owner.is_primary = true
+    LEFT JOIN users u_primary
+      ON u_primary.id = primary_owner.user_id
+    WHERE d.is_active = true
+  )
+  SELECT
+    dog_id AS id,
+    name,
+    breed,
+    age,
+    size,
+    gender,
+    bio,
+    main_photo_url,
+    extra_photo_urls,
+    photo_urls,
+    legacy_user_id AS user_id,
+    ownership_type,
+    COALESCE(permissions, ARRAY[]::text[]) AS permissions,
+    is_primary,
+    COALESCE(primary_owner_name, 'Unknown Owner') AS owner_name,
+    created_at,
+    updated_at
+  FROM current_user_roles
+  ORDER BY created_at DESC;
+$$;
+
+
+ALTER FUNCTION "public"."get_user_accessible_dogs"("p_user_id" "uuid") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."get_user_accessible_dogs"("p_user_id" "uuid") IS 'Returns all dogs accessible to the given user with full profile fields plus ownership context.';
+
+
+
+CREATE OR REPLACE FUNCTION "public"."get_user_active_checkin"("user_uuid" "uuid") RETURNS json
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  result json;
+BEGIN
+  SELECT row_to_json(c.*) INTO result
+  FROM checkins c
+  WHERE user_id = user_uuid
+  AND status = 'active'
+  ORDER BY checked_in_at DESC
+  LIMIT 1;
+  
+  RETURN result;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_user_active_checkin"("user_uuid" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_user_playdate_requests"("user_id_param" "uuid") RETURNS json
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    result json;
+BEGIN
+    SELECT json_agg(
+        json_build_object(
+            'id', pr.id,
+            'playdate_id', pr.playdate_id,
+            'requester_id', pr.requester_id,
+            'invitee_id', pr.invitee_id,
+            'invitee_dog_id', pr.invitee_dog_id,
+            'status', pr.status,
+            'message', pr.message,
+            'created_at', pr.created_at
+        )
+    ) INTO result
+    FROM playdate_requests pr
+    WHERE pr.invitee_id = user_id_param 
+      AND pr.status = 'pending'
+    ORDER BY pr.created_at DESC;
+    
+    RETURN COALESCE(result, '[]'::json);
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_user_playdate_requests"("user_id_param" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  INSERT INTO public.users (id, email, name)
+  VALUES (
+    new.id,
+    new.email,
+    coalesce(nullif(trim(new.raw_user_meta_data->>'name'), ''), '')
+  )
+  ON CONFLICT (id) DO UPDATE
+    SET name = coalesce(
+      nullif(trim(excluded.name), ''),
+      public.users.name
+    );
+  RETURN new;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."handle_new_user"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."handle_updated_at"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."handle_updated_at"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."has_user_liked_post"("target_user_id" "uuid", "target_post_id" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE
     AS $$
@@ -972,6 +1749,21 @@ $$;
 
 
 ALTER FUNCTION "public"."has_user_liked_post"("target_user_id" "uuid", "target_post_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."increment_event_participants"("event_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  UPDATE events 
+  SET current_participants = current_participants + 1,
+      updated_at = now()
+  WHERE id = event_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."increment_event_participants"("event_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."is_following"("follower" "uuid", "target" "uuid") RETURNS boolean
@@ -997,6 +1789,43 @@ $$;
 
 
 ALTER FUNCTION "public"."is_user_blocked"("checker_id" "uuid", "target_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."notify_bark"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+  receiver_user_id uuid;
+  sender_dog_name text;
+BEGIN
+  -- Get receiver's user_id
+  SELECT user_id INTO receiver_user_id
+  FROM dogs WHERE id = NEW.to_dog_id;
+  
+  -- Get sender dog's name
+  SELECT name INTO sender_dog_name
+  FROM dogs WHERE id = NEW.from_dog_id;
+  
+  -- Create notification
+  INSERT INTO notifications (user_id, title, body, type, data)
+  VALUES (
+    receiver_user_id,
+    '🐕 Woof!',
+    sender_dog_name || ' barked at you!',
+    'bark',
+    jsonb_build_object(
+      'from_dog_id', NEW.from_dog_id,
+      'to_dog_id', NEW.to_dog_id,
+      'bark_id', NEW.id
+    )
+  );
+  
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."notify_bark"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."revoke_dog_share"("p_share_id" "uuid", "p_owner_id" "uuid") RETURNS boolean
@@ -1388,6 +2217,56 @@ $$;
 ALTER FUNCTION "public"."unread_conversations_count"("p_user_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."unsuggest_amenity"("p_place_id" "text", "p_amenity_id" "uuid") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+  v_user_id UUID;
+BEGIN
+  v_user_id := auth.uid();
+
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'User must be authenticated';
+  END IF;
+
+  -- Delete the user's suggestion
+  DELETE FROM amenity_suggestions
+  WHERE place_id = p_place_id
+    AND user_id = v_user_id
+    AND amenity_id = p_amenity_id;
+
+  IF NOT FOUND THEN
+    RETURN FALSE;
+  END IF;
+
+  -- Decrement the count in place_amenities
+  UPDATE place_amenities
+  SET suggested_count = GREATEST(suggested_count - 1, 0),
+      updated_at = NOW()
+  WHERE place_id = p_place_id
+    AND amenity_id = p_amenity_id;
+
+  RETURN TRUE;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."unsuggest_amenity"("p_place_id" "text", "p_amenity_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."update_checkins_updated_at"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_checkins_updated_at"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."update_event_invitations_updated_at"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -1400,9 +2279,146 @@ $$;
 
 ALTER FUNCTION "public"."update_event_invitations_updated_at"() OWNER TO "postgres";
 
-SET default_tablespace = '';
 
-SET default_table_access_method = "heap";
+CREATE OR REPLACE FUNCTION "public"."update_events_updated_at"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_events_updated_at"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."update_updated_at_column"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_updated_at_column"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."use_dog_share_link"("p_link_code" "text", "p_dog_name_verification" "text", "p_new_user_id" "uuid") RETURNS boolean
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  link_record RECORD;
+  actual_dog_name TEXT;
+BEGIN
+  -- Get link details
+  SELECT * INTO link_record
+  FROM dog_share_links 
+  WHERE code = p_link_code 
+  AND expires_at > NOW() 
+  AND used_at IS NULL;
+  
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Invalid or expired share link';
+  END IF;
+  
+  -- Get actual dog name for verification
+  SELECT name INTO actual_dog_name
+  FROM dogs 
+  WHERE id = link_record.dog_id;
+  
+  -- Verify dog name (case insensitive)
+  IF LOWER(TRIM(actual_dog_name)) != LOWER(TRIM(p_dog_name_verification)) THEN
+    RAISE EXCEPTION 'Dog name verification failed';
+  END IF;
+  
+  -- Check if user already has access to this dog
+  IF EXISTS (
+    SELECT 1 FROM dog_owners 
+    WHERE dog_id = link_record.dog_id 
+    AND user_id = p_new_user_id
+  ) THEN
+    RAISE EXCEPTION 'User already has access to this dog';
+  END IF;
+  
+  -- Add new owner
+  INSERT INTO dog_owners (dog_id, user_id, permission_level)
+  VALUES (link_record.dog_id, p_new_user_id, link_record.permission_level);
+  
+  -- Mark link as used
+  UPDATE dog_share_links 
+  SET used_at = NOW(), used_by = p_new_user_id
+  WHERE code = p_link_code;
+  
+  RETURN TRUE;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."use_dog_share_link"("p_link_code" "text", "p_dog_name_verification" "text", "p_new_user_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."use_dog_share_link"("p_share_token" "text", "p_user_id" "uuid", "p_dog_name_entered" "text") RETURNS boolean
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  v_link_record RECORD;
+  v_actual_dog_name TEXT;
+BEGIN
+  -- Get link details
+  SELECT * INTO v_link_record
+  FROM dog_share_links 
+  WHERE share_token = p_share_token 
+  AND expires_at > NOW() 
+  AND used_at IS NULL;
+  
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Invalid or expired share link';
+  END IF;
+  
+  -- Verify dog name (case insensitive)
+  IF LOWER(TRIM(v_link_record.dog_name_for_verification)) != LOWER(TRIM(p_dog_name_entered)) THEN
+    RAISE EXCEPTION 'Dog name verification failed';
+  END IF;
+  
+  -- Check if user already has access to this dog
+  IF EXISTS (
+    SELECT 1 FROM dog_owners 
+    WHERE dog_id = v_link_record.dog_id 
+    AND user_id = p_user_id
+  ) THEN
+    RAISE EXCEPTION 'User already has access to this dog';
+  END IF;
+  
+  -- Add new owner with appropriate permissions
+  INSERT INTO dog_owners (dog_id, user_id, ownership_type, is_primary, permissions, added_by)
+  VALUES (
+    v_link_record.dog_id, 
+    p_user_id, 
+    v_link_record.access_level,
+    false,
+    CASE v_link_record.access_level
+      WHEN 'co_owner' THEN ARRAY['view', 'edit', 'playdates']
+      WHEN 'caretaker' THEN ARRAY['view', 'playdates'] 
+      WHEN 'walker' THEN ARRAY['view']
+      ELSE ARRAY['view']
+    END,
+    v_link_record.created_by
+  );
+  
+  -- Mark link as used
+  UPDATE dog_share_links 
+  SET used_at = NOW(), used_by = p_user_id
+  WHERE share_token = p_share_token;
+  
+  RETURN TRUE;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."use_dog_share_link"("p_share_token" "text", "p_user_id" "uuid", "p_dog_name_entered" "text") OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."achievements" (
@@ -1414,7 +2430,7 @@ CREATE TABLE IF NOT EXISTS "public"."achievements" (
     "requirement_type" "text" NOT NULL,
     "requirement_value" integer NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"(),
-    CONSTRAINT "achievements_requirement_type_check" CHECK (("requirement_type" = ANY (ARRAY['playdates_count'::"text", 'matches_count'::"text", 'posts_count'::"text", 'days_active'::"text", 'premium'::"text"])))
+    CONSTRAINT "achievements_requirement_type_check" CHECK (("requirement_type" = ANY (ARRAY['playdates_count'::"text", 'matches_count'::"text", 'posts_count'::"text", 'days_active'::"text", 'premium'::"text", 'checkins_count'::"text", 'friends_count'::"text", 'likes_count'::"text", 'parks_count'::"text"])))
 );
 
 
@@ -1461,6 +2477,41 @@ CREATE TABLE IF NOT EXISTS "public"."app_config" (
 ALTER TABLE "public"."app_config" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."barks" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "from_dog_id" "uuid" NOT NULL,
+    "to_dog_id" "uuid" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."barks" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."checkins" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "dog_id" "uuid" NOT NULL,
+    "park_id" "text" NOT NULL,
+    "park_name" "text" NOT NULL,
+    "checked_in_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "checked_out_at" timestamp with time zone,
+    "status" "text" DEFAULT 'active'::"text" NOT NULL,
+    "is_future_checkin" boolean DEFAULT false,
+    "scheduled_for" timestamp with time zone,
+    "latitude" double precision,
+    "longitude" double precision,
+    "checkin_method" "text" DEFAULT 'manual'::"text",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "checkins_checkin_method_check" CHECK (("checkin_method" = ANY (ARRAY['manual'::"text", 'gps'::"text", 'qr'::"text", 'nfc'::"text"]))),
+    CONSTRAINT "checkins_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'completed'::"text", 'cancelled'::"text", 'scheduled'::"text"])))
+);
+
+
+ALTER TABLE "public"."checkins" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."content_reports" (
     "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
     "reporter_id" "uuid" NOT NULL,
@@ -1487,7 +2538,8 @@ CREATE TABLE IF NOT EXISTS "public"."conversation_participants" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "conversation_id" "uuid",
     "user_id" "uuid",
-    "role" "text"
+    "role" "text" DEFAULT 'member'::"text",
+    "joined_at" timestamp with time zone DEFAULT "now"()
 );
 
 
@@ -1496,21 +2548,46 @@ ALTER TABLE "public"."conversation_participants" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."conversations" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user1_id" "uuid" NOT NULL,
+    "user2_id" "uuid" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "last_message_at" timestamp with time zone DEFAULT "now"(),
     "is_group" boolean DEFAULT false,
     "playdate_id" "uuid",
-    "group_name" "text"
+    "group_name" "text",
+    CONSTRAINT "ordered_users" CHECK (("user1_id" < "user2_id"))
 );
 
 
 ALTER TABLE "public"."conversations" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."dog_breeds" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "name" "text" NOT NULL,
+    "slug" "text" GENERATED ALWAYS AS ("lower"(TRIM(BOTH FROM "name"))) STORED,
+    "status" "text" DEFAULT 'approved'::"text",
+    "created_by" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "dog_breeds_status_check" CHECK (("status" = ANY (ARRAY['approved'::"text", 'pending'::"text"])))
+);
+
+
+ALTER TABLE "public"."dog_breeds" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."dog_friendships" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "dog1_id" "uuid",
-    "dog2_id" "uuid",
+    "formed_through_playdate_id" "uuid",
+    "friendship_level" "text" DEFAULT 'acquaintance'::"text",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
     "status" character varying(20) DEFAULT 'accepted'::character varying,
-    "requested_by_user_id" "uuid"
+    "requested_by_user_id" "uuid",
+    "dog_id" "uuid",
+    "friend_dog_id" "uuid",
+    CONSTRAINT "dog_friendships_friendship_level_check" CHECK (("friendship_level" = ANY (ARRAY['acquaintance'::"text", 'friend'::"text", 'best_friend'::"text"])))
 );
 
 
@@ -1519,6 +2596,22 @@ ALTER TABLE "public"."dog_friendships" OWNER TO "postgres";
 
 COMMENT ON COLUMN "public"."dog_friendships"."status" IS 'Friend request status: pending, accepted, declined';
 
+
+
+CREATE TABLE IF NOT EXISTS "public"."dog_owners" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "dog_id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "ownership_type" "text" DEFAULT 'owner'::"text" NOT NULL,
+    "permissions" "text"[] DEFAULT ARRAY['view'::"text", 'edit'::"text", 'playdates'::"text"],
+    "is_primary" boolean DEFAULT false,
+    "added_at" timestamp with time zone DEFAULT "now"(),
+    "added_by" "uuid",
+    CONSTRAINT "dog_owners_ownership_type_check" CHECK (("ownership_type" = ANY (ARRAY['owner'::"text", 'co_owner'::"text", 'caretaker'::"text", 'walker'::"text", 'sitter'::"text"])))
+);
+
+
+ALTER TABLE "public"."dog_owners" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."dog_share_activity_log" (
@@ -1532,6 +2625,25 @@ CREATE TABLE IF NOT EXISTS "public"."dog_share_activity_log" (
 
 
 ALTER TABLE "public"."dog_share_activity_log" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."dog_share_links" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "dog_id" "uuid" NOT NULL,
+    "share_token" "text" DEFAULT "encode"((("gen_random_uuid"())::"text")::"bytea", 'base64'::"text") NOT NULL,
+    "created_by" "uuid" NOT NULL,
+    "dog_name_for_verification" "text" NOT NULL,
+    "access_level" "text" DEFAULT 'co_owner'::"text" NOT NULL,
+    "max_uses" integer DEFAULT 1,
+    "used_count" integer DEFAULT 0,
+    "expires_at" timestamp with time zone DEFAULT ("now"() + '7 days'::interval),
+    "is_active" boolean DEFAULT true,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "dog_share_links_access_level_check" CHECK (("access_level" = ANY (ARRAY['co_owner'::"text", 'caretaker'::"text", 'walker'::"text"])))
+);
+
+
+ALTER TABLE "public"."dog_share_links" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."dog_shares" (
@@ -1564,8 +2676,6 @@ CREATE TABLE IF NOT EXISTS "public"."dogs" (
     "age" integer NOT NULL,
     "size" "text" NOT NULL,
     "gender" "text" NOT NULL,
-    "main_photo_url" "text",
-    "extra_photo_urls" "text"[] DEFAULT '{}'::"text"[],
     "photo_urls" "text"[] DEFAULT '{}'::"text"[],
     "bio" "text",
     "temperament" "text"[] DEFAULT '{}'::"text"[],
@@ -1575,6 +2685,8 @@ CREATE TABLE IF NOT EXISTS "public"."dogs" (
     "is_active" boolean DEFAULT true,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
+    "main_photo_url" "text",
+    "extra_photo_urls" "text"[] DEFAULT '{}'::"text"[],
     "latitude" double precision,
     "longitude" double precision,
     "is_shareable" boolean DEFAULT true,
@@ -1591,6 +2703,18 @@ ALTER TABLE "public"."dogs" OWNER TO "postgres";
 
 COMMENT ON COLUMN "public"."dogs"."is_public" IS 'If true, dog is discoverable in nearby searches and check-in lists. If false, dog is private.';
 
+
+
+CREATE TABLE IF NOT EXISTS "public"."event_categories" (
+    "id" "text" NOT NULL,
+    "name" "text" NOT NULL,
+    "icon" "text" NOT NULL,
+    "description" "text",
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."event_categories" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."event_invitations" (
@@ -1612,8 +2736,10 @@ ALTER TABLE "public"."event_invitations" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."event_participants" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "event_id" "uuid",
-    "user_id" "uuid",
+    "event_id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "dog_id" "uuid" NOT NULL,
+    "joined_at" timestamp with time zone DEFAULT "now"(),
     "created_at" timestamp with time zone DEFAULT "now"()
 );
 
@@ -1623,10 +2749,31 @@ ALTER TABLE "public"."event_participants" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."events" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "start_time" timestamp with time zone,
+    "title" "text" NOT NULL,
+    "description" "text" NOT NULL,
+    "organizer_id" "uuid" NOT NULL,
+    "organizer_type" "text" DEFAULT 'user'::"text" NOT NULL,
+    "start_time" timestamp with time zone NOT NULL,
+    "end_time" timestamp with time zone NOT NULL,
+    "location" "text" NOT NULL,
+    "latitude" double precision,
+    "longitude" double precision,
+    "category" "text" NOT NULL,
+    "max_participants" integer DEFAULT 10 NOT NULL,
+    "current_participants" integer DEFAULT 0 NOT NULL,
+    "target_age_groups" "text"[] DEFAULT '{}'::"text"[],
+    "target_sizes" "text"[] DEFAULT '{}'::"text"[],
+    "price" double precision DEFAULT 0,
+    "photo_urls" "text"[] DEFAULT '{}'::"text"[],
+    "requires_registration" boolean DEFAULT true,
+    "status" "text" DEFAULT 'upcoming'::"text" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
     "is_public" boolean DEFAULT true NOT NULL,
-    "visibility" "text" DEFAULT 'public'::"text"
+    "visibility" "text" DEFAULT 'public'::"text",
+    CONSTRAINT "events_category_check" CHECK (("category" = ANY (ARRAY['birthday'::"text", 'training'::"text", 'social'::"text", 'professional'::"text"]))),
+    CONSTRAINT "events_organizer_type_check" CHECK (("organizer_type" = ANY (ARRAY['user'::"text", 'professional'::"text"]))),
+    CONSTRAINT "events_status_check" CHECK (("status" = ANY (ARRAY['upcoming'::"text", 'ongoing'::"text", 'completed'::"text", 'cancelled'::"text"])))
 );
 
 
@@ -1635,23 +2782,29 @@ ALTER TABLE "public"."events" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."featured_parks" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "name" "text" NOT NULL,
+    "name" character varying(255) NOT NULL,
     "description" "text",
     "latitude" double precision NOT NULL,
     "longitude" double precision NOT NULL,
-    "amenities" "text"[] DEFAULT '{}'::"text"[],
     "address" "text",
-    "rating" numeric(3,2) DEFAULT 0.0,
-    "review_count" integer DEFAULT 0,
+    "amenities" "text"[] DEFAULT '{}'::"text"[],
+    "rating" numeric(2,1),
     "photo_urls" "text"[] DEFAULT '{}'::"text"[],
+    "google_place_data" "jsonb",
     "is_active" boolean DEFAULT true,
-    "featured_since" timestamp with time zone DEFAULT "now"(),
+    "created_by" "uuid",
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"()
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "qr_check_in_code" "text",
+    CONSTRAINT "featured_parks_rating_check" CHECK ((("rating" >= 1.0) AND ("rating" <= 5.0)))
 );
 
 
 ALTER TABLE "public"."featured_parks" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."featured_parks" IS 'Admin-curated featured dog parks with enhanced details and amenities';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."follows" (
@@ -1675,6 +2828,8 @@ CREATE TABLE IF NOT EXISTS "public"."matches" (
     "action" "text" NOT NULL,
     "is_mutual" boolean DEFAULT false,
     "created_at" timestamp with time zone DEFAULT "now"(),
+    "bark_count" integer DEFAULT 0,
+    "last_bark_at" timestamp with time zone,
     CONSTRAINT "matches_action_check" CHECK (("action" = ANY (ARRAY['bark'::"text", 'pass'::"text"])))
 );
 
@@ -1699,22 +2854,6 @@ CREATE TABLE IF NOT EXISTS "public"."messages" (
 ALTER TABLE "public"."messages" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."notifications" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "user_id" "uuid" NOT NULL,
-    "title" "text" NOT NULL,
-    "body" "text" NOT NULL,
-    "type" "text" NOT NULL,
-    "data" "jsonb",
-    "is_read" boolean DEFAULT false,
-    "created_at" timestamp with time zone DEFAULT "now"(),
-    CONSTRAINT "notifications_type_check" CHECK (("type" = ANY (ARRAY['match'::"text", 'message'::"text", 'playdate'::"text", 'achievement'::"text", 'system'::"text", 'admin_report'::"text"])))
-);
-
-
-ALTER TABLE "public"."notifications" OWNER TO "postgres";
-
-
 CREATE TABLE IF NOT EXISTS "public"."park_activity_reports" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "park_id" "text" NOT NULL,
@@ -1723,7 +2862,8 @@ CREATE TABLE IF NOT EXISTS "public"."park_activity_reports" (
     "is_admin_override" boolean DEFAULT false,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "expires_at" timestamp with time zone DEFAULT ("now"() + '02:00:00'::interval),
-    "source" "text" DEFAULT 'user'::"text"
+    "source" "text" DEFAULT 'user'::"text",
+    "park_name" "text"
 );
 
 
@@ -1742,33 +2882,24 @@ CREATE TABLE IF NOT EXISTS "public"."park_activity_seed_log" (
 ALTER TABLE "public"."park_activity_seed_log" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."park_admins" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "user_id" "uuid",
-    "can_add_parks" boolean DEFAULT false,
-    "can_edit_parks" boolean DEFAULT false,
-    "can_feature_parks" boolean DEFAULT false,
-    "created_at" timestamp with time zone DEFAULT "now"()
-);
-
-
-ALTER TABLE "public"."park_admins" OWNER TO "postgres";
-
-
 CREATE TABLE IF NOT EXISTS "public"."park_checkins" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "park_id" "uuid",
-    "user_id" "uuid",
-    "dog_id" "uuid",
+    "park_id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "dog_id" "uuid" NOT NULL,
     "latitude" double precision,
     "longitude" double precision,
-    "checked_in_at" timestamp with time zone DEFAULT "now"(),
+    "checked_in_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "checked_out_at" timestamp with time zone,
-    "is_active" boolean DEFAULT true
+    "is_active" boolean DEFAULT true NOT NULL
 );
 
 
 ALTER TABLE "public"."park_checkins" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."park_checkins" IS 'Real-time tracking of dogs checked into parks for live counts and social features';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."park_status_reports" (
@@ -1858,6 +2989,26 @@ CREATE TABLE IF NOT EXISTS "public"."playdate_participants" (
 ALTER TABLE "public"."playdate_participants" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."playdate_recaps" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "playdate_id" "uuid",
+    "user_id" "uuid",
+    "dog_id" "uuid",
+    "experience_rating" integer,
+    "location_rating" integer,
+    "recap_text" "text",
+    "photos" "text"[],
+    "shared_to_feed" boolean DEFAULT false,
+    "post_id" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "playdate_recaps_experience_rating_check" CHECK ((("experience_rating" >= 1) AND ("experience_rating" <= 5))),
+    CONSTRAINT "playdate_recaps_location_rating_check" CHECK ((("location_rating" >= 1) AND ("location_rating" <= 5)))
+);
+
+
+ALTER TABLE "public"."playdate_recaps" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."playdate_reminder_preferences" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
@@ -1877,16 +3028,20 @@ ALTER TABLE "public"."playdate_reminder_preferences" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."playdate_requests" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "requester_id" "uuid" NOT NULL,
-    "invitee_id" "uuid" NOT NULL,
-    "playdate_id" "uuid" NOT NULL,
-    "invitee_dog_id" "uuid" NOT NULL,
-    "status" "text" DEFAULT 'pending'::"text" NOT NULL,
+    "playdate_id" "uuid",
+    "requester_id" "uuid",
+    "invitee_id" "uuid",
+    "invitee_dog_id" "uuid",
+    "status" "text" DEFAULT 'pending'::"text",
     "message" "text",
-    "response_message" "text",
-    "created_at" timestamp with time zone DEFAULT "now"(),
+    "counter_proposal" "jsonb",
     "responded_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
     "requester_dog_id" "uuid",
+    "counter_message" "text",
+    "counter_scheduled_at" timestamp with time zone,
+    "counter_location" "text",
     CONSTRAINT "playdate_requests_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'accepted'::"text", 'declined'::"text", 'counter_proposed'::"text"])))
 );
 
@@ -1909,11 +3064,86 @@ CREATE TABLE IF NOT EXISTS "public"."playdates" (
     "status" "text" DEFAULT 'pending'::"text",
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
+    "creator_dog_id" "uuid",
+    "tags" "text"[] DEFAULT '{}'::"text"[],
+    "is_public" boolean DEFAULT false,
+    "weather_dependent" boolean DEFAULT false,
+    "notes" "text",
     CONSTRAINT "playdates_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'confirmed'::"text", 'completed'::"text", 'cancelled'::"text"])))
 );
 
 
 ALTER TABLE "public"."playdates" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."users" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "email" "text" NOT NULL,
+    "name" "text" NOT NULL,
+    "avatar_url" "text",
+    "bio" "text",
+    "location" "text",
+    "is_premium" boolean DEFAULT false,
+    "premium_expires_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "firebase_uid" "text",
+    "fcm_token" "text",
+    "latitude" double precision,
+    "longitude" double precision,
+    "location_updated_at" timestamp with time zone,
+    "search_radius_km" integer DEFAULT 25,
+    "live_latitude" double precision,
+    "live_longitude" double precision,
+    "live_location_updated_at" timestamp with time zone,
+    "live_location_privacy" "text" DEFAULT 'off'::"text",
+    "is_admin" boolean DEFAULT false,
+    "relationship_status" "text",
+    "is_superadmin" boolean DEFAULT false,
+    CONSTRAINT "users_live_location_privacy_check" CHECK (("live_location_privacy" = ANY (ARRAY['off'::"text", 'friends'::"text", 'all'::"text"])))
+);
+
+
+ALTER TABLE "public"."users" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."users"."firebase_uid" IS 'Firebase UID for seamless Firebase Auth integration';
+
+
+
+CREATE OR REPLACE VIEW "public"."playdate_requests_with_details" AS
+ SELECT "pr"."id",
+    "pr"."playdate_id",
+    "pr"."requester_id",
+    "pr"."invitee_id",
+    "pr"."invitee_dog_id",
+    "pr"."status",
+    "pr"."message",
+    "pr"."counter_proposal",
+    "pr"."responded_at",
+    "pr"."created_at",
+    "pr"."updated_at",
+    "pr"."requester_dog_id",
+    "ru"."name" AS "requester_name",
+    "ru"."avatar_url" AS "requester_avatar",
+    "iu"."name" AS "invitee_name",
+    "iu"."avatar_url" AS "invitee_avatar",
+    "id"."name" AS "invitee_dog_name",
+    "id"."main_photo_url" AS "invitee_dog_photo",
+    "id"."breed" AS "invitee_dog_breed",
+    "p"."title" AS "playdate_title",
+    "p"."location" AS "playdate_location",
+    "p"."scheduled_at" AS "playdate_scheduled_at",
+    "p"."description" AS "playdate_description",
+    "p"."organizer_id" AS "playdate_organizer_id"
+   FROM (((("public"."playdate_requests" "pr"
+     LEFT JOIN "public"."users" "ru" ON (("pr"."requester_id" = "ru"."id")))
+     LEFT JOIN "public"."users" "iu" ON (("pr"."invitee_id" = "iu"."id")))
+     LEFT JOIN "public"."dogs" "id" ON (("pr"."invitee_dog_id" = "id"."id")))
+     LEFT JOIN "public"."playdates" "p" ON (("pr"."playdate_id" = "p"."id")));
+
+
+ALTER VIEW "public"."playdate_requests_with_details" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."post_comments" (
@@ -1940,6 +3170,22 @@ CREATE TABLE IF NOT EXISTS "public"."post_likes" (
 ALTER TABLE "public"."post_likes" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."post_tags" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "post_id" "uuid" NOT NULL,
+    "tagger_dog_id" "uuid" NOT NULL,
+    "tagged_dog_id" "uuid" NOT NULL,
+    "is_collaborator" boolean DEFAULT false,
+    "status" "text" DEFAULT 'pending'::"text",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "post_tags_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'approved'::"text", 'rejected'::"text"])))
+);
+
+
+ALTER TABLE "public"."post_tags" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."posts" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
@@ -1953,11 +3199,36 @@ CREATE TABLE IF NOT EXISTS "public"."posts" (
     "comments_count" integer DEFAULT 0,
     "is_public" boolean DEFAULT true,
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"()
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "playdate_id" "uuid",
+    "tagged_dogs" "uuid"[] DEFAULT '{}'::"uuid"[]
 );
 
 
 ALTER TABLE "public"."posts" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."posts_with_tags" AS
+SELECT
+    NULL::"uuid" AS "id",
+    NULL::"uuid" AS "user_id",
+    NULL::"uuid" AS "dog_id",
+    NULL::"text" AS "content",
+    NULL::"text"[] AS "image_urls",
+    NULL::"text" AS "location",
+    NULL::double precision AS "latitude",
+    NULL::double precision AS "longitude",
+    NULL::integer AS "likes_count",
+    NULL::integer AS "comments_count",
+    NULL::boolean AS "is_public",
+    NULL::timestamp with time zone AS "created_at",
+    NULL::timestamp with time zone AS "updated_at",
+    NULL::"uuid" AS "playdate_id",
+    NULL::"uuid"[] AS "tagged_dogs",
+    NULL::"jsonb"[] AS "tagged_dogs_info";
+
+
+ALTER VIEW "public"."posts_with_tags" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."premium_subscriptions" (
@@ -2002,44 +3273,16 @@ CREATE TABLE IF NOT EXISTS "public"."user_blocks" (
 ALTER TABLE "public"."user_blocks" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."user_presence" (
-    "user_id" "uuid" NOT NULL,
-    "active_conversation_id" "uuid",
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
-);
+CREATE OR REPLACE VIEW "public"."v_park_active_counts" AS
+ SELECT "p"."id" AS "park_id",
+    "p"."name",
+    ("count"("c"."id"))::integer AS "active_count"
+   FROM ("public"."parks" "p"
+     LEFT JOIN "public"."park_checkins" "c" ON ((("c"."park_id" = "p"."id") AND ("c"."is_active" = true))))
+  GROUP BY "p"."id", "p"."name";
 
 
-ALTER TABLE "public"."user_presence" OWNER TO "postgres";
-
-
-CREATE TABLE IF NOT EXISTS "public"."users" (
-    "id" "uuid" NOT NULL,
-    "email" "text" NOT NULL,
-    "name" "text" NOT NULL,
-    "avatar_url" "text",
-    "bio" "text",
-    "location" "text",
-    "firebase_uid" "text",
-    "is_premium" boolean DEFAULT false,
-    "premium_expires_at" timestamp with time zone,
-    "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"(),
-    "latitude" double precision,
-    "longitude" double precision,
-    "location_updated_at" timestamp with time zone,
-    "search_radius_km" integer DEFAULT 25,
-    "live_latitude" double precision,
-    "live_longitude" double precision,
-    "live_location_updated_at" timestamp with time zone,
-    "live_location_privacy" "text" DEFAULT 'off'::"text",
-    "is_admin" boolean DEFAULT false,
-    "is_superadmin" boolean DEFAULT false,
-    "fcm_token" "text",
-    CONSTRAINT "users_live_location_privacy_check" CHECK (("live_location_privacy" = ANY (ARRAY['off'::"text", 'friends'::"text", 'all'::"text"])))
-);
-
-
-ALTER TABLE "public"."users" OWNER TO "postgres";
+ALTER VIEW "public"."v_park_active_counts" OWNER TO "postgres";
 
 
 ALTER TABLE ONLY "public"."achievements"
@@ -2082,8 +3325,23 @@ ALTER TABLE ONLY "public"."app_config"
 
 
 
+ALTER TABLE ONLY "public"."barks"
+    ADD CONSTRAINT "barks_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."checkins"
+    ADD CONSTRAINT "checkins_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."content_reports"
     ADD CONSTRAINT "content_reports_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."conversation_participants"
+    ADD CONSTRAINT "conversation_participants_conversation_id_user_id_key" UNIQUE ("conversation_id", "user_id");
 
 
 
@@ -2097,13 +3355,43 @@ ALTER TABLE ONLY "public"."conversations"
 
 
 
+ALTER TABLE ONLY "public"."dog_breeds"
+    ADD CONSTRAINT "dog_breeds_name_key" UNIQUE ("name");
+
+
+
+ALTER TABLE ONLY "public"."dog_breeds"
+    ADD CONSTRAINT "dog_breeds_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."dog_friendships"
     ADD CONSTRAINT "dog_friendships_pkey" PRIMARY KEY ("id");
 
 
 
+ALTER TABLE ONLY "public"."dog_owners"
+    ADD CONSTRAINT "dog_owners_dog_id_user_id_key" UNIQUE ("dog_id", "user_id");
+
+
+
+ALTER TABLE ONLY "public"."dog_owners"
+    ADD CONSTRAINT "dog_owners_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."dog_share_activity_log"
     ADD CONSTRAINT "dog_share_activity_log_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."dog_share_links"
+    ADD CONSTRAINT "dog_share_links_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."dog_share_links"
+    ADD CONSTRAINT "dog_share_links_share_token_key" UNIQUE ("share_token");
 
 
 
@@ -2127,6 +3415,11 @@ ALTER TABLE ONLY "public"."dogs"
 
 
 
+ALTER TABLE ONLY "public"."event_categories"
+    ADD CONSTRAINT "event_categories_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."event_invitations"
     ADD CONSTRAINT "event_invitations_event_id_dog_id_key" UNIQUE ("event_id", "dog_id");
 
@@ -2134,6 +3427,11 @@ ALTER TABLE ONLY "public"."event_invitations"
 
 ALTER TABLE ONLY "public"."event_invitations"
     ADD CONSTRAINT "event_invitations_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."event_participants"
+    ADD CONSTRAINT "event_participants_event_id_user_id_dog_id_key" UNIQUE ("event_id", "user_id", "dog_id");
 
 
 
@@ -2149,6 +3447,11 @@ ALTER TABLE ONLY "public"."events"
 
 ALTER TABLE ONLY "public"."featured_parks"
     ADD CONSTRAINT "featured_parks_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."featured_parks"
+    ADD CONSTRAINT "featured_parks_qr_check_in_code_key" UNIQUE ("qr_check_in_code");
 
 
 
@@ -2192,16 +3495,6 @@ ALTER TABLE ONLY "public"."park_activity_seed_log"
 
 
 
-ALTER TABLE ONLY "public"."park_admins"
-    ADD CONSTRAINT "park_admins_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."park_admins"
-    ADD CONSTRAINT "park_admins_user_id_key" UNIQUE ("user_id");
-
-
-
 ALTER TABLE ONLY "public"."park_checkins"
     ADD CONSTRAINT "park_checkins_pkey" PRIMARY KEY ("id");
 
@@ -2242,6 +3535,11 @@ ALTER TABLE ONLY "public"."playdate_participants"
 
 
 
+ALTER TABLE ONLY "public"."playdate_recaps"
+    ADD CONSTRAINT "playdate_recaps_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."playdate_reminder_preferences"
     ADD CONSTRAINT "playdate_reminder_preferences_pkey" PRIMARY KEY ("id");
 
@@ -2254,16 +3552,6 @@ ALTER TABLE ONLY "public"."playdate_reminder_preferences"
 
 ALTER TABLE ONLY "public"."playdate_requests"
     ADD CONSTRAINT "playdate_requests_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."playdate_requests"
-    ADD CONSTRAINT "playdate_requests_requester_id_invitee_id_playdate_id_invit_key" UNIQUE ("requester_id", "invitee_id", "playdate_id", "invitee_dog_id");
-
-
-
-ALTER TABLE ONLY "public"."playdate_requests"
-    ADD CONSTRAINT "playdate_requests_unique_dogs" UNIQUE ("playdate_id", "invitee_id", "invitee_dog_id", "requester_dog_id");
 
 
 
@@ -2287,6 +3575,16 @@ ALTER TABLE ONLY "public"."post_likes"
 
 
 
+ALTER TABLE ONLY "public"."post_tags"
+    ADD CONSTRAINT "post_tags_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."post_tags"
+    ADD CONSTRAINT "post_tags_post_id_tagged_dog_id_key" UNIQUE ("post_id", "tagged_dog_id");
+
+
+
 ALTER TABLE ONLY "public"."posts"
     ADD CONSTRAINT "posts_pkey" PRIMARY KEY ("id");
 
@@ -2294,6 +3592,16 @@ ALTER TABLE ONLY "public"."posts"
 
 ALTER TABLE ONLY "public"."premium_subscriptions"
     ADD CONSTRAINT "premium_subscriptions_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."barks"
+    ADD CONSTRAINT "unique_bark_moment" UNIQUE ("from_dog_id", "to_dog_id", "created_at");
+
+
+
+ALTER TABLE ONLY "public"."conversations"
+    ADD CONSTRAINT "unique_conversation" UNIQUE ("user1_id", "user2_id");
 
 
 
@@ -2317,11 +3625,6 @@ ALTER TABLE ONLY "public"."user_blocks"
 
 
 
-ALTER TABLE ONLY "public"."user_presence"
-    ADD CONSTRAINT "user_presence_pkey" PRIMARY KEY ("user_id");
-
-
-
 ALTER TABLE ONLY "public"."users"
     ADD CONSTRAINT "users_email_key" UNIQUE ("email");
 
@@ -2337,6 +3640,46 @@ CREATE INDEX "idx_amenity_suggestions_place_id" ON "public"."amenity_suggestions
 
 
 CREATE INDEX "idx_amenity_suggestions_user_id" ON "public"."amenity_suggestions" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "idx_barks_created_at" ON "public"."barks" USING "btree" ("created_at");
+
+
+
+CREATE INDEX "idx_barks_from_dog" ON "public"."barks" USING "btree" ("from_dog_id");
+
+
+
+CREATE INDEX "idx_barks_to_dog" ON "public"."barks" USING "btree" ("to_dog_id");
+
+
+
+CREATE INDEX "idx_checkins_checked_in_at" ON "public"."park_checkins" USING "btree" ("checked_in_at" DESC);
+
+
+
+CREATE INDEX "idx_checkins_park_active" ON "public"."park_checkins" USING "btree" ("park_id", "is_active");
+
+
+
+CREATE INDEX "idx_checkins_park_id" ON "public"."checkins" USING "btree" ("park_id");
+
+
+
+CREATE INDEX "idx_checkins_scheduled_for" ON "public"."checkins" USING "btree" ("scheduled_for");
+
+
+
+CREATE INDEX "idx_checkins_status" ON "public"."checkins" USING "btree" ("status");
+
+
+
+CREATE INDEX "idx_checkins_user_active" ON "public"."park_checkins" USING "btree" ("user_id", "is_active");
+
+
+
+CREATE INDEX "idx_checkins_user_id" ON "public"."checkins" USING "btree" ("user_id");
 
 
 
@@ -2361,6 +3704,46 @@ CREATE INDEX "idx_conversations_is_group" ON "public"."conversations" USING "btr
 
 
 CREATE INDEX "idx_conversations_playdate" ON "public"."conversations" USING "btree" ("playdate_id");
+
+
+
+CREATE INDEX "idx_conversations_user1" ON "public"."conversations" USING "btree" ("user1_id");
+
+
+
+CREATE INDEX "idx_conversations_user2" ON "public"."conversations" USING "btree" ("user2_id");
+
+
+
+CREATE INDEX "idx_dog_breeds_name" ON "public"."dog_breeds" USING "btree" ("name");
+
+
+
+CREATE INDEX "idx_dog_breeds_slug" ON "public"."dog_breeds" USING "btree" ("slug");
+
+
+
+CREATE INDEX "idx_dog_breeds_status" ON "public"."dog_breeds" USING "btree" ("status");
+
+
+
+CREATE INDEX "idx_dog_friendships_dog_id" ON "public"."dog_friendships" USING "btree" ("dog_id");
+
+
+
+CREATE INDEX "idx_dog_friendships_friend_dog_id" ON "public"."dog_friendships" USING "btree" ("friend_dog_id");
+
+
+
+CREATE INDEX "idx_dog_owners_dog_id" ON "public"."dog_owners" USING "btree" ("dog_id");
+
+
+
+CREATE INDEX "idx_dog_owners_primary" ON "public"."dog_owners" USING "btree" ("dog_id", "is_primary") WHERE ("is_primary" = true);
+
+
+
+CREATE INDEX "idx_dog_owners_user_id" ON "public"."dog_owners" USING "btree" ("user_id");
 
 
 
@@ -2416,19 +3799,39 @@ CREATE INDEX "idx_event_participants_created_at" ON "public"."event_participants
 
 
 
+CREATE INDEX "idx_event_participants_event_id" ON "public"."event_participants" USING "btree" ("event_id");
+
+
+
+CREATE INDEX "idx_event_participants_user_id" ON "public"."event_participants" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "idx_events_category" ON "public"."events" USING "btree" ("category");
+
+
+
+CREATE INDEX "idx_events_location" ON "public"."events" USING "btree" ("location");
+
+
+
+CREATE INDEX "idx_events_organizer_id" ON "public"."events" USING "btree" ("organizer_id");
+
+
+
 CREATE INDEX "idx_events_start_time" ON "public"."events" USING "btree" ("start_time");
 
 
 
-CREATE INDEX "idx_featured_parks_is_active" ON "public"."featured_parks" USING "btree" ("is_active");
+CREATE INDEX "idx_events_status" ON "public"."events" USING "btree" ("status");
 
 
 
-CREATE INDEX "idx_featured_parks_location" ON "public"."featured_parks" USING "gist" ("point"("longitude", "latitude"));
+CREATE INDEX "idx_featured_parks_active" ON "public"."featured_parks" USING "btree" ("is_active") WHERE ("is_active" = true);
 
 
 
-CREATE INDEX "idx_featured_parks_rating" ON "public"."featured_parks" USING "btree" ("rating" DESC);
+CREATE INDEX "idx_featured_parks_location" ON "public"."featured_parks" USING "btree" ("latitude", "longitude");
 
 
 
@@ -2440,7 +3843,19 @@ CREATE INDEX "idx_follows_following" ON "public"."follows" USING "btree" ("follo
 
 
 
+CREATE INDEX "idx_matches_bark_count" ON "public"."matches" USING "btree" ("bark_count") WHERE ("bark_count" > 0);
+
+
+
 CREATE INDEX "idx_matches_is_mutual" ON "public"."matches" USING "btree" ("is_mutual");
+
+
+
+CREATE INDEX "idx_matches_last_bark_at" ON "public"."matches" USING "btree" ("last_bark_at");
+
+
+
+CREATE INDEX "idx_matches_mutual" ON "public"."matches" USING "btree" ("is_mutual") WHERE ("is_mutual" = true);
 
 
 
@@ -2460,11 +3875,27 @@ CREATE INDEX "idx_messages_match_id" ON "public"."messages" USING "btree" ("matc
 
 
 
+CREATE INDEX "idx_notifications_action_type" ON "public"."notifications" USING "btree" ("user_id", "action_type", "is_read");
+
+
+
 CREATE INDEX "idx_notifications_is_read" ON "public"."notifications" USING "btree" ("is_read");
 
 
 
+CREATE INDEX "idx_notifications_related_id" ON "public"."notifications" USING "btree" ("related_id") WHERE ("related_id" IS NOT NULL);
+
+
+
+CREATE INDEX "idx_notifications_unread" ON "public"."notifications" USING "btree" ("user_id", "is_read", "created_at") WHERE ("is_read" = false);
+
+
+
 CREATE INDEX "idx_notifications_user_id" ON "public"."notifications" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "idx_notifications_user_unread" ON "public"."notifications" USING "btree" ("user_id", "is_read") WHERE ("is_read" = false);
 
 
 
@@ -2480,19 +3911,11 @@ CREATE UNIQUE INDEX "idx_park_activity_seed_log_area_day" ON "public"."park_acti
 
 
 
-CREATE INDEX "idx_park_checkins_checked_in_at" ON "public"."park_checkins" USING "btree" ("checked_in_at" DESC);
+CREATE INDEX "idx_park_checkins_active" ON "public"."park_checkins" USING "btree" ("park_id", "is_active") WHERE ("is_active" = true);
 
 
 
-CREATE INDEX "idx_park_checkins_is_active" ON "public"."park_checkins" USING "btree" ("is_active");
-
-
-
-CREATE INDEX "idx_park_checkins_park_id" ON "public"."park_checkins" USING "btree" ("park_id");
-
-
-
-CREATE INDEX "idx_park_checkins_user_id" ON "public"."park_checkins" USING "btree" ("user_id");
+CREATE INDEX "idx_park_checkins_user_active" ON "public"."park_checkins" USING "btree" ("user_id", "is_active") WHERE ("is_active" = true);
 
 
 
@@ -2505,6 +3928,10 @@ CREATE INDEX "idx_park_status_expires" ON "public"."park_status_reports" USING "
 
 
 CREATE INDEX "idx_park_status_park_id" ON "public"."park_status_reports" USING "btree" ("park_id");
+
+
+
+CREATE INDEX "idx_parks_lat_lon" ON "public"."parks" USING "btree" ("latitude", "longitude");
 
 
 
@@ -2540,6 +3967,18 @@ CREATE INDEX "idx_playdate_participants_user" ON "public"."playdate_participants
 
 
 
+CREATE INDEX "idx_playdate_recaps_playdate" ON "public"."playdate_recaps" USING "btree" ("playdate_id");
+
+
+
+CREATE INDEX "idx_playdate_recaps_shared" ON "public"."playdate_recaps" USING "btree" ("shared_to_feed") WHERE ("shared_to_feed" = true);
+
+
+
+CREATE INDEX "idx_playdate_recaps_user" ON "public"."playdate_recaps" USING "btree" ("user_id", "created_at");
+
+
+
 CREATE INDEX "idx_playdate_reminder_preferences_due" ON "public"."playdate_reminder_preferences" USING "btree" ("enabled", "last_sent_at") WHERE ("enabled" = true);
 
 
@@ -2548,7 +3987,27 @@ CREATE INDEX "idx_playdate_reminder_preferences_playdate" ON "public"."playdate_
 
 
 
+CREATE INDEX "idx_playdate_requests_invitee" ON "public"."playdate_requests" USING "btree" ("invitee_id");
+
+
+
+CREATE INDEX "idx_playdate_requests_invitee_dog" ON "public"."playdate_requests" USING "btree" ("invitee_dog_id");
+
+
+
+CREATE INDEX "idx_playdate_requests_playdate" ON "public"."playdate_requests" USING "btree" ("playdate_id");
+
+
+
+CREATE INDEX "idx_playdate_requests_requester" ON "public"."playdate_requests" USING "btree" ("requester_id", "status");
+
+
+
 CREATE INDEX "idx_playdate_requests_requester_dog" ON "public"."playdate_requests" USING "btree" ("requester_dog_id");
+
+
+
+CREATE INDEX "idx_playdate_requests_status" ON "public"."playdate_requests" USING "btree" ("status");
 
 
 
@@ -2576,11 +4035,31 @@ CREATE INDEX "idx_post_likes_user" ON "public"."post_likes" USING "btree" ("user
 
 
 
+CREATE INDEX "idx_post_tags_post_id" ON "public"."post_tags" USING "btree" ("post_id");
+
+
+
+CREATE INDEX "idx_post_tags_status" ON "public"."post_tags" USING "btree" ("status");
+
+
+
+CREATE INDEX "idx_post_tags_tagged_dog" ON "public"."post_tags" USING "btree" ("tagged_dog_id");
+
+
+
 CREATE INDEX "idx_posts_created_at" ON "public"."posts" USING "btree" ("created_at" DESC);
 
 
 
 CREATE INDEX "idx_posts_is_public" ON "public"."posts" USING "btree" ("is_public");
+
+
+
+CREATE INDEX "idx_posts_playdate" ON "public"."posts" USING "btree" ("playdate_id") WHERE ("playdate_id" IS NOT NULL);
+
+
+
+CREATE INDEX "idx_posts_tagged_dogs" ON "public"."posts" USING "gin" ("tagged_dogs");
 
 
 
@@ -2596,10 +4075,6 @@ CREATE INDEX "idx_user_blocks_blocker" ON "public"."user_blocks" USING "btree" (
 
 
 
-CREATE INDEX "idx_user_presence_active_conv" ON "public"."user_presence" USING "btree" ("active_conversation_id");
-
-
-
 CREATE INDEX "idx_users_fcm_token" ON "public"."users" USING "btree" ("fcm_token") WHERE ("fcm_token" IS NOT NULL);
 
 
@@ -2612,11 +4087,91 @@ CREATE INDEX "idx_users_live_location" ON "public"."users" USING "btree" ("live_
 
 
 
+CREATE OR REPLACE VIEW "public"."posts_with_tags" AS
+ SELECT "p"."id",
+    "p"."user_id",
+    "p"."dog_id",
+    "p"."content",
+    "p"."image_urls",
+    "p"."location",
+    "p"."latitude",
+    "p"."longitude",
+    "p"."likes_count",
+    "p"."comments_count",
+    "p"."is_public",
+    "p"."created_at",
+    "p"."updated_at",
+    "p"."playdate_id",
+    "p"."tagged_dogs",
+    "array_agg"("jsonb_build_object"('dog_id', "d"."id", 'dog_name', "d"."name", 'dog_photo', "d"."main_photo_url", 'owner_id', "d"."user_id")) FILTER (WHERE ("d"."id" IS NOT NULL)) AS "tagged_dogs_info"
+   FROM (("public"."posts" "p"
+     LEFT JOIN LATERAL "unnest"("p"."tagged_dogs") "tag_id"("tag_id") ON (true))
+     LEFT JOIN "public"."dogs" "d" ON (("d"."id" = "tag_id"."tag_id")))
+  GROUP BY "p"."id";
+
+
+
+CREATE OR REPLACE TRIGGER "checkins_updated_at" BEFORE UPDATE ON "public"."checkins" FOR EACH ROW EXECUTE FUNCTION "public"."update_checkins_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "events_updated_at" BEFORE UPDATE ON "public"."events" FOR EACH ROW EXECUTE FUNCTION "public"."update_events_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "handle_updated_at" BEFORE UPDATE ON "public"."users" FOR EACH ROW EXECUTE FUNCTION "public"."handle_updated_at"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_event_invitations_updated_at" BEFORE UPDATE ON "public"."event_invitations" FOR EACH ROW EXECUTE FUNCTION "public"."update_event_invitations_updated_at"();
 
 
 
 CREATE OR REPLACE TRIGGER "trg_sync_playdate_on_request_accepted" AFTER UPDATE OF "status" ON "public"."playdate_requests" FOR EACH ROW EXECUTE FUNCTION "public"."sync_playdate_on_request_accepted"();
+
+
+
+CREATE OR REPLACE TRIGGER "trigger_auto_approve_friend_tags" BEFORE INSERT ON "public"."post_tags" FOR EACH ROW EXECUTE FUNCTION "public"."auto_approve_friend_tags"();
+
+
+
+CREATE OR REPLACE TRIGGER "trigger_bark_notification" AFTER INSERT ON "public"."barks" FOR EACH ROW EXECUTE FUNCTION "public"."notify_bark"();
+
+
+
+CREATE OR REPLACE TRIGGER "trigger_check_max_tags" BEFORE INSERT ON "public"."post_tags" FOR EACH ROW EXECUTE FUNCTION "public"."check_max_tags"();
+
+
+
+CREATE OR REPLACE TRIGGER "trigger_cleanup_declined_requests" BEFORE UPDATE ON "public"."playdate_requests" FOR EACH ROW EXECUTE FUNCTION "public"."cleanup_declined_requests"();
+
+
+
+CREATE OR REPLACE TRIGGER "trigger_community_star" AFTER INSERT ON "public"."post_likes" FOR EACH ROW EXECUTE FUNCTION "public"."check_community_star_achievement"();
+
+
+
+CREATE OR REPLACE TRIGGER "trigger_create_dog_friendship" AFTER UPDATE ON "public"."playdates" FOR EACH ROW EXECUTE FUNCTION "public"."create_dog_friendship_after_playdate"();
+
+
+
+CREATE OR REPLACE TRIGGER "trigger_first_playdate" AFTER UPDATE ON "public"."playdates" FOR EACH ROW EXECUTE FUNCTION "public"."check_first_playdate_achievement"();
+
+
+
+CREATE OR REPLACE TRIGGER "trigger_park_achievements" AFTER INSERT ON "public"."checkins" FOR EACH ROW EXECUTE FUNCTION "public"."check_park_achievements"();
+
+
+
+CREATE OR REPLACE TRIGGER "trigger_photo_star" AFTER INSERT ON "public"."posts" FOR EACH ROW EXECUTE FUNCTION "public"."check_photo_star_achievement"();
+
+
+
+CREATE OR REPLACE TRIGGER "trigger_social_butterfly" AFTER INSERT OR UPDATE ON "public"."dog_friendships" FOR EACH ROW EXECUTE FUNCTION "public"."check_social_butterfly_achievement"();
+
+
+
+CREATE OR REPLACE TRIGGER "update_featured_parks_updated_at" BEFORE UPDATE ON "public"."featured_parks" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
 
 
@@ -2627,6 +4182,26 @@ ALTER TABLE ONLY "public"."amenity_suggestions"
 
 ALTER TABLE ONLY "public"."amenity_suggestions"
     ADD CONSTRAINT "amenity_suggestions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."barks"
+    ADD CONSTRAINT "barks_from_dog_id_fkey" FOREIGN KEY ("from_dog_id") REFERENCES "public"."dogs"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."barks"
+    ADD CONSTRAINT "barks_to_dog_id_fkey" FOREIGN KEY ("to_dog_id") REFERENCES "public"."dogs"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."checkins"
+    ADD CONSTRAINT "checkins_dog_id_fkey" FOREIGN KEY ("dog_id") REFERENCES "public"."dogs"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."checkins"
+    ADD CONSTRAINT "checkins_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
 
 
 
@@ -2646,7 +4221,12 @@ ALTER TABLE ONLY "public"."content_reports"
 
 
 ALTER TABLE ONLY "public"."conversation_participants"
-    ADD CONSTRAINT "conversation_participants_conversation_id_fkey" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id");
+    ADD CONSTRAINT "conversation_participants_conversation_id_fkey" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."conversation_participants"
+    ADD CONSTRAINT "conversation_participants_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
 
 
 
@@ -2655,8 +4235,53 @@ ALTER TABLE ONLY "public"."conversations"
 
 
 
+ALTER TABLE ONLY "public"."conversations"
+    ADD CONSTRAINT "conversations_user1_id_fkey" FOREIGN KEY ("user1_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."conversations"
+    ADD CONSTRAINT "conversations_user2_id_fkey" FOREIGN KEY ("user2_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."dog_breeds"
+    ADD CONSTRAINT "dog_breeds_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."dog_friendships"
+    ADD CONSTRAINT "dog_friendships_dog_id_fkey" FOREIGN KEY ("dog_id") REFERENCES "public"."dogs"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."dog_friendships"
+    ADD CONSTRAINT "dog_friendships_formed_through_playdate_id_fkey" FOREIGN KEY ("formed_through_playdate_id") REFERENCES "public"."playdates"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."dog_friendships"
+    ADD CONSTRAINT "dog_friendships_friend_dog_id_fkey" FOREIGN KEY ("friend_dog_id") REFERENCES "public"."dogs"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."dog_friendships"
     ADD CONSTRAINT "dog_friendships_requested_by_user_id_fkey" FOREIGN KEY ("requested_by_user_id") REFERENCES "auth"."users"("id");
+
+
+
+ALTER TABLE ONLY "public"."dog_owners"
+    ADD CONSTRAINT "dog_owners_added_by_fkey" FOREIGN KEY ("added_by") REFERENCES "public"."users"("id");
+
+
+
+ALTER TABLE ONLY "public"."dog_owners"
+    ADD CONSTRAINT "dog_owners_dog_id_fkey" FOREIGN KEY ("dog_id") REFERENCES "public"."dogs"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."dog_owners"
+    ADD CONSTRAINT "dog_owners_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
 
 
 
@@ -2667,6 +4292,16 @@ ALTER TABLE ONLY "public"."dog_share_activity_log"
 
 ALTER TABLE ONLY "public"."dog_share_activity_log"
     ADD CONSTRAINT "dog_share_activity_log_dog_share_id_fkey" FOREIGN KEY ("dog_share_id") REFERENCES "public"."dog_shares"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."dog_share_links"
+    ADD CONSTRAINT "dog_share_links_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."dog_share_links"
+    ADD CONSTRAINT "dog_share_links_dog_id_fkey" FOREIGN KEY ("dog_id") REFERENCES "public"."dogs"("id") ON DELETE CASCADE;
 
 
 
@@ -2706,7 +4341,27 @@ ALTER TABLE ONLY "public"."event_invitations"
 
 
 ALTER TABLE ONLY "public"."event_participants"
-    ADD CONSTRAINT "event_participants_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "public"."events"("id");
+    ADD CONSTRAINT "event_participants_dog_id_fkey" FOREIGN KEY ("dog_id") REFERENCES "public"."dogs"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."event_participants"
+    ADD CONSTRAINT "event_participants_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "public"."events"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."event_participants"
+    ADD CONSTRAINT "event_participants_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."events"
+    ADD CONSTRAINT "events_organizer_id_fkey" FOREIGN KEY ("organizer_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."featured_parks"
+    ADD CONSTRAINT "featured_parks_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
 
 
 
@@ -2770,11 +4425,6 @@ ALTER TABLE ONLY "public"."park_activity_seed_log"
 
 
 
-ALTER TABLE ONLY "public"."park_admins"
-    ADD CONSTRAINT "park_admins_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
-
-
-
 ALTER TABLE ONLY "public"."park_checkins"
     ADD CONSTRAINT "park_checkins_dog_id_fkey" FOREIGN KEY ("dog_id") REFERENCES "public"."dogs"("id") ON DELETE CASCADE;
 
@@ -2786,7 +4436,7 @@ ALTER TABLE ONLY "public"."park_checkins"
 
 
 ALTER TABLE ONLY "public"."park_checkins"
-    ADD CONSTRAINT "park_checkins_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "park_checkins_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
 
@@ -2830,6 +4480,26 @@ ALTER TABLE ONLY "public"."playdate_participants"
 
 
 
+ALTER TABLE ONLY "public"."playdate_recaps"
+    ADD CONSTRAINT "playdate_recaps_dog_id_fkey" FOREIGN KEY ("dog_id") REFERENCES "public"."dogs"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."playdate_recaps"
+    ADD CONSTRAINT "playdate_recaps_playdate_id_fkey" FOREIGN KEY ("playdate_id") REFERENCES "public"."playdates"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."playdate_recaps"
+    ADD CONSTRAINT "playdate_recaps_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."playdate_recaps"
+    ADD CONSTRAINT "playdate_recaps_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."playdate_reminder_preferences"
     ADD CONSTRAINT "playdate_reminder_preferences_playdate_id_fkey" FOREIGN KEY ("playdate_id") REFERENCES "public"."playdates"("id") ON DELETE CASCADE;
 
@@ -2861,12 +4531,17 @@ ALTER TABLE ONLY "public"."playdate_requests"
 
 
 ALTER TABLE ONLY "public"."playdate_requests"
-    ADD CONSTRAINT "playdate_requests_requester_dog_id_fkey" FOREIGN KEY ("requester_dog_id") REFERENCES "public"."dogs"("id");
+    ADD CONSTRAINT "playdate_requests_requester_dog_id_fkey" FOREIGN KEY ("requester_dog_id") REFERENCES "public"."dogs"("id") ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."playdate_requests"
     ADD CONSTRAINT "playdate_requests_requester_id_fkey" FOREIGN KEY ("requester_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."playdates"
+    ADD CONSTRAINT "playdates_creator_dog_id_fkey" FOREIGN KEY ("creator_dog_id") REFERENCES "public"."dogs"("id");
 
 
 
@@ -2900,8 +4575,28 @@ ALTER TABLE ONLY "public"."post_likes"
 
 
 
+ALTER TABLE ONLY "public"."post_tags"
+    ADD CONSTRAINT "post_tags_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."post_tags"
+    ADD CONSTRAINT "post_tags_tagged_dog_id_fkey" FOREIGN KEY ("tagged_dog_id") REFERENCES "public"."dogs"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."post_tags"
+    ADD CONSTRAINT "post_tags_tagger_dog_id_fkey" FOREIGN KEY ("tagger_dog_id") REFERENCES "public"."dogs"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."posts"
     ADD CONSTRAINT "posts_dog_id_fkey" FOREIGN KEY ("dog_id") REFERENCES "public"."dogs"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."posts"
+    ADD CONSTRAINT "posts_playdate_id_fkey" FOREIGN KEY ("playdate_id") REFERENCES "public"."playdates"("id") ON DELETE SET NULL;
 
 
 
@@ -2935,31 +4630,8 @@ ALTER TABLE ONLY "public"."user_blocks"
 
 
 
-ALTER TABLE ONLY "public"."user_presence"
-    ADD CONSTRAINT "user_presence_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
-
-
-
 ALTER TABLE ONLY "public"."users"
     ADD CONSTRAINT "users_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
-
-
-
-CREATE POLICY "Admins can insert featured parks" ON "public"."featured_parks" FOR INSERT TO "authenticated" WITH CHECK ((EXISTS ( SELECT 1
-   FROM "public"."park_admins"
-  WHERE (("park_admins"."user_id" = "auth"."uid"()) AND ("park_admins"."can_add_parks" = true)))));
-
-
-
-CREATE POLICY "Admins can manage participants" ON "public"."conversation_participants" USING (("conversation_id" IN ( SELECT "conversation_participants_1"."conversation_id"
-   FROM "public"."conversation_participants" "conversation_participants_1"
-  WHERE (("conversation_participants_1"."user_id" = "auth"."uid"()) AND ("conversation_participants_1"."role" = 'admin'::"text")))));
-
-
-
-CREATE POLICY "Admins can update featured parks" ON "public"."featured_parks" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
-   FROM "public"."park_admins"
-  WHERE (("park_admins"."user_id" = "auth"."uid"()) AND ("park_admins"."can_edit_parks" = true)))));
 
 
 
@@ -2983,7 +4655,27 @@ CREATE POLICY "Anyone can read amenities" ON "public"."amenities" FOR SELECT USI
 
 
 
+CREATE POLICY "Anyone can read approved breeds" ON "public"."dog_breeds" FOR SELECT USING (("status" = 'approved'::"text"));
+
+
+
+CREATE POLICY "Anyone can read barks" ON "public"."barks" FOR SELECT USING (true);
+
+
+
+CREATE POLICY "Anyone can read friendships" ON "public"."dog_friendships" FOR SELECT USING (true);
+
+
+
 CREATE POLICY "Anyone can read place amenities" ON "public"."place_amenities" FOR SELECT USING (true);
+
+
+
+CREATE POLICY "Anyone can view active checkins" ON "public"."park_checkins" FOR SELECT USING (("is_active" = true));
+
+
+
+CREATE POLICY "Anyone can view active featured parks" ON "public"."featured_parks" FOR SELECT USING (("is_active" = true));
 
 
 
@@ -2999,7 +4691,15 @@ CREATE POLICY "Anyone can view comments" ON "public"."post_comments" FOR SELECT 
 
 
 
+CREATE POLICY "Anyone can view event categories" ON "public"."event_categories" FOR SELECT USING (true);
+
+
+
 CREATE POLICY "Anyone can view event participants" ON "public"."event_participants" FOR SELECT USING (true);
+
+
+
+CREATE POLICY "Anyone can view events" ON "public"."events" FOR SELECT USING (true);
 
 
 
@@ -3011,7 +4711,11 @@ CREATE POLICY "Anyone can view public dogs" ON "public"."dogs" FOR SELECT USING 
 
 
 
-CREATE POLICY "Authenticated can read presence for push" ON "public"."user_presence" FOR SELECT TO "authenticated" USING (true);
+CREATE POLICY "Authenticated users can create events" ON "public"."events" FOR INSERT WITH CHECK (("auth"."uid"() = "organizer_id"));
+
+
+
+CREATE POLICY "Authenticated users can create featured parks" ON "public"."featured_parks" FOR INSERT WITH CHECK (("auth"."role"() = 'authenticated'::"text"));
 
 
 
@@ -3023,11 +4727,63 @@ CREATE POLICY "Authenticated users can create park status reports" ON "public"."
 
 
 
+CREATE POLICY "Authenticated users can delete friendships" ON "public"."dog_friendships" FOR DELETE USING (("auth"."role"() = 'authenticated'::"text"));
+
+
+
+CREATE POLICY "Authenticated users can insert barks" ON "public"."barks" FOR INSERT WITH CHECK (("auth"."role"() = 'authenticated'::"text"));
+
+
+
+CREATE POLICY "Authenticated users can insert breeds" ON "public"."dog_breeds" FOR INSERT WITH CHECK (("auth"."role"() = 'authenticated'::"text"));
+
+
+
+CREATE POLICY "Authenticated users can insert friendships" ON "public"."dog_friendships" FOR INSERT WITH CHECK (("auth"."role"() = 'authenticated'::"text"));
+
+
+
 CREATE POLICY "Authenticated users can join events" ON "public"."event_participants" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
 
 
 
 CREATE POLICY "Authenticated users can suggest amenities" ON "public"."place_amenities" FOR INSERT WITH CHECK (("auth"."uid"() IS NOT NULL));
+
+
+
+CREATE POLICY "Authenticated users can update friendships" ON "public"."dog_friendships" FOR UPDATE USING (("auth"."role"() = 'authenticated'::"text"));
+
+
+
+CREATE POLICY "Authenticated users can view achievements" ON "public"."achievements" FOR SELECT USING (("auth"."role"() = 'authenticated'::"text"));
+
+
+
+CREATE POLICY "Authenticated users can view comments" ON "public"."post_comments" FOR SELECT USING (("auth"."role"() = 'authenticated'::"text"));
+
+
+
+CREATE POLICY "Authenticated users can view parks" ON "public"."parks" FOR SELECT USING (("auth"."role"() = 'authenticated'::"text"));
+
+
+
+CREATE POLICY "Authenticated users can view post likes" ON "public"."post_likes" FOR SELECT USING (("auth"."role"() = 'authenticated'::"text"));
+
+
+
+CREATE POLICY "Authenticated users can view public posts" ON "public"."posts" FOR SELECT USING ((("is_public" = true) AND ("auth"."role"() = 'authenticated'::"text")));
+
+
+
+CREATE POLICY "Creators can delete their featured parks" ON "public"."featured_parks" FOR DELETE USING (("auth"."uid"() = "created_by"));
+
+
+
+CREATE POLICY "Creators can read their pending breeds" ON "public"."dog_breeds" FOR SELECT USING (("auth"."uid"() = "created_by"));
+
+
+
+CREATE POLICY "Creators can update their featured parks" ON "public"."featured_parks" FOR UPDATE USING (("auth"."uid"() = "created_by"));
 
 
 
@@ -3037,11 +4793,25 @@ CREATE POLICY "Dog owners can view their invitations" ON "public"."event_invitat
 
 
 
-CREATE POLICY "Everyone can view featured parks" ON "public"."featured_parks" FOR SELECT TO "authenticated" USING (("is_active" = true));
+CREATE POLICY "Invitees can update their playdate requests" ON "public"."playdate_requests" FOR UPDATE USING (("auth"."uid"() = "invitee_id"));
 
 
 
 CREATE POLICY "Inviters can manage their event invitations" ON "public"."event_invitations" USING (("auth"."uid"() = "invited_by")) WITH CHECK (("auth"."uid"() = "invited_by"));
+
+
+
+CREATE POLICY "Organizers can delete their events" ON "public"."events" FOR DELETE USING (("auth"."uid"() = "organizer_id"));
+
+
+
+CREATE POLICY "Organizers can update their events" ON "public"."events" FOR UPDATE USING (("auth"."uid"() = "organizer_id"));
+
+
+
+CREATE POLICY "Primary owners can manage ownership" ON "public"."dog_owners" USING (("dog_id" IN ( SELECT "dog_owners_1"."dog_id"
+   FROM "public"."dog_owners" "dog_owners_1"
+  WHERE (("dog_owners_1"."user_id" = "auth"."uid"()) AND ("dog_owners_1"."is_primary" = true)))));
 
 
 
@@ -3057,6 +4827,14 @@ CREATE POLICY "Seed log no read" ON "public"."park_activity_seed_log" FOR SELECT
 
 
 
+CREATE POLICY "System can award achievements" ON "public"."user_achievements" FOR INSERT WITH CHECK (true);
+
+
+
+CREATE POLICY "System can create notifications" ON "public"."notifications" FOR INSERT WITH CHECK (true);
+
+
+
 CREATE POLICY "System can update place amenities" ON "public"."place_amenities" FOR UPDATE USING (true);
 
 
@@ -3069,7 +4847,15 @@ CREATE POLICY "Users can block others" ON "public"."user_blocks" FOR INSERT WITH
 
 
 
+CREATE POLICY "Users can comment on posts" ON "public"."post_comments" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
 CREATE POLICY "Users can create comments" ON "public"."post_comments" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can create conversations" ON "public"."conversations" FOR INSERT WITH CHECK ((("auth"."uid"() = "user1_id") OR ("auth"."uid"() = "user2_id")));
 
 
 
@@ -3077,9 +4863,7 @@ CREATE POLICY "Users can create follows" ON "public"."follows" FOR INSERT WITH C
 
 
 
-CREATE POLICY "Users can create friendships for their dogs" ON "public"."dog_friendships" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
-   FROM "public"."dogs"
-  WHERE (("dogs"."id" = ANY (ARRAY["dog_friendships"."dog1_id", "dog_friendships"."dog2_id"])) AND ("dogs"."user_id" = "auth"."uid"())))));
+CREATE POLICY "Users can create matches" ON "public"."matches" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
 
 
 
@@ -3087,7 +4871,63 @@ CREATE POLICY "Users can create own reminder preferences" ON "public"."playdate_
 
 
 
+CREATE POLICY "Users can create playdate requests" ON "public"."playdate_requests" FOR INSERT WITH CHECK (("auth"."uid"() = "requester_id"));
+
+
+
+CREATE POLICY "Users can create playdates" ON "public"."playdates" FOR INSERT WITH CHECK (("auth"."uid"() = "organizer_id"));
+
+
+
+CREATE POLICY "Users can create posts" ON "public"."posts" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can create recaps for their own playdates" ON "public"."playdate_recaps" FOR INSERT WITH CHECK ((("user_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM "public"."playdates" "p"
+  WHERE (("p"."id" = "playdate_recaps"."playdate_id") AND (("p"."organizer_id" = "auth"."uid"()) OR ("p"."participant_id" = "auth"."uid"())))))));
+
+
+
 CREATE POLICY "Users can create reports" ON "public"."place_reports" FOR INSERT TO "authenticated" WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can create requests for their playdates" ON "public"."playdate_requests" FOR INSERT WITH CHECK ((("requester_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM "public"."playdates" "p"
+  WHERE (("p"."id" = "playdate_requests"."playdate_id") AND ("p"."organizer_id" = "auth"."uid"()))))));
+
+
+
+CREATE POLICY "Users can create share links for their dogs" ON "public"."dog_share_links" FOR INSERT WITH CHECK ((("created_by" = "auth"."uid"()) AND ("dog_id" IN ( SELECT "dog_owners"."dog_id"
+   FROM "public"."dog_owners"
+  WHERE (("dog_owners"."user_id" = "auth"."uid"()) AND ('share'::"text" = ANY ("dog_owners"."permissions")))))));
+
+
+
+CREATE POLICY "Users can create subscriptions" ON "public"."premium_subscriptions" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can create their own check-ins" ON "public"."checkins" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can create their own checkins" ON "public"."park_checkins" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can create their own recaps" ON "public"."playdate_recaps" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can delete dogs they own" ON "public"."dogs" FOR DELETE USING (("id" IN ( SELECT "dog_owners"."dog_id"
+   FROM "public"."dog_owners"
+  WHERE (("dog_owners"."user_id" = "auth"."uid"()) AND ("dog_owners"."ownership_type" = 'owner'::"text") AND ("dog_owners"."is_primary" = true)))));
+
+
+
+CREATE POLICY "Users can delete own participations" ON "public"."conversation_participants" FOR DELETE USING (("user_id" = "auth"."uid"()));
 
 
 
@@ -3095,13 +4935,15 @@ CREATE POLICY "Users can delete own reminder preferences" ON "public"."playdate_
 
 
 
+CREATE POLICY "Users can delete own suggestions" ON "public"."amenity_suggestions" FOR DELETE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can delete playdates they organize" ON "public"."playdates" FOR DELETE USING (("auth"."uid"() = "organizer_id"));
+
+
+
 CREATE POLICY "Users can delete their comments" ON "public"."post_comments" FOR DELETE USING (("auth"."uid"() = "user_id"));
-
-
-
-CREATE POLICY "Users can delete their dogs friendships" ON "public"."dog_friendships" FOR DELETE USING ((EXISTS ( SELECT 1
-   FROM "public"."dogs"
-  WHERE (("dogs"."id" = ANY (ARRAY["dog_friendships"."dog1_id", "dog_friendships"."dog2_id"])) AND ("dogs"."user_id" = "auth"."uid"())))));
 
 
 
@@ -3109,15 +4951,65 @@ CREATE POLICY "Users can delete their follows" ON "public"."follows" FOR DELETE 
 
 
 
+CREATE POLICY "Users can delete their matches" ON "public"."matches" FOR DELETE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can delete their notifications" ON "public"."notifications" FOR DELETE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can delete their own barks" ON "public"."barks" FOR DELETE USING ((EXISTS ( SELECT 1
+   FROM "public"."dogs" "d"
+  WHERE (("d"."id" = "barks"."from_dog_id") AND ("d"."user_id" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "Users can delete their own check-ins" ON "public"."checkins" FOR DELETE USING (("auth"."uid"() = "user_id"));
+
+
+
 CREATE POLICY "Users can delete their own notifications" ON "public"."notifications" FOR DELETE USING (("auth"."uid"() = "user_id"));
 
 
 
-CREATE POLICY "Users can join conversations" ON "public"."conversation_participants" FOR INSERT WITH CHECK (("user_id" = "auth"."uid"()));
+CREATE POLICY "Users can delete their own posts" ON "public"."posts" FOR DELETE USING (("auth"."uid"() = "user_id"));
 
 
 
-CREATE POLICY "Users can leave conversations" ON "public"."conversation_participants" FOR DELETE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can delete their own profile" ON "public"."users" FOR DELETE USING (("auth"."uid"() = "id"));
+
+
+
+CREATE POLICY "Users can delete their sent messages" ON "public"."messages" FOR DELETE USING (("auth"."uid"() = "sender_id"));
+
+
+
+CREATE POLICY "Users can insert dogs for themselves" ON "public"."dogs" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can insert own notifications" ON "public"."notifications" FOR INSERT WITH CHECK (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "Users can insert own profile" ON "public"."users" FOR INSERT WITH CHECK (("auth"."uid"() = "id"));
+
+
+
+CREATE POLICY "Users can insert participations" ON "public"."conversation_participants" FOR INSERT WITH CHECK (true);
+
+
+
+CREATE POLICY "Users can insert their own playdate participants" ON "public"."playdate_participants" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can insert their own profile" ON "public"."users" FOR INSERT WITH CHECK (true);
+
+
+
+CREATE POLICY "Users can join playdates" ON "public"."playdate_participants" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
 
 
 
@@ -3125,15 +5017,11 @@ CREATE POLICY "Users can leave events" ON "public"."event_participants" FOR DELE
 
 
 
+CREATE POLICY "Users can leave playdates" ON "public"."playdate_participants" FOR DELETE USING (("auth"."uid"() = "user_id"));
+
+
+
 CREATE POLICY "Users can like posts" ON "public"."post_likes" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
-
-
-
-CREATE POLICY "Users can manage their own checkins" ON "public"."park_checkins" TO "authenticated" USING (("user_id" = "auth"."uid"()));
-
-
-
-CREATE POLICY "Users can read their own presence" ON "public"."user_presence" FOR SELECT USING (("auth"."uid"() = "user_id"));
 
 
 
@@ -3153,7 +5041,29 @@ CREATE POLICY "Users can see own suggestions" ON "public"."amenity_suggestions" 
 
 
 
+CREATE POLICY "Users can send messages" ON "public"."messages" FOR INSERT WITH CHECK (("auth"."uid"() = "sender_id"));
+
+
+
 CREATE POLICY "Users can unblock" ON "public"."user_blocks" FOR DELETE USING (("auth"."uid"() = "blocker_id"));
+
+
+
+CREATE POLICY "Users can unlike posts" ON "public"."post_likes" FOR DELETE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can update dogs they have edit access to" ON "public"."dogs" FOR UPDATE USING (("id" IN ( SELECT "dog_owners"."dog_id"
+   FROM "public"."dog_owners"
+  WHERE (("dog_owners"."user_id" = "auth"."uid"()) AND ('edit'::"text" = ANY ("dog_owners"."permissions"))))));
+
+
+
+CREATE POLICY "Users can update own participations" ON "public"."conversation_participants" FOR UPDATE USING (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "Users can update own profile" ON "public"."users" FOR UPDATE USING (("auth"."uid"() = "id"));
 
 
 
@@ -3161,7 +5071,39 @@ CREATE POLICY "Users can update own reminder preferences" ON "public"."playdate_
 
 
 
+CREATE POLICY "Users can update playdates they organize" ON "public"."playdates" FOR UPDATE USING (("auth"."uid"() = "organizer_id"));
+
+
+
+CREATE POLICY "Users can update requests they received" ON "public"."playdate_requests" FOR UPDATE USING ((("invitee_id" = "auth"."uid"()) OR ("requester_id" = "auth"."uid"())));
+
+
+
+CREATE POLICY "Users can update share links they created" ON "public"."dog_share_links" FOR UPDATE USING (("created_by" = "auth"."uid"()));
+
+
+
 CREATE POLICY "Users can update their comments" ON "public"."post_comments" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can update their matches" ON "public"."matches" FOR UPDATE USING ((("auth"."uid"() = "user_id") OR ("auth"."uid"() = "target_user_id")));
+
+
+
+CREATE POLICY "Users can update their messages" ON "public"."messages" FOR UPDATE USING ((("auth"."uid"() = "sender_id") OR ("auth"."uid"() = "receiver_id")));
+
+
+
+CREATE POLICY "Users can update their notifications" ON "public"."notifications" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can update their own check-ins" ON "public"."checkins" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can update their own checkins" ON "public"."park_checkins" FOR UPDATE USING (("auth"."uid"() = "user_id"));
 
 
 
@@ -3177,7 +5119,15 @@ CREATE POLICY "Users can update their own park status reports" ON "public"."park
 
 
 
-CREATE POLICY "Users can update their own presence" ON "public"."user_presence" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can update their own posts" ON "public"."posts" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can update their own profile" ON "public"."users" FOR UPDATE USING (("auth"."uid"() = "id")) WITH CHECK (true);
+
+
+
+CREATE POLICY "Users can update their own recaps" ON "public"."playdate_recaps" FOR UPDATE USING (("user_id" = "auth"."uid"()));
 
 
 
@@ -3185,11 +5135,39 @@ CREATE POLICY "Users can update their participation" ON "public"."event_particip
 
 
 
-CREATE POLICY "Users can upsert their own presence" ON "public"."user_presence" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can update their participation" ON "public"."playdate_participants" FOR UPDATE USING (("auth"."uid"() = "user_id"));
 
 
 
-CREATE POLICY "Users can view all active checkins" ON "public"."park_checkins" FOR SELECT TO "authenticated" USING (("is_active" = true));
+CREATE POLICY "Users can update their subscriptions" ON "public"."premium_subscriptions" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can view accessible dogs" ON "public"."dogs" FOR SELECT USING ((("id" IN ( SELECT "dog_owners"."dog_id"
+   FROM "public"."dog_owners"
+  WHERE ("dog_owners"."user_id" = "auth"."uid"()))) OR ("is_active" = true)));
+
+
+
+CREATE POLICY "Users can view all profiles" ON "public"."users" FOR SELECT USING (true);
+
+
+
+CREATE POLICY "Users can view dog ownership info" ON "public"."dog_owners" FOR SELECT USING ((("user_id" = "auth"."uid"()) OR ("dog_id" IN ( SELECT "dog_owners_1"."dog_id"
+   FROM "public"."dog_owners" "dog_owners_1"
+  WHERE ("dog_owners_1"."user_id" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "Users can view own notifications" ON "public"."notifications" FOR SELECT USING (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "Users can view own participations" ON "public"."conversation_participants" FOR SELECT USING (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "Users can view own profile" ON "public"."users" FOR SELECT USING (("auth"."uid"() = "id"));
 
 
 
@@ -3201,23 +5179,67 @@ CREATE POLICY "Users can view own reports" ON "public"."place_reports" FOR SELEC
 
 
 
-CREATE POLICY "Users can view participants of their conversations" ON "public"."conversation_participants" FOR SELECT USING ((("user_id" = "auth"."uid"()) OR ("conversation_id" IN ( SELECT "conversation_participants_1"."conversation_id"
-   FROM "public"."conversation_participants" "conversation_participants_1"
-  WHERE ("conversation_participants_1"."user_id" = "auth"."uid"())))));
+CREATE POLICY "Users can view park check-in counts" ON "public"."checkins" FOR SELECT USING (true);
 
 
 
-CREATE POLICY "Users can view their admin status" ON "public"."park_admins" FOR SELECT TO "authenticated" USING (("user_id" = "auth"."uid"()));
+CREATE POLICY "Users can view playdate participants" ON "public"."playdate_participants" FOR SELECT USING (("auth"."role"() = 'authenticated'::"text"));
 
 
 
-CREATE POLICY "Users can view their dogs friendships" ON "public"."dog_friendships" FOR SELECT USING ((EXISTS ( SELECT 1
-   FROM "public"."dogs"
-  WHERE (("dogs"."id" = ANY (ARRAY["dog_friendships"."dog1_id", "dog_friendships"."dog2_id"])) AND ("dogs"."user_id" = "auth"."uid"())))));
+CREATE POLICY "Users can view playdate recaps" ON "public"."playdate_recaps" FOR SELECT USING ((("shared_to_feed" = true) OR ("auth"."uid"() = "user_id") OR ("auth"."uid"() IN ( SELECT "playdates"."organizer_id"
+   FROM "public"."playdates"
+  WHERE ("playdates"."id" = "playdate_recaps"."playdate_id"))) OR ("auth"."uid"() IN ( SELECT "playdates"."participant_id"
+   FROM "public"."playdates"
+  WHERE ("playdates"."id" = "playdate_recaps"."playdate_id")))));
+
+
+
+CREATE POLICY "Users can view playdates they're involved in" ON "public"."playdates" FOR SELECT USING ((("auth"."uid"() = "organizer_id") OR ("auth"."uid"() = "participant_id")));
+
+
+
+CREATE POLICY "Users can view recaps for playdates they participated in" ON "public"."playdate_recaps" FOR SELECT USING ((("user_id" = "auth"."uid"()) OR (EXISTS ( SELECT 1
+   FROM "public"."playdates" "p"
+  WHERE (("p"."id" = "playdate_recaps"."playdate_id") AND (("p"."organizer_id" = "auth"."uid"()) OR ("p"."participant_id" = "auth"."uid"())))))));
+
+
+
+CREATE POLICY "Users can view requests involving them" ON "public"."playdate_requests" FOR SELECT USING ((("requester_id" = "auth"."uid"()) OR ("invitee_id" = "auth"."uid"()) OR (EXISTS ( SELECT 1
+   FROM "public"."playdates" "p"
+  WHERE (("p"."id" = "playdate_requests"."playdate_id") AND (("p"."organizer_id" = "auth"."uid"()) OR ("p"."participant_id" = "auth"."uid"())))))));
+
+
+
+CREATE POLICY "Users can view share links they created" ON "public"."dog_share_links" FOR SELECT USING (("created_by" = "auth"."uid"()));
+
+
+
+CREATE POLICY "Users can view their achievements" ON "public"."user_achievements" FOR SELECT USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can view their matches" ON "public"."matches" FOR SELECT USING ((("auth"."uid"() = "user_id") OR ("auth"."uid"() = "target_user_id")));
+
+
+
+CREATE POLICY "Users can view their messages" ON "public"."messages" FOR SELECT USING ((("auth"."uid"() = "sender_id") OR ("auth"."uid"() = "receiver_id")));
+
+
+
+CREATE POLICY "Users can view their notifications" ON "public"."notifications" FOR SELECT USING (("auth"."uid"() = "user_id"));
 
 
 
 CREATE POLICY "Users can view their own blocks" ON "public"."user_blocks" FOR SELECT USING (("auth"."uid"() = "blocker_id"));
+
+
+
+CREATE POLICY "Users can view their own check-ins" ON "public"."checkins" FOR SELECT USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can view their own conversations" ON "public"."conversations" FOR SELECT USING ((("auth"."uid"() = "user1_id") OR ("auth"."uid"() = "user2_id")));
 
 
 
@@ -3229,8 +5251,35 @@ CREATE POLICY "Users can view their own notifications" ON "public"."notification
 
 
 
+CREATE POLICY "Users can view their own participations" ON "public"."event_participants" FOR SELECT USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can view their own playdate participants" ON "public"."playdate_participants" FOR SELECT USING ((("auth"."uid"() = "user_id") OR ("auth"."uid"() IN ( SELECT "playdates"."organizer_id"
+   FROM "public"."playdates"
+  WHERE ("playdates"."id" = "playdate_participants"."playdate_id"))) OR ("auth"."uid"() IN ( SELECT "playdates"."participant_id"
+   FROM "public"."playdates"
+  WHERE ("playdates"."id" = "playdate_participants"."playdate_id")))));
+
+
+
+CREATE POLICY "Users can view their own playdate requests" ON "public"."playdate_requests" FOR SELECT USING ((("auth"."uid"() = "requester_id") OR ("auth"."uid"() = "invitee_id")));
+
+
+
+CREATE POLICY "Users can view their own posts" ON "public"."posts" FOR SELECT USING (("auth"."uid"() = "user_id"));
+
+
+
 CREATE POLICY "Users can view their own reports" ON "public"."content_reports" FOR SELECT USING (("auth"."uid"() = "reporter_id"));
 
+
+
+CREATE POLICY "Users can view their subscriptions" ON "public"."premium_subscriptions" FOR SELECT USING (("auth"."uid"() = "user_id"));
+
+
+
+ALTER TABLE "public"."achievements" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."amenities" ENABLE ROW LEVEL SECURITY;
@@ -3242,10 +5291,38 @@ ALTER TABLE "public"."amenity_suggestions" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."app_config" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."barks" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."checkins" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "checkins_delete" ON "public"."park_checkins" FOR DELETE TO "authenticated" USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "checkins_insert" ON "public"."park_checkins" FOR INSERT TO "authenticated" WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "checkins_read" ON "public"."park_checkins" FOR SELECT TO "authenticated" USING (("is_active" OR ("auth"."uid"() = "user_id")));
+
+
+
+CREATE POLICY "checkins_update" ON "public"."park_checkins" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "user_id")) WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
 ALTER TABLE "public"."content_reports" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."conversation_participants" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."conversations" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."dog_breeds" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."dog_friendships" ENABLE ROW LEVEL SECURITY;
@@ -3272,16 +5349,34 @@ CREATE POLICY "dog_shares_update_policy" ON "public"."dog_shares" FOR UPDATE USI
 ALTER TABLE "public"."dogs" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."event_categories" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."event_invitations" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."event_participants" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."events" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."featured_parks" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."follows" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "insert_tags" ON "public"."post_tags" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."dogs" "d"
+  WHERE (("d"."id" = "post_tags"."tagger_dog_id") AND ("d"."user_id" = "auth"."uid"())))));
+
+
+
+ALTER TABLE "public"."matches" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."messages" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."notifications" ENABLE ROW LEVEL SECURITY;
@@ -3293,13 +5388,17 @@ ALTER TABLE "public"."park_activity_reports" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."park_activity_seed_log" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."park_admins" ENABLE ROW LEVEL SECURITY;
-
-
 ALTER TABLE "public"."park_checkins" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."park_status_reports" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."parks" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "parks_read" ON "public"."parks" FOR SELECT TO "authenticated" USING (true);
+
 
 
 ALTER TABLE "public"."place_amenities" ENABLE ROW LEVEL SECURITY;
@@ -3308,7 +5407,19 @@ ALTER TABLE "public"."place_amenities" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."place_reports" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."playdate_participants" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."playdate_recaps" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."playdate_reminder_preferences" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."playdate_requests" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."playdates" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."post_comments" ENABLE ROW LEVEL SECURITY;
@@ -3317,15 +5428,59 @@ ALTER TABLE "public"."post_comments" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."post_likes" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."post_tags" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."posts" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."premium_subscriptions" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "tagged_update_status" ON "public"."post_tags" FOR UPDATE USING ((EXISTS ( SELECT 1
+   FROM "public"."dogs" "d"
+  WHERE (("d"."id" = "post_tags"."tagged_dog_id") AND ("d"."user_id" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "tagged_view_pending" ON "public"."post_tags" FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM "public"."dogs" "d"
+  WHERE (("d"."id" = "post_tags"."tagged_dog_id") AND ("d"."user_id" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "tagger_delete" ON "public"."post_tags" FOR DELETE USING ((EXISTS ( SELECT 1
+   FROM "public"."dogs" "d"
+  WHERE (("d"."id" = "post_tags"."tagger_dog_id") AND ("d"."user_id" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "tagger_view_pending" ON "public"."post_tags" FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM "public"."dogs" "d"
+  WHERE (("d"."id" = "post_tags"."tagger_dog_id") AND ("d"."user_id" = "auth"."uid"())))));
+
+
+
+ALTER TABLE "public"."user_achievements" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."user_blocks" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."user_presence" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."users" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "view_approved_tags" ON "public"."post_tags" FOR SELECT USING (("status" = 'approved'::"text"));
+
 
 
 
 
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
+
+
+
+
 
 
 ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."messages";
@@ -3343,6 +5498,9 @@ GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
+
+
+
 
 
 
@@ -3385,6 +5543,34 @@ GRANT ALL ON FUNCTION "public"."box3d_out"("public"."box3d") TO "postgres";
 GRANT ALL ON FUNCTION "public"."box3d_out"("public"."box3d") TO "anon";
 GRANT ALL ON FUNCTION "public"."box3d_out"("public"."box3d") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."box3d_out"("public"."box3d") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_in"("cstring") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_in"("cstring") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_in"("cstring") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_in"("cstring") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_out"("public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_out"("public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_out"("public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_out"("public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_recv"("internal") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_recv"("internal") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_recv"("internal") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_recv"("internal") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_send"("public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_send"("public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_send"("public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_send"("public"."cube") TO "service_role";
 
 
 
@@ -3866,6 +6052,18 @@ GRANT ALL ON FUNCTION "public"."geometry"("text") TO "service_role";
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 GRANT ALL ON FUNCTION "public"."_postgis_deprecate"("oldname" "text", "newname" "text", "version" "text") TO "postgres";
 GRANT ALL ON FUNCTION "public"."_postgis_deprecate"("oldname" "text", "newname" "text", "version" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."_postgis_deprecate"("oldname" "text", "newname" "text", "version" "text") TO "authenticated";
@@ -4187,6 +6385,18 @@ GRANT ALL ON FUNCTION "public"."accept_dog_share"("p_share_code" character varyi
 
 
 
+GRANT ALL ON FUNCTION "public"."add_dog_with_primary_owner"("p_user_id" "uuid", "p_dog_data" "jsonb") TO "anon";
+GRANT ALL ON FUNCTION "public"."add_dog_with_primary_owner"("p_user_id" "uuid", "p_dog_data" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."add_dog_with_primary_owner"("p_user_id" "uuid", "p_dog_data" "jsonb") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."add_dog_with_primary_owner"("owner_id" "uuid", "dog_name" "text", "dog_breed" "text", "dog_age" integer, "dog_bio" "text", "dog_image_url" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."add_dog_with_primary_owner"("owner_id" "uuid", "dog_name" "text", "dog_breed" "text", "dog_age" integer, "dog_bio" "text", "dog_image_url" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."add_dog_with_primary_owner"("owner_id" "uuid", "dog_name" "text", "dog_breed" "text", "dog_age" integer, "dog_bio" "text", "dog_image_url" "text") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."addauth"("text") TO "postgres";
 GRANT ALL ON FUNCTION "public"."addauth"("text") TO "anon";
 GRANT ALL ON FUNCTION "public"."addauth"("text") TO "authenticated";
@@ -4215,9 +6425,33 @@ GRANT ALL ON FUNCTION "public"."addgeometrycolumn"("catalog_name" character vary
 
 
 
+GRANT ALL ON FUNCTION "public"."auto_approve_friend_tags"() TO "anon";
+GRANT ALL ON FUNCTION "public"."auto_approve_friend_tags"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."auto_approve_friend_tags"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."auto_checkout_old_checkins"() TO "anon";
+GRANT ALL ON FUNCTION "public"."auto_checkout_old_checkins"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."auto_checkout_old_checkins"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."auto_checkout_stale_checkins"() TO "anon";
+GRANT ALL ON FUNCTION "public"."auto_checkout_stale_checkins"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."auto_checkout_stale_checkins"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."auto_seed_park_activity"("p_area_key" "text", "p_park_ids" "text"[], "p_dog_counts" integer[]) TO "anon";
 GRANT ALL ON FUNCTION "public"."auto_seed_park_activity"("p_area_key" "text", "p_park_ids" "text"[], "p_dog_counts" integer[]) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."auto_seed_park_activity"("p_area_key" "text", "p_park_ids" "text"[], "p_dog_counts" integer[]) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."award_achievement"("target_user_id" "uuid", "achievement_name" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."award_achievement"("target_user_id" "uuid", "achievement_name" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."award_achievement"("target_user_id" "uuid", "achievement_name" "text") TO "service_role";
 
 
 
@@ -4225,6 +6459,48 @@ GRANT ALL ON FUNCTION "public"."box3dtobox"("public"."box3d") TO "postgres";
 GRANT ALL ON FUNCTION "public"."box3dtobox"("public"."box3d") TO "anon";
 GRANT ALL ON FUNCTION "public"."box3dtobox"("public"."box3d") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."box3dtobox"("public"."box3d") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."can_bark"("sender_dog_id" "uuid", "receiver_dog_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."can_bark"("sender_dog_id" "uuid", "receiver_dog_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."can_bark"("sender_dog_id" "uuid", "receiver_dog_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."check_community_star_achievement"() TO "anon";
+GRANT ALL ON FUNCTION "public"."check_community_star_achievement"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."check_community_star_achievement"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."check_first_playdate_achievement"() TO "anon";
+GRANT ALL ON FUNCTION "public"."check_first_playdate_achievement"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."check_first_playdate_achievement"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."check_max_tags"() TO "anon";
+GRANT ALL ON FUNCTION "public"."check_max_tags"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."check_max_tags"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."check_park_achievements"() TO "anon";
+GRANT ALL ON FUNCTION "public"."check_park_achievements"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."check_park_achievements"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."check_photo_star_achievement"() TO "anon";
+GRANT ALL ON FUNCTION "public"."check_photo_star_achievement"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."check_photo_star_achievement"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."check_social_butterfly_achievement"() TO "anon";
+GRANT ALL ON FUNCTION "public"."check_social_butterfly_achievement"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."check_social_butterfly_achievement"() TO "service_role";
 
 
 
@@ -4246,6 +6522,12 @@ GRANT ALL ON FUNCTION "public"."checkauthtrigger"() TO "postgres";
 GRANT ALL ON FUNCTION "public"."checkauthtrigger"() TO "anon";
 GRANT ALL ON FUNCTION "public"."checkauthtrigger"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."checkauthtrigger"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cleanup_declined_requests"() TO "anon";
+GRANT ALL ON FUNCTION "public"."cleanup_declined_requests"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cleanup_declined_requests"() TO "service_role";
 
 
 
@@ -4282,9 +6564,241 @@ GRANT ALL ON FUNCTION "public"."create_auth_user_for_firebase"("user_email" "tex
 
 
 
+GRANT ALL ON FUNCTION "public"."create_dog_friendship_after_playdate"() TO "anon";
+GRANT ALL ON FUNCTION "public"."create_dog_friendship_after_playdate"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_dog_friendship_after_playdate"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."create_dog_share"("p_dog_id" "uuid", "p_owner_id" "uuid", "p_access_level" character varying, "p_pin_code" character varying, "p_expires_at" timestamp with time zone, "p_shared_via" character varying, "p_notes" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."create_dog_share"("p_dog_id" "uuid", "p_owner_id" "uuid", "p_access_level" character varying, "p_pin_code" character varying, "p_expires_at" timestamp with time zone, "p_shared_via" character varying, "p_notes" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."create_dog_share"("p_dog_id" "uuid", "p_owner_id" "uuid", "p_access_level" character varying, "p_pin_code" character varying, "p_expires_at" timestamp with time zone, "p_shared_via" character varying, "p_notes" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."create_dog_share_link"("p_access_level" "text", "p_creator_id" "uuid", "p_dog_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."create_dog_share_link"("p_access_level" "text", "p_creator_id" "uuid", "p_dog_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_dog_share_link"("p_access_level" "text", "p_creator_id" "uuid", "p_dog_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."create_dog_share_link"("p_dog_id" "uuid", "p_creator_id" "uuid", "p_permission_level" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."create_dog_share_link"("p_dog_id" "uuid", "p_creator_id" "uuid", "p_permission_level" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_dog_share_link"("p_dog_id" "uuid", "p_creator_id" "uuid", "p_permission_level" "text") TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."notifications" TO "anon";
+GRANT ALL ON TABLE "public"."notifications" TO "authenticated";
+GRANT ALL ON TABLE "public"."notifications" TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."create_notification"("user_id" "uuid", "title" "text", "body" "text", "type" "text", "action_type" "text", "related_id" "text", "metadata" "jsonb", "is_read" boolean, "created_at" timestamp with time zone) TO "anon";
+GRANT ALL ON FUNCTION "public"."create_notification"("user_id" "uuid", "title" "text", "body" "text", "type" "text", "action_type" "text", "related_id" "text", "metadata" "jsonb", "is_read" boolean, "created_at" timestamp with time zone) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_notification"("user_id" "uuid", "title" "text", "body" "text", "type" "text", "action_type" "text", "related_id" "text", "metadata" "jsonb", "is_read" boolean, "created_at" timestamp with time zone) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube"(double precision[]) TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube"(double precision[]) TO "anon";
+GRANT ALL ON FUNCTION "public"."cube"(double precision[]) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube"(double precision[]) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube"(double precision) TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube"(double precision) TO "anon";
+GRANT ALL ON FUNCTION "public"."cube"(double precision) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube"(double precision) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube"(double precision[], double precision[]) TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube"(double precision[], double precision[]) TO "anon";
+GRANT ALL ON FUNCTION "public"."cube"(double precision[], double precision[]) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube"(double precision[], double precision[]) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube"(double precision, double precision) TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube"(double precision, double precision) TO "anon";
+GRANT ALL ON FUNCTION "public"."cube"(double precision, double precision) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube"(double precision, double precision) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube"("public"."cube", double precision) TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube"("public"."cube", double precision) TO "anon";
+GRANT ALL ON FUNCTION "public"."cube"("public"."cube", double precision) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube"("public"."cube", double precision) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube"("public"."cube", double precision, double precision) TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube"("public"."cube", double precision, double precision) TO "anon";
+GRANT ALL ON FUNCTION "public"."cube"("public"."cube", double precision, double precision) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube"("public"."cube", double precision, double precision) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_cmp"("public"."cube", "public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_cmp"("public"."cube", "public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_cmp"("public"."cube", "public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_cmp"("public"."cube", "public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_contained"("public"."cube", "public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_contained"("public"."cube", "public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_contained"("public"."cube", "public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_contained"("public"."cube", "public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_contains"("public"."cube", "public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_contains"("public"."cube", "public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_contains"("public"."cube", "public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_contains"("public"."cube", "public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_coord"("public"."cube", integer) TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_coord"("public"."cube", integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_coord"("public"."cube", integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_coord"("public"."cube", integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_coord_llur"("public"."cube", integer) TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_coord_llur"("public"."cube", integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_coord_llur"("public"."cube", integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_coord_llur"("public"."cube", integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_dim"("public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_dim"("public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_dim"("public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_dim"("public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_distance"("public"."cube", "public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_distance"("public"."cube", "public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_distance"("public"."cube", "public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_distance"("public"."cube", "public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_enlarge"("public"."cube", double precision, integer) TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_enlarge"("public"."cube", double precision, integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_enlarge"("public"."cube", double precision, integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_enlarge"("public"."cube", double precision, integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_eq"("public"."cube", "public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_eq"("public"."cube", "public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_eq"("public"."cube", "public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_eq"("public"."cube", "public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_ge"("public"."cube", "public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_ge"("public"."cube", "public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_ge"("public"."cube", "public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_ge"("public"."cube", "public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_gt"("public"."cube", "public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_gt"("public"."cube", "public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_gt"("public"."cube", "public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_gt"("public"."cube", "public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_inter"("public"."cube", "public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_inter"("public"."cube", "public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_inter"("public"."cube", "public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_inter"("public"."cube", "public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_is_point"("public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_is_point"("public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_is_point"("public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_is_point"("public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_le"("public"."cube", "public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_le"("public"."cube", "public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_le"("public"."cube", "public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_le"("public"."cube", "public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_ll_coord"("public"."cube", integer) TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_ll_coord"("public"."cube", integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_ll_coord"("public"."cube", integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_ll_coord"("public"."cube", integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_lt"("public"."cube", "public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_lt"("public"."cube", "public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_lt"("public"."cube", "public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_lt"("public"."cube", "public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_ne"("public"."cube", "public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_ne"("public"."cube", "public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_ne"("public"."cube", "public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_ne"("public"."cube", "public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_overlap"("public"."cube", "public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_overlap"("public"."cube", "public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_overlap"("public"."cube", "public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_overlap"("public"."cube", "public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_size"("public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_size"("public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_size"("public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_size"("public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_subset"("public"."cube", integer[]) TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_subset"("public"."cube", integer[]) TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_subset"("public"."cube", integer[]) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_subset"("public"."cube", integer[]) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_union"("public"."cube", "public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_union"("public"."cube", "public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_union"("public"."cube", "public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_union"("public"."cube", "public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cube_ur_coord"("public"."cube", integer) TO "postgres";
+GRANT ALL ON FUNCTION "public"."cube_ur_coord"("public"."cube", integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."cube_ur_coord"("public"."cube", integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cube_ur_coord"("public"."cube", integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."decrement_event_participants"("event_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."decrement_event_participants"("event_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."decrement_event_participants"("event_id" "uuid") TO "service_role";
 
 
 
@@ -4298,6 +6812,20 @@ GRANT ALL ON FUNCTION "public"."disablelongtransactions"() TO "postgres";
 GRANT ALL ON FUNCTION "public"."disablelongtransactions"() TO "anon";
 GRANT ALL ON FUNCTION "public"."disablelongtransactions"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."disablelongtransactions"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."distance_chebyshev"("public"."cube", "public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."distance_chebyshev"("public"."cube", "public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."distance_chebyshev"("public"."cube", "public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."distance_chebyshev"("public"."cube", "public"."cube") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."distance_taxicab"("public"."cube", "public"."cube") TO "postgres";
+GRANT ALL ON FUNCTION "public"."distance_taxicab"("public"."cube", "public"."cube") TO "anon";
+GRANT ALL ON FUNCTION "public"."distance_taxicab"("public"."cube", "public"."cube") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."distance_taxicab"("public"."cube", "public"."cube") TO "service_role";
 
 
 
@@ -4343,6 +6871,41 @@ GRANT ALL ON FUNCTION "public"."dropgeometrytable"("catalog_name" character vary
 
 
 
+GRANT ALL ON FUNCTION "public"."earth"() TO "postgres";
+GRANT ALL ON FUNCTION "public"."earth"() TO "anon";
+GRANT ALL ON FUNCTION "public"."earth"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."earth"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."gc_to_sec"(double precision) TO "postgres";
+GRANT ALL ON FUNCTION "public"."gc_to_sec"(double precision) TO "anon";
+GRANT ALL ON FUNCTION "public"."gc_to_sec"(double precision) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."gc_to_sec"(double precision) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."earth_box"("public"."earth", double precision) TO "postgres";
+GRANT ALL ON FUNCTION "public"."earth_box"("public"."earth", double precision) TO "anon";
+GRANT ALL ON FUNCTION "public"."earth_box"("public"."earth", double precision) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."earth_box"("public"."earth", double precision) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."sec_to_gc"(double precision) TO "postgres";
+GRANT ALL ON FUNCTION "public"."sec_to_gc"(double precision) TO "anon";
+GRANT ALL ON FUNCTION "public"."sec_to_gc"(double precision) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."sec_to_gc"(double precision) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."earth_distance"("public"."earth", "public"."earth") TO "postgres";
+GRANT ALL ON FUNCTION "public"."earth_distance"("public"."earth", "public"."earth") TO "anon";
+GRANT ALL ON FUNCTION "public"."earth_distance"("public"."earth", "public"."earth") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."earth_distance"("public"."earth", "public"."earth") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."enablelongtransactions"() TO "postgres";
 GRANT ALL ON FUNCTION "public"."enablelongtransactions"() TO "anon";
 GRANT ALL ON FUNCTION "public"."enablelongtransactions"() TO "authenticated";
@@ -4361,6 +6924,55 @@ GRANT ALL ON FUNCTION "public"."find_srid"(character varying, character varying,
 GRANT ALL ON FUNCTION "public"."find_srid"(character varying, character varying, character varying) TO "anon";
 GRANT ALL ON FUNCTION "public"."find_srid"(character varying, character varying, character varying) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."find_srid"(character varying, character varying, character varying) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."g_cube_consistent"("internal", "public"."cube", smallint, "oid", "internal") TO "postgres";
+GRANT ALL ON FUNCTION "public"."g_cube_consistent"("internal", "public"."cube", smallint, "oid", "internal") TO "anon";
+GRANT ALL ON FUNCTION "public"."g_cube_consistent"("internal", "public"."cube", smallint, "oid", "internal") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."g_cube_consistent"("internal", "public"."cube", smallint, "oid", "internal") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."g_cube_distance"("internal", "public"."cube", smallint, "oid", "internal") TO "postgres";
+GRANT ALL ON FUNCTION "public"."g_cube_distance"("internal", "public"."cube", smallint, "oid", "internal") TO "anon";
+GRANT ALL ON FUNCTION "public"."g_cube_distance"("internal", "public"."cube", smallint, "oid", "internal") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."g_cube_distance"("internal", "public"."cube", smallint, "oid", "internal") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."g_cube_penalty"("internal", "internal", "internal") TO "postgres";
+GRANT ALL ON FUNCTION "public"."g_cube_penalty"("internal", "internal", "internal") TO "anon";
+GRANT ALL ON FUNCTION "public"."g_cube_penalty"("internal", "internal", "internal") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."g_cube_penalty"("internal", "internal", "internal") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."g_cube_picksplit"("internal", "internal") TO "postgres";
+GRANT ALL ON FUNCTION "public"."g_cube_picksplit"("internal", "internal") TO "anon";
+GRANT ALL ON FUNCTION "public"."g_cube_picksplit"("internal", "internal") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."g_cube_picksplit"("internal", "internal") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."g_cube_same"("public"."cube", "public"."cube", "internal") TO "postgres";
+GRANT ALL ON FUNCTION "public"."g_cube_same"("public"."cube", "public"."cube", "internal") TO "anon";
+GRANT ALL ON FUNCTION "public"."g_cube_same"("public"."cube", "public"."cube", "internal") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."g_cube_same"("public"."cube", "public"."cube", "internal") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."g_cube_union"("internal", "internal") TO "postgres";
+GRANT ALL ON FUNCTION "public"."g_cube_union"("internal", "internal") TO "anon";
+GRANT ALL ON FUNCTION "public"."g_cube_union"("internal", "internal") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."g_cube_union"("internal", "internal") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."geo_distance"("point", "point") TO "postgres";
+GRANT ALL ON FUNCTION "public"."geo_distance"("point", "point") TO "anon";
+GRANT ALL ON FUNCTION "public"."geo_distance"("point", "point") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."geo_distance"("point", "point") TO "service_role";
 
 
 
@@ -5097,9 +7709,21 @@ GRANT ALL ON FUNCTION "public"."get_nearby_parks"("user_lat" double precision, "
 
 
 
+GRANT ALL ON FUNCTION "public"."get_park_dog_count"("park_uuid" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_park_dog_count"("park_uuid" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_park_dog_count"("park_uuid" "text") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_park_status"("p_park_id" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_park_status"("p_park_id" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_park_status"("p_park_id" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_pending_playdate_requests"("user_id_param" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_pending_playdate_requests"("user_id_param" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_pending_playdate_requests"("user_id_param" "uuid") TO "service_role";
 
 
 
@@ -5125,6 +7749,24 @@ GRANT ALL ON FUNCTION "public"."get_proj4_from_srid"(integer) TO "service_role";
 GRANT ALL ON FUNCTION "public"."get_shared_dogs"("p_user_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_shared_dogs"("p_user_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_shared_dogs"("p_user_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_user_accessible_dogs"("p_user_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_user_accessible_dogs"("p_user_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_user_accessible_dogs"("p_user_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_user_active_checkin"("user_uuid" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_user_active_checkin"("user_uuid" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_user_active_checkin"("user_uuid" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_user_playdate_requests"("user_id_param" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_user_playdate_requests"("user_id_param" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_user_playdate_requests"("user_id_param" "uuid") TO "service_role";
 
 
 
@@ -5254,9 +7896,27 @@ GRANT ALL ON FUNCTION "public"."gtrgm_union"("internal", "internal") TO "service
 
 
 
+GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "anon";
+GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."handle_updated_at"() TO "anon";
+GRANT ALL ON FUNCTION "public"."handle_updated_at"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."handle_updated_at"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."has_user_liked_post"("target_user_id" "uuid", "target_post_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."has_user_liked_post"("target_user_id" "uuid", "target_post_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."has_user_liked_post"("target_user_id" "uuid", "target_post_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."increment_event_participants"("event_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."increment_event_participants"("event_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."increment_event_participants"("event_id" "uuid") TO "service_role";
 
 
 
@@ -5293,6 +7953,20 @@ GRANT ALL ON FUNCTION "public"."is_user_blocked"("checker_id" "uuid", "target_id
 
 
 
+GRANT ALL ON FUNCTION "public"."latitude"("public"."earth") TO "postgres";
+GRANT ALL ON FUNCTION "public"."latitude"("public"."earth") TO "anon";
+GRANT ALL ON FUNCTION "public"."latitude"("public"."earth") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."latitude"("public"."earth") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."ll_to_earth"(double precision, double precision) TO "postgres";
+GRANT ALL ON FUNCTION "public"."ll_to_earth"(double precision, double precision) TO "anon";
+GRANT ALL ON FUNCTION "public"."ll_to_earth"(double precision, double precision) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."ll_to_earth"(double precision, double precision) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."lockrow"("text", "text", "text") TO "postgres";
 GRANT ALL ON FUNCTION "public"."lockrow"("text", "text", "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."lockrow"("text", "text", "text") TO "authenticated";
@@ -5321,10 +7995,23 @@ GRANT ALL ON FUNCTION "public"."lockrow"("text", "text", "text", "text", timesta
 
 
 
+GRANT ALL ON FUNCTION "public"."longitude"("public"."earth") TO "postgres";
+GRANT ALL ON FUNCTION "public"."longitude"("public"."earth") TO "anon";
+GRANT ALL ON FUNCTION "public"."longitude"("public"."earth") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."longitude"("public"."earth") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."longtransactionsenabled"() TO "postgres";
 GRANT ALL ON FUNCTION "public"."longtransactionsenabled"() TO "anon";
 GRANT ALL ON FUNCTION "public"."longtransactionsenabled"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."longtransactionsenabled"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."notify_bark"() TO "anon";
+GRANT ALL ON FUNCTION "public"."notify_bark"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."notify_bark"() TO "service_role";
 
 
 
@@ -8904,9 +11591,33 @@ GRANT ALL ON FUNCTION "public"."unread_conversations_count"("p_user_id" "uuid") 
 
 
 
+GRANT ALL ON FUNCTION "public"."unsuggest_amenity"("p_place_id" "text", "p_amenity_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."unsuggest_amenity"("p_place_id" "text", "p_amenity_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."unsuggest_amenity"("p_place_id" "text", "p_amenity_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_checkins_updated_at"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_checkins_updated_at"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_checkins_updated_at"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."update_event_invitations_updated_at"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_event_invitations_updated_at"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_event_invitations_updated_at"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_events_updated_at"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_events_updated_at"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_events_updated_at"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "service_role";
 
 
 
@@ -8928,6 +11639,18 @@ GRANT ALL ON FUNCTION "public"."updategeometrysrid"("catalogn_name" character va
 GRANT ALL ON FUNCTION "public"."updategeometrysrid"("catalogn_name" character varying, "schema_name" character varying, "table_name" character varying, "column_name" character varying, "new_srid_in" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."updategeometrysrid"("catalogn_name" character varying, "schema_name" character varying, "table_name" character varying, "column_name" character varying, "new_srid_in" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."updategeometrysrid"("catalogn_name" character varying, "schema_name" character varying, "table_name" character varying, "column_name" character varying, "new_srid_in" integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."use_dog_share_link"("p_link_code" "text", "p_dog_name_verification" "text", "p_new_user_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."use_dog_share_link"("p_link_code" "text", "p_dog_name_verification" "text", "p_new_user_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."use_dog_share_link"("p_link_code" "text", "p_dog_name_verification" "text", "p_new_user_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."use_dog_share_link"("p_share_token" "text", "p_user_id" "uuid", "p_dog_name_entered" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."use_dog_share_link"("p_share_token" "text", "p_user_id" "uuid", "p_dog_name_entered" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."use_dog_share_link"("p_share_token" "text", "p_user_id" "uuid", "p_dog_name_entered" "text") TO "service_role";
 
 
 
@@ -9128,6 +11851,12 @@ GRANT ALL ON FUNCTION "public"."st_union"("public"."geometry", double precision)
 
 
 
+
+
+
+
+
+
 GRANT ALL ON TABLE "public"."achievements" TO "anon";
 GRANT ALL ON TABLE "public"."achievements" TO "authenticated";
 GRANT ALL ON TABLE "public"."achievements" TO "service_role";
@@ -9152,6 +11881,18 @@ GRANT ALL ON TABLE "public"."app_config" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."barks" TO "anon";
+GRANT ALL ON TABLE "public"."barks" TO "authenticated";
+GRANT ALL ON TABLE "public"."barks" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."checkins" TO "anon";
+GRANT ALL ON TABLE "public"."checkins" TO "authenticated";
+GRANT ALL ON TABLE "public"."checkins" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."content_reports" TO "anon";
 GRANT ALL ON TABLE "public"."content_reports" TO "authenticated";
 GRANT ALL ON TABLE "public"."content_reports" TO "service_role";
@@ -9170,15 +11911,33 @@ GRANT ALL ON TABLE "public"."conversations" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."dog_breeds" TO "anon";
+GRANT ALL ON TABLE "public"."dog_breeds" TO "authenticated";
+GRANT ALL ON TABLE "public"."dog_breeds" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."dog_friendships" TO "anon";
 GRANT ALL ON TABLE "public"."dog_friendships" TO "authenticated";
 GRANT ALL ON TABLE "public"."dog_friendships" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."dog_owners" TO "anon";
+GRANT ALL ON TABLE "public"."dog_owners" TO "authenticated";
+GRANT ALL ON TABLE "public"."dog_owners" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."dog_share_activity_log" TO "anon";
 GRANT ALL ON TABLE "public"."dog_share_activity_log" TO "authenticated";
 GRANT ALL ON TABLE "public"."dog_share_activity_log" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."dog_share_links" TO "anon";
+GRANT ALL ON TABLE "public"."dog_share_links" TO "authenticated";
+GRANT ALL ON TABLE "public"."dog_share_links" TO "service_role";
 
 
 
@@ -9191,6 +11950,12 @@ GRANT ALL ON TABLE "public"."dog_shares" TO "service_role";
 GRANT ALL ON TABLE "public"."dogs" TO "anon";
 GRANT ALL ON TABLE "public"."dogs" TO "authenticated";
 GRANT ALL ON TABLE "public"."dogs" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."event_categories" TO "anon";
+GRANT ALL ON TABLE "public"."event_categories" TO "authenticated";
+GRANT ALL ON TABLE "public"."event_categories" TO "service_role";
 
 
 
@@ -9236,12 +12001,6 @@ GRANT ALL ON TABLE "public"."messages" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."notifications" TO "anon";
-GRANT ALL ON TABLE "public"."notifications" TO "authenticated";
-GRANT ALL ON TABLE "public"."notifications" TO "service_role";
-
-
-
 GRANT ALL ON TABLE "public"."park_activity_reports" TO "anon";
 GRANT ALL ON TABLE "public"."park_activity_reports" TO "authenticated";
 GRANT ALL ON TABLE "public"."park_activity_reports" TO "service_role";
@@ -9251,12 +12010,6 @@ GRANT ALL ON TABLE "public"."park_activity_reports" TO "service_role";
 GRANT ALL ON TABLE "public"."park_activity_seed_log" TO "anon";
 GRANT ALL ON TABLE "public"."park_activity_seed_log" TO "authenticated";
 GRANT ALL ON TABLE "public"."park_activity_seed_log" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."park_admins" TO "anon";
-GRANT ALL ON TABLE "public"."park_admins" TO "authenticated";
-GRANT ALL ON TABLE "public"."park_admins" TO "service_role";
 
 
 
@@ -9296,6 +12049,12 @@ GRANT ALL ON TABLE "public"."playdate_participants" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."playdate_recaps" TO "anon";
+GRANT ALL ON TABLE "public"."playdate_recaps" TO "authenticated";
+GRANT ALL ON TABLE "public"."playdate_recaps" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."playdate_reminder_preferences" TO "anon";
 GRANT ALL ON TABLE "public"."playdate_reminder_preferences" TO "authenticated";
 GRANT ALL ON TABLE "public"."playdate_reminder_preferences" TO "service_role";
@@ -9314,6 +12073,18 @@ GRANT ALL ON TABLE "public"."playdates" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."users" TO "anon";
+GRANT ALL ON TABLE "public"."users" TO "authenticated";
+GRANT ALL ON TABLE "public"."users" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."playdate_requests_with_details" TO "anon";
+GRANT ALL ON TABLE "public"."playdate_requests_with_details" TO "authenticated";
+GRANT ALL ON TABLE "public"."playdate_requests_with_details" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."post_comments" TO "anon";
 GRANT ALL ON TABLE "public"."post_comments" TO "authenticated";
 GRANT ALL ON TABLE "public"."post_comments" TO "service_role";
@@ -9326,9 +12097,21 @@ GRANT ALL ON TABLE "public"."post_likes" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."post_tags" TO "anon";
+GRANT ALL ON TABLE "public"."post_tags" TO "authenticated";
+GRANT ALL ON TABLE "public"."post_tags" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."posts" TO "anon";
 GRANT ALL ON TABLE "public"."posts" TO "authenticated";
 GRANT ALL ON TABLE "public"."posts" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."posts_with_tags" TO "anon";
+GRANT ALL ON TABLE "public"."posts_with_tags" TO "authenticated";
+GRANT ALL ON TABLE "public"."posts_with_tags" TO "service_role";
 
 
 
@@ -9350,15 +12133,9 @@ GRANT ALL ON TABLE "public"."user_blocks" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."user_presence" TO "anon";
-GRANT ALL ON TABLE "public"."user_presence" TO "authenticated";
-GRANT ALL ON TABLE "public"."user_presence" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."users" TO "anon";
-GRANT ALL ON TABLE "public"."users" TO "authenticated";
-GRANT ALL ON TABLE "public"."users" TO "service_role";
+GRANT ALL ON TABLE "public"."v_park_active_counts" TO "anon";
+GRANT ALL ON TABLE "public"."v_park_active_counts" TO "authenticated";
+GRANT ALL ON TABLE "public"."v_park_active_counts" TO "service_role";
 
 
 
@@ -9422,8 +12199,254 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 
 
 
+drop extension if exists "pg_net";
 
---
--- Dumped schema changes for auth and storage
---
+create extension if not exists "pg_net" with schema "public";
+
+alter table "public"."dog_shares" drop constraint "dog_shares_access_level_check";
+
+alter table "public"."dog_shares" drop constraint "dog_shares_shared_via_check";
+
+alter table "public"."dog_shares" add constraint "dog_shares_access_level_check" CHECK (((access_level)::text = ANY ((ARRAY['view'::character varying, 'edit'::character varying, 'manage'::character varying])::text[]))) not valid;
+
+alter table "public"."dog_shares" validate constraint "dog_shares_access_level_check";
+
+alter table "public"."dog_shares" add constraint "dog_shares_shared_via_check" CHECK (((shared_via)::text = ANY ((ARRAY['link'::character varying, 'qr'::character varying, 'whatsapp'::character varying])::text[]))) not valid;
+
+alter table "public"."dog_shares" validate constraint "dog_shares_shared_via_check";
+
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+
+  create policy "Anyone can view avatars"
+  on "storage"."objects"
+  as permissive
+  for select
+  to public
+using ((bucket_id = 'user-avatars'::text));
+
+
+
+  create policy "Anyone can view dog photos"
+  on "storage"."objects"
+  as permissive
+  for select
+  to public
+using ((bucket_id = 'dog-photos'::text));
+
+
+
+  create policy "Anyone can view photos"
+  on "storage"."objects"
+  as permissive
+  for select
+  to public
+using ((bucket_id = 'photos'::text));
+
+
+
+  create policy "Anyone can view post images"
+  on "storage"."objects"
+  as permissive
+  for select
+  to public
+using ((bucket_id = 'post-images'::text));
+
+
+
+  create policy "Authenticated users can upload photos"
+  on "storage"."objects"
+  as permissive
+  for insert
+  to public
+with check (((bucket_id = 'photos'::text) AND (auth.uid() IS NOT NULL)));
+
+
+
+  create policy "Chat participants can read media"
+  on "storage"."objects"
+  as permissive
+  for select
+  to public
+using (((bucket_id = 'chat-media'::text) AND (EXISTS ( SELECT 1
+   FROM public.matches m
+  WHERE (((m.id)::text = (storage.foldername(objects.name))[1]) AND ((m.user_id = auth.uid()) OR (m.target_user_id = auth.uid())))))));
+
+
+
+  create policy "Chat participants can upload media"
+  on "storage"."objects"
+  as permissive
+  for insert
+  to public
+with check (((bucket_id = 'chat-media'::text) AND (EXISTS ( SELECT 1
+   FROM public.matches m
+  WHERE (((m.id)::text = (storage.foldername(objects.name))[1]) AND ((m.user_id = auth.uid()) OR (m.target_user_id = auth.uid())))))));
+
+
+
+  create policy "Participants can upload playdate photos"
+  on "storage"."objects"
+  as permissive
+  for insert
+  to public
+with check (((bucket_id = 'playdate-albums'::text) AND (EXISTS ( SELECT 1
+   FROM public.playdate_participants pp
+  WHERE (((pp.playdate_id)::text = (storage.foldername(objects.name))[1]) AND (pp.user_id = auth.uid()))))));
+
+
+
+  create policy "Participants can view playdate photos"
+  on "storage"."objects"
+  as permissive
+  for select
+  to public
+using (((bucket_id = 'playdate-albums'::text) AND (EXISTS ( SELECT 1
+   FROM public.playdate_participants pp
+  WHERE (((pp.playdate_id)::text = (storage.foldername(objects.name))[1]) AND (pp.user_id = auth.uid()))))));
+
+
+
+  create policy "Uploader can delete own chat media"
+  on "storage"."objects"
+  as permissive
+  for delete
+  to public
+using (((bucket_id = 'chat-media'::text) AND ((auth.uid())::text = (storage.foldername(name))[2]) AND (EXISTS ( SELECT 1
+   FROM public.matches m
+  WHERE (((m.id)::text = (storage.foldername(objects.name))[1]) AND ((m.user_id = auth.uid()) OR (m.target_user_id = auth.uid())))))));
+
+
+
+  create policy "Uploader can delete own playdate photos"
+  on "storage"."objects"
+  as permissive
+  for delete
+  to public
+using (((bucket_id = 'playdate-albums'::text) AND ((auth.uid())::text = (storage.foldername(name))[2]) AND (EXISTS ( SELECT 1
+   FROM public.playdate_participants pp
+  WHERE (((pp.playdate_id)::text = (storage.foldername(objects.name))[1]) AND (pp.user_id = auth.uid()))))));
+
+
+
+  create policy "Uploader can update own chat media"
+  on "storage"."objects"
+  as permissive
+  for update
+  to public
+using (((bucket_id = 'chat-media'::text) AND ((auth.uid())::text = (storage.foldername(name))[2]) AND (EXISTS ( SELECT 1
+   FROM public.matches m
+  WHERE (((m.id)::text = (storage.foldername(objects.name))[1]) AND ((m.user_id = auth.uid()) OR (m.target_user_id = auth.uid())))))));
+
+
+
+  create policy "Uploader can update own playdate photos"
+  on "storage"."objects"
+  as permissive
+  for update
+  to public
+using (((bucket_id = 'playdate-albums'::text) AND ((auth.uid())::text = (storage.foldername(name))[2]) AND (EXISTS ( SELECT 1
+   FROM public.playdate_participants pp
+  WHERE (((pp.playdate_id)::text = (storage.foldername(objects.name))[1]) AND (pp.user_id = auth.uid()))))));
+
+
+
+  create policy "Users can delete own avatars"
+  on "storage"."objects"
+  as permissive
+  for delete
+  to public
+using (((bucket_id = 'user-avatars'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
+
+
+
+  create policy "Users can delete own dog photos"
+  on "storage"."objects"
+  as permissive
+  for delete
+  to public
+using (((bucket_id = 'dog-photos'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
+
+
+
+  create policy "Users can delete own post images"
+  on "storage"."objects"
+  as permissive
+  for delete
+  to public
+using (((bucket_id = 'post-images'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
+
+
+
+  create policy "Users can delete their own photos"
+  on "storage"."objects"
+  as permissive
+  for delete
+  to public
+using (((bucket_id = 'photos'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
+
+
+
+  create policy "Users can update own avatars"
+  on "storage"."objects"
+  as permissive
+  for update
+  to public
+using (((bucket_id = 'user-avatars'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
+
+
+
+  create policy "Users can update own dog photos"
+  on "storage"."objects"
+  as permissive
+  for update
+  to public
+using (((bucket_id = 'dog-photos'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
+
+
+
+  create policy "Users can update own post images"
+  on "storage"."objects"
+  as permissive
+  for update
+  to public
+using (((bucket_id = 'post-images'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
+
+
+
+  create policy "Users can update their own photos"
+  on "storage"."objects"
+  as permissive
+  for update
+  to public
+using (((bucket_id = 'photos'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
+
+
+
+  create policy "Users can upload dog photos"
+  on "storage"."objects"
+  as permissive
+  for insert
+  to public
+with check (((bucket_id = 'dog-photos'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
+
+
+
+  create policy "Users can upload own avatars"
+  on "storage"."objects"
+  as permissive
+  for insert
+  to public
+with check (((bucket_id = 'user-avatars'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
+
+
+
+  create policy "Users can upload post images"
+  on "storage"."objects"
+  as permissive
+  for insert
+  to public
+with check (((bucket_id = 'post-images'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
+
+
 
